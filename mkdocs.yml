@@ -1,0 +1,8 @@
+site_name: 大明二代
+site_description: 大明二代的博客
+site_author: 明国宾
+
+theme:
+  name: material
+
+copyright: copyright 2020
