@@ -4,5 +4,29 @@ site_author: 明国宾
 
 theme:
   name: material
+  # palette:
+  #   primary: 'Blue Grey'
+  #   accent: 'Pink'
+  feature:
+    - navigation.tabs
+  #font:
+    #text: 'Ubuntu'
+    #code: 'Ubuntu Mono'
+  language: 'zh'
+# extra:
+#   social:
+#     - type: github  # 在新版里type已废弃(感谢HuJialun的反馈)
+#       link: https://github.com/damingerdai
+#   search:
+#     language: 'zh'
+
+markdown_extensions:
+  - pymdownx.tabbed
+
+nav:
+  - 个人说明:
+      - 1. 我是大明二代: index.md
+  - K8S:
+      - 1. Minkube安装笔记: minkube.md
 
 copyright: copyright 2020
