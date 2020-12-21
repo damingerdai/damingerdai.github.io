@@ -28,5 +28,7 @@ nav:
       - 1. 我是大明二代: index.md
   - K8S:
       - 1. Minkube安装笔记: minkube.md
+  - 其他:
+      - 1. 喜欢的post: link.md
 
 copyright: copyright 2020
