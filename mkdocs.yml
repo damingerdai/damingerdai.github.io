@@ -14,12 +14,6 @@ theme:
     #text: 'Ubuntu'
     #code: 'Ubuntu Mono'
   language: 'zh'
-# extra:
-#   social:
-#     - type: github  # 在新版里type已废弃(感谢HuJialun的反馈)
-#       link: https://github.com/damingerdai
-#   search:
-#     language: 'zh'
 
 extra:
   social:
