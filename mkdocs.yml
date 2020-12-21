@@ -1,14 +1,15 @@
 site_name: 大明二代
 site_description: 大明二代的博客
 site_author: 明国宾
+site_url: https://damingerdai.github.io/
 
 theme:
   name: material
-  # palette:
-  #   primary: 'Blue Grey'
-  #   accent: 'Pink'
+  palette:
+    primary: 'Blue Grey'
+    accent: 'Pink'
   feature:
-    - navigation.tabs
+    tabs: true
   #font:
     #text: 'Ubuntu'
     #code: 'Ubuntu Mono'
