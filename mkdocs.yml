@@ -15,13 +15,6 @@ theme:
     #code: 'Ubuntu Mono'
   language: 'zh'
 
-extra:
-  social:
-    - type: github
-      link: https://github.com/damingerdai
-  search:
-    language: 'zh'
-
 nav:
   - 个人说明:
       - 1. 我是大明二代: index.md
