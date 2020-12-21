@@ -1,5 +1,3 @@
-# Minkube 安装笔记
-
 ## 在Ubuntu 18.04.5 LTS上安装minkube
 
 ### 要求
