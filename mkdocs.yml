@@ -9,7 +9,8 @@ theme:
     primary: 'Blue Grey'
     accent: 'Pink'
   feature:
-    tabs: true
+    - navigation.tabs
+    - navigation.tabs.sticky
   #font:
     #text: 'Ubuntu'
     #code: 'Ubuntu Mono'
