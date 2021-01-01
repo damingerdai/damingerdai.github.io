@@ -18,13 +18,13 @@ theme:
 
 nav:
   - 个人说明:
-      - 1. 我是大明二代: index.md
+      - 我是大明二代: index.md
   - 软件:
-      - 1. Minkube安装笔记: how-to-install-minkube.md
-      - 2. Android Studio安装笔记: how-to-install-android-studio.md
+      - Minkube安装笔记: how-to-install-minkube.md
+      - Android Studio安装笔记: how-to-install-android-studio.md
   # - K8S:
   #     - 1. Minkube安装笔记: minkube.md
   - 其他:
-      - 1. 喜欢的post: link.md
+      - 喜欢的post: link.md
 
 copyright: copyright 2020
