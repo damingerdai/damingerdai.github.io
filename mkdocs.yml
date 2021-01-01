@@ -5,9 +5,9 @@ site_url: https://damingerdai.github.io/
 
 theme:
   name: material
-  palette:
-    primary: 'Blue Grey'
-    accent: 'Pink'
+  # palette:
+  #   primary: 'Blue Grey'
+  #   accent: 'Pink'
   feature:
     - navigation.tabs
     - navigation.tabs.sticky
