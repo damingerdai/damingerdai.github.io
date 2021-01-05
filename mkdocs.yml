@@ -3,6 +3,9 @@ site_description: 大明二代的博客
 site_author: 明国宾
 site_url: https://damingerdai.github.io/
 
+repo_name: 'damingerdai.github.io'
+repo_url: 'https://github.com/damingerdai/damingerdai.github.io'
+
 theme:
   name: material
   # palette:
