@@ -11,12 +11,13 @@ theme:
   # palette:
   #   primary: 'Blue Grey'
   #   accent: 'Pink'
-  feature:
+  features:
+    # - navigation.instant
+    - navigation.sections
     - navigation.tabs
-    - navigation.tabs.sticky
-  #font:
-    #text: 'Ubuntu'
-    #code: 'Ubuntu Mono'
+  font:
+    text: Roboto
+    code: Roboto Mono
   language: 'zh'
 
 nav:
