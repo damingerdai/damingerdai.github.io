@@ -3,7 +3,7 @@
 ## 技术
 
 1. [mkdocs](https://www.mkdocs.org/user-guide/styling-your-docs/#overriding-template-blocks)
-2. [mkdocs-materia](https://squidfunk.github.io/mkdocs-material/getting-started/)
+2. [mkdocs-material](https://squidfunk.github.io/mkdocs-material/getting-started/)
 
 ## 参考
 
