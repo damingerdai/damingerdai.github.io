@@ -3,25 +3,32 @@ site_description: 大明二代的博客
 site_author: 明国宾
 site_url: https://damingerdai.github.io/
 
+repo_name: 'damingerdai.github.io'
+repo_url: 'https://github.com/damingerdai/damingerdai.github.io'
+
 theme:
   name: material
-  palette:
-    primary: 'Blue Grey'
-    accent: 'Pink'
-  feature:
+  # palette:
+  #   primary: 'Blue Grey'
+  #   accent: 'Pink'
+  features:
+    # - navigation.instant
+    - navigation.sections
     - navigation.tabs
-    - navigation.tabs.sticky
-  #font:
-    #text: 'Ubuntu'
-    #code: 'Ubuntu Mono'
+  font:
+    text: Roboto
+    code: Roboto Mono
   language: 'zh'
 
 nav:
   - 个人说明:
-      - 1. 我是大明二代: index.md
-  - K8S:
-      - 1. Minkube安装笔记: minkube.md
+      - 我是大明二代: index.md
+  - 软件:
+      - Minkube安装笔记: how-to-install-minkube.md
+      - Android Studio安装笔记: how-to-install-android-studio.md
+  # - K8S:
+  #     - 1. Minkube安装笔记: minkube.md
   - 其他:
-      - 1. 喜欢的post: link.md
+      - 喜欢的post: link.md
 
-copyright: copyright 2020
+copyright: copyright 2021
