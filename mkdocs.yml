@@ -27,8 +27,6 @@ nav:
       - Minkube安装笔记: how-to-install-minkube.md
       - Docker Desktop自带k8s安装笔记: how-to-install-docker-desktop-k8s.md
       - Android Studio安装笔记: how-to-install-android-studio.md
-  # - K8S:
-  #     - 1. Minkube安装笔记: minkube.md
   - 其他:
       - 喜欢的post: link.md
 

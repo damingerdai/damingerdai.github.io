@@ -9,3 +9,13 @@
 
 ### GraphQL 
 [Think in GraphQL](https://ithelp.ithome.com.tw/users/20111997/ironman/1878)
+
+### Typescript
+
+[Using the Compiler API](https://github.com/Microsoft/TypeScript/wiki/Using-the-Compiler-API)
+
+[深入理解 TypeScript](https://jkchao.github.io/typescript-book-chinese/#why)
+
+[\[TypeScript\] Compiler API 第一次接觸](https://blog.kevinyang.net/2018/08/17/typescript-compiler/)
+
+[ts-morph](https://ts-morph.com/)
