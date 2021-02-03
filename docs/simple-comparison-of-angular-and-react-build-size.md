@@ -53,6 +53,7 @@ styles.css          | styles        |   0 bytes
 ```
 
 通过Finder查看js和css文件的大小发现:
+
 1. main.js大小为217kB;
 2. polyfills.js大小为37kB;
 3. runtime.js为1kB;
@@ -116,6 +117,7 @@ File sizes after gzip:
 经过统计， gzip总体积为44.91kB。
 
 通过Finder查看js和css文件的大小发现:
+
 1. main.2c9755c1.chunk.js大小为1kB;
 2. runtime-main.073f5272.js大小为2kB;
 3. 2.6a046b6b.chunk.js大小为131kB;
