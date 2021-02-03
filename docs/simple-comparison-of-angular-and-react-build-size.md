@@ -127,3 +127,5 @@ File sizes after gzip:
 ## 总结
 
 通过上面简单的对比，在各自默认的创建、构建方式下，react在打包体积大小方面比angular更具优势。但是在实际开发中，我们都会使用大量的第三方的依赖，实际项目的打包体积大小还是需要因人而异的。
+
+源代码已经上传到[github](https://github.com/damingerdai/imple-comparison-of-angular-and-react-build-size-code)。
