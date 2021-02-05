@@ -24,10 +24,14 @@ nav:
   - 个人说明:
       - 我是大明二代: index.md
   - 软件:
-      - Minkube安装笔记: how-to-install-minkube.md
-      - Docker Desktop自带k8s安装笔记: how-to-install-docker-desktop-k8s.md
-      - Android Studio安装笔记: how-to-install-android-studio.md
-      - Angular和React构建体积简单对比: simple-comparison-of-angular-and-react-build-size.md
+      - docker与k8s:
+        - Minkube安装笔记: k8s/how-to-install-minkube.md
+        - Docker Desktop自带k8s安装笔记: k8s/how-to-install-docker-desktop-k8s.md
+      - 前端:
+        - Angular和React构建体积简单对比: front-end/simple-comparison-of-angular-and-react-build-size.md
+      - 安装笔记:
+        - Android Studio安装笔记: how-to-install-android-studio.md
+      
   - 其他:
       - 喜欢的post: link.md
       - 学习课程: learning.md
