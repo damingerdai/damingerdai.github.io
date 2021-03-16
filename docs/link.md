@@ -25,3 +25,7 @@
 ### PostgreSQL
 
 1. [Pgbouncer最佳实践：系列二](https://www.freeaihub.com/post/102283.html)
+
+### Ubuntu
+
+1. [Ubuntu20.04 体验和美化】(https://www.cnblogs.com/woshimrf/p/ubuntu20-04.html)
