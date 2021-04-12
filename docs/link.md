@@ -28,4 +28,4 @@
 
 ### Ubuntu
 
-1. [Ubuntu20.04 体验和美化】(https://www.cnblogs.com/woshimrf/p/ubuntu20-04.html)
+1. [Ubuntu20.04 体验和美化](https://www.cnblogs.com/woshimrf/p/ubuntu20-04.html)
