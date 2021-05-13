@@ -1,6 +1,6 @@
 # 在windows上构建angular项目 (上)
 
-前端三大框架([angular](https://angular.io/), (react)[https://reactjs.org/], (vue)[https://vuejs.org/])中，angular一直都是一个很独特的存在。首先，angular的概念很多，服务、依赖注入、模块，指令等，都是在前端圈不是很常用的，此外，angular使用了[bazel](https://www.bazel.build/)作为构建工具，而react和vue都是使用了[rollup](https://rollupjs.org/guide/en/)，因此在本地编译构建angular将会远远超过react和vue，如果你是用的windows平台，那么一个个坑需要自己慢慢来填。。。
+前端三大框架( [angular](https://angular.io/), [reac](https://reactjs.org/), [vue](https://vuejs.org/) )中，angular一直都是一个很独特的存在。首先，angular的概念很多，服务、依赖注入、模块，指令等，都是在前端圈不是很常用的，此外，angular使用了[bazel](https://www.bazel.build/)作为构建工具，而react和vue都是使用了[rollup](https://rollupjs.org/guide/en/)，因此在本地编译构建angular将会远远超过react和vue，如果你是用的windows平台，那么一个个坑需要自己慢慢来填。。。
 
 # Bazel是什么？
 
