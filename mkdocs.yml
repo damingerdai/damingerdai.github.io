@@ -23,12 +23,12 @@ theme:
 nav:
   - 个人说明:
       - 我是大明二代: index.md
+  - 前端:
+        - Angular和React构建体积简单对比: front-end/simple-comparison-of-angular-and-react-build-size.md
   - 软件:
       - docker与k8s:
         - Minkube安装笔记: k8s/how-to-install-minkube.md
         - Docker Desktop自带k8s安装笔记: k8s/how-to-install-docker-desktop-k8s.md
-      - 前端:
-        - Angular和React构建体积简单对比: front-end/simple-comparison-of-angular-and-react-build-size.md
       - 安装笔记:
         - Android Studio安装笔记: how-to-install-android-studio.md
       
