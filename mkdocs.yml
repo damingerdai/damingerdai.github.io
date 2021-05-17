@@ -25,7 +25,8 @@ nav:
       - 我是大明二代: index.md
   - 前端:
         - Angular和React构建体积简单对比: front-end/simple-comparison-of-angular-and-react-build-size.md
-        - 在windows上构建angular项目 (上): front-end/build-angular-on-windows.md
+        - 在windows上构建angular项目 (上): front-end/build-angular-on-windows-01.md
+        - 在windows上构建angular项目 (下): front-end/build-angular-on-windows-02.md
   - 软件:
       - docker与k8s:
         - Minkube安装笔记: k8s/how-to-install-minkube.md
