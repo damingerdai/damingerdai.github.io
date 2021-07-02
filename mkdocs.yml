@@ -29,10 +29,10 @@ nav:
         - 在windows上构建angular项目 (下): front-end/build-angular-on-windows-02.md
   - 软件:
       - docker与k8s:
-        - Minkube安装笔记: k8s/how-to-install-minkube.md
-        - Docker Desktop自带k8s安装笔记: k8s/how-to-install-docker-desktop-k8s.md
+        - Minkube安装笔记: software/k8s/how-to-install-minkube.md
+        - Docker Desktop自带k8s安装笔记: software/k8s/how-to-install-docker-desktop-k8s.md
       - 安装笔记:
-        - Android Studio安装笔记: how-to-install-android-studio.md
+        - Android Studio安装笔记: software/install/how-to-install-android-studio.md
       
   - 其他:
       - 喜欢的post: others/link.md
