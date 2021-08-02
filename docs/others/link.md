@@ -8,6 +8,10 @@
 
 2. [高效 Coding 術：Angular Schematics 實戰三十天](https://ithelp.ithome.com.tw/users/20090728/ironman/2149)
 
+### React
+
+1. [React技术揭秘](https://react.iamkasong.com/)
+
 ### GraphQL 
 
 1. [Think in GraphQL](https://ithelp.ithome.com.tw/users/20111997/ironman/1878)
