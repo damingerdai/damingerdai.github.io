@@ -28,7 +28,7 @@ nav:
         - 在windows上构建angular项目 (上): front-end/build-angular-on-windows-01.md
         - 在windows上构建angular项目 (下): front-end/build-angular-on-windows-02.md
         - TypeScript中可选链: front-end/ts-optional-chaining.md
-        - 使用bazel编译TypeScript: front-end/build-typescript-with-bazel.md
+        - 使用Bazel编译TypeScript: front-end/build-typescript-with-bazel.md
   - 软件:
       - docker与k8s:
         - Minkube安装笔记: software/k8s/how-to-install-minkube.md

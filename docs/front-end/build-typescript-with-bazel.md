@@ -1,4 +1,4 @@
-# 使用bazel编译TypeScript
+# 使用Bazel编译TypeScript
 
 ## 准备
 
