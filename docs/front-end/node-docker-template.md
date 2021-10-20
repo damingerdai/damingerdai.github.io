@@ -54,7 +54,7 @@ FROM node:14.17.6-alpine3.14 as build
 # RUN npm config set strict-ssl false
 # RUN yarn config set strict-ssl false
 
-RUN apk update && apk add bash && npm install -g npm
+RUN apk update && apk add bash
 
 COPY package.json package-lock.json .npmrc /tmp/
 RUN cd /tmp && npm install
