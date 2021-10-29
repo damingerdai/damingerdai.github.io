@@ -30,6 +30,8 @@ nav:
         - TypeScript中可选链: front-end/ts-optional-chaining.md
         - 使用Bazel编译TypeScript: front-end/build-typescript-with-bazel.md
         - Nodejs项目的Dockerfile模版: front-end/node-docker-template.md
+  - Java:
+        - Gradle配置阿里镜像: java/gradle-ali-mirror.md
   - 软件:
       - docker与k8s:
         - Minkube安装笔记: software/k8s/how-to-install-minkube.md
