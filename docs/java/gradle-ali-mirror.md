@@ -4,7 +4,7 @@
 
 请在gradle的安装目录下的`init.d`的文件夹下添加`init.gradle`:
 
-```
+```groovy
 gradle.projectsLoaded {
     rootProject.allprojects {
         buildscript {
