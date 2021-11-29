@@ -87,7 +87,7 @@ private License license() {
       return new License()
               .name("MIT")
               .url("https://opensource.org/licenses/MIT");
-  }
+}
 ```
 
 > 注： 这里我采用MIT的开源协议，更多协议，请访问[https://opensource.org/licenses](https://opensource.org/licenses)。
@@ -272,7 +272,7 @@ private Components components() {
               .info(info())
               .components(components())
               .externalDocs(externalDocumentation());
-  }
+}
 ```
 
 在需要使用Authorization的接口上添加：
