@@ -32,7 +32,7 @@ nav:
         - Nodejs项目的Dockerfile模版: front-end/node-docker-template.md
   - Java:
         - Gradle配置阿里镜像: java/gradle-ali-mirror.md
-        - 从springfox到到springdoc: java/migrate-springdoc-from-springfox.md
+        - 从springfox迁移到springdoc: java/migrate-springdoc-from-springfox.md
   - 软件:
       - docker与k8s:
         - Minkube安装笔记: software/k8s/how-to-install-minkube.md
