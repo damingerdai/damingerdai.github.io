@@ -2,7 +2,7 @@
 
 ## 前言
 
-[Apollo Server V3](https://www.apollographql.com/docs/apollo-server/)出来也快半年了，是时候把[express-postgres-ts-starter](https://github.com/damingerdai/express-postgres-ts-starter)的graphql升级了。
+[Apollo Server V3](https://www.apollographql.com/docs/apollo-server/)出来也快半年了，是时候把[express-postgres-ts-starter](https://github.com/damingerdai/express-postgres-ts-starter)的graphql部分升级了。
 
 ## 使用dependabot帮助更新版本
 
