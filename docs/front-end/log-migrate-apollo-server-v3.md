@@ -103,4 +103,4 @@ server.applyMiddleware({ app });
 
 ## 结束
 
-现在可以在浏览器打开`GraphQL Playground`, 以[express-postgres-ts-starter](https://github.com/damingerdai/express-postgres-ts-starter]为例，使用`http://127.0.0.1:3000/graphql`就可以看到效果了。
+现在可以在浏览器打开`GraphQL Playground`, 以[express-postgres-ts-starter](https://github.com/damingerdai/express-postgres-ts-starter)为例，使用`http://127.0.0.1:3000/graphql`就可以看到效果了。
