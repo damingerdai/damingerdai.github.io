@@ -38,6 +38,7 @@ nav:
       - docker与k8s:
         - Minkube安装笔记: software/k8s/how-to-install-minkube.md
         - Docker Desktop自带k8s安装笔记: software/k8s/how-to-install-docker-desktop-k8s.md
+        - Mac版minikube安装笔记: software/k8s/how-to-install-minkube-on-mac.md
       - 安装笔记:
         - Android Studio安装笔记: software/install/how-to-install-android-studio.md
         - Homebrew安装笔记: software/install/how-to-install-homebrew.md
