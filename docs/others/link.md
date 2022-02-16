@@ -8,6 +8,8 @@
 
 2. [高效 Coding 術：Angular Schematics 實戰三十天](https://ithelp.ithome.com.tw/users/20090728/ironman/2149)
 
+3. [Angular框架解读](https://godbasin.github.io/front-end-playground/angular/deep-into-angular/angular-design-0-prestart.html#%E5%89%8D%E7%AB%AF%E6%A1%86%E6%9E%B6)
+
 ### React
 
 1. [React技术揭秘](https://react.iamkasong.com/)
