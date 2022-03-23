@@ -31,9 +31,9 @@ nav:
         - 使用Bazel编译TypeScript: front-end/build-typescript-with-bazel.md
         - Nodejs项目的Dockerfile模版: front-end/node-docker-template.md
         - 记录一次迁移Apollo Server V3的过程: front-end/log-migrate-apollo-server-v3.md
-  - Java:
-        - Gradle配置阿里镜像: java/gradle-ali-mirror.md
-        - 从springfox迁移到springdoc: java/migrate-springdoc-from-springfox.md
+  - 后端:
+        - Gradle配置阿里镜像: back-end/gradle-ali-mirror.md
+        - 从springfox迁移到springdoc: back-end/migrate-springdoc-from-springfox.md
   - 软件:
       - docker与k8s:
         - Minkube安装笔记: software/k8s/how-to-install-minkube.md
