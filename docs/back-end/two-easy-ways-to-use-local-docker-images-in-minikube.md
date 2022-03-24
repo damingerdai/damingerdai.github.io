@@ -147,5 +147,7 @@ kubectl port-forward deployment/myapp 8080:8080
 ## 后言
 
 原文：[Two easy ways to use local Docker images in Minikube](https://medium.com/gitconnected/two-easy-ways-to-use-local-docker-images-in-minikube-cd4dcb1a5379)
+
 译文： [两种在Minikube中运行本地Docker镜像的简单方式](https://damingerdai.github.io/back-end/two-easy-ways-to-use-local-docker-images-in-minikube/)
+
 译者：[大明二代](https://damingerdai.github.io/)
