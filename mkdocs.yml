@@ -35,6 +35,7 @@ nav:
         - Gradle配置阿里镜像: back-end/gradle-ali-mirror.md
         - 从springfox迁移到springdoc: back-end/migrate-springdoc-from-springfox.md
         - 两种在Minikube中运行本地Docker镜像的简单方式: back-end/two-easy-ways-to-use-local-docker-images-in-minikube.md
+        - 使用github action推送到docker的镜像仓库: back-end/github-action-push-docker-image-to-github-packages.md
   - 软件:
       - docker与k8s:
         - Minkube安装笔记: software/k8s/how-to-install-minkube.md
