@@ -13,3 +13,9 @@ k8s在1.20之后就弃用docker的运行时了，所以k3s也开始默认使用[
 /usr/local/bin/k3s-uninstall.sh
 curl -sfL https://get.k3s.io | sh -s - server --docker
 ```
+
+国内用户，可以使用以下方法加速安装：
+
+```
+curl -sfL https://rancher-mirror.rancher.cn/k3s/k3s-install.sh | INSTALL_K3S_MIRROR=cn sh -s - server --docker
+```
