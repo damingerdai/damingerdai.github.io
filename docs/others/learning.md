@@ -7,6 +7,7 @@
 ## WEB前端
 
 1. [深入浅出现代Web编程](https://fullstackopen.com/zh/)
+2. [Type-Challenges](https://wangtunan.github.io/blog/typescript/challenge.html#%E4%BB%8B%E7%BB%8D)
 
 ## Docker与k8s
 
