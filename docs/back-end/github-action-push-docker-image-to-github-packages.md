@@ -10,7 +10,7 @@
 
 在github的仓库的secrets设置页面(例：https://github.com/{your_username}/{your_repository_name}/settings/secrets/actions)里创建一个名为GHCR_PAT的secrets
 
-![secrets设置页面](https://raw.githubusercontent.com/damingerdai/damingerdai.github.io/master/assets/back-end/github-action-push-docker-image-to-github-packages-1.png 'secrets设置页面')
+![secrets设置页面](https://raw.githubusercontent.com/damingerdai/damingerdai.github.io/master/assets/back-end/github-action-push-docker-image-to-github-packages-1.png)
 
 # 创建GitHub Action文件
 
