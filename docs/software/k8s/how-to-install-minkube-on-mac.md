@@ -10,7 +10,7 @@
 1. 至少两个CPU
 2. 至少2GB内容
 3. 至少20GB的硬盘空间
-4. 容器或者虚拟机， 比如[Docker](https://www.docker.com/, [Hyperkit](https://github.com/moby/hyperkit), [Hyper-V](https://docs.microsoft.com/en-us/windows-server/virtualization/hyper-v/hyper-v-technology-overview), [KVM](https://www.linux-kvm.org/page/Main_Page), [Parallels](https://www.parallels.com/), [Podman](https://podman.io/), [VirtualBox](https://www.virtualbox.org/), or [VMware Fusion/Workstation](https://www.vmware.com/asean/products/fusion.html)
+4. 容器或者虚拟机， 比如[Docker](https://www.docker.com/), [Hyperkit](https://github.com/moby/hyperkit), [Hyper-V](https://docs.microsoft.com/en-us/windows-server/virtualization/hyper-v/hyper-v-technology-overview), [KVM](https://www.linux-kvm.org/page/Main_Page), [Parallels](https://www.parallels.com/), [Podman](https://podman.io/), [VirtualBox](https://www.virtualbox.org/), or [VMware Fusion/Workstation](https://www.vmware.com/asean/products/fusion.html)
 
 ## 安装
 
