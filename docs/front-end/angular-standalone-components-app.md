@@ -66,7 +66,8 @@ imports: [
   standalone: true,
 })
 export class AppComponent {
-
+    ...
+}
 ```
 
 第二步，将`AppModule`的imports中的导入的模块加入到`AppComponent`的imports中,但是有两个模块例外： `BrowserModule`和`BrowserAnimationsModule`。
@@ -130,7 +131,7 @@ const ROUTES: Route[] = [
 
 其中`ButtonListComponent`和`ChipListComponent`使用`loadComponent`去实现路由懒加载。
 
-然后在`bootstrapApplication`的第二个参数中使用`providers`注册`RouterModule`好了。
+最后在`bootstrapApplication`的第二个参数中使用`providers`注册`RouterModule`好了。
 
 ```javascript
 bootstrapApplication(AppComponent, {
