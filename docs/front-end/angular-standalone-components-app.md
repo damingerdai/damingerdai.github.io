@@ -8,7 +8,7 @@ Angular 14一项令人兴奋的特性就是Angular的独立组件终于来了。
 
 ## 如何创建一个独立组件
 
-对于已有的组件，我们可以在`@Component()`中添加*standalone: true*的，然后我们可以在没有`@NgModule()`的情况下直接使用`imports`导入其他模块了。
+对于已有的组件，我们可以在`@Component()`中添加*standalone: true*的标识，然后我们可以在没有`@NgModule()`的情况下直接使用`imports`导入其他模块了。
 如果是新建组件，可以使用`ng generate component <name> --standalone`的命令，直接创建一个独立组件, 例如：
 
 ```bash
