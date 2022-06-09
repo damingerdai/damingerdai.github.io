@@ -31,7 +31,7 @@ nav:
         - 使用Bazel编译TypeScript: front-end/build-typescript-with-bazel.md
         - Nodejs项目的Dockerfile模版: front-end/node-docker-template.md
         - 记录一次迁移Apollo Server V3的过程: front-end/log-migrate-apollo-server-v3.md
-        - Angular 独立组件体检: front-end/angular-standalone-components-app.md
+        - Angular独立组件简单体验: front-end/angular-standalone-components-app.md
   - 后端:
         - Gradle配置阿里镜像: back-end/gradle-ali-mirror.md
         - 从springfox迁移到springdoc: back-end/migrate-springdoc-from-springfox.md
