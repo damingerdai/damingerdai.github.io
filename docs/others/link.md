@@ -28,6 +28,8 @@
 
 4. [ts-morph](https://ts-morph.com/)
 
+5. [Type-Challenges](https://wangtunan.github.io/blog/typescript/challenge.html#%E4%BB%8B%E7%BB%8D)
+
 ### PostgreSQL
 
 1. [Pgbouncer最佳实践：系列二](https://www.freeaihub.com/post/102283.html)
