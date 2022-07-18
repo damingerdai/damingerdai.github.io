@@ -3,6 +3,7 @@
 ## 计算机
 
 1. [计算机教育中缺失的一课](https://missing-semester-cn.github.io/)
+2. [CS自学指南](https://csdiy.wiki/)
 
 ## WEB前端
 
