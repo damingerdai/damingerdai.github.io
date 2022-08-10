@@ -33,6 +33,7 @@
 ### PostgreSQL
 
 1. [Pgbouncer最佳实践：系列二](https://www.freeaihub.com/post/102283.html)
+2. [PgSQL · 最佳实践 · EXPLAIN 使用浅析](http://mysql.taobao.org/monthly/2018/11/06/)
 
 ### Ubuntu
 
