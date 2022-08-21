@@ -62,3 +62,7 @@
 
 1. [Learn X in Y minutes Where X = Python](https://learnxinyminutes.com/docs/python/)
 2. [Dive Into Python 3](https://diveintopython3.net/)
+
+### Neovim
+
+1. [Getting started using Lua in Neovim](https://github.com/nanotee/nvim-lua-guide)([在 neovim 中使用 Lua](https://github.com/glepnir/nvim-lua-guide-zh))
