@@ -66,3 +66,4 @@
 ### Neovim
 
 1. [Getting started using Lua in Neovim](https://github.com/nanotee/nvim-lua-guide)([在 neovim 中使用 Lua](https://github.com/glepnir/nvim-lua-guide-zh))
+2. [vim使用入门](https://www.zhaixue.cc/vim/vim-intro.html)
