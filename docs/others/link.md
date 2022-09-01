@@ -57,6 +57,8 @@
 5. [go-ethereum 源码笔记（miner,consensus 模块-挖矿和共识算法](https://knarfeh.com/2018/03/10/go-ethereum%20%E6%BA%90%E7%A0%81%E7%AC%94%E8%AE%B0%EF%BC%88miner,%20consensus%20%E6%A8%A1%E5%9D%97-%E6%8C%96%E7%9F%BF%E5%92%8C%E5%85%B1%E8%AF%86%E7%AE%97%E6%B3%95%EF%BC%89/)
 6. [Solidity 中文文档](https://learnblockchain.cn/docs/solidity/)
 7. [区块链技术入门学习指引](https://learnblockchain.cn/2018/01/11/guide/)
+8. [solana](https://docs.solana.com/)
+9. [cosmwasm](https://cosmwasm.com/)
 
 ### Python
 
