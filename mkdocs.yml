@@ -38,6 +38,7 @@ nav:
         - 两种在Minikube中运行本地Docker镜像的简单方式: back-end/two-easy-ways-to-use-local-docker-images-in-minikube.md
         - 使用github action推送到docker的镜像仓库: back-end/github-action-push-docker-image-to-github-packages.md
         - 给Ingress上配置ssl证书: back-end/add-ssl-for-ingress.md
+        - k3s使用Let‘s Encrypt配置https入口部署: back-end/k3s-uses-letsencrypt-and-traefik-to-deploy-the-https.md
   - 软件:
       - docker与k8s:
         - Minkube安装笔记: software/k8s/how-to-install-minkube.md
