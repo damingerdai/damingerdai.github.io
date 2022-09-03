@@ -176,8 +176,6 @@ Events:
 
 ## 效果
 
-![](assets/back-end/hoteler-web-certificate.png)
-
 ![Hoteler Web](https://raw.githubusercontent.com/damingerdai/damingerdai.github.io/master/assets/back-end/hoteler-web-certificate.png)
 
 ## 参考资料
