@@ -16,3 +16,9 @@
 2. [Kubernetes Handbook——Kubernetes 中文指南/云原生应用架构实践手册](https://jimmysong.io/kubernetes-handbook/)
 3. [Kubernetes 完全手册](https://chinese.freecodecamp.org/news/the-kubernetes-handbook/)
 4. [Docker 入门教程 - 2021 最新版](https://chinese.freecodecamp.org/news/the-docker-handbook/)
+
+
+## Rust
+
+1. [Rust程序设计语言](https://kaisery.github.io/trpl-zh-cn)
+2. [Rust语言圣经(Rust Course)](https://gitcourse.rs/about-book.html)
