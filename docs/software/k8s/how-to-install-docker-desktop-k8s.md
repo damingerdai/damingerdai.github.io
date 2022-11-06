@@ -18,6 +18,7 @@
     "https://dockerhub.azk8s.cn",
     "https://registry.docker-cn.com",
     "https://docker.mirrors.ustc.edu.cn",
+    "https://mirror.baidubce.com",
     "http://hub-mirror.c.163.com"
   ],
   "insecure-registries": [],
