@@ -14,6 +14,7 @@
 ```json
 {
   "registry-mirrors": [
+    "https://dockerproxy.com",
     "https://dockerhub.azk8s.cn",
     "https://registry.docker-cn.com",
     "https://docker.mirrors.ustc.edu.cn",
