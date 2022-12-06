@@ -60,6 +60,7 @@
 7. [区块链技术入门学习指引](https://learnblockchain.cn/2018/01/11/guide/)
 8. [solana](https://docs.solana.com/)
 9. [cosmwasm](https://cosmwasm.com/)
+10. [免費取得Goerli測試幣](https://hackmd.io/@m061i6/HJQQ4G5-j)
 
 ### Python
 
