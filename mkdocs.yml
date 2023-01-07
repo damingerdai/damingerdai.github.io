@@ -50,7 +50,8 @@ nav:
         - Android Studio安装笔记: software/install/how-to-install-android-studio.md
         - Homebrew安装笔记: software/install/how-to-install-homebrew.md
         - drone + gogs + docker实现持续自动化部署: software/install/drone-gogs-docker-devops.md
-      
+  - 区块链:
+      - 记录一些测试币的水龙头: blockchain/some-token-faucet.md
   - 其他:
       - 喜欢的post: others/link.md
       - 学习课程: others/learning.md
