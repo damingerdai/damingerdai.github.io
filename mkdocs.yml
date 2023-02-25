@@ -23,7 +23,7 @@ theme:
 nav:
   - 主页:
       - 我是大明二代: index.md
-      - 2022年度总结: docs/summary/2022.md
+      - 2022年度总结: summary/2022.md
   - 前端:
         - Angular和React构建体积简单对比: front-end/simple-comparison-of-angular-and-react-build-size.md
         - 在windows上构建angular项目 (上): front-end/build-angular-on-windows-01.md
