@@ -41,6 +41,7 @@ nav:
         - 给Ingress上配置ssl证书: back-end/add-ssl-for-ingress.md
         - k3s使用Let‘s Encrypt配置https入口部署: back-end/k3s-uses-letsencrypt-and-traefik-to-deploy-the-https.md
         - 记录使用pg_dump中遇到的ssl问题: back-end/pg_dump_ssl_issues.md
+        - 解决Windows下Docker启动容器时，端口被占用错误: back-end/windows_docker_port_in_use_issues.md
   - 软件:
       - docker与k8s:
         - Minkube安装笔记: software/k8s/how-to-install-minkube.md
