@@ -21,4 +21,4 @@
 ## Rust
 
 1. [Rust程序设计语言](https://kaisery.github.io/trpl-zh-cn)
-2. [Rust语言圣经(Rust Course)](https://gitcourse.rs/about-book.html)
+2. [Rust语言圣经(Rust Course)](https://course.rs/about-book.html)
