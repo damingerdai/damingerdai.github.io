@@ -1,0 +1,195 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="dark"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1.0,viewport-fit=cover"><title>记录一次迁移Apollo Server V3的过程 | Damingerdai's Blog</title><meta name="author" content="Arthur Ming"><meta name="copyright" content="Arthur Ming"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#0d0d0d"><meta name="description" content="记录一次迁移Apollo Server V3的过程前言Apollo Server V3出来也快半年了，是时候把express-postgres-ts-starter的graphql部分升级了。 使用dependabot帮助更新版本dependabot是一个github的工具(似乎也支持gitlab,但是我不确定)，用于检测repo依赖安全性，同时也可以帮助我定期更新repo的依赖版本。 这是我的d">
+<meta property="og:type" content="article">
+<meta property="og:title" content="记录一次迁移Apollo Server V3的过程">
+<meta property="og:url" content="http://blog.damingerdai.com/2021/12/15/front-end/log-migrate-apollo-server-v3/index.html">
+<meta property="og:site_name" content="Damingerdai&#39;s Blog">
+<meta property="og:description" content="记录一次迁移Apollo Server V3的过程前言Apollo Server V3出来也快半年了，是时候把express-postgres-ts-starter的graphql部分升级了。 使用dependabot帮助更新版本dependabot是一个github的工具(似乎也支持gitlab,但是我不确定)，用于检测repo依赖安全性，同时也可以帮助我定期更新repo的依赖版本。 这是我的d">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg">
+<meta property="article:published_time" content="2021-12-15T07:12:08.000Z">
+<meta property="article:modified_time" content="2023-08-11T13:28:40.088Z">
+<meta property="article:author" content="Arthur Ming">
+<meta property="article:tag" content="nodejs">
+<meta property="article:tag" content="apollo">
+<meta property="article:tag" content="graphql">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg"><link rel="shortcut icon" href="/img/avatar.png"><link rel="canonical" href="http://blog.damingerdai.com/2021/12/15/front-end/log-migrate-apollo-server-v3/index.html"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><link rel="stylesheet" href="/css/index.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free/css/all.min.css" media="print" onload="this.media='all'"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/ui/dist/fancybox/fancybox.min.css" media="print" onload="this.media='all'"><script>const GLOBAL_CONFIG = {
+  root: '/',
+  algolia: undefined,
+  localSearch: {"path":"/search.xml","preload":false,"top_n_per_article":1,"unescape":false,"languages":{"hits_empty":"找不到您查询的内容：${query}","hits_stats":"共找到 ${hits} 篇文章"}},
+  translate: undefined,
+  noticeOutdate: undefined,
+  highlight: {"plugin":"highlighjs","highlightCopy":true,"highlightLang":true,"highlightHeightLimit":false},
+  copy: {
+    success: '复制成功',
+    error: '复制错误',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '',
+  dateSuffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: undefined,
+  lightbox: 'fancybox',
+  Snackbar: undefined,
+  source: {
+    justifiedGallery: {
+      js: 'https://cdn.jsdelivr.net/npm/flickr-justified-gallery/dist/fjGallery.min.js',
+      css: 'https://cdn.jsdelivr.net/npm/flickr-justified-gallery/dist/fjGallery.min.css'
+    }
+  },
+  isPhotoFigcaption: false,
+  islazyload: false,
+  isAnchor: false,
+  percent: {
+    toc: true,
+    rightside: false,
+  },
+  autoDarkmode: false
+}</script><script id="config-diff">var GLOBAL_CONFIG_SITE = {
+  title: '记录一次迁移Apollo Server V3的过程',
+  isPost: true,
+  isHome: false,
+  isHighlightShrink: false,
+  isToc: true,
+  postUpdate: '2023-08-11 21:28:40'
+}</script><noscript><style type="text/css">
+  #nav {
+    opacity: 1
+  }
+  .justified-gallery img {
+    opacity: 1
+  }
+
+  #recent-posts time,
+  #post-meta time {
+    display: inline !important
+  }
+</style></noscript><script>(win=>{
+    win.saveToLocal = {
+      set: function setWithExpiry(key, value, ttl) {
+        if (ttl === 0) return
+        const now = new Date()
+        const expiryDay = ttl * 86400000
+        const item = {
+          value: value,
+          expiry: now.getTime() + expiryDay,
+        }
+        localStorage.setItem(key, JSON.stringify(item))
+      },
+
+      get: function getWithExpiry(key) {
+        const itemStr = localStorage.getItem(key)
+
+        if (!itemStr) {
+          return undefined
+        }
+        const item = JSON.parse(itemStr)
+        const now = new Date()
+
+        if (now.getTime() > item.expiry) {
+          localStorage.removeItem(key)
+          return undefined
+        }
+        return item.value
+      }
+    }
+  
+    win.getScript = url => new Promise((resolve, reject) => {
+      const script = document.createElement('script')
+      script.src = url
+      script.async = true
+      script.onerror = reject
+      script.onload = script.onreadystatechange = function() {
+        const loadState = this.readyState
+        if (loadState && loadState !== 'loaded' && loadState !== 'complete') return
+        script.onload = script.onreadystatechange = null
+        resolve()
+      }
+      document.head.appendChild(script)
+    })
+  
+    win.getCSS = (url,id = false) => new Promise((resolve, reject) => {
+      const link = document.createElement('link')
+      link.rel = 'stylesheet'
+      link.href = url
+      if (id) link.id = id
+      link.onerror = reject
+      link.onload = link.onreadystatechange = function() {
+        const loadState = this.readyState
+        if (loadState && loadState !== 'loaded' && loadState !== 'complete') return
+        link.onload = link.onreadystatechange = null
+        resolve()
+      }
+      document.head.appendChild(link)
+    })
+  
+      win.activateDarkMode = function () {
+        document.documentElement.setAttribute('data-theme', 'dark')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+        }
+      }
+      win.activateLightMode = function () {
+        document.documentElement.setAttribute('data-theme', 'light')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#ffffff')
+        }
+      }
+      const t = saveToLocal.get('theme')
+    
+          if (t === 'dark') activateDarkMode()
+          else if (t === 'light') activateLightMode()
+        
+      const asideStatus = saveToLocal.get('aside-status')
+      if (asideStatus !== undefined) {
+        if (asideStatus === 'hide') {
+          document.documentElement.classList.add('hide-aside')
+        } else {
+          document.documentElement.classList.remove('hide-aside')
+        }
+      }
+    
+    const detectApple = () => {
+      if(/iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent)){
+        document.documentElement.classList.add('apple')
+      }
+    }
+    detectApple()
+    })(window)</script><meta name="generator" content="Hexo 6.3.0"></head><body><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="avatar-img is-center"><img src="/img/avatar.png" onerror="onerror=null;src='/img/friend_404.gif'" alt="avatar"/></div><div class="sidebar-site-data site-data is-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">28</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">39</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">4</div></a></div><hr class="custom-hr"/><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归类</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page group" href="javascript:void(0);"><i class="fa-fw fas fa-list"></i><span> 其他</span><i class="fas fa-chevron-down"></i></a><ul class="menus_item_child"><li><a class="site-page child" href="/others/learning"><i class="fa-fw fas fa-graduation-cap"></i><span> 学习课程</span></a></li><li><a class="site-page child" href="/others/link/"><i class="fa-fw fas fa-link"></i><span> 链接</span></a></li></ul></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于</span></a></div></div></div></div><div class="post" id="body-wrap"><header class="post-bg" id="page-header" style="background-image: url('https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg')"><nav id="nav"><span id="blog-info"><a href="/" title="Damingerdai's Blog"><span class="site-name">Damingerdai's Blog</span></a></span><div id="menus"><div id="search-button"><a class="site-page social-icon search" href="javascript:void(0);"><i class="fas fa-search fa-fw"></i><span> 搜索</span></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归类</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page group" href="javascript:void(0);"><i class="fa-fw fas fa-list"></i><span> 其他</span><i class="fas fa-chevron-down"></i></a><ul class="menus_item_child"><li><a class="site-page child" href="/others/learning"><i class="fa-fw fas fa-graduation-cap"></i><span> 学习课程</span></a></li><li><a class="site-page child" href="/others/link/"><i class="fa-fw fas fa-link"></i><span> 链接</span></a></li></ul></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于</span></a></div></div><div id="toggle-menu"><a class="site-page" href="javascript:void(0);"><i class="fas fa-bars fa-fw"></i></a></div></div></nav><div id="post-info"><h1 class="post-title">记录一次迁移Apollo Server V3的过程</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2021-12-15T07:12:08.000Z" title="发表于 2021-12-15 15:12:08">2021-12-15</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2023-08-11T13:28:40.088Z" title="更新于 2023-08-11 21:28:40">2023-08-11</time></span><span class="post-meta-categories"><span class="post-meta-separator">|</span><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/%E5%89%8D%E7%AB%AF/">前端</a></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-pv-cv" id="" data-flag-title="记录一次迁移Apollo Server V3的过程"><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">阅读量:</span><span id="busuanzi_value_page_pv"><i class="fa-solid fa-spinner fa-spin"></i></span></span></div></div></div></header><main class="layout" id="content-inner"><div id="post"><article class="post-content" id="article-container"><h1 id="记录一次迁移Apollo-Server-V3的过程"><a href="#记录一次迁移Apollo-Server-V3的过程" class="headerlink" title="记录一次迁移Apollo Server V3的过程"></a>记录一次迁移Apollo Server V3的过程</h1><h2 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h2><p><a target="_blank" rel="noopener" href="https://www.apollographql.com/docs/apollo-server/">Apollo Server V3</a>出来也快半年了，是时候把<a target="_blank" rel="noopener" href="https://github.com/damingerdai/express-postgres-ts-starter">express-postgres-ts-starter</a>的graphql部分升级了。</p>
+<h2 id="使用dependabot帮助更新版本"><a href="#使用dependabot帮助更新版本" class="headerlink" title="使用dependabot帮助更新版本"></a>使用dependabot帮助更新版本</h2><p><a target="_blank" rel="noopener" href="https://docs.github.com/en/code-security/supply-chain-security/keeping-your-dependencies-updated-automatically/about-dependabot-version-updates">dependabot</a>是一个github的工具(似乎也支持gitlab,但是我不确定)，用于检测repo依赖安全性，同时也可以帮助我定期更新repo的依赖版本。</p>
+<p>这是我的dependabot的配置文件：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">version: 2</span><br><span class="line">updates:</span><br><span class="line"> - package-ecosystem: npm</span><br><span class="line">   directory: &#x27;/&#x27;</span><br><span class="line">   schedule:</span><br><span class="line">    interval: weekly</span><br><span class="line">   open-pull-requests-limit: 10</span><br></pre></td></tr></table></figure>
+
+<h2 id="升级Apollo-Servier所需要依赖"><a href="#升级Apollo-Servier所需要依赖" class="headerlink" title="升级Apollo Servier所需要依赖"></a>升级Apollo Servier所需要依赖</h2><h3 id="nodejs"><a href="#nodejs" class="headerlink" title="nodejs"></a>nodejs</h3><p><code>Apollo Servier 3</code>仅仅支持nodejsv12以上版本(<code>Apollo Servier 2</code>则只需要nodejsv6以上的支持)。 因此需要升级到nodejs12，推荐使用node14和node16。</p>
+<blockquote>
+<p>我十分推荐使用Linux&#x2F;MAC用户使用<a target="_blank" rel="noopener" href="https://github.com/nvm-sh/nvm">nvm</a>,Windows用户使用<a target="_blank" rel="noopener" href="https://github.com/coreybutler/nvm-windows">nvm-windows</a>安装、升级node版本。</p>
+</blockquote>
+<h3 id="graphql"><a href="#graphql" class="headerlink" title="graphql"></a>graphql</h3><p><code>Apollo Servier</code>有一个可选依赖<a target="_blank" rel="noopener" href="https://www.npmjs.com/package/graphql">graphql</a>(GraphQL JS的核心实现),<code>Apollo Servier 3</code>需要<code>graphql</code> v15.3.0以上的支持。</p>
+<h2 id="问题记录"><a href="#问题记录" class="headerlink" title="问题记录"></a>问题记录</h2><h3 id="GraphQL-Playground"><a href="#GraphQL-Playground" class="headerlink" title="GraphQL Playground"></a>GraphQL Playground</h3><p><code>Apollo Server 2</code>是默认支持<a target="_blank" rel="noopener" href="https://github.com/graphql/graphql-playground">GraphQL Playground</a>，我们只需要在构造函数里配置好<em>playground</em>这个字段就好了，但是<code>Apollo Server 3</code>删除了对GraphQL Playgroun的默认支持，转而推荐在非生产环境中使用<a target="_blank" rel="noopener" href="https://www.apollographql.com/blog/announcement/platform/apollo-sandbox-an-open-graphql-ide-for-local-development/">Apollo Sandbox</a>。</p>
+<p>不过我们还是可以重新配置<code>GraphQL Playground</code>的。</p>
+<p>如果之前是使用<code>new ApolloServer(&#123;playground: boolean&#125;)</code>的类似方式配置<code>GraphQL Playground</code>，那么可以</p>
+<figure class="highlight typescript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> &#123; <span class="title class_">ApolloServerPluginLandingPageGraphQLPlayground</span>,</span><br><span class="line">         <span class="title class_">ApolloServerPluginLandingPageDisabled</span> &#125; <span class="keyword">from</span> <span class="string">&#x27;apollo-server-core&#x27;</span>;</span><br><span class="line"><span class="keyword">new</span> <span class="title class_">ApolloServer</span>(&#123;</span><br><span class="line">  <span class="attr">plugins</span>: [</span><br><span class="line">    process.<span class="property">env</span>.<span class="property">NODE_ENV</span> === <span class="string">&#x27;production&#x27;</span></span><br><span class="line">      ? <span class="title class_">ApolloServerPluginLandingPageDisabled</span>()</span><br><span class="line">      : <span class="title class_">ApolloServerPluginLandingPageGraphQLPlayground</span>(),</span><br><span class="line">  ],</span><br><span class="line">&#125;);</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+
+<p>如果之前是使用<code>new ApolloServer(&#123;playground: playgroundOptions&#125;)</code>的类似方式配置<code>GraphQL Playground</code>，那么可以使用:</p>
+<figure class="highlight typescript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> &#123; <span class="title class_">ApolloServerPluginLandingPageGraphQLPlayground</span> &#125; <span class="keyword">from</span> <span class="string">&#x27;apollo-server-core&#x27;</span>;</span><br><span class="line"></span><br><span class="line"><span class="keyword">const</span> playgroundOptions = &#123;</span><br><span class="line">    <span class="comment">// 仅做参考</span></span><br><span class="line">    <span class="attr">settings</span>: &#123;</span><br><span class="line">        <span class="string">&#x27;editor.theme&#x27;</span>: <span class="string">&#x27;dark&#x27;</span>,</span><br><span class="line">        <span class="string">&#x27;editor.cursorShape&#x27;</span>: <span class="string">&#x27;line&#x27;</span></span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">new</span> <span class="title class_">ApolloServer</span>(&#123;</span><br><span class="line">  <span class="attr">plugins</span>: [</span><br><span class="line">    <span class="title class_">ApolloServerPluginLandingPageGraphQLPlayground</span>(playgroundOptions),</span><br><span class="line">  ],</span><br><span class="line">&#125;);</span><br></pre></td></tr></table></figure>
+
+<h3 id="tracing"><a href="#tracing" class="headerlink" title="tracing"></a>tracing</h3><p>在<code>Apollo Server 2</code>中，构造函数的参数提供<em>tracing</em>布尔字段，用于开启基于(apollo-tracing)[<a target="_blank" rel="noopener" href="https://www.npmjs.com/package/apollo-tracing]%E8%B7%9F%E8%B8%AA%E6%9C%BA%E5%88%B6%EF%BC%8C%E4%BD%86%E6%98%AF%E5%BE%88%E9%81%97%E6%86%BE%EF%BC%8C%E5%9C%A8%60Apollo">https://www.npmjs.com/package/apollo-tracing]跟踪机制，但是很遗憾，在`Apollo</a> Server 3<code>中，*tracing*已经被删除了，，，</code>apollo-tracing&#96;也已经被废弃了，如果一定要使用，可以：</p>
+<figure class="highlight typescript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">new</span> <span class="title class_">ApolloServer</span>(&#123;</span><br><span class="line">  <span class="attr">plugins</span>: [</span><br><span class="line">    <span class="built_in">require</span>(<span class="string">&#x27;apollo-tracing&#x27;</span>).<span class="title function_">plugin</span>()</span><br><span class="line">  ]</span><br><span class="line">&#125;);</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+
+<blockquote>
+<p>不过值得注意的是，该解决方案没有经过严格测试，可能存在bug。</p>
+</blockquote>
+<h3 id="You-must-await-server-start-before-calling-server-applyMiddleware"><a href="#You-must-await-server-start-before-calling-server-applyMiddleware" class="headerlink" title="You must await server.start() before calling server.applyMiddleware()"></a>You must <code>await server.start()</code> before calling <code>server.applyMiddleware()</code></h3><p>在<code>Apollo Server v2.22</code>中提供了_server.start()_的方法，其目的是为了方便集成非serverless的框架(Express、Fastify、Hapi、Koa、Micro 和 Cloudflare)。因此这些框架的使用者使用在创建<code>ApolloServer</code>对象之后立刻启动graphql服务。</p>
+<figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">const</span> app = <span class="title function_">express</span>();</span><br><span class="line"><span class="keyword">const</span> server = <span class="keyword">new</span> <span class="title class_">ApolloServer</span>(&#123;...&#125;);</span><br><span class="line"><span class="keyword">await</span> server.<span class="title function_">start</span>();</span><br><span class="line">server.<span class="title function_">applyMiddleware</span>(&#123; app &#125;);</span><br></pre></td></tr></table></figure>
+
+<h2 id="结束"><a href="#结束" class="headerlink" title="结束"></a>结束</h2><p>现在可以在浏览器打开<code>GraphQL Playground</code>, 以<a target="_blank" rel="noopener" href="https://github.com/damingerdai/express-postgres-ts-starter">express-postgres-ts-starter</a>为例，使用<code>http://127.0.0.1:3000/graphql</code>就可以看到效果了。</p>
+</article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta">文章作者: </span><span class="post-copyright-info"><a href="http://blog.damingerdai.com">Arthur Ming</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta">文章链接: </span><span class="post-copyright-info"><a href="http://blog.damingerdai.com/2021/12/15/front-end/log-migrate-apollo-server-v3/">http://blog.damingerdai.com/2021/12/15/front-end/log-migrate-apollo-server-v3/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta">版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来自 <a href="http://blog.damingerdai.com" target="_blank">Damingerdai's Blog</a>！</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/nodejs/">nodejs</a><a class="post-meta__tags" href="/tags/apollo/">apollo</a><a class="post-meta__tags" href="/tags/graphql/">graphql</a></div><div class="post_share"><div class="social-share" data-image="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" data-sites="facebook,twitter,wechat,weibo,qq"></div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/butterfly-extsrc/sharejs/dist/css/share.min.css" media="print" onload="this.media='all'"><script src="https://cdn.jsdelivr.net/npm/butterfly-extsrc/sharejs/dist/js/social-share.min.js" defer></script></div></div><nav class="pagination-post" id="pagination"><div class="prev-post pull-left"><a href="/2021/12/31/summary/2022/" title="2022年度总结"><img class="cover" src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" onerror="onerror=null;src='/img/404.jpg'" alt="cover of previous post"><div class="pagination-info"><div class="label">上一篇</div><div class="prev_info">2022年度总结</div></div></a></div><div class="next-post pull-right"><a href="/2021/11/29/back-end/migrate-springdoc-from-springfox/" title="从springfox迁移到springdoc"><img class="cover" src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" onerror="onerror=null;src='/img/404.jpg'" alt="cover of next post"><div class="pagination-info"><div class="label">下一篇</div><div class="next_info">从springfox迁移到springdoc</div></div></a></div></nav><div class="relatedPosts"><div class="headline"><i class="fas fa-thumbs-up fa-fw"></i><span>相关推荐</span></div><div class="relatedPosts-list"><div><a href="/2023/08/10/front-end/how-to-use-bazel-to-build-nodejs-typescript-expressjs/" title="如何使用bazel去构建基于express和typescript的nodejs项目"><img class="cover" src="https://cn.bing.com/th?id=OHR.HokkaidoShida_ZH-CN0103354943_1920x1080.jpg&rf=LaDigue_1920x1080.jpg&pid=hp" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2023-08-10</div><div class="title">如何使用bazel去构建基于express和typescript的nodejs项目</div></div></a></div><div><a href="/2021/10/20/front-end/node-docker-template/" title="Nodejs项目的Dockerfile模版"><img class="cover" src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2021-10-20</div><div class="title">Nodejs项目的Dockerfile模版</div></div></a></div></div></div></div><div class="aside-content" id="aside-content"><div class="card-widget card-info"><div class="is-center"><div class="avatar-img"><img src="/img/avatar.png" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="author-info__name">Arthur Ming</div><div class="author-info__description">大明二代的博客</div></div><div class="card-info-data site-data is-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">28</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">39</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">4</div></a></div><a id="card-info-btn" target="_blank" rel="noopener" href="https://github.com/damingerdai"><i class="fab fa-github"></i><span>Follow Me</span></a><div class="card-info-social-icons is-center"><a class="social-icon" href="https://github.com/damingerdai" target="_blank" title="Github"><i class="fab fa-github" style="color: #24292e;"></i></a><a class="social-icon" href="mailto:mingguobin@live.com" target="_blank" title="Email"><i class="fas fa-envelope" style="color: #4a7dbe;"></i></a></div></div><div class="card-widget card-announcement"><div class="item-headline"><i class="fas fa-bullhorn fa-shake"></i><span>公告</span></div><div class="announcement_content">大家好，我是大明二代</div></div><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="item-headline"><i class="fas fa-stream"></i><span>目录</span><span class="toc-percentage"></span></div><div class="toc-content"><ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#%E8%AE%B0%E5%BD%95%E4%B8%80%E6%AC%A1%E8%BF%81%E7%A7%BBApollo-Server-V3%E7%9A%84%E8%BF%87%E7%A8%8B"><span class="toc-number">1.</span> <span class="toc-text">记录一次迁移Apollo Server V3的过程</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%89%8D%E8%A8%80"><span class="toc-number">1.1.</span> <span class="toc-text">前言</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%BD%BF%E7%94%A8dependabot%E5%B8%AE%E5%8A%A9%E6%9B%B4%E6%96%B0%E7%89%88%E6%9C%AC"><span class="toc-number">1.2.</span> <span class="toc-text">使用dependabot帮助更新版本</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%8D%87%E7%BA%A7Apollo-Servier%E6%89%80%E9%9C%80%E8%A6%81%E4%BE%9D%E8%B5%96"><span class="toc-number">1.3.</span> <span class="toc-text">升级Apollo Servier所需要依赖</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#nodejs"><span class="toc-number">1.3.1.</span> <span class="toc-text">nodejs</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#graphql"><span class="toc-number">1.3.2.</span> <span class="toc-text">graphql</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E9%97%AE%E9%A2%98%E8%AE%B0%E5%BD%95"><span class="toc-number">1.4.</span> <span class="toc-text">问题记录</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#GraphQL-Playground"><span class="toc-number">1.4.1.</span> <span class="toc-text">GraphQL Playground</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#tracing"><span class="toc-number">1.4.2.</span> <span class="toc-text">tracing</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#You-must-await-server-start-before-calling-server-applyMiddleware"><span class="toc-number">1.4.3.</span> <span class="toc-text">You must await server.start() before calling server.applyMiddleware()</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E7%BB%93%E6%9D%9F"><span class="toc-number">1.5.</span> <span class="toc-text">结束</span></a></li></ol></li></ol></div></div><div class="card-widget card-recent-post"><div class="item-headline"><i class="fas fa-history"></i><span>最新文章</span></div><div class="aside-list"><div class="aside-list-item"><a class="thumbnail" href="/2023/08/11/hello-world/" title="Hello World"><img src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="Hello World"/></a><div class="content"><a class="title" href="/2023/08/11/hello-world/" title="Hello World">Hello World</a><time datetime="2023-08-11T13:28:40.088Z" title="发表于 2023-08-11 21:28:40">2023-08-11</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2023/08/10/front-end/how-to-use-bazel-to-build-nodejs-typescript-expressjs/" title="如何使用bazel去构建基于express和typescript的nodejs项目"><img src="https://cn.bing.com/th?id=OHR.HokkaidoShida_ZH-CN0103354943_1920x1080.jpg&amp;rf=LaDigue_1920x1080.jpg&amp;pid=hp" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="如何使用bazel去构建基于express和typescript的nodejs项目"/></a><div class="content"><a class="title" href="/2023/08/10/front-end/how-to-use-bazel-to-build-nodejs-typescript-expressjs/" title="如何使用bazel去构建基于express和typescript的nodejs项目">如何使用bazel去构建基于express和typescript的nodejs项目</a><time datetime="2023-08-10T14:10:03.000Z" title="发表于 2023-08-10 22:10:03">2023-08-10</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2023/04/14/back-end/how-to-user-k3s-deploy-postgresql-for-dev/" title="用k3s部署PostgreSQL用于开发"><img src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="用k3s部署PostgreSQL用于开发"/></a><div class="content"><a class="title" href="/2023/04/14/back-end/how-to-user-k3s-deploy-postgresql-for-dev/" title="用k3s部署PostgreSQL用于开发">用k3s部署PostgreSQL用于开发</a><time datetime="2023-04-14T03:10:05.000Z" title="发表于 2023-04-14 11:10:05">2023-04-14</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2023/02/26/back-end/windows_docker_port_in_use_issues/" title="解决Windows下Docker启动容器时，端口被占用错误"><img src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="解决Windows下Docker启动容器时，端口被占用错误"/></a><div class="content"><a class="title" href="/2023/02/26/back-end/windows_docker_port_in_use_issues/" title="解决Windows下Docker启动容器时，端口被占用错误">解决Windows下Docker启动容器时，端口被占用错误</a><time datetime="2023-02-26T11:54:58.000Z" title="发表于 2023-02-26 19:54:58">2023-02-26</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2023/02/25/back-end/pg_dump_ssl_issues/" title="记录使用pg_dump中遇到的ssl问题"><img src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="记录使用pg_dump中遇到的ssl问题"/></a><div class="content"><a class="title" href="/2023/02/25/back-end/pg_dump_ssl_issues/" title="记录使用pg_dump中遇到的ssl问题">记录使用pg_dump中遇到的ssl问题</a><time datetime="2023-02-25T13:38:21.000Z" title="发表于 2023-02-25 21:38:21">2023-02-25</time></div></div></div></div></div></div></main><footer id="footer"><div id="footer-wrap"><div class="copyright">&copy;2020 - 2023 By Arthur Ming</div><div class="framework-info"><span>框架 </span><a target="_blank" rel="noopener" href="https://hexo.io">Hexo</a><span class="footer-separator">|</span><span>主题 </span><a target="_blank" rel="noopener" href="https://github.com/jerryc127/hexo-theme-butterfly">Butterfly</a></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="浅色和深色模式转换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside_config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><button id="go-up" type="button" title="回到顶部"><span class="scroll-percent"></span><i class="fas fa-arrow-up"></i></button></div></div><div><script src="/js/utils.js"></script><script src="/js/main.js"></script><script src="https://cdn.jsdelivr.net/npm/@fancyapps/ui/dist/fancybox/fancybox.umd.min.js"></script><div class="js-pjax"></div><script defer="defer" id="ribbon" src="https://cdn.jsdelivr.net/npm/butterfly-extsrc/dist/canvas-ribbon.min.js" size="150" alpha="0.6" zIndex="-1" mobile="false" data-click="true"></script><script async data-pjax src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script><div id="local-search"><div class="search-dialog"><nav class="search-nav"><span class="search-dialog-title">搜索</span><span id="loading-status"></span><button class="search-close-button"><i class="fas fa-times"></i></button></nav><div class="is-center" id="loading-database"><i class="fas fa-spinner fa-pulse"></i><span>  数据库加载中</span></div><div class="search-wrap"><div id="local-search-input"><div class="local-search-box"><input class="local-search-box--input" placeholder="搜索文章" type="text"/></div></div><hr/><div class="no-result" id="local-search-results"></div><div id="local-search-stats-wrap"></div></div></div><div id="search-mask"></div><script src="/js/search/local-search.js"></script></div></div></body></html>

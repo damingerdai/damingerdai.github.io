@@ -1,0 +1,227 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="dark"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1.0,viewport-fit=cover"><title>两种在Minikube中运行本地Docker镜像的简单方式 | Damingerdai's Blog</title><meta name="author" content="Arthur Ming"><meta name="copyright" content="Arthur Ming"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#0d0d0d"><meta name="description" content="两种在Minikube中运行本地Docker镜像的简单方式前言本文将分享两种在Minikube中运行本地Docker镜像的简单方式  要求 安装并运行Docker 安装并运行Minikube 安装kubectl  你将学到的知识本文将教会大家如何在Minikube中使用本地的Docker镜像。因为Kubernetes默认从注册表中提取镜像，所以Kubernetes一般是不会使用本地镜像，并且在生产">
+<meta property="og:type" content="article">
+<meta property="og:title" content="两种在Minikube中运行本地Docker镜像的简单方式">
+<meta property="og:url" content="http://blog.damingerdai.com/2022/03/23/back-end/two-easy-ways-to-use-local-docker-images-in-minikube/index.html">
+<meta property="og:site_name" content="Damingerdai&#39;s Blog">
+<meta property="og:description" content="两种在Minikube中运行本地Docker镜像的简单方式前言本文将分享两种在Minikube中运行本地Docker镜像的简单方式  要求 安装并运行Docker 安装并运行Minikube 安装kubectl  你将学到的知识本文将教会大家如何在Minikube中使用本地的Docker镜像。因为Kubernetes默认从注册表中提取镜像，所以Kubernetes一般是不会使用本地镜像，并且在生产">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg">
+<meta property="article:published_time" content="2022-03-23T15:20:25.000Z">
+<meta property="article:modified_time" content="2023-08-11T13:28:40.088Z">
+<meta property="article:author" content="Arthur Ming">
+<meta property="article:tag" content="k8s">
+<meta property="article:tag" content="docker">
+<meta property="article:tag" content="minikube">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg"><link rel="shortcut icon" href="/img/avatar.png"><link rel="canonical" href="http://blog.damingerdai.com/2022/03/23/back-end/two-easy-ways-to-use-local-docker-images-in-minikube/index.html"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><link rel="stylesheet" href="/css/index.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free/css/all.min.css" media="print" onload="this.media='all'"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/ui/dist/fancybox/fancybox.min.css" media="print" onload="this.media='all'"><script>const GLOBAL_CONFIG = {
+  root: '/',
+  algolia: undefined,
+  localSearch: {"path":"/search.xml","preload":false,"top_n_per_article":1,"unescape":false,"languages":{"hits_empty":"找不到您查询的内容：${query}","hits_stats":"共找到 ${hits} 篇文章"}},
+  translate: undefined,
+  noticeOutdate: undefined,
+  highlight: {"plugin":"highlighjs","highlightCopy":true,"highlightLang":true,"highlightHeightLimit":false},
+  copy: {
+    success: '复制成功',
+    error: '复制错误',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '',
+  dateSuffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: undefined,
+  lightbox: 'fancybox',
+  Snackbar: undefined,
+  source: {
+    justifiedGallery: {
+      js: 'https://cdn.jsdelivr.net/npm/flickr-justified-gallery/dist/fjGallery.min.js',
+      css: 'https://cdn.jsdelivr.net/npm/flickr-justified-gallery/dist/fjGallery.min.css'
+    }
+  },
+  isPhotoFigcaption: false,
+  islazyload: false,
+  isAnchor: false,
+  percent: {
+    toc: true,
+    rightside: false,
+  },
+  autoDarkmode: false
+}</script><script id="config-diff">var GLOBAL_CONFIG_SITE = {
+  title: '两种在Minikube中运行本地Docker镜像的简单方式',
+  isPost: true,
+  isHome: false,
+  isHighlightShrink: false,
+  isToc: true,
+  postUpdate: '2023-08-11 21:28:40'
+}</script><noscript><style type="text/css">
+  #nav {
+    opacity: 1
+  }
+  .justified-gallery img {
+    opacity: 1
+  }
+
+  #recent-posts time,
+  #post-meta time {
+    display: inline !important
+  }
+</style></noscript><script>(win=>{
+    win.saveToLocal = {
+      set: function setWithExpiry(key, value, ttl) {
+        if (ttl === 0) return
+        const now = new Date()
+        const expiryDay = ttl * 86400000
+        const item = {
+          value: value,
+          expiry: now.getTime() + expiryDay,
+        }
+        localStorage.setItem(key, JSON.stringify(item))
+      },
+
+      get: function getWithExpiry(key) {
+        const itemStr = localStorage.getItem(key)
+
+        if (!itemStr) {
+          return undefined
+        }
+        const item = JSON.parse(itemStr)
+        const now = new Date()
+
+        if (now.getTime() > item.expiry) {
+          localStorage.removeItem(key)
+          return undefined
+        }
+        return item.value
+      }
+    }
+  
+    win.getScript = url => new Promise((resolve, reject) => {
+      const script = document.createElement('script')
+      script.src = url
+      script.async = true
+      script.onerror = reject
+      script.onload = script.onreadystatechange = function() {
+        const loadState = this.readyState
+        if (loadState && loadState !== 'loaded' && loadState !== 'complete') return
+        script.onload = script.onreadystatechange = null
+        resolve()
+      }
+      document.head.appendChild(script)
+    })
+  
+    win.getCSS = (url,id = false) => new Promise((resolve, reject) => {
+      const link = document.createElement('link')
+      link.rel = 'stylesheet'
+      link.href = url
+      if (id) link.id = id
+      link.onerror = reject
+      link.onload = link.onreadystatechange = function() {
+        const loadState = this.readyState
+        if (loadState && loadState !== 'loaded' && loadState !== 'complete') return
+        link.onload = link.onreadystatechange = null
+        resolve()
+      }
+      document.head.appendChild(link)
+    })
+  
+      win.activateDarkMode = function () {
+        document.documentElement.setAttribute('data-theme', 'dark')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+        }
+      }
+      win.activateLightMode = function () {
+        document.documentElement.setAttribute('data-theme', 'light')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#ffffff')
+        }
+      }
+      const t = saveToLocal.get('theme')
+    
+          if (t === 'dark') activateDarkMode()
+          else if (t === 'light') activateLightMode()
+        
+      const asideStatus = saveToLocal.get('aside-status')
+      if (asideStatus !== undefined) {
+        if (asideStatus === 'hide') {
+          document.documentElement.classList.add('hide-aside')
+        } else {
+          document.documentElement.classList.remove('hide-aside')
+        }
+      }
+    
+    const detectApple = () => {
+      if(/iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent)){
+        document.documentElement.classList.add('apple')
+      }
+    }
+    detectApple()
+    })(window)</script><meta name="generator" content="Hexo 6.3.0"></head><body><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="avatar-img is-center"><img src="/img/avatar.png" onerror="onerror=null;src='/img/friend_404.gif'" alt="avatar"/></div><div class="sidebar-site-data site-data is-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">28</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">39</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">4</div></a></div><hr class="custom-hr"/><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归类</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page group" href="javascript:void(0);"><i class="fa-fw fas fa-list"></i><span> 其他</span><i class="fas fa-chevron-down"></i></a><ul class="menus_item_child"><li><a class="site-page child" href="/others/learning"><i class="fa-fw fas fa-graduation-cap"></i><span> 学习课程</span></a></li><li><a class="site-page child" href="/others/link/"><i class="fa-fw fas fa-link"></i><span> 链接</span></a></li></ul></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于</span></a></div></div></div></div><div class="post" id="body-wrap"><header class="post-bg" id="page-header" style="background-image: url('https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg')"><nav id="nav"><span id="blog-info"><a href="/" title="Damingerdai's Blog"><span class="site-name">Damingerdai's Blog</span></a></span><div id="menus"><div id="search-button"><a class="site-page social-icon search" href="javascript:void(0);"><i class="fas fa-search fa-fw"></i><span> 搜索</span></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归类</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page group" href="javascript:void(0);"><i class="fa-fw fas fa-list"></i><span> 其他</span><i class="fas fa-chevron-down"></i></a><ul class="menus_item_child"><li><a class="site-page child" href="/others/learning"><i class="fa-fw fas fa-graduation-cap"></i><span> 学习课程</span></a></li><li><a class="site-page child" href="/others/link/"><i class="fa-fw fas fa-link"></i><span> 链接</span></a></li></ul></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于</span></a></div></div><div id="toggle-menu"><a class="site-page" href="javascript:void(0);"><i class="fas fa-bars fa-fw"></i></a></div></div></nav><div id="post-info"><h1 class="post-title">两种在Minikube中运行本地Docker镜像的简单方式</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2022-03-23T15:20:25.000Z" title="发表于 2022-03-23 23:20:25">2022-03-23</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2023-08-11T13:28:40.088Z" title="更新于 2023-08-11 21:28:40">2023-08-11</time></span><span class="post-meta-categories"><span class="post-meta-separator">|</span><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/%E5%90%8E%E7%AB%AF/">后端</a></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-pv-cv" id="" data-flag-title="两种在Minikube中运行本地Docker镜像的简单方式"><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">阅读量:</span><span id="busuanzi_value_page_pv"><i class="fa-solid fa-spinner fa-spin"></i></span></span></div></div></div></header><main class="layout" id="content-inner"><div id="post"><article class="post-content" id="article-container"><h1 id="两种在Minikube中运行本地Docker镜像的简单方式"><a href="#两种在Minikube中运行本地Docker镜像的简单方式" class="headerlink" title="两种在Minikube中运行本地Docker镜像的简单方式"></a>两种在Minikube中运行本地Docker镜像的简单方式</h1><h2 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h2><p>本文将分享两种在Minikube中运行本地Docker镜像的简单方式</p>
+<p><img src="https://miro.medium.com/max/1400/1*Q8RckeLvx7rVFNPTHzx21A.png" alt="Kubernetes"></p>
+<h2 id="要求"><a href="#要求" class="headerlink" title="要求"></a>要求</h2><ul>
+<li>安装并运行<a target="_blank" rel="noopener" href="https://www.docker.com/get-started">Docker</a></li>
+<li>安装并运行<a target="_blank" rel="noopener" href="https://minikube.sigs.k8s.io/docs/start/">Minikube</a></li>
+<li><a target="_blank" rel="noopener" href="https://kubernetes.io/docs/tasks/tools/">安装kubectl</a></li>
+</ul>
+<h2 id="你将学到的知识"><a href="#你将学到的知识" class="headerlink" title="你将学到的知识"></a>你将学到的知识</h2><p>本文将教会大家如何在Minikube中使用本地的Docker镜像。因为Kubernetes默认从注册表中提取镜像，所以Kubernetes一般是不会使用本地镜像，并且在生产环境中也不应该使用本地镜像。但是，如果我们可以很轻松的使用本地镜像，而不是每次都需要将这些镜像推送到远程的注册表、登录远程注册表并在本地电脑中重新拉取，那么使用本地镜像将十分便利。</p>
+<p>和往常一样，我在github中准备了一个<a target="_blank" rel="noopener" href="https://github.com/Abszissex/medium-local-docker-image-minikube">仓库</a>, 方便大家查看完成的代码库，并且可以按照本文描述的步骤进行操作。</p>
+<h2 id="Demo介绍"><a href="#Demo介绍" class="headerlink" title="Demo介绍"></a>Demo介绍</h2><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">/</span><br><span class="line">|- app/</span><br><span class="line">  |- Dockerfile</span><br><span class="line">  |- index.js</span><br><span class="line">  |- package.json</span><br><span class="line">|- deployment.yaml</span><br></pre></td></tr></table></figure>
+
+<p>在上面的文件夹结构中，我将重点介绍将在本文中使用的重点文件：</p>
+<ul>
+<li><p><strong>app&#x2F;Dockerfile</strong> 用于构建包含一个Node.js Web 服务器的本地Docker镜像的Dockerfile，我们将其部署到Minikube</p>
+</li>
+<li><p><strong>app&#x2F;index.js</strong> Node.js Web 服务器的应用程序代码</p>
+</li>
+<li><p><em><strong>app&#x2F;package.json</strong> 我们Node.js Web 服务器的依赖。在本文中，只使用了</em>*express**，一个用于搭建Web服务器的Nodejs库</p>
+</li>
+<li><p><strong>deployment.yaml</strong> 在Kubernetes中运行Node.js Web 服务器的Deployment配置</p>
+</li>
+</ul>
+<p><strong>app</strong>文件夹中的实际内容和本文无关。 我仅仅是提供一个demo方便接下来的教程讲解，当然使用你自己的demo也是可以的。如果你想要使用<strong>app</strong>这个应用，请注意服务器将在容器内部中监听8080端口。</p>
+<h2 id="Deployment配置"><a href="#Deployment配置" class="headerlink" title="Deployment配置"></a>Deployment配置</h2><p><strong>deployment.yaml</strong>的内容如下：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line">apiVersion: apps/v1</span><br><span class="line">kind: Deployment</span><br><span class="line">metadata:</span><br><span class="line">  name: myapp</span><br><span class="line">  labels:</span><br><span class="line">    name: myapp</span><br><span class="line">spec:</span><br><span class="line">  selector:</span><br><span class="line">    matchLabels:</span><br><span class="line">      name: myapp</span><br><span class="line">  template:</span><br><span class="line">    metadata:</span><br><span class="line">      labels:</span><br><span class="line">        name: myapp</span><br><span class="line">    spec:</span><br><span class="line">      containers:</span><br><span class="line">        - name: myapp</span><br><span class="line">          image: pz/demo</span><br><span class="line">          imagePullPolicy: Never</span><br><span class="line">          ports:</span><br><span class="line">            - containerPort: 8080</span><br></pre></td></tr></table></figure>
+
+<p>我们需要重点关注的是<strong>imagePullPolicy</strong>和<strong>containerPort</strong>这两个配置</p>
+<p>通过<strong>containerPort</strong>，我们将暴露app正在监听的<em>8080</em>端口，因此我们稍后可以通过浏览器访问<em><a target="_blank" rel="noopener" href="http://127.0.0.1:8080/">http://127.0.0.1:8080</a></em>去验证是否满足我们预期那样工作。</p>
+<p>更关键的是<strong>imagePullPolicy</strong>。如果你想使用本地Docker镜像，<strong>imagePullPolicy</strong>需要设置成<strong>Never</strong>, 否则， Kubernetes将在注册表中根据你提供的名字来搜素同名镜像。</p>
+<h2 id="构建Dcoker镜像"><a href="#构建Dcoker镜像" class="headerlink" title="构建Dcoker镜像"></a>构建Dcoker镜像</h2><p>为了验证Docker镜像能够按照我们的预期在Kubernetes中运行，让我们来构建并运行。</p>
+<p>首先，我们导航进入<strong>app</strong>目录，然后我们通过<strong>docker build -t pz&#x2F;demo .<strong>构建Docker镜像，通过</strong>-t</strong>参数将镜像名字设置为<strong>pz&#x2F;demo</strong>。</p>
+<p><img src="https://miro.medium.com/max/1400/1*Q-XZFc-_TRrTfwS_-DtHQw.png" alt="docker images"></p>
+<p>当构建完成之后，我们可以通过<strong>docker run -it –rm -p 8080:8080 pz&#x2F;demo</strong>命令来运行容器，并将Docker的8080端口映射的本地的8080端口。接下来，我们可以在浏览器中访问<a target="_blank" rel="noopener" href="http://localhost:8080/">localhost:8080</a>。 如果我们可以在浏览器中看到*”Hello World!”*，那么说明我们的容器运行正常。</p>
+<p><img src="https://miro.medium.com/max/1224/1*BrzMRioHmZEaR1km1C0EWA.png" alt="localhost:8080"></p>
+<h2 id="在Minikube中运行本地Docker镜像"><a href="#在Minikube中运行本地Docker镜像" class="headerlink" title="在Minikube中运行本地Docker镜像"></a>在Minikube中运行本地Docker镜像</h2><p>如果你想通过<strong>kubectl apply -f deployment.yaml</strong>命令部署上面的<strong>deployment.yaml</strong>到你的Minikube中，那启动的Pod将找不到你刚刚构建的Docker镜像。</p>
+<p>你可以通过<strong>kubectl logs deployment.apps&#x2F;myapp</strong>命令来检查日志去来验证这个错误的结果。</p>
+<p><img src="https://miro.medium.com/max/1400/1*qGB6vXA3rpRnubXQ9Qf3oQ.png" alt="kubectl logs deployment.apps/myapp"></p>
+<p>上面的日志显示由于Kubernetes拉取不到镜像Pod一直等待重启。这其实是因为Minikube没有方法获取你本地Docker镜像。</p>
+<p>但是幸运的是，有两个简单的命令可以帮助解决这个问题。</p>
+<p>第一种方式是使用<strong>image load</strong>命令， 你可以使用下面的名利将本地Docker镜像从本地电脑中导入Minikube中：</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta prompt_"># </span><span class="language-bash">General</span></span><br><span class="line">minikube image load &lt;IMAGE_NAME&gt;</span><br><span class="line"><span class="meta prompt_"># </span><span class="language-bash">Example</span></span><br><span class="line">minikube image load pz/demo</span><br></pre></td></tr></table></figure>
+
+<p>在导入完成之后，你可以重启pod。然后你可以发现pod可以正常工作了。</p>
+<p>其实我们还可以变得更简单。以前的方法是你需呀先在本地构建Docker镜像，然后将其移动到Minikube容器中，虽然耗时不多，但是终究还是浪费了不少时间。</p>
+<p>通过使用Minikube的<strong>image build</strong>， 我们可以在Minikube中直接构建镜像：</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta prompt_"># </span><span class="language-bash">General</span></span><br><span class="line">minikube image build -t &lt;IMAGE_NAME&gt; .</span><br><span class="line"><span class="meta prompt_"># </span><span class="language-bash">Example</span></span><br><span class="line">minikube image build -t pz/demo .</span><br></pre></td></tr></table></figure>
+
+<p>使用<strong>minikube image build</strong>构建出来的镜像可以在Minikkube中直接访问，同时也不再需要在<strong>minikube image load</strong>中的第二步导入步骤。</p>
+<p>使用以上两种之一的方法，我们可以重新检查一下Deployment的日志：</p>
+<p><img src="https://miro.medium.com/max/1400/1*-yXXk7reYwXm_w3folq6kQ.png" alt="kubectl logs deployment.apps/myapp"></p>
+<p>为了进一步验证一切是否按照我们预期的工作，我们可以使用下面的命令将本地8080端口转发发Deployment的8080端口中：</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">kubectl port-forward deployment/myapp 8080:8080</span><br></pre></td></tr></table></figure>
+
+<p>重新检查浏览器，我们可以发现本地构建的应用在Minikube中运行正常，🎉🎉🎉</p>
+<p><img src="https://miro.medium.com/max/1224/1*BrzMRioHmZEaR1km1C0EWA.png" alt="localhost:8080"></p>
+<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>通过本文，你应该能够使用<strong>minikube image load</strong>和<strong>minikube image buildcommand</strong>命令在Minikube中使用本地镜像了.</p>
+<p>更多信息请关注<a target="_blank" rel="noopener" href="https://www.linkedin.com/in/pascal-zwikirsch-3a95a1177/">LinkedIn</a></p>
+<h2 id="后言"><a href="#后言" class="headerlink" title="后言"></a>后言</h2><p>原文：<a target="_blank" rel="noopener" href="https://medium.com/gitconnected/two-easy-ways-to-use-local-docker-images-in-minikube-cd4dcb1a5379">Two easy ways to use local Docker images in Minikube</a></p>
+<p>译文： <a target="_blank" rel="noopener" href="https://damingerdai.github.io/back-end/two-easy-ways-to-use-local-docker-images-in-minikube/">两种在Minikube中运行本地Docker镜像的简单方式</a></p>
+<p>译者：<a target="_blank" rel="noopener" href="https://damingerdai.github.io/">大明二代</a></p>
+</article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta">文章作者: </span><span class="post-copyright-info"><a href="http://blog.damingerdai.com">Arthur Ming</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta">文章链接: </span><span class="post-copyright-info"><a href="http://blog.damingerdai.com/2022/03/23/back-end/two-easy-ways-to-use-local-docker-images-in-minikube/">http://blog.damingerdai.com/2022/03/23/back-end/two-easy-ways-to-use-local-docker-images-in-minikube/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta">版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来自 <a href="http://blog.damingerdai.com" target="_blank">Damingerdai's Blog</a>！</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/k8s/">k8s</a><a class="post-meta__tags" href="/tags/docker/">docker</a><a class="post-meta__tags" href="/tags/minikube/">minikube</a></div><div class="post_share"><div class="social-share" data-image="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" data-sites="facebook,twitter,wechat,weibo,qq"></div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/butterfly-extsrc/sharejs/dist/css/share.min.css" media="print" onload="this.media='all'"><script src="https://cdn.jsdelivr.net/npm/butterfly-extsrc/sharejs/dist/js/social-share.min.js" defer></script></div></div><nav class="pagination-post" id="pagination"><div class="prev-post pull-left"><a href="/2022/04/16/back-end/github-action-push-docker-image-to-github-packages/" title="使用github action推送到docker的镜像仓库"><img class="cover" src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" onerror="onerror=null;src='/img/404.jpg'" alt="cover of previous post"><div class="pagination-info"><div class="label">上一篇</div><div class="prev_info">使用github action推送到docker的镜像仓库</div></div></a></div><div class="next-post pull-right"><a href="/2022/01/17/software/k8s/how-to-install-minkube-on-mac/" title="Mac版minikube安装笔记"><img class="cover" src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" onerror="onerror=null;src='/img/404.jpg'" alt="cover of next post"><div class="pagination-info"><div class="label">下一篇</div><div class="next_info">Mac版minikube安装笔记</div></div></a></div></nav><div class="relatedPosts"><div class="headline"><i class="fas fa-thumbs-up fa-fw"></i><span>相关推荐</span></div><div class="relatedPosts-list"><div><a href="/2021/01/14/software/k8s/how-to-install-docker-desktop-k8s/" title="Docker Desktop自带k8s安装笔记"><img class="cover" src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2021-01-14</div><div class="title">Docker Desktop自带k8s安装笔记</div></div></a></div><div><a href="/2022/01/17/software/k8s/how-to-install-minkube-on-mac/" title="Mac版minikube安装笔记"><img class="cover" src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2022-01-17</div><div class="title">Mac版minikube安装笔记</div></div></a></div><div><a href="/2021/01/01/software/k8s/how-to-install-minkube/" title="在Ubuntu 18.04.5 LTS上安装minkube"><img class="cover" src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2021-01-01</div><div class="title">在Ubuntu 18.04.5 LTS上安装minkube</div></div></a></div><div><a href="/2022/05/15/software/k8s/k3s-install-with-docker/" title="K3S安装的时候默认使用docker"><img class="cover" src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2022-05-15</div><div class="title">K3S安装的时候默认使用docker</div></div></a></div><div><a href="/2022/06/18/back-end/add-ssl-for-ingress/" title="给Ingress上配置ssl证书"><img class="cover" src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2022-06-18</div><div class="title">给Ingress上配置ssl证书</div></div></a></div><div><a href="/2023/04/14/back-end/how-to-user-k3s-deploy-postgresql-for-dev/" title="用k3s部署PostgreSQL用于开发"><img class="cover" src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2023-04-14</div><div class="title">用k3s部署PostgreSQL用于开发</div></div></a></div></div></div></div><div class="aside-content" id="aside-content"><div class="card-widget card-info"><div class="is-center"><div class="avatar-img"><img src="/img/avatar.png" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="author-info__name">Arthur Ming</div><div class="author-info__description">大明二代的博客</div></div><div class="card-info-data site-data is-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">28</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">39</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">4</div></a></div><a id="card-info-btn" target="_blank" rel="noopener" href="https://github.com/damingerdai"><i class="fab fa-github"></i><span>Follow Me</span></a><div class="card-info-social-icons is-center"><a class="social-icon" href="https://github.com/damingerdai" target="_blank" title="Github"><i class="fab fa-github" style="color: #24292e;"></i></a><a class="social-icon" href="mailto:mingguobin@live.com" target="_blank" title="Email"><i class="fas fa-envelope" style="color: #4a7dbe;"></i></a></div></div><div class="card-widget card-announcement"><div class="item-headline"><i class="fas fa-bullhorn fa-shake"></i><span>公告</span></div><div class="announcement_content">大家好，我是大明二代</div></div><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="item-headline"><i class="fas fa-stream"></i><span>目录</span><span class="toc-percentage"></span></div><div class="toc-content"><ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#%E4%B8%A4%E7%A7%8D%E5%9C%A8Minikube%E4%B8%AD%E8%BF%90%E8%A1%8C%E6%9C%AC%E5%9C%B0Docker%E9%95%9C%E5%83%8F%E7%9A%84%E7%AE%80%E5%8D%95%E6%96%B9%E5%BC%8F"><span class="toc-number">1.</span> <span class="toc-text">两种在Minikube中运行本地Docker镜像的简单方式</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%89%8D%E8%A8%80"><span class="toc-number">1.1.</span> <span class="toc-text">前言</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E8%A6%81%E6%B1%82"><span class="toc-number">1.2.</span> <span class="toc-text">要求</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%BD%A0%E5%B0%86%E5%AD%A6%E5%88%B0%E7%9A%84%E7%9F%A5%E8%AF%86"><span class="toc-number">1.3.</span> <span class="toc-text">你将学到的知识</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Demo%E4%BB%8B%E7%BB%8D"><span class="toc-number">1.4.</span> <span class="toc-text">Demo介绍</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Deployment%E9%85%8D%E7%BD%AE"><span class="toc-number">1.5.</span> <span class="toc-text">Deployment配置</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E6%9E%84%E5%BB%BADcoker%E9%95%9C%E5%83%8F"><span class="toc-number">1.6.</span> <span class="toc-text">构建Dcoker镜像</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%9C%A8Minikube%E4%B8%AD%E8%BF%90%E8%A1%8C%E6%9C%AC%E5%9C%B0Docker%E9%95%9C%E5%83%8F"><span class="toc-number">1.7.</span> <span class="toc-text">在Minikube中运行本地Docker镜像</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E6%80%BB%E7%BB%93"><span class="toc-number">1.8.</span> <span class="toc-text">总结</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%90%8E%E8%A8%80"><span class="toc-number">1.9.</span> <span class="toc-text">后言</span></a></li></ol></li></ol></div></div><div class="card-widget card-recent-post"><div class="item-headline"><i class="fas fa-history"></i><span>最新文章</span></div><div class="aside-list"><div class="aside-list-item"><a class="thumbnail" href="/2023/08/11/hello-world/" title="Hello World"><img src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="Hello World"/></a><div class="content"><a class="title" href="/2023/08/11/hello-world/" title="Hello World">Hello World</a><time datetime="2023-08-11T13:28:40.088Z" title="发表于 2023-08-11 21:28:40">2023-08-11</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2023/08/10/front-end/how-to-use-bazel-to-build-nodejs-typescript-expressjs/" title="如何使用bazel去构建基于express和typescript的nodejs项目"><img src="https://cn.bing.com/th?id=OHR.HokkaidoShida_ZH-CN0103354943_1920x1080.jpg&amp;rf=LaDigue_1920x1080.jpg&amp;pid=hp" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="如何使用bazel去构建基于express和typescript的nodejs项目"/></a><div class="content"><a class="title" href="/2023/08/10/front-end/how-to-use-bazel-to-build-nodejs-typescript-expressjs/" title="如何使用bazel去构建基于express和typescript的nodejs项目">如何使用bazel去构建基于express和typescript的nodejs项目</a><time datetime="2023-08-10T14:10:03.000Z" title="发表于 2023-08-10 22:10:03">2023-08-10</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2023/04/14/back-end/how-to-user-k3s-deploy-postgresql-for-dev/" title="用k3s部署PostgreSQL用于开发"><img src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="用k3s部署PostgreSQL用于开发"/></a><div class="content"><a class="title" href="/2023/04/14/back-end/how-to-user-k3s-deploy-postgresql-for-dev/" title="用k3s部署PostgreSQL用于开发">用k3s部署PostgreSQL用于开发</a><time datetime="2023-04-14T03:10:05.000Z" title="发表于 2023-04-14 11:10:05">2023-04-14</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2023/02/26/back-end/windows_docker_port_in_use_issues/" title="解决Windows下Docker启动容器时，端口被占用错误"><img src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="解决Windows下Docker启动容器时，端口被占用错误"/></a><div class="content"><a class="title" href="/2023/02/26/back-end/windows_docker_port_in_use_issues/" title="解决Windows下Docker启动容器时，端口被占用错误">解决Windows下Docker启动容器时，端口被占用错误</a><time datetime="2023-02-26T11:54:58.000Z" title="发表于 2023-02-26 19:54:58">2023-02-26</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2023/02/25/back-end/pg_dump_ssl_issues/" title="记录使用pg_dump中遇到的ssl问题"><img src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="记录使用pg_dump中遇到的ssl问题"/></a><div class="content"><a class="title" href="/2023/02/25/back-end/pg_dump_ssl_issues/" title="记录使用pg_dump中遇到的ssl问题">记录使用pg_dump中遇到的ssl问题</a><time datetime="2023-02-25T13:38:21.000Z" title="发表于 2023-02-25 21:38:21">2023-02-25</time></div></div></div></div></div></div></main><footer id="footer"><div id="footer-wrap"><div class="copyright">&copy;2020 - 2023 By Arthur Ming</div><div class="framework-info"><span>框架 </span><a target="_blank" rel="noopener" href="https://hexo.io">Hexo</a><span class="footer-separator">|</span><span>主题 </span><a target="_blank" rel="noopener" href="https://github.com/jerryc127/hexo-theme-butterfly">Butterfly</a></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="浅色和深色模式转换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside_config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><button id="go-up" type="button" title="回到顶部"><span class="scroll-percent"></span><i class="fas fa-arrow-up"></i></button></div></div><div><script src="/js/utils.js"></script><script src="/js/main.js"></script><script src="https://cdn.jsdelivr.net/npm/@fancyapps/ui/dist/fancybox/fancybox.umd.min.js"></script><div class="js-pjax"></div><script defer="defer" id="ribbon" src="https://cdn.jsdelivr.net/npm/butterfly-extsrc/dist/canvas-ribbon.min.js" size="150" alpha="0.6" zIndex="-1" mobile="false" data-click="true"></script><script async data-pjax src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script><div id="local-search"><div class="search-dialog"><nav class="search-nav"><span class="search-dialog-title">搜索</span><span id="loading-status"></span><button class="search-close-button"><i class="fas fa-times"></i></button></nav><div class="is-center" id="loading-database"><i class="fas fa-spinner fa-pulse"></i><span>  数据库加载中</span></div><div class="search-wrap"><div id="local-search-input"><div class="local-search-box"><input class="local-search-box--input" placeholder="搜索文章" type="text"/></div></div><hr/><div class="no-result" id="local-search-results"></div><div id="local-search-stats-wrap"></div></div></div><div id="search-mask"></div><script src="/js/search/local-search.js"></script></div></div></body></html>

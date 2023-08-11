@@ -1,1158 +1,272 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="dark"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1.0,viewport-fit=cover"><title>Damingerdai's Blog - 大明二代的博客</title><meta name="author" content="Arthur Ming"><meta name="copyright" content="Arthur Ming"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#0d0d0d"><meta name="description" content="大明二代的博客">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Damingerdai&#39;s Blog">
+<meta property="og:url" content="http://blog.damingerdai.com/index.html">
+<meta property="og:site_name" content="Damingerdai&#39;s Blog">
+<meta property="og:description" content="大明二代的博客">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="http://blog.damingerdai.com/img/avatar.png">
+<meta property="article:author" content="Arthur Ming">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="http://blog.damingerdai.com/img/avatar.png"><link rel="shortcut icon" href="/img/avatar.png"><link rel="canonical" href="http://blog.damingerdai.com/index.html"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><link rel="stylesheet" href="/css/index.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free/css/all.min.css" media="print" onload="this.media='all'"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/ui/dist/fancybox/fancybox.min.css" media="print" onload="this.media='all'"><script>const GLOBAL_CONFIG = {
+  root: '/',
+  algolia: undefined,
+  localSearch: {"path":"/search.xml","preload":false,"top_n_per_article":1,"unescape":false,"languages":{"hits_empty":"找不到您查询的内容：${query}","hits_stats":"共找到 ${hits} 篇文章"}},
+  translate: undefined,
+  noticeOutdate: undefined,
+  highlight: {"plugin":"highlighjs","highlightCopy":true,"highlightLang":true,"highlightHeightLimit":false},
+  copy: {
+    success: '复制成功',
+    error: '复制错误',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '',
+  dateSuffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: undefined,
+  lightbox: 'fancybox',
+  Snackbar: undefined,
+  source: {
+    justifiedGallery: {
+      js: 'https://cdn.jsdelivr.net/npm/flickr-justified-gallery/dist/fjGallery.min.js',
+      css: 'https://cdn.jsdelivr.net/npm/flickr-justified-gallery/dist/fjGallery.min.css'
+    }
+  },
+  isPhotoFigcaption: false,
+  islazyload: false,
+  isAnchor: false,
+  percent: {
+    toc: true,
+    rightside: false,
+  },
+  autoDarkmode: false
+}</script><script id="config-diff">var GLOBAL_CONFIG_SITE = {
+  title: 'Damingerdai\'s Blog',
+  isPost: false,
+  isHome: true,
+  isHighlightShrink: false,
+  isToc: false,
+  postUpdate: '2023-08-11 21:28:52'
+}</script><noscript><style type="text/css">
+  #nav {
+    opacity: 1
+  }
+  .justified-gallery img {
+    opacity: 1
+  }
 
-<!doctype html>
-<html lang="zh" class="no-js">
-  <head>
-    
-      <meta charset="utf-8">
-      <meta name="viewport" content="width=device-width,initial-scale=1">
-      
-        <meta name="description" content="大明二代的博客">
-      
-      
-        <meta name="author" content="明国宾">
-      
-      
-        <link rel="canonical" href="https://damingerdai.github.io/">
-      
-      
-      
-        <link rel="next" href="summary/2022/">
-      
-      <link rel="icon" href="assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.4.3, mkdocs-material-9.1.18">
-    
-    
-      
-        <title>我是大明二代 - 大明二代</title>
-      
-    
-    
-      <link rel="stylesheet" href="assets/stylesheets/main.26e3688c.min.css">
-      
-      
+  #recent-posts time,
+  #post-meta time {
+    display: inline !important
+  }
+</style></noscript><script>(win=>{
+    win.saveToLocal = {
+      set: function setWithExpiry(key, value, ttl) {
+        if (ttl === 0) return
+        const now = new Date()
+        const expiryDay = ttl * 86400000
+        const item = {
+          value: value,
+          expiry: now.getTime() + expiryDay,
+        }
+        localStorage.setItem(key, JSON.stringify(item))
+      },
 
+      get: function getWithExpiry(key) {
+        const itemStr = localStorage.getItem(key)
+
+        if (!itemStr) {
+          return undefined
+        }
+        const item = JSON.parse(itemStr)
+        const now = new Date()
+
+        if (now.getTime() > item.expiry) {
+          localStorage.removeItem(key)
+          return undefined
+        }
+        return item.value
+      }
+    }
+  
+    win.getScript = url => new Promise((resolve, reject) => {
+      const script = document.createElement('script')
+      script.src = url
+      script.async = true
+      script.onerror = reject
+      script.onload = script.onreadystatechange = function() {
+        const loadState = this.readyState
+        if (loadState && loadState !== 'loaded' && loadState !== 'complete') return
+        script.onload = script.onreadystatechange = null
+        resolve()
+      }
+      document.head.appendChild(script)
+    })
+  
+    win.getCSS = (url,id = false) => new Promise((resolve, reject) => {
+      const link = document.createElement('link')
+      link.rel = 'stylesheet'
+      link.href = url
+      if (id) link.id = id
+      link.onerror = reject
+      link.onload = link.onreadystatechange = function() {
+        const loadState = this.readyState
+        if (loadState && loadState !== 'loaded' && loadState !== 'complete') return
+        link.onload = link.onreadystatechange = null
+        resolve()
+      }
+      document.head.appendChild(link)
+    })
+  
+      win.activateDarkMode = function () {
+        document.documentElement.setAttribute('data-theme', 'dark')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+        }
+      }
+      win.activateLightMode = function () {
+        document.documentElement.setAttribute('data-theme', 'light')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#ffffff')
+        }
+      }
+      const t = saveToLocal.get('theme')
     
-    
-    
-      
+          if (t === 'dark') activateDarkMode()
+          else if (t === 'light') activateLightMode()
         
-        
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
-        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
-      
+      const asideStatus = saveToLocal.get('aside-status')
+      if (asideStatus !== undefined) {
+        if (asideStatus === 'hide') {
+          document.documentElement.classList.add('hide-aside')
+        } else {
+          document.documentElement.classList.remove('hide-aside')
+        }
+      }
     
-    
-    <script>__md_scope=new URL(".",location),__md_hash=e=>[...e].reduce((e,_)=>(e<<5)-e+_.charCodeAt(0),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
-    
-      
-
-    
-    
-    
-  </head>
-  
-  
-    <body dir="ltr">
-  
-    
-    
-      <script>var palette=__md_get("__palette");if(palette&&"object"==typeof palette.color)for(var key of Object.keys(palette.color))document.body.setAttribute("data-md-color-"+key,palette.color[key])</script>
-    
-    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
-    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
-    <label class="md-overlay" for="__drawer"></label>
-    <div data-md-component="skip">
-      
-        
-        <a href="#welcome-to-damingerdai" class="md-skip">
-          跳转至
-        </a>
-      
-    </div>
-    <div data-md-component="announce">
-      
-    </div>
-    
-    
-      
-
-<header class="md-header" data-md-component="header">
-  <nav class="md-header__inner md-grid" aria-label="页眉">
-    <a href="." title="大明二代" class="md-header__button md-logo" aria-label="大明二代" data-md-component="logo">
-      
-  
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54Z"/></svg>
-
-    </a>
-    <label class="md-header__button md-icon" for="__drawer">
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3V6m0 5h18v2H3v-2m0 5h18v2H3v-2Z"/></svg>
-    </label>
-    <div class="md-header__title" data-md-component="header-title">
-      <div class="md-header__ellipsis">
-        <div class="md-header__topic">
-          <span class="md-ellipsis">
-            大明二代
-          </span>
-        </div>
-        <div class="md-header__topic" data-md-component="header-topic">
-          <span class="md-ellipsis">
-            
-              我是大明二代
-            
-          </span>
-        </div>
-      </div>
-    </div>
-    
-    
-    
-      <label class="md-header__button md-icon" for="__search">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5Z"/></svg>
-      </label>
-      <div class="md-search" data-md-component="search" role="dialog">
-  <label class="md-search__overlay" for="__search"></label>
-  <div class="md-search__inner" role="search">
-    <form class="md-search__form" name="search">
-      <input type="text" class="md-search__input" name="query" aria-label="搜索" placeholder="搜索" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
-      <label class="md-search__icon md-icon" for="__search">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5Z"/></svg>
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12Z"/></svg>
-      </label>
-      <nav class="md-search__options" aria-label="查找">
-        
-        <button type="reset" class="md-search__icon md-icon" title="清空当前内容" aria-label="清空当前内容" tabindex="-1">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41Z"/></svg>
-        </button>
-      </nav>
-      
-    </form>
-    <div class="md-search__output">
-      <div class="md-search__scrollwrap" data-md-scrollfix>
-        <div class="md-search-result" data-md-component="search-result">
-          <div class="md-search-result__meta">
-            正在初始化搜索引擎
-          </div>
-          <ol class="md-search-result__list" role="presentation"></ol>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-    
-    
-      <div class="md-header__source">
-        <a href="https://github.com/damingerdai/damingerdai.github.io" title="前往仓库" class="md-source" data-md-component="source">
-  <div class="md-source__icon md-icon">
-    
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.4.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2023 Fonticons, Inc.--><path d="M439.55 236.05 244 40.45a28.87 28.87 0 0 0-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 0 1-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 0 0 0 40.81l195.61 195.6a28.86 28.86 0 0 0 40.8 0l194.69-194.69a28.86 28.86 0 0 0 0-40.81z"/></svg>
-  </div>
-  <div class="md-source__repository">
-    damingerdai.github.io
-  </div>
-</a>
-      </div>
-    
-  </nav>
-  
-</header>
-    
-    <div class="md-container" data-md-component="container">
-      
-      
-        
-          
-            
-<nav class="md-tabs" aria-label="标签" data-md-component="tabs">
-  <div class="md-grid">
-    <ul class="md-tabs__list">
-      
-        
-  
-  
-    
-  
-
-
-  
-  
-  
-    <li class="md-tabs__item">
-      <a href="." class="md-tabs__link md-tabs__link--active">
-        主页
-      </a>
-    </li>
-  
-
-      
-        
-  
-  
-
-
-  
-  
-  
-    <li class="md-tabs__item">
-      <a href="front-end/simple-comparison-of-angular-and-react-build-size/" class="md-tabs__link">
-        前端
-      </a>
-    </li>
-  
-
-      
-        
-  
-  
-
-
-  
-  
-  
-    <li class="md-tabs__item">
-      <a href="back-end/gradle-ali-mirror/" class="md-tabs__link">
-        后端
-      </a>
-    </li>
-  
-
-      
-        
-  
-  
-
-
-  
-  
-  
-    
-
-  
-  
-  
-    <li class="md-tabs__item">
-      <a href="software/k8s/how-to-install-minkube/" class="md-tabs__link">
-        软件
-      </a>
-    </li>
-  
-
-  
-
-      
-        
-  
-  
-
-
-  
-  
-  
-    <li class="md-tabs__item">
-      <a href="blockchain/some-token-faucet/" class="md-tabs__link">
-        区块链
-      </a>
-    </li>
-  
-
-      
-        
-  
-  
-
-
-  
-  
-  
-    <li class="md-tabs__item">
-      <a href="others/link/" class="md-tabs__link">
-        其他
-      </a>
-    </li>
-  
-
-      
-    </ul>
-  </div>
-</nav>
-          
-        
-      
-      <main class="md-main" data-md-component="main">
-        <div class="md-main__inner md-grid">
-          
-            
-              
-              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
-                <div class="md-sidebar__scrollwrap">
-                  <div class="md-sidebar__inner">
-                    
-
-  
-
-
-<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="导航栏" data-md-level="0">
-  <label class="md-nav__title" for="__drawer">
-    <a href="." title="大明二代" class="md-nav__button md-logo" aria-label="大明二代" data-md-component="logo">
-      
-  
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54Z"/></svg>
-
-    </a>
-    大明二代
-  </label>
-  
-    <div class="md-nav__source">
-      <a href="https://github.com/damingerdai/damingerdai.github.io" title="前往仓库" class="md-source" data-md-component="source">
-  <div class="md-source__icon md-icon">
-    
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.4.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2023 Fonticons, Inc.--><path d="M439.55 236.05 244 40.45a28.87 28.87 0 0 0-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 0 1-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 0 0 0 40.81l195.61 195.6a28.86 28.86 0 0 0 40.8 0l194.69-194.69a28.86 28.86 0 0 0 0-40.81z"/></svg>
-  </div>
-  <div class="md-source__repository">
-    damingerdai.github.io
-  </div>
-</a>
-    </div>
-  
-  <ul class="md-nav__list" data-md-scrollfix>
-    
-      
-      
-      
-
-  
-  
-    
-  
-  
-    
-    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
-      
-      
-      
-      
-      <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_1" checked>
-      
-      
-      
-        <label class="md-nav__link" for="__nav_1" id="__nav_1_label" tabindex="0">
-          主页
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_1_label" aria-expanded="true">
-        <label class="md-nav__title" for="__nav_1">
-          <span class="md-nav__icon md-icon"></span>
-          主页
-        </label>
-        <ul class="md-nav__list" data-md-scrollfix>
-          
-            
-              
-  
-  
-    
-  
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          我是大明二代
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="." class="md-nav__link md-nav__link--active">
-        我是大明二代
-      </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="目录">
-  
-  
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      目录
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#welcome-to-damingerdai" class="md-nav__link">
-    Welcome to damingerdai
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
-    </li>
-  
-
-            
-          
-            
-              
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="summary/2022/" class="md-nav__link">
-        2022年度总结
-      </a>
-    </li>
-  
-
-            
-          
-        </ul>
-      </nav>
-    </li>
-  
-
-    
-      
-      
-      
-
-  
-  
-  
-    
-    <li class="md-nav__item md-nav__item--nested">
-      
-      
-      
-      
-      <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
-      
-      
-      
-        <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
-          前端
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
-        <label class="md-nav__title" for="__nav_2">
-          <span class="md-nav__icon md-icon"></span>
-          前端
-        </label>
-        <ul class="md-nav__list" data-md-scrollfix>
-          
-            
-              
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="front-end/simple-comparison-of-angular-and-react-build-size/" class="md-nav__link">
-        Angular和React构建体积简单对比
-      </a>
-    </li>
-  
-
-            
-          
-            
-              
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="front-end/build-angular-on-windows-01/" class="md-nav__link">
-        在windows上构建angular项目 (上)
-      </a>
-    </li>
-  
-
-            
-          
-            
-              
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="front-end/build-angular-on-windows-02/" class="md-nav__link">
-        在windows上构建angular项目 (下)
-      </a>
-    </li>
-  
-
-            
-          
-            
-              
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="front-end/ts-optional-chaining/" class="md-nav__link">
-        TypeScript中可选链
-      </a>
-    </li>
-  
-
-            
-          
-            
-              
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="front-end/build-typescript-with-bazel/" class="md-nav__link">
-        使用Bazel编译TypeScript
-      </a>
-    </li>
-  
-
-            
-          
-            
-              
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="front-end/node-docker-template/" class="md-nav__link">
-        Nodejs项目的Dockerfile模版
-      </a>
-    </li>
-  
-
-            
-          
-            
-              
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="front-end/log-migrate-apollo-server-v3/" class="md-nav__link">
-        记录一次迁移Apollo Server V3的过程
-      </a>
-    </li>
-  
-
-            
-          
-            
-              
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="front-end/angular-standalone-components-app/" class="md-nav__link">
-        Angular独立组件简单体验
-      </a>
-    </li>
-  
-
-            
-          
-        </ul>
-      </nav>
-    </li>
-  
-
-    
-      
-      
-      
-
-  
-  
-  
-    
-    <li class="md-nav__item md-nav__item--nested">
-      
-      
-      
-      
-      <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
-      
-      
-      
-        <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
-          后端
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
-        <label class="md-nav__title" for="__nav_3">
-          <span class="md-nav__icon md-icon"></span>
-          后端
-        </label>
-        <ul class="md-nav__list" data-md-scrollfix>
-          
-            
-              
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="back-end/gradle-ali-mirror/" class="md-nav__link">
-        Gradle配置阿里镜像
-      </a>
-    </li>
-  
-
-            
-          
-            
-              
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="back-end/migrate-springdoc-from-springfox/" class="md-nav__link">
-        从springfox迁移到springdoc
-      </a>
-    </li>
-  
-
-            
-          
-            
-              
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="back-end/two-easy-ways-to-use-local-docker-images-in-minikube/" class="md-nav__link">
-        两种在Minikube中运行本地Docker镜像的简单方式
-      </a>
-    </li>
-  
-
-            
-          
-            
-              
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="back-end/github-action-push-docker-image-to-github-packages/" class="md-nav__link">
-        使用github action推送到docker的镜像仓库
-      </a>
-    </li>
-  
-
-            
-          
-            
-              
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="back-end/add-ssl-for-ingress/" class="md-nav__link">
-        给Ingress上配置ssl证书
-      </a>
-    </li>
-  
-
-            
-          
-            
-              
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="back-end/k3s-uses-letsencrypt-and-traefik-to-deploy-the-https/" class="md-nav__link">
-        k3s使用Let‘s Encrypt配置https入口部署
-      </a>
-    </li>
-  
-
-            
-          
-            
-              
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="back-end/pg_dump_ssl_issues/" class="md-nav__link">
-        记录使用pg_dump中遇到的ssl问题
-      </a>
-    </li>
-  
-
-            
-          
-            
-              
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="back-end/windows_docker_port_in_use_issues/" class="md-nav__link">
-        解决Windows下Docker启动容器时，端口被占用错误
-      </a>
-    </li>
-  
-
-            
-          
-            
-              
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="back-end/how-to-user-k3s-deploy-postgresql-for-dev/" class="md-nav__link">
-        使用k3s部署PostgreSQL用于开发
-      </a>
-    </li>
-  
-
-            
-          
-        </ul>
-      </nav>
-    </li>
-  
-
-    
-      
-      
-      
-
-  
-  
-  
-    
-    <li class="md-nav__item md-nav__item--nested">
-      
-      
-      
-      
-      <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
-      
-      
-      
-        <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
-          软件
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
-        <label class="md-nav__title" for="__nav_4">
-          <span class="md-nav__icon md-icon"></span>
-          软件
-        </label>
-        <ul class="md-nav__list" data-md-scrollfix>
-          
-            
-              
-  
-  
-  
-    
-      
-    
-    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
-      
-      
-      
-      
-      <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_1" >
-      
-      
-      
-        <label class="md-nav__link" for="__nav_4_1" id="__nav_4_1_label" tabindex="0">
-          docker与k8s
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_1_label" aria-expanded="false">
-        <label class="md-nav__title" for="__nav_4_1">
-          <span class="md-nav__icon md-icon"></span>
-          docker与k8s
-        </label>
-        <ul class="md-nav__list" data-md-scrollfix>
-          
-            
-              
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="software/k8s/how-to-install-minkube/" class="md-nav__link">
-        Minkube安装笔记
-      </a>
-    </li>
-  
-
-            
-          
-            
-              
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="software/k8s/how-to-install-docker-desktop-k8s/" class="md-nav__link">
-        Docker Desktop自带k8s安装笔记
-      </a>
-    </li>
-  
-
-            
-          
-            
-              
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="software/k8s/how-to-install-minkube-on-mac/" class="md-nav__link">
-        Mac版minikube安装笔记
-      </a>
-    </li>
-  
-
-            
-          
-            
-              
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="software/k8s/k3s-install-with-docker/" class="md-nav__link">
-        K3S安装的时候默认使用docker
-      </a>
-    </li>
-  
-
-            
-          
-        </ul>
-      </nav>
-    </li>
-  
-
-            
-          
+    const detectApple = () => {
+      if(/iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent)){
+        document.documentElement.classList.add('apple')
+      }
+    }
+    detectApple()
+    })(window)</script><meta name="generator" content="Hexo 6.3.0"></head><body><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="avatar-img is-center"><img src="/img/avatar.png" onerror="onerror=null;src='/img/friend_404.gif'" alt="avatar"/></div><div class="sidebar-site-data site-data is-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">28</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">39</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">4</div></a></div><hr class="custom-hr"/><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归类</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page group" href="javascript:void(0);"><i class="fa-fw fas fa-list"></i><span> 其他</span><i class="fas fa-chevron-down"></i></a><ul class="menus_item_child"><li><a class="site-page child" href="/others/learning"><i class="fa-fw fas fa-graduation-cap"></i><span> 学习课程</span></a></li><li><a class="site-page child" href="/others/link/"><i class="fa-fw fas fa-link"></i><span> 链接</span></a></li></ul></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于</span></a></div></div></div></div><div class="page" id="body-wrap"><header class="full_page" id="page-header" style="background-image: url('https://homepage.damingerdai.com/_next/image?url=%2Fdamingerdai.webp&amp;w=2048&amp;q=75')"><nav id="nav"><span id="blog-info"><a href="/" title="Damingerdai's Blog"><span class="site-name">Damingerdai's Blog</span></a></span><div id="menus"><div id="search-button"><a class="site-page social-icon search" href="javascript:void(0);"><i class="fas fa-search fa-fw"></i><span> 搜索</span></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归类</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page group" href="javascript:void(0);"><i class="fa-fw fas fa-list"></i><span> 其他</span><i class="fas fa-chevron-down"></i></a><ul class="menus_item_child"><li><a class="site-page child" href="/others/learning"><i class="fa-fw fas fa-graduation-cap"></i><span> 学习课程</span></a></li><li><a class="site-page child" href="/others/link/"><i class="fa-fw fas fa-link"></i><span> 链接</span></a></li></ul></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于</span></a></div></div><div id="toggle-menu"><a class="site-page" href="javascript:void(0);"><i class="fas fa-bars fa-fw"></i></a></div></div></nav><div id="site-info"><h1 id="site-title">Damingerdai's Blog</h1><div id="site-subtitle"><span id="subtitle"></span></div><div id="site_social_icons"><a class="social-icon" href="https://github.com/damingerdai" target="_blank" title="Github"><i class="fab fa-github" style="color: #24292e;"></i></a><a class="social-icon" href="mailto:mingguobin@live.com" target="_blank" title="Email"><i class="fas fa-envelope" style="color: #4a7dbe;"></i></a></div></div><div id="scroll-down"><i class="fas fa-angle-down scroll-down-effects"></i></div></header><main class="layout" id="content-inner"><div class="recent-posts" id="recent-posts"><div class="recent-post-item"><div class="post_cover left"><a href="/2023/08/11/hello-world/" title="Hello World"><img class="post-bg" src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="Hello World"></a></div><div class="recent-post-info"><a class="article-title" href="/2023/08/11/hello-world/" title="Hello World">Hello World</a><div class="article-meta-wrap"><span class="post-meta-date"><i class="far fa-calendar-alt"></i><span class="article-meta-label">发表于</span><time datetime="2023-08-11T13:28:40.088Z" title="发表于 2023-08-11 21:28:40">2023-08-11</time></span></div><div class="content">Welcome to Hexo! This is your very first post. Check documentation for more info. If you get any problems when using Hexo, you can find the answer in troubleshooting or you can ask me on GitHub.
+Quick StartCreate a new post1$ hexo new &quot;My New Post&quot;
+
+More info: Writing
+Run server1$ hexo server
+
+More info: Server
+Generate static files1$ hexo generate
+
+More info: Generating
+Deploy to remote sites1$ hexo deploy
+
+More info: Deployment
+</div></div></div><div class="recent-post-item"><div class="post_cover right"><a href="/2023/08/10/front-end/how-to-use-bazel-to-build-nodejs-typescript-expressjs/" title="如何使用bazel去构建基于express和typescript的nodejs项目"><img class="post-bg" src="https://cn.bing.com/th?id=OHR.HokkaidoShida_ZH-CN0103354943_1920x1080.jpg&amp;rf=LaDigue_1920x1080.jpg&amp;pid=hp" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="如何使用bazel去构建基于express和typescript的nodejs项目"></a></div><div class="recent-post-info"><a class="article-title" href="/2023/08/10/front-end/how-to-use-bazel-to-build-nodejs-typescript-expressjs/" title="如何使用bazel去构建基于express和typescript的nodejs项目">如何使用bazel去构建基于express和typescript的nodejs项目</a><div class="article-meta-wrap"><span class="post-meta-date"><i class="far fa-calendar-alt"></i><span class="article-meta-label">发表于</span><time datetime="2023-08-10T14:10:03.000Z" title="发表于 2023-08-10 22:10:03">2023-08-10</time></span><span class="article-meta"><span class="article-meta-separator">|</span><i class="fas fa-inbox"></i><a class="article-meta__categories" href="/categories/%E5%89%8D%E7%AB%AF/">前端</a></span></div><div class="content">前言Bazel 是一款类似于 Make、Maven 和 Gradle的开源构建和测试工具。它使用可读的高级构建语言，支持多种变成语言编写的项目，并且能够为多个平台进行构建。Bazel 支持构建包含多个仓库、大量开发人员的大型代码库。
+详细介绍可见Bazel官网。
+目的本文的目的是使用bazel5去构建一个完整的nodejs后端项目，并不负责bazel相关知识的介绍。
+配置首先在package.json文件中·devDependencies·部分添加：
+1234&quot;@bazel/bazelisk&quot;: &quot;^1.7.5&quot;,&quot;@bazel/buildifier&quot;: &quot;^6.0.0&quot;,&quot;@bazel/ibazel&quot;: &quot;^0.16.0&quot;,&quot;@bazel/typescript&quot;: &quot;^5.8.1&quot;,
+
+然后再执行安装依赖命令。
+创建.bazelignore文件并写入下面的内容:
+123.gitnode_modulesdist
+
+创建.baze ...</div></div></div><div class="recent-post-item"><div class="post_cover left"><a href="/2023/04/14/back-end/how-to-user-k3s-deploy-postgresql-for-dev/" title="用k3s部署PostgreSQL用于开发"><img class="post-bg" src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="用k3s部署PostgreSQL用于开发"></a></div><div class="recent-post-info"><a class="article-title" href="/2023/04/14/back-end/how-to-user-k3s-deploy-postgresql-for-dev/" title="用k3s部署PostgreSQL用于开发">用k3s部署PostgreSQL用于开发</a><div class="article-meta-wrap"><span class="post-meta-date"><i class="far fa-calendar-alt"></i><span class="article-meta-label">发表于</span><time datetime="2023-04-14T03:10:05.000Z" title="发表于 2023-04-14 11:10:05">2023-04-14</time></span><span class="article-meta"><span class="article-meta-separator">|</span><i class="fas fa-inbox"></i><a class="article-meta__categories" href="/categories/%E5%90%8E%E7%AB%AF/">后端</a></span></div><div class="content">前言PostgreSQL是世界上最先进的开源数据库。本文的目的是使用k3s本地部署PostgreSQL用于本地开发使用，不具备直接上生产的能力。
+安装PostgreSQL首先准备config.yaml用于定义PostgreSQL的配置：
+1234567891011apiVersion: v1kind: ConfigMapmetadata:  name: postgres-config  namespace: default  labels:    app: postgresdata:  POSTGRES_USER: postgres  POSTGRES_PASSWORD: &#x27;123456&#x27;  POSTGRES_DB: postgres
+
+申请PersistentVolume用于数据持久化的存储：
+12345678910111213apiVersion: v1kind: PersistentVolumemetadata:  name: postgres-pv-volume  namespace: defaultspec:  storageClassName: manu ...</div></div></div><div class="recent-post-item"><div class="post_cover right"><a href="/2023/02/26/back-end/windows_docker_port_in_use_issues/" title="解决Windows下Docker启动容器时，端口被占用错误"><img class="post-bg" src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="解决Windows下Docker启动容器时，端口被占用错误"></a></div><div class="recent-post-info"><a class="article-title" href="/2023/02/26/back-end/windows_docker_port_in_use_issues/" title="解决Windows下Docker启动容器时，端口被占用错误">解决Windows下Docker启动容器时，端口被占用错误</a><div class="article-meta-wrap"><span class="post-meta-date"><i class="far fa-calendar-alt"></i><span class="article-meta-label">发表于</span><time datetime="2023-02-26T11:54:58.000Z" title="发表于 2023-02-26 19:54:58">2023-02-26</time></span><span class="article-meta"><span class="article-meta-separator">|</span><i class="fas fa-inbox"></i><a class="article-meta__categories" href="/categories/%E5%90%8E%E7%AB%AF/">后端</a></span></div><div class="content">解决Windows下Docker启动容器时，端口被占用错误问题描述在使用docker-compose启动mysql的时候遇到一个问题:
+1bind: An attempt was made to access a socket in a way forbidden by its access permissions.
+
+然后查了一下是否存在应用占用了3306的端口：
+1netstat -ano | findstr 3306
+
+结果很尴尬，并没有。。。
+百度了一下，发现是Hyper-V会保留部分tcp端口导致我们自己无法使用这些端口, 使用如下命令查看保留的端口：
+123456789101112131415161718192021222324netsh interface ipv4 show excludedportrange protocol=tcp协议 tcp 端口排除范围开始端口    结束端口----------    --------      1026        1125      1126        1225      1226        1325      1 ...</div></div></div><div class="recent-post-item"><div class="post_cover left"><a href="/2023/02/25/back-end/pg_dump_ssl_issues/" title="记录使用pg_dump中遇到的ssl问题"><img class="post-bg" src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="记录使用pg_dump中遇到的ssl问题"></a></div><div class="recent-post-info"><a class="article-title" href="/2023/02/25/back-end/pg_dump_ssl_issues/" title="记录使用pg_dump中遇到的ssl问题">记录使用pg_dump中遇到的ssl问题</a><div class="article-meta-wrap"><span class="post-meta-date"><i class="far fa-calendar-alt"></i><span class="article-meta-label">发表于</span><time datetime="2023-02-25T13:38:21.000Z" title="发表于 2023-02-25 21:38:21">2023-02-25</time></span><span class="article-meta"><span class="article-meta-separator">|</span><i class="fas fa-inbox"></i><a class="article-meta__categories" href="/categories/%E5%90%8E%E7%AB%AF/">后端</a></span></div><div class="content">记录使用pg_dump中遇到的ssl问题问题描述在使用pg_dump过程中遇到的两个问题：
+
+SSL connection is required. Please specify SSL options and retry.
+SSL error: unsafe legacy renegotiation disabled
+
+SSL option问题这是因为postgresql需要使用TLS&#x2F;SSL connections，我们可以设置一个环境变量PGSSLMODE为required就可以了。
+针对Linux或者Macos用户，使用:
+1export PGSSLMODE=require
+针对Windows用户，使用:
+1SET PGSSLMODE=require
+
+unsafe legacy renegotiation disabled这是因为ssl协议存在一个漏洞，后来升级的时候提供了一个开关默认关闭这个了漏洞，这个解决方法存在一定安全隐患，请谨慎使用。
+创建一个自定义的openssl.cnf,并写入：
+12345678910openssl_conf = openssl_ini ...</div></div></div><div class="recent-post-item"><div class="post_cover right"><a href="/2023/01/07/web3/some-token-faucet/" title="记录一些测试币的水龙头"><img class="post-bg" src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="记录一些测试币的水龙头"></a></div><div class="recent-post-info"><a class="article-title" href="/2023/01/07/web3/some-token-faucet/" title="记录一些测试币的水龙头">记录一些测试币的水龙头</a><div class="article-meta-wrap"><span class="post-meta-date"><i class="far fa-calendar-alt"></i><span class="article-meta-label">发表于</span><time datetime="2023-01-07T13:57:57.000Z" title="发表于 2023-01-07 21:57:57">2023-01-07</time></span><span class="article-meta"><span class="article-meta-separator">|</span><i class="fas fa-inbox"></i><a class="article-meta__categories" href="/categories/web3/">web3</a></span></div><div class="content">记录一些测试币的水龙头记录一些常用的区块链水龙头，以防忘记
+GoerliGoerli Testnet Faucet: 不太记得当初是怎么知道了，但是似乎永远失败…
+GOERLI FAUCET, 每天可以获取0.1 ETH(以前是可以每天领取0.25ETH), 需要使用Alchemy账号.
+Mining Faucet, 使用cpu的算力去挖矿，问题不大，可以使用。
+polygonpolygon faucet, 支持多个测试网络，但是Goerli的ETH没拿到
+参考资料
+免費取得Goerli測試幣
+
+</div></div></div><div class="recent-post-item"><div class="post_cover left"><a href="/2022/09/03/back-end/k3s-uses-letsencrypt-and-traefik-to-deploy-the-https/" title="k3s使用Let‘s Encrypt配置https入口部署"><img class="post-bg" src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="k3s使用Let‘s Encrypt配置https入口部署"></a></div><div class="recent-post-info"><a class="article-title" href="/2022/09/03/back-end/k3s-uses-letsencrypt-and-traefik-to-deploy-the-https/" title="k3s使用Let‘s Encrypt配置https入口部署">k3s使用Let‘s Encrypt配置https入口部署</a><div class="article-meta-wrap"><span class="post-meta-date"><i class="far fa-calendar-alt"></i><span class="article-meta-label">发表于</span><time datetime="2022-09-03T13:07:59.000Z" title="发表于 2022-09-03 21:07:59">2022-09-03</time></span><span class="article-meta"><span class="article-meta-separator">|</span><i class="fas fa-inbox"></i><a class="article-meta__categories" href="/categories/%E5%90%8E%E7%AB%AF/">后端</a></span></div><div class="content">前言本文记录k3s使用letsencrypt配置ssl证书和续签。
+本文使用的k3s版本为： v1.23.6+k3s1。
+安装 cert-manager123# 使用官网提供的配置文件一键安装# 如果拉取 github 资源有困难，可以从网络通畅的位置下载好粘贴过去$ kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.9.1/cert-manager.yaml
+
+如果一切正常，k3s
+12345$ kubectl get pods -n cert-managerNAME                                       READY   STATUS    RESTARTS   AGEcert-manager-6544c44c6b-tlhw8              1/1     Running   0          51scert-manager-cainjector-5687864d5f-rldsg   1/1     Running  ...</div></div></div><div class="recent-post-item"><div class="post_cover right"><a href="/2022/06/18/back-end/add-ssl-for-ingress/" title="给Ingress上配置ssl证书"><img class="post-bg" src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="给Ingress上配置ssl证书"></a></div><div class="recent-post-info"><a class="article-title" href="/2022/06/18/back-end/add-ssl-for-ingress/" title="给Ingress上配置ssl证书">给Ingress上配置ssl证书</a><div class="article-meta-wrap"><span class="post-meta-date"><i class="far fa-calendar-alt"></i><span class="article-meta-label">发表于</span><time datetime="2022-06-18T05:04:18.000Z" title="发表于 2022-06-18 13:04:18">2022-06-18</time></span><span class="article-meta"><span class="article-meta-separator">|</span><i class="fas fa-inbox"></i><a class="article-meta__categories" href="/categories/%E5%90%8E%E7%AB%AF/">后端</a></span></div><div class="content">给Ingress上配置ssl证书创建secret1234kubectl create secret tls [secretName]  --cert=[pem文件路径] --key=[key文件路径] --namespace [namespace] -o yaml --dry-run=client &gt; ingress-default-cert.yamlkubectl apply -f ingress-default-cert.yaml
+
+Ingress添加证书1234567891011121314151617181920212223242526272829apiVersion: networking.k8s.io/v1beta1kind: Ingress  metadata:     name: [ingress-name]     namespace: [namespace] # ingress要和secret在同一个名称空间下     annotations:         kubernetes.io/ingress.class: traefik         traef ...</div></div></div><div class="recent-post-item"><div class="post_cover left"><a href="/2022/06/09/front-end/angular-standalone-components-app/" title="Angular独立组件简单体验"><img class="post-bg" src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="Angular独立组件简单体验"></a></div><div class="recent-post-info"><a class="article-title" href="/2022/06/09/front-end/angular-standalone-components-app/" title="Angular独立组件简单体验">Angular独立组件简单体验</a><div class="article-meta-wrap"><span class="post-meta-date"><i class="far fa-calendar-alt"></i><span class="article-meta-label">发表于</span><time datetime="2022-06-09T12:49:16.000Z" title="发表于 2022-06-09 20:49:16">2022-06-09</time></span><span class="article-meta"><span class="article-meta-separator">|</span><i class="fas fa-inbox"></i><a class="article-meta__categories" href="/categories/%E5%89%8D%E7%AB%AF/">前端</a></span></div><div class="content">Angular独立组件简单体验前言Angular 14一项令人兴奋的特性就是Angular的独立组件终于来了。
+在Angular 14中， 开发者可以尝试使用独立组件开发各种组件，但是值得注意的是Angular独立组件的API仍然没有稳定下，将来可能存在一些破坏性更新，所以不推荐在生产环境中使用。
+如何创建一个独立组件对于已有的组件，我们可以在@Component()中添加standalone: true的标识，然后我们可以在没有@NgModule()的情况下直接使用imports导入其他模块了。如果是新建组件，可以使用ng generate component &lt;name&gt; --standalone的命令，直接创建一个独立组件, 例如：
+1ng generate component button-list --standalone
+
+12345678910@Component(&#123;  selector: &#x27;app-button-list&#x27;,  standalone: true,  imports: [    CommonModule,  ],  ...</div></div></div><div class="recent-post-item"><div class="post_cover right"><a href="/2022/05/15/software/install/drone-gogs-docker-devops/" title="drone + gogs + docker实现持续自动化部署"><img class="post-bg" src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="drone + gogs + docker实现持续自动化部署"></a></div><div class="recent-post-info"><a class="article-title" href="/2022/05/15/software/install/drone-gogs-docker-devops/" title="drone + gogs + docker实现持续自动化部署">drone + gogs + docker实现持续自动化部署</a><div class="article-meta-wrap"><span class="post-meta-date"><i class="far fa-calendar-alt"></i><span class="article-meta-label">发表于</span><time datetime="2022-05-15T07:56:40.000Z" title="发表于 2022-05-15 15:56:40">2022-05-15</time></span><span class="article-meta"><span class="article-meta-separator">|</span><i class="fas fa-inbox"></i><a class="article-meta__categories" href="/categories/%E8%BD%AF%E4%BB%B6/">软件</a></span></div><div class="content">准备我们使用docker-compose来安装gogs和drone。
+首先我们准备数据库，gogs支持mysql，postgres, sqlite, sql server和TiDB。这里我们选择使用postgre:
+12345678910111213141516171819version: &#x27;3&#x27;services:  postgres:    image: postgres:14.2    container_name: postgres    ports:      - 5432:5432    volumes:      - ./postgres:/var/lib/postgresql/data    environment:      POSTGRES_USER: postgres      POSTGRES_PASSWORD: 123456      POSTGRES_DB: postgres    networks:      - ci-network networks:  ci-network:    external: true
+
+创建docker网络 ...</div></div></div><nav id="pagination"><div class="pagination"><span class="page-number current">1</span><a class="page-number" href="/page/2/#content-inner">2</a><a class="page-number" href="/page/3/#content-inner">3</a><a class="extend next" rel="next" href="/page/2/#content-inner"><i class="fas fa-chevron-right fa-fw"></i></a></div></nav></div><div class="aside-content" id="aside-content"><div class="card-widget card-info"><div class="is-center"><div class="avatar-img"><img src="/img/avatar.png" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="author-info__name">Arthur Ming</div><div class="author-info__description">大明二代的博客</div></div><div class="card-info-data site-data is-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">28</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">39</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">4</div></a></div><a id="card-info-btn" target="_blank" rel="noopener" href="https://github.com/damingerdai"><i class="fab fa-github"></i><span>Follow Me</span></a><div class="card-info-social-icons is-center"><a class="social-icon" href="https://github.com/damingerdai" target="_blank" title="Github"><i class="fab fa-github" style="color: #24292e;"></i></a><a class="social-icon" href="mailto:mingguobin@live.com" target="_blank" title="Email"><i class="fas fa-envelope" style="color: #4a7dbe;"></i></a></div></div><div class="card-widget card-announcement"><div class="item-headline"><i class="fas fa-bullhorn fa-shake"></i><span>公告</span></div><div class="announcement_content">大家好，我是大明二代</div></div><div class="sticky_layout"><div class="card-widget card-recent-post"><div class="item-headline"><i class="fas fa-history"></i><span>最新文章</span></div><div class="aside-list"><div class="aside-list-item"><a class="thumbnail" href="/2023/08/11/hello-world/" title="Hello World"><img src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="Hello World"/></a><div class="content"><a class="title" href="/2023/08/11/hello-world/" title="Hello World">Hello World</a><time datetime="2023-08-11T13:28:40.088Z" title="发表于 2023-08-11 21:28:40">2023-08-11</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2023/08/10/front-end/how-to-use-bazel-to-build-nodejs-typescript-expressjs/" title="如何使用bazel去构建基于express和typescript的nodejs项目"><img src="https://cn.bing.com/th?id=OHR.HokkaidoShida_ZH-CN0103354943_1920x1080.jpg&amp;rf=LaDigue_1920x1080.jpg&amp;pid=hp" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="如何使用bazel去构建基于express和typescript的nodejs项目"/></a><div class="content"><a class="title" href="/2023/08/10/front-end/how-to-use-bazel-to-build-nodejs-typescript-expressjs/" title="如何使用bazel去构建基于express和typescript的nodejs项目">如何使用bazel去构建基于express和typescript的nodejs项目</a><time datetime="2023-08-10T14:10:03.000Z" title="发表于 2023-08-10 22:10:03">2023-08-10</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2023/04/14/back-end/how-to-user-k3s-deploy-postgresql-for-dev/" title="用k3s部署PostgreSQL用于开发"><img src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="用k3s部署PostgreSQL用于开发"/></a><div class="content"><a class="title" href="/2023/04/14/back-end/how-to-user-k3s-deploy-postgresql-for-dev/" title="用k3s部署PostgreSQL用于开发">用k3s部署PostgreSQL用于开发</a><time datetime="2023-04-14T03:10:05.000Z" title="发表于 2023-04-14 11:10:05">2023-04-14</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2023/02/26/back-end/windows_docker_port_in_use_issues/" title="解决Windows下Docker启动容器时，端口被占用错误"><img src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="解决Windows下Docker启动容器时，端口被占用错误"/></a><div class="content"><a class="title" href="/2023/02/26/back-end/windows_docker_port_in_use_issues/" title="解决Windows下Docker启动容器时，端口被占用错误">解决Windows下Docker启动容器时，端口被占用错误</a><time datetime="2023-02-26T11:54:58.000Z" title="发表于 2023-02-26 19:54:58">2023-02-26</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2023/02/25/back-end/pg_dump_ssl_issues/" title="记录使用pg_dump中遇到的ssl问题"><img src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="记录使用pg_dump中遇到的ssl问题"/></a><div class="content"><a class="title" href="/2023/02/25/back-end/pg_dump_ssl_issues/" title="记录使用pg_dump中遇到的ssl问题">记录使用pg_dump中遇到的ssl问题</a><time datetime="2023-02-25T13:38:21.000Z" title="发表于 2023-02-25 21:38:21">2023-02-25</time></div></div></div></div><div class="card-widget card-categories"><div class="item-headline">
+            <i class="fas fa-folder-open"></i>
+            <span>分类</span>
             
-              
-  
-  
-  
-    
-      
-    
-    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
-      
-      
-      
-      
-      <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_2" >
-      
-      
-      
-        <label class="md-nav__link" for="__nav_4_2" id="__nav_4_2_label" tabindex="0">
-          安装笔记
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_2_label" aria-expanded="false">
-        <label class="md-nav__title" for="__nav_4_2">
-          <span class="md-nav__icon md-icon"></span>
-          安装笔记
-        </label>
-        <ul class="md-nav__list" data-md-scrollfix>
-          
-            
-              
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="software/install/how-to-install-android-studio/" class="md-nav__link">
-        Android Studio安装笔记
-      </a>
-    </li>
-  
-
-            
-          
-            
-              
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="software/install/how-to-install-homebrew/" class="md-nav__link">
-        Homebrew安装笔记
-      </a>
-    </li>
-  
-
-            
-          
-            
-              
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="software/install/drone-gogs-docker-devops/" class="md-nav__link">
-        drone + gogs + docker实现持续自动化部署
-      </a>
-    </li>
-  
-
-            
-          
-        </ul>
-      </nav>
-    </li>
-  
-
-            
-          
-        </ul>
-      </nav>
-    </li>
-  
-
-    
-      
-      
-      
-
-  
-  
-  
-    
-    <li class="md-nav__item md-nav__item--nested">
-      
-      
-      
-      
-      <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
-      
-      
-      
-        <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
-          区块链
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
-        <label class="md-nav__title" for="__nav_5">
-          <span class="md-nav__icon md-icon"></span>
-          区块链
-        </label>
-        <ul class="md-nav__list" data-md-scrollfix>
-          
-            
-              
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="blockchain/some-token-faucet/" class="md-nav__link">
-        记录一些测试币的水龙头
-      </a>
-    </li>
-  
-
-            
-          
-        </ul>
-      </nav>
-    </li>
-  
-
-    
-      
-      
-      
-
-  
-  
-  
-    
-    <li class="md-nav__item md-nav__item--nested">
-      
-      
-      
-      
-      <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
-      
-      
-      
-        <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
-          其他
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
-        <label class="md-nav__title" for="__nav_6">
-          <span class="md-nav__icon md-icon"></span>
-          其他
-        </label>
-        <ul class="md-nav__list" data-md-scrollfix>
-          
-            
-              
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="others/link/" class="md-nav__link">
-        喜欢的post
-      </a>
-    </li>
-  
-
-            
-          
-            
-              
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="others/learning/" class="md-nav__link">
-        学习课程
-      </a>
-    </li>
-  
-
-            
-          
-        </ul>
-      </nav>
-    </li>
-  
-
-    
-  </ul>
-</nav>
-                  </div>
-                </div>
-              </div>
-            
-            
-              
-              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
-                <div class="md-sidebar__scrollwrap">
-                  <div class="md-sidebar__inner">
-                    
-
-<nav class="md-nav md-nav--secondary" aria-label="目录">
-  
-  
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      目录
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#welcome-to-damingerdai" class="md-nav__link">
-    Welcome to damingerdai
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-                  </div>
-                </div>
-              </div>
-            
-          
-          
-            <div class="md-content" data-md-component="content">
-              <article class="md-content__inner md-typeset">
-                
-                  
-
-  
-  
-
-
-  <h1>我是大明二代</h1>
-
-<h2 id="welcome-to-damingerdai">Welcome to damingerdai</h2>
-<p>大家好， 我是明国宾。，目前在普华永道信息技术(上海)有限公司做全栈开发。</p>
-<p>在普华永道里，我以Angular Commit Message规范为基础，逐步发展了一套基于Nodejs生态的开发部署规范，在PM和其他开发同事的支持下，成功地在项目中推广，而我也在从中获得收获成长。</p>
-<p>作为一名非计算机专业出生的普通人，我使用过<code>Spring Boot</code>、<code>Nodejs</code>和<code>Angular</code>做过项目, 但是由于种种原因，并没有好好深入研究过技术的底层原理，更多的还是一些简单的技术应用。</p>
-<p>因此我希望我将来可以花费更多深研技术：</p>
-<ol>
-<li>在<code>Angular</code>的基础上，能够使用<code>React</code>进行项目开发，同时对<code>TypeScript Compiler Api</code>进行深入研究。</li>
-<li>深入研究<code>Spring Boot</code>, 根据以前开发的项目，形成自己一套的快速开发框架。</li>
-<li>未来是属于云原生的世界，<code>Golang</code>将会越来越重要，因此能够继续研究Golang。此外，<code>K8S</code>是云原生开发的事实上的基础设施，我将花费更多的时间去研究。</li>
-<li><code>Rust</code>是一名很有意思的语言，希望能够在学习之余，简单的入门一下，能够理解前人对编程语言的思考</li>
-<li><code>Bazel</code>是谷歌开源的编译工具，性能好，支持多语言。但是由于可参考的资料非常少，希望能有机会勉强掌握。</li>
-</ol>
-<p>随着年岁的增长，我越来越发现，自己的时间太少，而需要学习的知识只会越来越多。有的时候也会觉得迷茫，但是我想对我自己说一句：我是要成为架构师的男人！</p>
-
-
-
-
-
-                
-              </article>
             </div>
-          
-          
-        </div>
-        
-      </main>
-      
-        <footer class="md-footer">
-  
-  <div class="md-footer-meta md-typeset">
-    <div class="md-footer-meta__inner md-grid">
-      <div class="md-copyright">
-  
-    <div class="md-copyright__highlight">
-      copyright 2021
-    </div>
-  
-  
-    Made with
-    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
-      Material for MkDocs
-    </a>
-  
-</div>
-      
-    </div>
-  </div>
-</footer>
-      
-    </div>
-    <div class="md-dialog" data-md-component="dialog">
-      <div class="md-dialog__inner md-typeset"></div>
-    </div>
-    
-    <script id="__config" type="application/json">{"base": ".", "features": ["navigation.sections", "navigation.tabs"], "search": "assets/javascripts/workers/search.74e28a9f.min.js", "translations": {"clipboard.copied": "\u5df2\u590d\u5236", "clipboard.copy": "\u590d\u5236", "search.result.more.one": "\u5728\u8be5\u9875\u4e0a\u8fd8\u6709 1 \u4e2a\u7b26\u5408\u6761\u4ef6\u7684\u7ed3\u679c", "search.result.more.other": "\u5728\u8be5\u9875\u4e0a\u8fd8\u6709 # \u4e2a\u7b26\u5408\u6761\u4ef6\u7684\u7ed3\u679c", "search.result.none": "\u6ca1\u6709\u627e\u5230\u7b26\u5408\u6761\u4ef6\u7684\u7ed3\u679c", "search.result.one": "\u627e\u5230 1 \u4e2a\u7b26\u5408\u6761\u4ef6\u7684\u7ed3\u679c", "search.result.other": "# \u4e2a\u7b26\u5408\u6761\u4ef6\u7684\u7ed3\u679c", "search.result.placeholder": "\u952e\u5165\u4ee5\u5f00\u59cb\u641c\u7d22", "search.result.term.missing": "\u7f3a\u5c11", "select.version": "\u9009\u62e9\u5f53\u524d\u7248\u672c"}}</script>
-    
-    
-      <script src="assets/javascripts/bundle.220ee61c.min.js"></script>
-      
-    
-  </body>
-</html>
+            <ul class="card-category-list" id="aside-cat-list">
+            <li class="card-category-list-item "><a class="card-category-list-link" href="/categories/web3/"><span class="card-category-list-name">web3</span><span class="card-category-list-count">1</span></a></li><li class="card-category-list-item "><a class="card-category-list-link" href="/categories/%E5%89%8D%E7%AB%AF/"><span class="card-category-list-name">前端</span><span class="card-category-list-count">9</span></a></li><li class="card-category-list-item "><a class="card-category-list-link" href="/categories/%E5%90%8E%E7%AB%AF/"><span class="card-category-list-name">后端</span><span class="card-category-list-count">9</span></a></li><li class="card-category-list-item "><a class="card-category-list-link" href="/categories/%E8%BD%AF%E4%BB%B6/"><span class="card-category-list-name">软件</span><span class="card-category-list-count">7</span></a></li>
+            </ul></div><div class="card-widget card-tags"><div class="item-headline"><i class="fas fa-tags"></i><span>标签</span></div><div class="card-tag-cloud"><a href="/tags/windows/" style="font-size: 1.1em; color: #999">windows</a> <a href="/tags/graphql/" style="font-size: 1.1em; color: #999">graphql</a> <a href="/tags/docker/" style="font-size: 1.42em; color: #99a6b7">docker</a> <a href="/tags/drone/" style="font-size: 1.1em; color: #999">drone</a> <a href="/tags/bazel/" style="font-size: 1.34em; color: #99a3b0">bazel</a> <a href="/tags/docker-desktop/" style="font-size: 1.1em; color: #999">docker desktop</a> <a href="/tags/github/" style="font-size: 1.1em; color: #999">github</a> <a href="/tags/kubernetes/" style="font-size: 1.34em; color: #99a3b0">kubernetes</a> <a href="/tags/nodejs/" style="font-size: 1.26em; color: #999fa8">nodejs</a> <a href="/tags/react/" style="font-size: 1.1em; color: #999">react</a> <a href="/tags/PostgreSQ/" style="font-size: 1.1em; color: #999">PostgreSQ</a> <a href="/tags/spring-boot/" style="font-size: 1.1em; color: #999">spring boot</a> <a href="/tags/gogs/" style="font-size: 1.1em; color: #999">gogs</a> <a href="/tags/Goerli/" style="font-size: 1.1em; color: #999">Goerli</a> <a href="/tags/ssl/" style="font-size: 1.26em; color: #999fa8">ssl</a> <a href="/tags/springdoc/" style="font-size: 1.1em; color: #999">springdoc</a> <a href="/tags/gradle/" style="font-size: 1.1em; color: #999">gradle</a> <a href="/tags/k3s/" style="font-size: 1.18em; color: #999ca1">k3s</a> <a href="/tags/github-action/" style="font-size: 1.1em; color: #999">github action</a> <a href="/tags/apollo/" style="font-size: 1.1em; color: #999">apollo</a> <a href="/tags/oepn-api/" style="font-size: 1.1em; color: #999">oepn api</a> <a href="/tags/polygon/" style="font-size: 1.1em; color: #999">polygon</a> <a href="/tags/typescript/" style="font-size: 1.18em; color: #999ca1">typescript</a> <a href="/tags/ndroid-Studio/" style="font-size: 1.1em; color: #999">ndroid Studio</a> <a href="/tags/angular/" style="font-size: 1.34em; color: #99a3b0">angular</a> <a href="/tags/mac/" style="font-size: 1.1em; color: #999">mac</a> <a href="/tags/typeScript/" style="font-size: 1.1em; color: #999">typeScript</a> <a href="/tags/Mac/" style="font-size: 1.1em; color: #999">Mac</a> <a href="/tags/swagger-ui/" style="font-size: 1.1em; color: #999">swagger-ui</a> <a href="/tags/homebew/" style="font-size: 1.1em; color: #999">homebew</a> <a href="/tags/Docker-Desktop/" style="font-size: 1.1em; color: #999">Docker Desktop</a> <a href="/tags/postgresql/" style="font-size: 1.1em; color: #999">postgresql</a> <a href="/tags/web3/" style="font-size: 1.1em; color: #999">web3</a> <a href="/tags/pg-dump/" style="font-size: 1.1em; color: #999">pg_dump</a> <a href="/tags/k8s/" style="font-size: 1.5em; color: #99a9bf">k8s</a> <a href="/tags/minikube/" style="font-size: 1.26em; color: #999fa8">minikube</a> <a href="/tags/Ubuntu/" style="font-size: 1.1em; color: #999">Ubuntu</a> <a href="/tags/ingress/" style="font-size: 1.1em; color: #999">ingress</a> <a href="/tags/letsencrypt/" style="font-size: 1.1em; color: #999">letsencrypt</a></div></div><div class="card-widget card-archives"><div class="item-headline"><i class="fas fa-archive"></i><span>归档</span><a class="card-more-btn" href="/archives/" title="查看更多">
+    <i class="fas fa-angle-right"></i></a></div><ul class="card-archive-list"><li class="card-archive-list-item"><a class="card-archive-list-link" href="/archives/2023/08/"><span class="card-archive-list-date">八月 2023</span><span class="card-archive-list-count">2</span></a></li><li class="card-archive-list-item"><a class="card-archive-list-link" href="/archives/2023/04/"><span class="card-archive-list-date">四月 2023</span><span class="card-archive-list-count">1</span></a></li><li class="card-archive-list-item"><a class="card-archive-list-link" href="/archives/2023/02/"><span class="card-archive-list-date">二月 2023</span><span class="card-archive-list-count">2</span></a></li><li class="card-archive-list-item"><a class="card-archive-list-link" href="/archives/2023/01/"><span class="card-archive-list-date">一月 2023</span><span class="card-archive-list-count">1</span></a></li><li class="card-archive-list-item"><a class="card-archive-list-link" href="/archives/2022/09/"><span class="card-archive-list-date">九月 2022</span><span class="card-archive-list-count">1</span></a></li><li class="card-archive-list-item"><a class="card-archive-list-link" href="/archives/2022/06/"><span class="card-archive-list-date">六月 2022</span><span class="card-archive-list-count">2</span></a></li><li class="card-archive-list-item"><a class="card-archive-list-link" href="/archives/2022/05/"><span class="card-archive-list-date">五月 2022</span><span class="card-archive-list-count">2</span></a></li><li class="card-archive-list-item"><a class="card-archive-list-link" href="/archives/2022/04/"><span class="card-archive-list-date">四月 2022</span><span class="card-archive-list-count">1</span></a></li></ul></div><div class="card-widget card-webinfo"><div class="item-headline"><i class="fas fa-chart-line"></i><span>网站资讯</span></div><div class="webinfo"><div class="webinfo-item"><div class="item-name">文章数目 :</div><div class="item-count">28</div></div><div class="webinfo-item"><div class="item-name">本站访客数 :</div><div class="item-count" id="busuanzi_value_site_uv"><i class="fa-solid fa-spinner fa-spin"></i></div></div><div class="webinfo-item"><div class="item-name">本站总访问量 :</div><div class="item-count" id="busuanzi_value_site_pv"><i class="fa-solid fa-spinner fa-spin"></i></div></div><div class="webinfo-item"><div class="item-name">最后更新时间 :</div><div class="item-count" id="last-push-date" data-lastPushDate="2023-08-11T13:28:51.715Z"><i class="fa-solid fa-spinner fa-spin"></i></div></div></div></div></div></div></main><footer id="footer"><div id="footer-wrap"><div class="copyright">&copy;2020 - 2023 By Arthur Ming</div><div class="framework-info"><span>框架 </span><a target="_blank" rel="noopener" href="https://hexo.io">Hexo</a><span class="footer-separator">|</span><span>主题 </span><a target="_blank" rel="noopener" href="https://github.com/jerryc127/hexo-theme-butterfly">Butterfly</a></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="darkmode" type="button" title="浅色和深色模式转换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside_config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button id="go-up" type="button" title="回到顶部"><span class="scroll-percent"></span><i class="fas fa-arrow-up"></i></button></div></div><div><script src="/js/utils.js"></script><script src="/js/main.js"></script><script src="https://cdn.jsdelivr.net/npm/@fancyapps/ui/dist/fancybox/fancybox.umd.min.js"></script><div class="js-pjax"><script>window.typedJSFn = {
+  init: (str) => {
+    window.typed = new Typed('#subtitle', Object.assign({
+      strings: str,
+      startDelay: 300,
+      typeSpeed: 150,
+      loop: true,
+      backSpeed: 50,
+    }, null))
+  },
+  run: (subtitleType) => {
+    if (true) {
+      if (typeof Typed === 'function') {
+        subtitleType()
+      } else {
+        getScript('https://cdn.jsdelivr.net/npm/typed.js/dist/typed.umd.min.js').then(subtitleType)
+      }
+    } else {
+      subtitleType()
+    }
+  }
+}
+</script><script>function subtitleType () {
+  if (true) {
+    typedJSFn.init(["Time flies over us, but leaves its shadow behind.","Time flies when you're having fun.","The sands of time have been kind to me."])
+  } else {
+    document.getElementById("subtitle").textContent = "Time flies over us, but leaves its shadow behind."
+  }
+}
+typedJSFn.run(subtitleType)</script></div><script defer="defer" id="ribbon" src="https://cdn.jsdelivr.net/npm/butterfly-extsrc/dist/canvas-ribbon.min.js" size="150" alpha="0.6" zIndex="-1" mobile="false" data-click="true"></script><script async data-pjax src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script><div id="local-search"><div class="search-dialog"><nav class="search-nav"><span class="search-dialog-title">搜索</span><span id="loading-status"></span><button class="search-close-button"><i class="fas fa-times"></i></button></nav><div class="is-center" id="loading-database"><i class="fas fa-spinner fa-pulse"></i><span>  数据库加载中</span></div><div class="search-wrap"><div id="local-search-input"><div class="local-search-box"><input class="local-search-box--input" placeholder="搜索文章" type="text"/></div></div><hr/><div class="no-result" id="local-search-results"></div><div id="local-search-stats-wrap"></div></div></div><div id="search-mask"></div><script src="/js/search/local-search.js"></script></div></div></body></html>
