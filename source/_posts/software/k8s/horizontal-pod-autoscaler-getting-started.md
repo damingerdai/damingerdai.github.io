@@ -114,3 +114,4 @@ spec:
 4. [Enable Kubernetes Metrics Server on Docker Desktop](https://dev.to/docker/enable-kubernetes-metrics-server-on-docker-desktop-5434)
 5. [Kubernetes HPA 使用详解](https://www.qikqiak.com/post/k8s-hpa-usage/)
 6. [How kubernetes HPA with 2 or more metrics behaves - especially the no.of replicas calculation?](https://stackoverflow.com/questions/54302592/how-kubernetes-hpa-with-2-or-more-metrics-behaves-especially-the-no-of-replica)
+7. [feat: 使用k8s的HorizontalPodAutoscaler进行水平的资源缩放](https://github.com/damingerdai/hoteler/pull/749)
