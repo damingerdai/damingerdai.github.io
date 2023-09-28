@@ -26,7 +26,11 @@ categories: [软件]
     "https://registry.docker-cn.com",
     "https://docker.mirrors.ustc.edu.cn",
     "https://mirror.baidubce.com",
-    "http://hub-mirror.c.163.com"
+    "http://hub-mirror.c.163.com",
+    "https://uyah70su.mirror.aliyuncs.com",
+    "https://dockerhub.mirrors.nwafu.edu.cn",
+    "https://7bafc985f90c43b887a96c2b846cf984.mirror.swr.myhuaweicloud.com"
+    "",
   ],
   "insecure-registries": [],
   "debug": true,
@@ -101,6 +105,7 @@ eyJhbGciOiJSUzI1NiIsImtpZCI6Imk0TWpNeGM3SWVrMHllMVphM0FPVFZIZ2RIaXZIbll2UzZObkJS
 ## 参考资料
 
 - [Kubernetes Dashboard](https://github.com/kubernetes/dashboard#getting-started)
+- [常用镜像仓库](https://gist.github.com/qwfys/aec4d2ab79281aeafebdb40b22d0b748)
 
 ## 附录
 
