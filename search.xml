@@ -4,6 +4,33 @@
   
     
     <entry>
+      <title>Podman的hello world入门</title>
+      <link href="/2024/01/21/software/podman-hello-world/"/>
+      <url>/2024/01/21/software/podman-hello-world/</url>
+      
+        <content type="html"><![CDATA[<h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><p><a href="https://podman.io/">Podnam</a>是一个符合OCI，用于在 Linux® 系统上开发、提供了与 Docker 等类似的功能来管理容器。管理和运行容器开源工具。 Podman 最初由 Red Hat® 工程师与开源社区一起开发。Podman使用 libpod 库管理整个容器生态系统。</p><h1 id="安装"><a href="#安装" class="headerlink" title="安装"></a>安装</h1><p>如果你使用Macos, 可以使用homebrew安装：</p><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">brew install podman</span><br></pre></td></tr></table></figure><p>安装之后就可以创建和启动Podnam虚拟机：</p><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">podman machine init</span><br><span class="line">podman machine start</span><br></pre></td></tr></table></figure><p>如果你使用Debian 或者 ubuntu， 可以使用apt-get命令安装：</p><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">sudo apt-get install runc -y</span><br><span class="line">sudo apt-get -y install podman</span><br></pre></td></tr></table></figure><p> 其他系统可能参考<a href="https://podman.io/docs/installation">podman安装页面</a></p><blockquote><p>注意：对于 Windows 和 Mac，podman 需要一个虚拟机来部署容器。</p></blockquote><h1 id="配置"><a href="#配置" class="headerlink" title="配置"></a>配置</h1><p>默认情况下，Podman 配置有两个容器注册表。</p><ul><li><a href="https://quay.io/">quay.io</a></li><li><a href="https://hub.docker.com/">docker.io</a></li></ul><p>我们可以在·&#x2F;etc&#x2F;containers&#x2F;registries.conf·看到</p><p>但是为了方便我们构建基于Dockerfile的景象，我们需要在没有明确容器注册表的时候默认拉取docer.io的注册表，我们可以在·&#x2F;etc&#x2F;containers&#x2F;registries.conf·或者·$HOME&#x2F;.config&#x2F;containers&#x2F;registries.conf·设置unqualified-search-registries</p><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">unqualified-search-registries = [<span class="string">&quot;docker.io&quot;</span>]</span><br></pre></td></tr></table></figure><h1 id="存储"><a href="#存储" class="headerlink" title="存储"></a>存储</h1><p>每个系统用户都有自己的容器存储地址。这意味着，如果您尝试从不同的用户登录中提取镜像，它将从远程注册表而不是本地映像中提取镜像。</p><h1 id="容器管理"><a href="#容器管理" class="headerlink" title="容器管理"></a>容器管理</h1><p>拉取容器：</p><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">podman pull docker.io/nginx</span><br></pre></td></tr></table></figure><p>运行容器：</p><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">podman  run --name docker-nginx -p 8080:80 docker.io/nginx</span><br></pre></td></tr></table></figure><p>如果你绑定1024一下的端口，你需要使用root权限：</p><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">sudo podman run --name docker-nginx -p 80:80 docker.io/nginx</span><br></pre></td></tr></table></figure><p>对于root用户，容器将会存储在·&#x2F;var&#x2F;lib&#x2F;containers&#x2F;storag·的文件夹中。<br>对于非root用户，容器将会存储在·$HOME&#x2F;.local&#x2F;share&#x2F;containers&#x2F;storage·的文件夹中。</p><h1 id="参考资料"><a href="#参考资料" class="headerlink" title="参考资料"></a>参考资料</h1><ol><li><a href="https://www.redhat.com/en/topics/containers/what-is-podman">What is Podman?</a></li><li><a href="https://zhuanlan.zhihu.com/p/582580502">Podman 初学者指南（上）</a></li><li><a href="https://github.com/containers/podman/issues/16096">Podman “Error: no registries found in registries.conf, a registry must be provided” while logging&#x2F;pulling from docker.io</a></li><li><a href="https://devopscube.com/podman-tutorial-beginners/">What is Podman?</a></li></ol>]]></content>
+      
+      
+      <categories>
+          
+          <category> 软件 </category>
+          
+      </categories>
+      
+      
+        <tags>
+            
+            <tag> podman </tag>
+            
+            <tag> 容器 </tag>
+            
+        </tags>
+      
+    </entry>
+    
+    
+    
+    <entry>
       <title>2023年度总结</title>
       <link href="/2024/01/06/summary/2023/"/>
       <url>/2024/01/06/summary/2023/</url>
