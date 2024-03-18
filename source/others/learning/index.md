@@ -16,7 +16,7 @@ date: 2023-08-09 21:10:24
 1. [深入浅出现代Web编程](https://fullstackopen.com/zh/)
 2. [Type-Challenges](https://wangtunan.github.io/blog/typescript/challenge.html#%E4%BB%8B%E7%BB%8D)
 
-## Docker与k8s
+## 云原生
 
 1. [从Docker到Kubernetes进阶](https://www.qikqiak.com/k8s-book/)
 2. [Kubernetes Handbook——Kubernetes 中文指南/云原生应用架构实践手册](https://jimmysong.io/kubernetes-handbook/)
@@ -32,3 +32,8 @@ date: 2023-08-09 21:10:24
 ## Flutter
 
 1. [Flutter实战*第二版](https://book.flutterchina.club/)
+
+## Git
+
+1. [Learn Git Branching](https://learngitbranching.js.org/)
+2. [Git飞行规则(Flight Rules)](https://github.com/k88hudson/git-flight-rules)
