@@ -1,9 +1,17 @@
 # 大明二代的博客
 
-## 技术
+## 技术栈
 
 1. [hexo](https://hexo.io/zh-cn/)
 2. [butterfly](https://butterfly.js.org/)
+
+### 如何创建post
+
+```bash
+hexo new post "folderName/Your Post Title"
+```
+
+这将在你的source/_posts/folderName目录下创建一个名为"Your Post Title.md"的Markdown文件。如果folderName文件夹不存在，Hexo将会自动创建它。你可以在这个文件中开始写你的文章。nnn
 
 ## 参考
 
