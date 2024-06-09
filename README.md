@@ -11,7 +11,13 @@
 hexo new post "folderName/Your Post Title"
 ```
 
-这将在你的source/_posts/folderName目录下创建一个名为"Your Post Title.md"的Markdown文件。如果folderName文件夹不存在，Hexo将会自动创建它。你可以在这个文件中开始写你的文章。nnn
+这将在你的source/_posts/folderName目录下创建一个名为"Your Post Title.md"的Markdown文件。如果folderName文件夹不存在，Hexo将会自动创建它。你可以在这个文件中开始写你的文章。
+
+### 升级
+
+```bash
+npm install hexo hexo-asset-image hexo-asset-link hexo-generator-archive hexo-generator-category hexo-generator-index hexo-generator-search hexo-generator-tag hexo-renderer-ejs hexo-renderer-marked hexo-renderer-pug hexo-renderer-stylus hexo-server hexo-theme-landscape
+```
 
 ## 参考
 
