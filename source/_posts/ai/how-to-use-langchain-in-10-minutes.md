@@ -140,7 +140,8 @@ print(output)
 
 # new code below this line
 script_chain = LLMChain(llm=llm, prompt=script_prompt)
-script = description_chain.predict(description=output, verbose=True)
+script = script_chain.predict(description=output, verbose=True)
+# 原文是script = description_chain.predict(description=output, verbose=True)，应该是错误
 print(script)
 ```
 
