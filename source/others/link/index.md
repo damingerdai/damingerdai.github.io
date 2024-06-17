@@ -75,3 +75,7 @@
 ### Java
 
 1. [编码妙 ♂ 妙 ♂ 屋](https://www.skypyb.com/)
+
+### AI
+
+1. [Prompt Engineering Guide](https://www.promptingguide.ai/)
