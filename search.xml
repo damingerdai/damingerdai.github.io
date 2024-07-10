@@ -4,6 +4,19 @@
   
     
     <entry>
+      <title>back-end/how-to-backup-postgres-docker-container</title>
+      <link href="/2024/07/10/back-end/back-end-how-to-backup-postgres-docker-container/"/>
+      <url>/2024/07/10/back-end/back-end-how-to-backup-postgres-docker-container/</url>
+      
+        <content type="html"><![CDATA[<h1 id="使用docker-compose备份Postgres-Docker容器的解决方案"><a href="#使用docker-compose备份Postgres-Docker容器的解决方案" class="headerlink" title="使用docker-compose备份Postgres Docker容器的解决方案"></a>使用docker-compose备份Postgres Docker容器的解决方案</h1><h2 id="备份"><a href="#备份" class="headerlink" title="备份"></a>备份</h2><p>使用<code>pg_dumpall</code>命令备份Postgres数据库。</p><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">docker-compose <span class="built_in">exec</span> &lt;postgres_service&gt; pg_dumpall -U postgres &gt; dump_`<span class="built_in">date</span> +%Y-%m-%d<span class="string">&quot;_&quot;</span>%H_%M_%S`.sql</span><br></pre></td></tr></table></figure><ol><li><code>docker-compose exec &lt;postgres_service&gt;</code> 在名为<code>&lt;postgres_service&gt;</code>的Postgres容器上执行命令。</li><li><code>-U postgres</code> 指定数据库的用户名。Docker的默认用户名是<code>postgres</code>，如果你使用不同的用户名，请进行修改。</li></ol><h2 id="恢复"><a href="#恢复" class="headerlink" title="恢复"></a>恢复</h2><p>将<code>dump_</code>date +%Y-%m-%d”<em>“%H</em>%M_%S<code>.sql</code>文件放置在<code>backup</code>文件夹中。</p><p>然后使用Docker卷将<code>backup</code>文件夹绑定到Postgres容器上：</p><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">volumes:</span><br><span class="line">    - ./backup:/backup</span><br></pre></td></tr></table></figure><p>删除现有的Postgres容器并创建一个新的容器：</p><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">docker-compose down &amp;&amp; docker-compose up -d</span><br></pre></td></tr></table></figure><p>执行数据库导入命令：</p><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">docker-compose <span class="built_in">exec</span> postgres psql -f /backup/dump_xxx.sql postgres -U postgres</span><br></pre></td></tr></table></figure><h2 id="参考资料"><a href="#参考资料" class="headerlink" title="参考资料"></a>参考资料</h2><ol><li><a href="https://wdt.im/posts/docker-compose-postgres-backup-restore/">使用docker-compose备份和恢复Postgres数据库</a></li></ol>]]></content>
+      
+      
+      
+    </entry>
+    
+    
+    
+    <entry>
       <title>如何在10分钟内使用LangChain</title>
       <link href="/2024/06/09/ai/how-to-use-langchain-in-10-minutes/"/>
       <url>/2024/06/09/ai/how-to-use-langchain-in-10-minutes/</url>
