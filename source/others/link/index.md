@@ -79,3 +79,7 @@
 ### AI
 
 1. [Prompt Engineering Guide](https://www.promptingguide.ai/)
+
+### 翻译
+
+1. [Runebook.dev](https://runebook.dev/)
