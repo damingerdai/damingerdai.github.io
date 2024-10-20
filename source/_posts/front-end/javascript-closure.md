@@ -1,5 +1,5 @@
 ---
-title: front-end/javascript-closure
+title: JavaScript中的闭包
 date: 2024-10-20 14:25:45
 tags: [javascript]
 categories: [前端]
