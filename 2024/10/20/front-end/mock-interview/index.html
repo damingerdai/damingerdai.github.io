@@ -1,0 +1,325 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="dark"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1.0,viewport-fit=cover"><title>模拟面试 | Damingerdai's Blog</title><meta name="author" content="Arthur Ming"><meta name="copyright" content="Arthur Ming"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#0d0d0d"><meta name="description" content="敏捷开发敏捷开发是一种以迭代和增量的方式来开发软件的流程，它注重团队协作、快速反馈以及应对变化的能力。在敏捷开发中，Sprint（冲刺） 是一个核心概念。下面我为你总结了敏捷开发流程中的Sprint、迭代节奏、和时间周期： 1. Sprint（冲刺） Sprint 是敏捷开发的基础单位，通常是一个固定时间周期，通常为1到4周。 每个 Sprint 都是一个小型迭代周期，在这个周期中，团队需要完成一">
+<meta property="og:type" content="article">
+<meta property="og:title" content="模拟面试">
+<meta property="og:url" content="http://blog.damingerdai.com/2024/10/20/front-end/mock-interview/index.html">
+<meta property="og:site_name" content="Damingerdai&#39;s Blog">
+<meta property="og:description" content="敏捷开发敏捷开发是一种以迭代和增量的方式来开发软件的流程，它注重团队协作、快速反馈以及应对变化的能力。在敏捷开发中，Sprint（冲刺） 是一个核心概念。下面我为你总结了敏捷开发流程中的Sprint、迭代节奏、和时间周期： 1. Sprint（冲刺） Sprint 是敏捷开发的基础单位，通常是一个固定时间周期，通常为1到4周。 每个 Sprint 都是一个小型迭代周期，在这个周期中，团队需要完成一">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg">
+<meta property="article:published_time" content="2024-10-20T12:45:06.000Z">
+<meta property="article:modified_time" content="2024-10-21T13:55:38.013Z">
+<meta property="article:author" content="Arthur Ming">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg"><link rel="shortcut icon" href="/img/avatar.png"><link rel="canonical" href="http://blog.damingerdai.com/2024/10/20/front-end/mock-interview/index.html"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><link rel="stylesheet" href="/css/index.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free/css/all.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/ui/dist/fancybox/fancybox.min.css" media="print" onload="this.media='all'"><script>const GLOBAL_CONFIG = {
+  root: '/',
+  algolia: undefined,
+  localSearch: {"path":"/search.xml","preload":false,"top_n_per_article":1,"unescape":false,"languages":{"hits_empty":"找不到您查询的内容：${query}","hits_stats":"共找到 ${hits} 篇文章"}},
+  translate: undefined,
+  noticeOutdate: undefined,
+  highlight: {"plugin":"highlight.js","highlightCopy":true,"highlightLang":true,"highlightHeightLimit":false},
+  copy: {
+    success: '复制成功',
+    error: '复制错误',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '',
+  dateSuffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: undefined,
+  lightbox: 'fancybox',
+  Snackbar: undefined,
+  infinitegrid: {
+    js: 'https://cdn.jsdelivr.net/npm/@egjs/infinitegrid/dist/infinitegrid.min.js',
+    buttonText: '加载更多'
+  },
+  isPhotoFigcaption: false,
+  islazyload: false,
+  isAnchor: false,
+  percent: {
+    toc: true,
+    rightside: false,
+  },
+  autoDarkmode: true
+}</script><script id="config-diff">var GLOBAL_CONFIG_SITE = {
+  title: '模拟面试',
+  isPost: true,
+  isHome: false,
+  isHighlightShrink: false,
+  isToc: true,
+  postUpdate: '2024-10-21 21:55:38'
+}</script><script>(win=>{
+      win.saveToLocal = {
+        set: (key, value, ttl) => {
+          if (ttl === 0) return
+          const now = Date.now()
+          const expiry = now + ttl * 86400000
+          const item = {
+            value,
+            expiry
+          }
+          localStorage.setItem(key, JSON.stringify(item))
+        },
+      
+        get: key => {
+          const itemStr = localStorage.getItem(key)
+      
+          if (!itemStr) {
+            return undefined
+          }
+          const item = JSON.parse(itemStr)
+          const now = Date.now()
+      
+          if (now > item.expiry) {
+            localStorage.removeItem(key)
+            return undefined
+          }
+          return item.value
+        }
+      }
+    
+      win.getScript = (url, attr = {}) => new Promise((resolve, reject) => {
+        const script = document.createElement('script')
+        script.src = url
+        script.async = true
+        script.onerror = reject
+        script.onload = script.onreadystatechange = function() {
+          const loadState = this.readyState
+          if (loadState && loadState !== 'loaded' && loadState !== 'complete') return
+          script.onload = script.onreadystatechange = null
+          resolve()
+        }
+
+        Object.keys(attr).forEach(key => {
+          script.setAttribute(key, attr[key])
+        })
+
+        document.head.appendChild(script)
+      })
+    
+      win.getCSS = (url, id = false) => new Promise((resolve, reject) => {
+        const link = document.createElement('link')
+        link.rel = 'stylesheet'
+        link.href = url
+        if (id) link.id = id
+        link.onerror = reject
+        link.onload = link.onreadystatechange = function() {
+          const loadState = this.readyState
+          if (loadState && loadState !== 'loaded' && loadState !== 'complete') return
+          link.onload = link.onreadystatechange = null
+          resolve()
+        }
+        document.head.appendChild(link)
+      })
+    
+      win.activateDarkMode = () => {
+        document.documentElement.setAttribute('data-theme', 'dark')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+        }
+      }
+      win.activateLightMode = () => {
+        document.documentElement.setAttribute('data-theme', 'light')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#ffffff')
+        }
+      }
+      const t = saveToLocal.get('theme')
+    
+          const isDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches
+          const isLightMode = window.matchMedia('(prefers-color-scheme: light)').matches
+          const isNotSpecified = window.matchMedia('(prefers-color-scheme: no-preference)').matches
+          const hasNoSupport = !isDarkMode && !isLightMode && !isNotSpecified
+
+          if (t === undefined) {
+            if (isLightMode) activateLightMode()
+            else if (isDarkMode) activateDarkMode()
+            else if (isNotSpecified || hasNoSupport) {
+              const now = new Date()
+              const hour = now.getHours()
+              const isNight = hour <= 6 || hour >= 18
+              isNight ? activateDarkMode() : activateLightMode()
+            }
+            window.matchMedia('(prefers-color-scheme: dark)').addListener(e => {
+              if (saveToLocal.get('theme') === undefined) {
+                e.matches ? activateDarkMode() : activateLightMode()
+              }
+            })
+          } else if (t === 'light') activateLightMode()
+          else activateDarkMode()
+        
+      const asideStatus = saveToLocal.get('aside-status')
+      if (asideStatus !== undefined) {
+        if (asideStatus === 'hide') {
+          document.documentElement.classList.add('hide-aside')
+        } else {
+          document.documentElement.classList.remove('hide-aside')
+        }
+      }
+    
+      const detectApple = () => {
+        if(/iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent)){
+          document.documentElement.classList.add('apple')
+        }
+      }
+      detectApple()
+    })(window)</script><link rel="stylesheet" href="/css/styles.css"><meta name="generator" content="Hexo 7.2.0"></head><body><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="avatar-img is-center"><img src="/img/avatar.png" onerror="onerror=null;src='/img/friend_404.gif'" alt="avatar"/></div><div class="sidebar-site-data site-data is-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">37</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">47</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">8</div></a></div><hr class="custom-hr"/><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归类</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page group" href="javascript:void(0);"><i class="fa-fw fas fa-list"></i><span> 其他</span><i class="fas fa-chevron-down"></i></a><ul class="menus_item_child"><li><a class="site-page child" href="/others/learning"><i class="fa-fw fas fa-graduation-cap"></i><span> 学习课程</span></a></li><li><a class="site-page child" href="/others/link/"><i class="fa-fw fas fa-link"></i><span> 链接</span></a></li><li><a class="site-page child" href="/others/interview/"><i class="fa-fw fas fa-glide"></i><span> 面试</span></a></li></ul></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于</span></a></div></div></div></div><div class="post" id="body-wrap"><header class="post-bg" id="page-header" style="background-image: url('https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg')"><nav id="nav"><span id="blog-info"><a href="/" title="Damingerdai's Blog"><span class="site-name">Damingerdai's Blog</span></a></span><div id="menus"><div id="search-button"><a class="site-page social-icon search" href="javascript:void(0);"><i class="fas fa-search fa-fw"></i><span> 搜索</span></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归类</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page group" href="javascript:void(0);"><i class="fa-fw fas fa-list"></i><span> 其他</span><i class="fas fa-chevron-down"></i></a><ul class="menus_item_child"><li><a class="site-page child" href="/others/learning"><i class="fa-fw fas fa-graduation-cap"></i><span> 学习课程</span></a></li><li><a class="site-page child" href="/others/link/"><i class="fa-fw fas fa-link"></i><span> 链接</span></a></li><li><a class="site-page child" href="/others/interview/"><i class="fa-fw fas fa-glide"></i><span> 面试</span></a></li></ul></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于</span></a></div></div><div id="toggle-menu"><a class="site-page" href="javascript:void(0);"><i class="fas fa-bars fa-fw"></i></a></div></div></nav><div id="post-info"><h1 class="post-title">模拟面试</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2024-10-20T12:45:06.000Z" title="发表于 2024-10-20 20:45:06">2024-10-20</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2024-10-21T13:55:38.013Z" title="更新于 2024-10-21 21:55:38">2024-10-21</time></span><span class="post-meta-categories"><span class="post-meta-separator">|</span><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/%E5%89%8D%E7%AB%AF/">前端</a><i class="fas fa-angle-right post-meta-separator"></i><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/%E5%89%8D%E7%AB%AF/nodejs/">nodejs</a><i class="fas fa-angle-right post-meta-separator"></i><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/%E5%89%8D%E7%AB%AF/nodejs/%E6%95%8F%E6%8D%B7%E5%BC%80%E5%8F%91/">敏捷开发</a><i class="fas fa-angle-right post-meta-separator"></i><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/%E5%89%8D%E7%AB%AF/nodejs/%E6%95%8F%E6%8D%B7%E5%BC%80%E5%8F%91/%E9%9D%A2%E8%AF%95/">面试</a></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-pv-cv" id="" data-flag-title="模拟面试"><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">阅读量:</span><span id="busuanzi_value_page_pv"><i class="fa-solid fa-spinner fa-spin"></i></span></span></div></div></div></header><main class="layout" id="content-inner"><div id="post"><article class="post-content" id="article-container"><h2 id="敏捷开发"><a href="#敏捷开发" class="headerlink" title="敏捷开发"></a>敏捷开发</h2><p>敏捷开发是一种以<strong>迭代</strong>和<strong>增量</strong>的方式来开发软件的流程，它注重<strong>团队协作</strong>、<strong>快速反馈</strong>以及<strong>应对变化</strong>的能力。在敏捷开发中，<strong>Sprint（冲刺）</strong> 是一个核心概念。下面我为你总结了敏捷开发流程中的<strong>Sprint</strong>、迭代节奏、和时间周期：</p>
+<h3 id="1-Sprint（冲刺）"><a href="#1-Sprint（冲刺）" class="headerlink" title="1. Sprint（冲刺）"></a>1. <strong>Sprint（冲刺）</strong></h3><ul>
+<li><strong>Sprint</strong> 是敏捷开发的基础单位，通常是一个<strong>固定时间周期</strong>，通常为<strong>1到4周</strong>。</li>
+<li>每个 Sprint 都是一个<strong>小型迭代周期</strong>，在这个周期中，团队需要完成一定数量的工作（通常是具体的功能、用户故事或任务）。</li>
+<li><strong>目标</strong>是在每个 Sprint 结束时交付一个<strong>可工作的产品增量</strong>，即使不一定是完整产品，也应该是能够演示或发布的可用功能。</li>
+</ul>
+<h3 id="2-迭代节奏"><a href="#2-迭代节奏" class="headerlink" title="2. 迭代节奏"></a>2. <strong>迭代节奏</strong></h3><p>敏捷开发的迭代节奏是基于 Sprint 的。团队会按照以下步骤循环进行开发：</p>
+<ol>
+<li><p><strong>Sprint 计划会议（Sprint Planning）</strong>：</p>
+<ul>
+<li>在每个 Sprint 开始时，团队会召开计划会议，确定当前 Sprint 的<strong>目标</strong>和<strong>待完成的任务</strong>。这些任务一般从<strong>产品待办事项列表（Product Backlog）</strong>中选取，并拆分成更小的<strong>用户故事（User Stories）</strong>或<strong>任务（Tasks）</strong>。</li>
+<li>团队会评估每个任务的工作量，并确保任务的总量符合 Sprint 的工作周期。</li>
+</ul>
+</li>
+<li><p><strong>Sprint 执行</strong>：</p>
+<ul>
+<li>团队根据计划开始执行任务，过程中可能会有<strong>每日站会（Daily Standup）</strong>，团队成员汇报进展、讨论问题以及调整任务优先级。</li>
+<li>每个 Sprint 中，团队尽量保持快速迭代，在尽可能短的时间内交付有价值的功能。</li>
+</ul>
+</li>
+<li><p><strong>Sprint 评审会议（Sprint Review）</strong>：</p>
+<ul>
+<li>在 Sprint 结束时，团队会召开评审会议，展示在 Sprint 中完成的工作成果，通常是一个<strong>可演示的产品功能</strong>。</li>
+<li>团队与利益相关者一起<strong>检验产品增量</strong>，并对下一个 Sprint 的工作进行讨论和调整。</li>
+</ul>
+</li>
+<li><p><strong>Sprint 回顾会议（Sprint Retrospective）</strong>：</p>
+<ul>
+<li>在 Sprint 结束后，团队还会召开回顾会议，讨论 Sprint 中的<strong>问题</strong>和<strong>改进点</strong>。</li>
+<li>这个会议帮助团队在每个 Sprint 后不断改进工作流程、沟通方式和工具。</li>
+</ul>
+</li>
+</ol>
+<h3 id="3-时间周期"><a href="#3-时间周期" class="headerlink" title="3. 时间周期"></a>3. <strong>时间周期</strong></h3><ul>
+<li>每个 Sprint 的时间周期通常是<strong>固定的</strong>，并且根据团队和项目的需求而定，常见的周期为：<ul>
+<li><strong>1周</strong>：适用于需求非常紧急的项目，团队需要快速反馈和迭代，但要求团队有很强的适应能力。</li>
+<li><strong>2周</strong>：这是最常见的周期，能让团队有足够的时间完成可交付的功能，同时保持灵活应对变化。</li>
+<li><strong>3到4周</strong>：适用于更复杂的功能开发，需要较长时间来完成，但仍然遵循敏捷的短周期迭代原则。</li>
+</ul>
+</li>
+</ul>
+<h3 id="4-持续交付和反馈"><a href="#4-持续交付和反馈" class="headerlink" title="4. 持续交付和反馈"></a>4. <strong>持续交付和反馈</strong></h3><p>敏捷开发的一个核心目标是尽早交付可用的产品并从用户处获得反馈。因此，每个 Sprint 结束时，团队都会交付<strong>可工作的产品增量</strong>，并依据<strong>用户反馈</strong>调整下一阶段的开发工作。这个流程反复进行，直到项目完成或需求停止。</p>
+<h3 id="总结："><a href="#总结：" class="headerlink" title="总结："></a>总结：</h3><p>敏捷开发流程是通过多个 Sprint 迭代实现的，每个 Sprint 通常持续 1-4 周。在每个 Sprint 中，团队会计划任务，进行开发和测试，并交付可用的产品增量。通过频繁的反馈和不断优化，团队能够应对需求变化并持续改进开发效率。</p>
+<h2 id="技术"><a href="#技术" class="headerlink" title="技术"></a>技术</h2><h3 id="javascript的闭包是什么，能不能写一个例子"><a href="#javascript的闭包是什么，能不能写一个例子" class="headerlink" title="javascript的闭包是什么，能不能写一个例子"></a>javascript的闭包是什么，能不能写一个例子</h3><p>闭包是指函数可以记住并访问它所在的词法作用域，即使这个函数在词法作用域之外执行。这是 JavaScript 强大的功能之一，常用于隐藏数据、模拟私有变量、创建回调函数等场景。</p>
+<p>闭包的三个特性：</p>
+<ul>
+<li>函数嵌套：闭包通常是内部函数访问外部函数的变量。</li>
+<li>作用域链：函数在定义时绑定了其所在的词法作用域。</li>
+<li>外部函数执行后，内部函数依然能够访问外部函数的变量。</li>
+</ul>
+<p>例子：</p>
+<figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">function</span> <span class="title function_">createCounter</span>(<span class="params"></span>) &#123;</span><br><span class="line">  <span class="keyword">let</span> count = <span class="number">0</span>; <span class="comment">// 外部函数的局部变量</span></span><br><span class="line"></span><br><span class="line">  <span class="keyword">return</span> <span class="keyword">function</span>(<span class="params"></span>) &#123; <span class="comment">// 返回一个内部函数，形成闭包</span></span><br><span class="line">    count++; <span class="comment">// 内部函数能够访问外部函数的变量</span></span><br><span class="line">    <span class="variable language_">console</span>.<span class="title function_">log</span>(count);</span><br><span class="line">  &#125;;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">const</span> counter = <span class="title function_">createCounter</span>(); <span class="comment">// 调用外部函数，返回内部函数</span></span><br><span class="line"></span><br><span class="line"><span class="title function_">counter</span>(); <span class="comment">// 输出: 1</span></span><br><span class="line"><span class="title function_">counter</span>(); <span class="comment">// 输出: 2</span></span><br><span class="line"><span class="title function_">counter</span>(); <span class="comment">// 输出: 3</span></span><br><span class="line"></span><br></pre></td></tr></table></figure>
+
+<h3 id="javascript的原型链是什么"><a href="#javascript的原型链是什么" class="headerlink" title="javascript的原型链是什么"></a>javascript的原型链是什么</h3><p>JavaScript的原型链是用于实现继承的一种机制。</p>
+<ul>
+<li>每个对象都有一个**<strong>proto</strong>**属性，指向它的原型对象。</li>
+<li>如果在对象上找不到某个属性或方法，JavaScript 会沿着原型链向上查找，直到找到该属性或方法，或者到达原型链的顶端 null。</li>
+<li>函数的 prototype 属性是其实例对象的原型。通过这个机制，JavaScript 实现了属性和方法的共享和继承。</li>
+<li>原型链的顶端是 Object.prototype，它的 <strong>proto</strong> 指向 null，表示原型链的结束</li>
+</ul>
+<p>例子：</p>
+<figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">function</span> <span class="title function_">Person</span>(<span class="params">name</span>) &#123;</span><br><span class="line">  <span class="variable language_">this</span>.<span class="property">name</span> = name;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="title class_">Person</span>.<span class="property"><span class="keyword">prototype</span></span>.<span class="property">sayHello</span> = <span class="keyword">function</span>(<span class="params"></span>) &#123;</span><br><span class="line">  <span class="variable language_">console</span>.<span class="title function_">log</span>(<span class="string">`Hello, my name is <span class="subst">$&#123;<span class="variable language_">this</span>.name&#125;</span>`</span>);</span><br><span class="line">&#125;;</span><br><span class="line"></span><br><span class="line"><span class="keyword">const</span> person = <span class="keyword">new</span> <span class="title class_">Person</span>(<span class="string">&#x27;John&#x27;</span>);</span><br><span class="line">person.<span class="title function_">sayHello</span>(); <span class="comment">// Hello, my name is John</span></span><br><span class="line"></span><br><span class="line"><span class="variable language_">console</span>.<span class="title function_">log</span>(person.<span class="property">__proto__</span> === <span class="title class_">Person</span>.<span class="property"><span class="keyword">prototype</span></span>); <span class="comment">// true</span></span><br><span class="line"><span class="variable language_">console</span>.<span class="title function_">log</span>(<span class="title class_">Person</span>.<span class="property"><span class="keyword">prototype</span></span>.<span class="property">__proto__</span> === <span class="title class_">Object</span>.<span class="property"><span class="keyword">prototype</span></span>); <span class="comment">// true</span></span><br><span class="line"><span class="variable language_">console</span>.<span class="title function_">log</span>(<span class="title class_">Object</span>.<span class="property"><span class="keyword">prototype</span></span>.<span class="property">__proto__</span> === <span class="literal">null</span>); <span class="comment">// true</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="javascript中new运算符做了什么"><a href="#javascript中new运算符做了什么" class="headerlink" title="javascript中new运算符做了什么"></a>javascript中new运算符做了什么</h3><p>当你在 JavaScript 中使用 new 运算符时，它会执行以下四个步骤：</p>
+<ul>
+<li>创建一个新的空对象。</li>
+<li>将这个新对象的**<strong>proto</strong>**属性设置为构造函数的prototype对象，从而实现原型链继承。</li>
+<li>调用构造函数，并将新对象作为函数内部的 this，让构造函数能够为新对象添加属性。</li>
+<li>如果构造函数返回的是对象类型的值，则返回这个对象；否则，返回新创建的对象</li>
+</ul>
+<h3 id="let和const有什么区别"><a href="#let和const有什么区别" class="headerlink" title="let和const有什么区别"></a>let和const有什么区别</h3><p>let 允许重新赋值，而 const 不允许重新赋值。const 必须在声明时初始化，而 let 可以在声明后再赋值。</p>
+<ul>
+<li>使用 let：适合需要在后续修改变量值的场景。</li>
+<li>使用 const：适合声明不需要重新赋值的常量，尤其是用来声明不可变的原始类型（如数字、字符串）。对于对象和数组，虽然引用不能改变，但内部内容可以修改。</li>
+</ul>
+<h3 id="interface和type的区别，-interface能不能继承type？"><a href="#interface和type的区别，-interface能不能继承type？" class="headerlink" title="interface和type的区别， interface能不能继承type？"></a>interface和type的区别， interface能不能继承type？</h3><p>interface 和 type 都可以定义对象的形状，但 interface 更适合面向对象的场景，而 type 更灵活，适合定义联合类型、元组等复杂类型。<br>interface 可以继承 type，反过来也可以通过交叉类型实现扩展。<br>interface 支持合并声明，这在库开发和扩展时非常有用，而 type 则无法合并。</p>
+<h3 id="apply-call-bind-的区别"><a href="#apply-call-bind-的区别" class="headerlink" title="apply, call, bind 的区别"></a>apply, call, bind 的区别</h3><p>apply、call 和 bind 是 JavaScript 中用来改变函数内部 this 指向的方法，它们的核心功能是类似的，但在使用方式和行为上有所不同。</p>
+<p>核心区别总结：</p>
+<ol>
+<li>apply：传递参数时使用数组形式，立即调用函数。</li>
+<li>call：传递参数时使用逗号分隔，立即调用函数。</li>
+<li>bind：返回一个绑定了 this 的新函数，但不会立即执行。</li>
+</ol>
+<p>书写apply：</p>
+<figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line"><span class="title class_">Function</span>.<span class="property"><span class="keyword">prototype</span></span>.<span class="property">myApply</span> = <span class="keyword">function</span>(<span class="params">context, argsArray</span>) &#123;</span><br><span class="line">  <span class="comment">// 1. 如果没有提供 context，则默认设置为全局对象 (在浏览器中是 window，在 Node.js 中是 global)</span></span><br><span class="line">  context = context || globalThis;</span><br><span class="line"></span><br><span class="line">  <span class="comment">// 2. 给 context 添加一个临时方法，指向当前的函数 (this)</span></span><br><span class="line">  <span class="keyword">const</span> fnSymbol = <span class="title class_">Symbol</span>();  <span class="comment">// 使用 Symbol 避免属性冲突</span></span><br><span class="line">  context[fnSymbol] = <span class="variable language_">this</span>;</span><br><span class="line"></span><br><span class="line">  <span class="comment">// 3. 执行函数，并传入参数数组</span></span><br><span class="line">  <span class="keyword">let</span> result;</span><br><span class="line">  <span class="keyword">if</span> (<span class="title class_">Array</span>.<span class="title function_">isArray</span>(argsArray)) &#123;</span><br><span class="line">    result = context[fnSymbol](...argsArray);  <span class="comment">// 解构数组传参</span></span><br><span class="line">  &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">    result = context[fnSymbol]();  <span class="comment">// 如果没有参数数组，则直接调用</span></span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="comment">// 4. 删除临时属性</span></span><br><span class="line">  <span class="keyword">delete</span> context[fnSymbol];</span><br><span class="line"></span><br><span class="line">  <span class="comment">// 5. 返回执行结果</span></span><br><span class="line">  <span class="keyword">return</span> result;</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+
+<p>书写call：</p>
+<figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="title class_">Function</span>.<span class="property"><span class="keyword">prototype</span></span>.<span class="property">myCall</span> = <span class="keyword">function</span>(<span class="params">context, ...args</span>) &#123;</span><br><span class="line">  <span class="comment">// 1. 如果没有提供 context，则默认设置为全局对象 (在浏览器中是 window，在 Node.js 中是 global)</span></span><br><span class="line">  context = context || globalThis;</span><br><span class="line"></span><br><span class="line">  <span class="comment">// 2. 给 context 添加一个临时方法，指向当前的函数 (this)</span></span><br><span class="line">  <span class="keyword">const</span> fnSymbol = <span class="title class_">Symbol</span>();  <span class="comment">// 使用 Symbol 避免属性冲突</span></span><br><span class="line">  context[fnSymbol] = <span class="variable language_">this</span>;</span><br><span class="line"></span><br><span class="line">  <span class="comment">// 3. 执行函数，并传入参数</span></span><br><span class="line">  <span class="keyword">const</span> result = context[fnSymbol](...args);  <span class="comment">// 通过展开运算符传入参数</span></span><br><span class="line"></span><br><span class="line">  <span class="comment">// 4. 删除临时属性</span></span><br><span class="line">  <span class="keyword">delete</span> context[fnSymbol];</span><br><span class="line"></span><br><span class="line">  <span class="comment">// 5. 返回执行结果</span></span><br><span class="line">  <span class="keyword">return</span> result;</span><br><span class="line">&#125;;</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+
+<p>手写bind：</p>
+<figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line"><span class="title class_">Function</span>.<span class="property"><span class="keyword">prototype</span></span>.<span class="property">myBind</span> = <span class="keyword">function</span>(<span class="params">context, ...args</span>) &#123;</span><br><span class="line">  <span class="comment">// 保存原函数</span></span><br><span class="line">  <span class="keyword">const</span> originalFunc = <span class="variable language_">this</span>;</span><br><span class="line"></span><br><span class="line">  <span class="comment">// 返回一个新函数</span></span><br><span class="line">  <span class="keyword">const</span> boundFunction = <span class="keyword">function</span>(<span class="params">...newArgs</span>) &#123;</span><br><span class="line">    <span class="comment">// 判断是否作为构造函数调用</span></span><br><span class="line">    <span class="comment">// 如果是构造函数调用，`this` 指向实例对象，应该忽略绑定的 `context`</span></span><br><span class="line">    <span class="comment">// 否则使用绑定的 `context`</span></span><br><span class="line">    <span class="keyword">const</span> isNew = <span class="variable language_">this</span> <span class="keyword">instanceof</span> boundFunction;</span><br><span class="line">    <span class="keyword">const</span> thisArg = isNew ? <span class="variable language_">this</span> : context;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 使用 apply 绑定 `this`，合并 args 和 newArgs</span></span><br><span class="line">    <span class="keyword">return</span> originalFunc.<span class="title function_">apply</span>(thisArg, [...args, ...newArgs]);</span><br><span class="line">  &#125;;</span><br><span class="line"></span><br><span class="line">  <span class="comment">// 继承原函数的 prototype，确保绑定后的函数是原函数的实例</span></span><br><span class="line">  <span class="keyword">if</span> (originalFunc.<span class="property"><span class="keyword">prototype</span></span>) &#123;</span><br><span class="line">    boundFunction.<span class="property"><span class="keyword">prototype</span></span> = <span class="title class_">Object</span>.<span class="title function_">create</span>(originalFunc.<span class="property"><span class="keyword">prototype</span></span>);</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="keyword">return</span> boundFunction;</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+
+<h3 id="react的事件合成"><a href="#react的事件合成" class="headerlink" title="react的事件合成"></a>react的事件合成</h3><p>在 React 中，事件是通过合成事件（SyntheticEvent）机制处理的，它是对原生 DOM 事件的一种跨浏览器的封装，确保事件在所有浏览器中都有一致的行为。React 使用事件委托的方式，将所有事件统一绑定在根元素上，通过事件冒泡来捕捉子元素的事件触发。这种机制可以显著提高性能，因为它避免了在每个 DOM 节点上绑定独立的事件处理程序。</p>
+<p>SyntheticEvent 的接口与浏览器的原生事件一致，像 preventDefault() 和 stopPropagation() 都可以直接使用。但需要注意的是，SyntheticEvent 是可回收的，React 会在事件处理后自动销毁事件对象，减少内存占用。如果需要在异步操作中使用事件对象，可以使用 event.persist() 方法防止事件被回收。</p>
+<p>总的来说，React 的事件合成机制提供了性能优化和跨浏览器兼容性，是事件处理的基础工具。在 React 18 中，合成事件先于原生事件处理是为了确保性能优化、一致性和更好的用户体验。</p>
+<p>要获取合成事件中的原生事件，你可以通过 event.nativeEvent 属性来访问。这允许你获取浏览器的原生事件对象，并直接与之进行交互。</p>
+<p>在 React 中，阻止合成事件（SyntheticEvent）冒泡与阻止原生 DOM 事件冒泡的方法类似。你可以使用合成事件对象的 stopPropagation() 方法来阻止事件的冒泡行为。</p>
+<p>当你调用 event.stopPropagation() 时，React 会阻止该事件继续向上传播到父级元素的事件处理程序。</p>
+<h3 id="react的vdom是什么，有什么优势"><a href="#react的vdom是什么，有什么优势" class="headerlink" title="react的vdom是什么，有什么优势"></a>react的vdom是什么，有什么优势</h3><p>React 的 Virtual DOM（虚拟 DOM）是 React 用来优化 UI 更新的一种技术。它是实际 DOM 的轻量级副本，通过在内存中模拟 DOM 树来进行高效的 UI 渲染和更新。</p>
+<p>Virtual DOM 工作原理：</p>
+<ol>
+<li>当 React 组件首次渲染时，React 会在内存中创建一个 Virtual DOM 树。这个虚拟 DOM 是 React 元素的对象表示，它轻量且易于操作</li>
+<li>当组件的状态或属性发生变化时，React 会重新计算新的 Virtual DOM 树，但不会立即更新实际的 DOM</li>
+<li>React 使用高效的差异算法（reconciliation）来比较新旧 Virtual DOM 树。它会找出新旧 Virtual DOM 树之间的差异（diff），即需要更新的部分</li>
+<li>React 将这些差异应用到实际的 DOM 上，通过一次性最小化的更新来提升性能</li>
+</ol>
+<p>Virtual DOM 的优势：</p>
+<ol>
+<li><strong>性能优化</strong>: 直接操作真实 DOM 是比较昂贵的，因为 DOM 的操作会导致浏览器的重新布局和重绘。而 Virtual DOM 是在内存中操作的，速度快得多。通过批量更新 DOM 的方式，React 将频繁的小改动合并为一次大的更新，减少不必要的重排和重绘，极大地提高了性能</li>
+<li><strong>跨平台一致性</strong>: Virtual DOM 提供了一种抽象的 DOM 结构，它不依赖于特定的平台。因此，React 可以用于浏览器环境、移动应用（React Native）、甚至服务器端渲染等不同平台，增强了代码的复用性</li>
+<li><strong>可预测的 UI 更新</strong>: 通过 Virtual DOM 和 React 的状态驱动（declarative）设计，React 可以确保 UI 的更新是可预测的，开发者只需专注于描述 UI 应该“如何呈现”，而不是手动控制具体的 DOM 更新过程</li>
+<li><strong>简化复杂操作</strong>: 在复杂的应用中，直接操作 DOM 可能会导致难以维护和调试的问题。React 的 Virtual DOM 屏蔽了复杂的 DOM 操作，让开发者只需要定义组件的状态和结构，React 自动处理 DOM 操作</li>
+</ol>
+<p>Virtual DOM 的局限性：</p>
+<ol>
+<li><strong>不总是最快的</strong>：虽然 Virtual DOM 提供了高效的更新机制，但在某些非常简单或特定的场景下，直接操作 DOM 可能比使用 Virtual DOM 更快</li>
+<li><strong>学习成本</strong>： 需要理解 React 的状态管理、生命周期、Virtual DOM 等概念，可能对初学者有一定的学习门槛</li>
+</ol>
+<p>React 的 Virtual DOM 是一种提升性能的优化技术，通过在内存中创建轻量级的虚拟 DOM 树，配合差异算法和批量更新策略，有效地提高了 UI 更新的效率，并简化了跨平台开发的复杂性。</p>
+<h3 id="react中的hoc组件"><a href="#react中的hoc组件" class="headerlink" title="react中的hoc组件"></a>react中的hoc组件</h3><p>在 React 中，HOC（Higher-Order Component，高阶组件） 是一种组件复用的高级技术。HOC 本质上是一个函数，它接受一个组件作为参数，并返回一个新的组件。高阶组件常用于逻辑复用、增强现有组件的功能，而不改变组件本身的实现。</p>
+<p>HOC 的定义：</p>
+<ul>
+<li>高阶组件是一个纯函数，它不修改传入的组件，只是返回一个增强后的新组件。</li>
+</ul>
+<p>HOC 的工作原理：</p>
+<ul>
+<li><strong>参数是组件</strong>：HOC 接收一个现有组件作为参数。</li>
+<li><strong>返回新组件</strong>：它会返回一个新组件，该组件可以基于原组件进行额外的功能扩展。</li>
+<li><strong>不修改原组件</strong>：HOC 不直接修改原组件，而是通过包装、组合的方式增强功能。</li>
+</ul>
+<p>HOC 的常见用途：</p>
+<ul>
+<li><strong>复用逻辑</strong>：多个组件共享相同的逻辑时，可以使用 HOC 将该逻辑提取出来。</li>
+<li><strong>处理权限控制</strong>：HOC 可用于权限校验逻辑，例如检查用户是否有访问权限。</li>
+<li><strong>操作 props</strong>：HOC 可以修改、增加或删除组件的 props。</li>
+<li><strong>操作生命周期</strong>：通过 HOC 可以控制组件的生命周期，以实现缓存、请求拦截等功能。</li>
+</ul>
+<h3 id="react组件间的通信方式"><a href="#react组件间的通信方式" class="headerlink" title="react组件间的通信方式"></a>react组件间的通信方式</h3><ul>
+<li><strong>父子组件通信</strong>：父组件通过props将数据传递给子组件。React 的数据流是单向的，从父组件流向子组件</li>
+<li><strong>子组件向父组件通信（回调函数 Props</strong>：子组件无法直接修改父组件的数据，因此子组件可以通过调用父组件传递的回调函数来向父组件传递信息。父组件可以在回调函数中接收子组件传递的数据并更新状态</li>
+<li><strong>兄弟组件通信（通过父组件中转）</strong>：由于 React 的单向数据流，兄弟组件之间不能直接通信。通常通过父组件中转实现兄弟组件间的通信。父组件将一个回调函数传递给一个子组件，当这个子组件触发回调函数时，父组件更新状态，然后将状态传递给另一个子组件</li>
+<li><strong>跨层级组件通信（Context API）</strong>: 对于层级嵌套较深的组件，逐层通过 props 传递数据会导致代码臃肿。此时可以使用 Context API 来实现跨层级组件的通信。Context 提供了一个全局的状态或函数，允许任意组件订阅并访问这些数据</li>
+<li><strong>全局状态管理（Redux、MobX 等）</strong>: 对于复杂的应用，尤其是有大量组件需要共享状态时，使用 Redux 或 MobX 等状态管理库可以帮助管理全局状态。Redux 的核心思想是将状态集中管理，组件通过订阅状态和分发（dispatch）动作来实现通信</li>
+<li><strong>Refs（父子组件直接引用通信）</strong>: 有时需要直接访问子组件的某个实例或 DOM 节点，此时可以通过 Refs 实现父组件与子组件的通信。父组件可以通过 ref 获取子组件实例，并调用子组件的方法或访问子组件的 DOM 节点</li>
+</ul>
+<h3 id="css中垂直居中的4种方式"><a href="#css中垂直居中的4种方式" class="headerlink" title="css中垂直居中的4种方式"></a>css中垂直居中的4种方式</h3><ul>
+<li>使用 flexbox 实现垂直居中</li>
+<li>使用 grid 实现垂直居中</li>
+<li>使用 absolute positioning 和 transform 实现垂直居中</li>
+<li>使用 line-height 实现垂直居中（仅限单行文本）</li>
+</ul>
+</article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta"><i class="fas fa-circle-user fa-fw"></i>文章作者: </span><span class="post-copyright-info"><a href="http://blog.damingerdai.com">Arthur Ming</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta"><i class="fas fa-square-arrow-up-right fa-fw"></i>文章链接: </span><span class="post-copyright-info"><a href="http://blog.damingerdai.com/2024/10/20/front-end/mock-interview/">http://blog.damingerdai.com/2024/10/20/front-end/mock-interview/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta"><i class="fas fa-circle-exclamation fa-fw"></i>版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来自 <a href="http://blog.damingerdai.com" target="_blank">Damingerdai's Blog</a>！</span></div></div><div class="tag_share"><div class="post-meta__tag-list"></div><div class="post_share"><div class="social-share" data-image="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" data-sites="facebook,twitter,wechat,weibo,qq"></div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/butterfly-extsrc/sharejs/dist/css/share.min.css" media="print" onload="this.media='all'"><script src="https://cdn.jsdelivr.net/npm/butterfly-extsrc/sharejs/dist/js/social-share.min.js" defer></script></div></div><nav class="pagination-post" id="pagination"><div class="next-post pull-full"><a href="/2024/10/20/front-end/javascript-closure/" title="JavaScript中的闭包"><img class="cover" src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" onerror="onerror=null;src='/img/404.jpg'" alt="cover of next post"><div class="pagination-info"><div class="label">下一篇</div><div class="next_info">JavaScript中的闭包</div></div></a></div></nav></div><div class="aside-content" id="aside-content"><div class="card-widget card-info"><div class="is-center"><div class="avatar-img"><img src="/img/avatar.png" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="author-info__name">Arthur Ming</div><div class="author-info__description">大明二代的博客</div></div><div class="card-info-data site-data is-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">37</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">47</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">8</div></a></div><a id="card-info-btn" target="_blank" rel="noopener" href="https://github.com/damingerdai"><i class="fab fa-github"></i><span>Follow Me</span></a><div class="card-info-social-icons is-center"><a class="social-icon" href="https://github.com/damingerdai" target="_blank" title="Github"><i class="fab fa-github" style="color: #24292e;"></i></a><a class="social-icon" href="mailto:mingguobin@live.com" target="_blank" title="Email"><i class="fas fa-envelope" style="color: #4a7dbe;"></i></a></div></div><div class="card-widget card-announcement"><div class="item-headline"><i class="fas fa-bullhorn fa-shake"></i><span>公告</span></div><div class="announcement_content">大家好，我是大明二代</div></div><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="item-headline"><i class="fas fa-stream"></i><span>目录</span><span class="toc-percentage"></span></div><div class="toc-content"><ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E6%95%8F%E6%8D%B7%E5%BC%80%E5%8F%91"><span class="toc-number">1.</span> <span class="toc-text">敏捷开发</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#1-Sprint%EF%BC%88%E5%86%B2%E5%88%BA%EF%BC%89"><span class="toc-number">1.1.</span> <span class="toc-text">1. Sprint（冲刺）</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#2-%E8%BF%AD%E4%BB%A3%E8%8A%82%E5%A5%8F"><span class="toc-number">1.2.</span> <span class="toc-text">2. 迭代节奏</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-%E6%97%B6%E9%97%B4%E5%91%A8%E6%9C%9F"><span class="toc-number">1.3.</span> <span class="toc-text">3. 时间周期</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#4-%E6%8C%81%E7%BB%AD%E4%BA%A4%E4%BB%98%E5%92%8C%E5%8F%8D%E9%A6%88"><span class="toc-number">1.4.</span> <span class="toc-text">4. 持续交付和反馈</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E6%80%BB%E7%BB%93%EF%BC%9A"><span class="toc-number">1.5.</span> <span class="toc-text">总结：</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E6%8A%80%E6%9C%AF"><span class="toc-number">2.</span> <span class="toc-text">技术</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#javascript%E7%9A%84%E9%97%AD%E5%8C%85%E6%98%AF%E4%BB%80%E4%B9%88%EF%BC%8C%E8%83%BD%E4%B8%8D%E8%83%BD%E5%86%99%E4%B8%80%E4%B8%AA%E4%BE%8B%E5%AD%90"><span class="toc-number">2.1.</span> <span class="toc-text">javascript的闭包是什么，能不能写一个例子</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#javascript%E7%9A%84%E5%8E%9F%E5%9E%8B%E9%93%BE%E6%98%AF%E4%BB%80%E4%B9%88"><span class="toc-number">2.2.</span> <span class="toc-text">javascript的原型链是什么</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#javascript%E4%B8%ADnew%E8%BF%90%E7%AE%97%E7%AC%A6%E5%81%9A%E4%BA%86%E4%BB%80%E4%B9%88"><span class="toc-number">2.3.</span> <span class="toc-text">javascript中new运算符做了什么</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#let%E5%92%8Cconst%E6%9C%89%E4%BB%80%E4%B9%88%E5%8C%BA%E5%88%AB"><span class="toc-number">2.4.</span> <span class="toc-text">let和const有什么区别</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#interface%E5%92%8Ctype%E7%9A%84%E5%8C%BA%E5%88%AB%EF%BC%8C-interface%E8%83%BD%E4%B8%8D%E8%83%BD%E7%BB%A7%E6%89%BFtype%EF%BC%9F"><span class="toc-number">2.5.</span> <span class="toc-text">interface和type的区别， interface能不能继承type？</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#apply-call-bind-%E7%9A%84%E5%8C%BA%E5%88%AB"><span class="toc-number">2.6.</span> <span class="toc-text">apply, call, bind 的区别</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#react%E7%9A%84%E4%BA%8B%E4%BB%B6%E5%90%88%E6%88%90"><span class="toc-number">2.7.</span> <span class="toc-text">react的事件合成</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#react%E7%9A%84vdom%E6%98%AF%E4%BB%80%E4%B9%88%EF%BC%8C%E6%9C%89%E4%BB%80%E4%B9%88%E4%BC%98%E5%8A%BF"><span class="toc-number">2.8.</span> <span class="toc-text">react的vdom是什么，有什么优势</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#react%E4%B8%AD%E7%9A%84hoc%E7%BB%84%E4%BB%B6"><span class="toc-number">2.9.</span> <span class="toc-text">react中的hoc组件</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#react%E7%BB%84%E4%BB%B6%E9%97%B4%E7%9A%84%E9%80%9A%E4%BF%A1%E6%96%B9%E5%BC%8F"><span class="toc-number">2.10.</span> <span class="toc-text">react组件间的通信方式</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#css%E4%B8%AD%E5%9E%82%E7%9B%B4%E5%B1%85%E4%B8%AD%E7%9A%844%E7%A7%8D%E6%96%B9%E5%BC%8F"><span class="toc-number">2.11.</span> <span class="toc-text">css中垂直居中的4种方式</span></a></li></ol></li></ol></div></div><div class="card-widget card-recent-post"><div class="item-headline"><i class="fas fa-history"></i><span>最新文章</span></div><div class="aside-list"><div class="aside-list-item"><a class="thumbnail" href="/2024/10/20/front-end/mock-interview/" title="模拟面试"><img src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="模拟面试"/></a><div class="content"><a class="title" href="/2024/10/20/front-end/mock-interview/" title="模拟面试">模拟面试</a><time datetime="2024-10-20T12:45:06.000Z" title="发表于 2024-10-20 20:45:06">2024-10-20</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2024/10/20/front-end/javascript-closure/" title="JavaScript中的闭包"><img src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="JavaScript中的闭包"/></a><div class="content"><a class="title" href="/2024/10/20/front-end/javascript-closure/" title="JavaScript中的闭包">JavaScript中的闭包</a><time datetime="2024-10-20T06:25:45.000Z" title="发表于 2024-10-20 14:25:45">2024-10-20</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2024/07/10/back-end/back-end-how-to-backup-postgres-docker-container/" title="使用docker-compose备份Postgres Docker容器的解决方案"><img src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="使用docker-compose备份Postgres Docker容器的解决方案"/></a><div class="content"><a class="title" href="/2024/07/10/back-end/back-end-how-to-backup-postgres-docker-container/" title="使用docker-compose备份Postgres Docker容器的解决方案">使用docker-compose备份Postgres Docker容器的解决方案</a><time datetime="2024-07-10T09:18:24.000Z" title="发表于 2024-07-10 17:18:24">2024-07-10</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2024/06/09/ai/how-to-use-langchain-in-10-minutes/" title="如何在10分钟内使用LangChain"><img src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="如何在10分钟内使用LangChain"/></a><div class="content"><a class="title" href="/2024/06/09/ai/how-to-use-langchain-in-10-minutes/" title="如何在10分钟内使用LangChain">如何在10分钟内使用LangChain</a><time datetime="2024-06-09T05:05:40.000Z" title="发表于 2024-06-09 13:05:40">2024-06-09</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2024/02/11/back-end/use-bazel-build-and-run-spring-boot/" title="使用bazel构建spring boot项目"><img src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="使用bazel构建spring boot项目"/></a><div class="content"><a class="title" href="/2024/02/11/back-end/use-bazel-build-and-run-spring-boot/" title="使用bazel构建spring boot项目">使用bazel构建spring boot项目</a><time datetime="2024-02-11T13:23:35.000Z" title="发表于 2024-02-11 21:23:35">2024-02-11</time></div></div></div></div></div></div></main><footer id="footer"><div id="footer-wrap"><div class="copyright">&copy;2020 - 2024 By Arthur Ming</div><div class="framework-info"><span>框架 </span><a target="_blank" rel="noopener" href="https://hexo.io">Hexo</a><span class="footer-separator">|</span><span>主题 </span><a target="_blank" rel="noopener" href="https://github.com/jerryc127/hexo-theme-butterfly">Butterfly</a></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="浅色和深色模式转换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside-config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><button id="go-up" type="button" title="回到顶部"><span class="scroll-percent"></span><i class="fas fa-arrow-up"></i></button></div></div><div><script src="/js/utils.js"></script><script src="/js/main.js"></script><script src="https://cdn.jsdelivr.net/npm/@fancyapps/ui/dist/fancybox/fancybox.umd.min.js"></script><div class="js-pjax"></div><script defer="defer" id="ribbon" src="https://cdn.jsdelivr.net/npm/butterfly-extsrc/dist/canvas-ribbon.min.js" size="150" alpha="0.6" zIndex="-1" mobile="false" data-click="true"></script><script async data-pjax src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script><div id="local-search"><div class="search-dialog"><nav class="search-nav"><span class="search-dialog-title">搜索</span><span id="loading-status"></span><button class="search-close-button"><i class="fas fa-times"></i></button></nav><div class="is-center" id="loading-database"><i class="fas fa-spinner fa-pulse"></i><span>  数据库加载中</span></div><div class="search-wrap"><div id="local-search-input"><div class="local-search-box"><input class="local-search-box--input" placeholder="搜索文章" type="text"/></div></div><hr/><div id="local-search-results"></div><div id="local-search-stats-wrap"></div></div></div><div id="search-mask"></div><script src="/js/search/local-search.js"></script></div></div></body></html>
