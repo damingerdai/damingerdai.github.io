@@ -1,0 +1,350 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="dark"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1.0,viewport-fit=cover"><title>Angular的模拟面试 | Damingerdai's Blog</title><meta name="author" content="Arthur Ming"><meta name="copyright" content="Arthur Ming"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#0d0d0d"><meta name="description" content="前言本文是针对angular前端的模拟面试 问题前端CSS的优先级在 CSS 中，选择器用于选择 HTML 元素并应用样式。不同选择器的优先级（权重）决定了样式的应用顺序。以下是常用选择器类型及其优先级规则：  CSS 选择器类型  元素选择器：直接选择 HTML 元素，如 div、p、h1。 类选择器：通过类名选择元素，使用 . 前缀，如 .box。 ID 选择器：通过 ID 名称选择元素，使用">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Angular的模拟面试">
+<meta property="og:url" content="http://blog.damingerdai.com/2024/10/26/front-end/angular-mock-interview/index.html">
+<meta property="og:site_name" content="Damingerdai&#39;s Blog">
+<meta property="og:description" content="前言本文是针对angular前端的模拟面试 问题前端CSS的优先级在 CSS 中，选择器用于选择 HTML 元素并应用样式。不同选择器的优先级（权重）决定了样式的应用顺序。以下是常用选择器类型及其优先级规则：  CSS 选择器类型  元素选择器：直接选择 HTML 元素，如 div、p、h1。 类选择器：通过类名选择元素，使用 . 前缀，如 .box。 ID 选择器：通过 ID 名称选择元素，使用">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg">
+<meta property="article:published_time" content="2024-10-26T08:16:38.000Z">
+<meta property="article:modified_time" content="2024-10-26T12:08:10.868Z">
+<meta property="article:author" content="Arthur Ming">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg"><link rel="shortcut icon" href="/img/avatar.png"><link rel="canonical" href="http://blog.damingerdai.com/2024/10/26/front-end/angular-mock-interview/index.html"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><link rel="stylesheet" href="/css/index.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free/css/all.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/ui/dist/fancybox/fancybox.min.css" media="print" onload="this.media='all'"><script>const GLOBAL_CONFIG = {
+  root: '/',
+  algolia: undefined,
+  localSearch: {"path":"/search.xml","preload":false,"top_n_per_article":1,"unescape":false,"languages":{"hits_empty":"找不到您查询的内容：${query}","hits_stats":"共找到 ${hits} 篇文章"}},
+  translate: undefined,
+  noticeOutdate: undefined,
+  highlight: {"plugin":"highlight.js","highlightCopy":true,"highlightLang":true,"highlightHeightLimit":false},
+  copy: {
+    success: '复制成功',
+    error: '复制错误',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '',
+  dateSuffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: undefined,
+  lightbox: 'fancybox',
+  Snackbar: undefined,
+  infinitegrid: {
+    js: 'https://cdn.jsdelivr.net/npm/@egjs/infinitegrid/dist/infinitegrid.min.js',
+    buttonText: '加载更多'
+  },
+  isPhotoFigcaption: false,
+  islazyload: false,
+  isAnchor: false,
+  percent: {
+    toc: true,
+    rightside: false,
+  },
+  autoDarkmode: true
+}</script><script id="config-diff">var GLOBAL_CONFIG_SITE = {
+  title: 'Angular的模拟面试',
+  isPost: true,
+  isHome: false,
+  isHighlightShrink: false,
+  isToc: true,
+  postUpdate: '2024-10-26 20:08:10'
+}</script><script>(win=>{
+      win.saveToLocal = {
+        set: (key, value, ttl) => {
+          if (ttl === 0) return
+          const now = Date.now()
+          const expiry = now + ttl * 86400000
+          const item = {
+            value,
+            expiry
+          }
+          localStorage.setItem(key, JSON.stringify(item))
+        },
+      
+        get: key => {
+          const itemStr = localStorage.getItem(key)
+      
+          if (!itemStr) {
+            return undefined
+          }
+          const item = JSON.parse(itemStr)
+          const now = Date.now()
+      
+          if (now > item.expiry) {
+            localStorage.removeItem(key)
+            return undefined
+          }
+          return item.value
+        }
+      }
+    
+      win.getScript = (url, attr = {}) => new Promise((resolve, reject) => {
+        const script = document.createElement('script')
+        script.src = url
+        script.async = true
+        script.onerror = reject
+        script.onload = script.onreadystatechange = function() {
+          const loadState = this.readyState
+          if (loadState && loadState !== 'loaded' && loadState !== 'complete') return
+          script.onload = script.onreadystatechange = null
+          resolve()
+        }
+
+        Object.keys(attr).forEach(key => {
+          script.setAttribute(key, attr[key])
+        })
+
+        document.head.appendChild(script)
+      })
+    
+      win.getCSS = (url, id = false) => new Promise((resolve, reject) => {
+        const link = document.createElement('link')
+        link.rel = 'stylesheet'
+        link.href = url
+        if (id) link.id = id
+        link.onerror = reject
+        link.onload = link.onreadystatechange = function() {
+          const loadState = this.readyState
+          if (loadState && loadState !== 'loaded' && loadState !== 'complete') return
+          link.onload = link.onreadystatechange = null
+          resolve()
+        }
+        document.head.appendChild(link)
+      })
+    
+      win.activateDarkMode = () => {
+        document.documentElement.setAttribute('data-theme', 'dark')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+        }
+      }
+      win.activateLightMode = () => {
+        document.documentElement.setAttribute('data-theme', 'light')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#ffffff')
+        }
+      }
+      const t = saveToLocal.get('theme')
+    
+          const isDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches
+          const isLightMode = window.matchMedia('(prefers-color-scheme: light)').matches
+          const isNotSpecified = window.matchMedia('(prefers-color-scheme: no-preference)').matches
+          const hasNoSupport = !isDarkMode && !isLightMode && !isNotSpecified
+
+          if (t === undefined) {
+            if (isLightMode) activateLightMode()
+            else if (isDarkMode) activateDarkMode()
+            else if (isNotSpecified || hasNoSupport) {
+              const now = new Date()
+              const hour = now.getHours()
+              const isNight = hour <= 6 || hour >= 18
+              isNight ? activateDarkMode() : activateLightMode()
+            }
+            window.matchMedia('(prefers-color-scheme: dark)').addListener(e => {
+              if (saveToLocal.get('theme') === undefined) {
+                e.matches ? activateDarkMode() : activateLightMode()
+              }
+            })
+          } else if (t === 'light') activateLightMode()
+          else activateDarkMode()
+        
+      const asideStatus = saveToLocal.get('aside-status')
+      if (asideStatus !== undefined) {
+        if (asideStatus === 'hide') {
+          document.documentElement.classList.add('hide-aside')
+        } else {
+          document.documentElement.classList.remove('hide-aside')
+        }
+      }
+    
+      const detectApple = () => {
+        if(/iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent)){
+          document.documentElement.classList.add('apple')
+        }
+      }
+      detectApple()
+    })(window)</script><link rel="stylesheet" href="/css/styles.css"><meta name="generator" content="Hexo 7.2.0"></head><body><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="avatar-img is-center"><img src="/img/avatar.png" onerror="onerror=null;src='/img/friend_404.gif'" alt="avatar"/></div><div class="sidebar-site-data site-data is-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">38</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">47</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">8</div></a></div><hr class="custom-hr"/><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归类</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page group" href="javascript:void(0);"><i class="fa-fw fas fa-list"></i><span> 其他</span><i class="fas fa-chevron-down"></i></a><ul class="menus_item_child"><li><a class="site-page child" href="/others/learning"><i class="fa-fw fas fa-graduation-cap"></i><span> 学习课程</span></a></li><li><a class="site-page child" href="/others/link/"><i class="fa-fw fas fa-link"></i><span> 链接</span></a></li><li><a class="site-page child" href="/others/interview/"><i class="fa-fw fas fa-glide"></i><span> 面试</span></a></li></ul></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于</span></a></div></div></div></div><div class="post" id="body-wrap"><header class="post-bg" id="page-header" style="background-image: url('https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg')"><nav id="nav"><span id="blog-info"><a href="/" title="Damingerdai's Blog"><span class="site-name">Damingerdai's Blog</span></a></span><div id="menus"><div id="search-button"><a class="site-page social-icon search" href="javascript:void(0);"><i class="fas fa-search fa-fw"></i><span> 搜索</span></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归类</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page group" href="javascript:void(0);"><i class="fa-fw fas fa-list"></i><span> 其他</span><i class="fas fa-chevron-down"></i></a><ul class="menus_item_child"><li><a class="site-page child" href="/others/learning"><i class="fa-fw fas fa-graduation-cap"></i><span> 学习课程</span></a></li><li><a class="site-page child" href="/others/link/"><i class="fa-fw fas fa-link"></i><span> 链接</span></a></li><li><a class="site-page child" href="/others/interview/"><i class="fa-fw fas fa-glide"></i><span> 面试</span></a></li></ul></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于</span></a></div></div><div id="toggle-menu"><a class="site-page" href="javascript:void(0);"><i class="fas fa-bars fa-fw"></i></a></div></div></nav><div id="post-info"><h1 class="post-title">Angular的模拟面试</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2024-10-26T08:16:38.000Z" title="发表于 2024-10-26 16:16:38">2024-10-26</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2024-10-26T12:08:10.868Z" title="更新于 2024-10-26 20:08:10">2024-10-26</time></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-pv-cv" id="" data-flag-title="Angular的模拟面试"><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">阅读量:</span><span id="busuanzi_value_page_pv"><i class="fa-solid fa-spinner fa-spin"></i></span></span></div></div></div></header><main class="layout" id="content-inner"><div id="post"><article class="post-content" id="article-container"><h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><p>本文是针对angular前端的模拟面试</p>
+<h1 id="问题"><a href="#问题" class="headerlink" title="问题"></a>问题</h1><h2 id="前端CSS的优先级"><a href="#前端CSS的优先级" class="headerlink" title="前端CSS的优先级"></a>前端CSS的优先级</h2><p>在 CSS 中，选择器用于选择 HTML 元素并应用样式。不同选择器的优先级（权重）决定了样式的应用顺序。以下是常用选择器类型及其优先级规则：</p>
+<ol>
+<li><p>CSS 选择器类型</p>
+<ul>
+<li>元素选择器：直接选择 HTML 元素，如 div、p、h1。</li>
+<li>类选择器：通过类名选择元素，使用 . 前缀，如 .box。</li>
+<li>ID 选择器：通过 ID 名称选择元素，使用 # 前缀，如 #header。</li>
+<li>属性选择器：通过元素属性选择元素，如 [type&#x3D;”text”]。</li>
+<li>伪类选择器：选择特定状态的元素，如 :hover、:focus。</li>
+<li>伪元素选择器：选择元素的一部分，如 ::before、::after。</li>
+<li>组合选择器：通过多种选择器的组合，选择满足特定条件的元素。常见的组合符有：<ul>
+<li>后代选择器：div p，选择 div 中的所有 p 元素。</li>
+<li>子选择器：div &gt; p，选择 div 的直接子元素 p。</li>
+<li>相邻兄弟选择器：h1 + p，选择紧跟在 h1 之后的 p 元素。</li>
+<li>通用兄弟选择器：h1 ~ p，选择 h1 之后的所有 p 元素。</li>
+</ul>
+</li>
+</ul>
+</li>
+<li><p>CSS 选择器优先级（权重）计算规则<br>CSS 中的优先级使用权重值进行计算，以确定样式的应用顺序。权重值的计算通常按四位数来表示（a, b, c, d），不同选择器类型的权重值如下：</p>
+<ul>
+<li>内联样式：1000 权重，最高优先级（a&#x3D;1，如 &lt;div style&#x3D;”color: red;”&gt;）。</li>
+<li>ID 选择器：0100 权重，每个 ID 选择器会为权重 b 加 1。</li>
+<li>类选择器、属性选择器、伪类选择器：0010 权重，每个类、属性、伪类为权重 c 加 1。</li>
+<li>元素选择器、伪元素选择器：0001 权重，每个元素或伪元素为权重 d 加 1。</li>
+<li>通配选择器 *：没有权重，不影响优先级。</li>
+</ul>
+</li>
+</ol>
+<p>优先级计算示例：</p>
+<figure class="highlight css"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="selector-id">#header</span> <span class="selector-class">.menu-item</span> <span class="selector-tag">a</span> 的优先级：<span class="number">0100</span> + <span class="number">0010</span> + <span class="number">0001</span> = <span class="number">0111</span></span><br><span class="line"><span class="selector-tag">div</span> &gt; <span class="selector-tag">p</span> 的优先级：<span class="number">0001</span> + <span class="number">0001</span> = <span class="number">0002</span></span><br><span class="line"><span class="selector-tag">h1</span><span class="selector-pseudo">::before</span> 的优先级：<span class="number">0001</span> + <span class="number">0001</span> = <span class="number">0002</span></span><br><span class="line"><span class="selector-class">.nav</span> <span class="selector-class">.link</span><span class="selector-pseudo">:hover</span> 的优先级：<span class="number">0010</span> + <span class="number">0010</span> = <span class="number">0020</span></span><br></pre></td></tr></table></figure>
+
+<ol start="3">
+<li>层叠规则（重要性）<br>如果多个选择器的优先级相同，那么后定义的样式将覆盖先定义的样式。如果样式带有 !important 标记，则会直接覆盖常规样式的优先级。多个 !important 样式冲突时，遵循优先级和源顺序（后者覆盖前者）。</li>
+</ol>
+<h3 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h3><p>优先级从高到低：内联样式 &gt; ID 选择器 &gt; 类选择器、属性选择器、伪类选择器 &gt; 元素选择器、伪元素选择器。<br>使用 !important 可以提高样式优先级，但应谨慎使用，以免降低代码可维护性。</p>
+<h2 id="CSS主题切换的思路，代码怎么做全局的变量"><a href="#CSS主题切换的思路，代码怎么做全局的变量" class="headerlink" title="CSS主题切换的思路，代码怎么做全局的变量"></a>CSS主题切换的思路，代码怎么做全局的变量</h2><p>方案一：</p>
+<p>在 Angular 中实现 CSS 主题切换的思路，通常利用CSS 变量和全局样式，并结合 Angular 的服务来管理和切换主题。可以通过动态切换 data-theme 属性，实现全局的主题切换。</p>
+<p>方案二：</p>
+<p>使用scss和切换link的方式。</p>
+<p>方案三：</p>
+<p>使用css in js的思路，不一定支持angular</p>
+<h2 id="网页的暗黑模式怎么实现"><a href="#网页的暗黑模式怎么实现" class="headerlink" title="网页的暗黑模式怎么实现"></a>网页的暗黑模式怎么实现</h2><p>实现网页的暗黑模式，通常可以使用<strong>CSS 变量</strong>、<strong>媒体查询</strong>、<strong>JavaScript</strong> 等方法来进行切换。以下是几种常见的实现方式：</p>
+<h3 id="1-使用-CSS-变量实现暗黑模式"><a href="#1-使用-CSS-变量实现暗黑模式" class="headerlink" title="1. 使用 CSS 变量实现暗黑模式"></a>1. 使用 CSS 变量实现暗黑模式</h3><p>这种方式通过定义 CSS 变量来控制主题颜色，再使用 JavaScript 切换 CSS 变量值。</p>
+<h4 id="1-1-定义-CSS-变量"><a href="#1-1-定义-CSS-变量" class="headerlink" title="1.1 定义 CSS 变量"></a>1.1 定义 CSS 变量</h4><p>在 <code>:root</code> 中定义亮色模式的 CSS 变量，并为暗色模式设置一个 <code>data-theme=&quot;dark&quot;</code> 属性时的变量值。</p>
+<figure class="highlight css"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/* 定义亮色模式 */</span></span><br><span class="line"><span class="selector-pseudo">:root</span> &#123;</span><br><span class="line">  <span class="attr">--background-color</span>: <span class="number">#ffffff</span>;</span><br><span class="line">  <span class="attr">--text-color</span>: <span class="number">#000000</span>;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">/* 定义暗黑模式 */</span></span><br><span class="line"><span class="selector-attr">[data-theme=<span class="string">&quot;dark&quot;</span>]</span> &#123;</span><br><span class="line">  <span class="attr">--background-color</span>: <span class="number">#1e1e1e</span>;</span><br><span class="line">  <span class="attr">--text-color</span>: <span class="number">#ffffff</span>;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">/* 使用变量应用到样式 */</span></span><br><span class="line"><span class="selector-tag">body</span> &#123;</span><br><span class="line">  <span class="attribute">background-color</span>: <span class="built_in">var</span>(--background-color);</span><br><span class="line">  <span class="attribute">color</span>: <span class="built_in">var</span>(--text-color);</span><br><span class="line">  <span class="attribute">transition</span>: background-color <span class="number">0.3s</span>, color <span class="number">0.3s</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h4 id="1-2-使用-JavaScript-切换主题"><a href="#1-2-使用-JavaScript-切换主题" class="headerlink" title="1.2 使用 JavaScript 切换主题"></a>1.2 使用 JavaScript 切换主题</h4><p>使用 JavaScript 监听用户的点击事件，在页面根元素上添加或移除 <code>data-theme=&quot;dark&quot;</code> 属性，切换暗黑和亮色模式。</p>
+<figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 切换暗黑模式</span></span><br><span class="line"><span class="keyword">function</span> <span class="title function_">toggleDarkMode</span>(<span class="params"></span>) &#123;</span><br><span class="line">  <span class="keyword">const</span> currentTheme = <span class="variable language_">document</span>.<span class="property">documentElement</span>.<span class="title function_">getAttribute</span>(<span class="string">&quot;data-theme&quot;</span>);</span><br><span class="line">  <span class="keyword">const</span> newTheme = currentTheme === <span class="string">&quot;dark&quot;</span> ? <span class="string">&quot;light&quot;</span> : <span class="string">&quot;dark&quot;</span>;</span><br><span class="line">  <span class="variable language_">document</span>.<span class="property">documentElement</span>.<span class="title function_">setAttribute</span>(<span class="string">&quot;data-theme&quot;</span>, newTheme);</span><br><span class="line">  <span class="variable language_">localStorage</span>.<span class="title function_">setItem</span>(<span class="string">&quot;theme&quot;</span>, newTheme); <span class="comment">// 保存用户选择</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// 初始化主题</span></span><br><span class="line"><span class="keyword">const</span> savedTheme = <span class="variable language_">localStorage</span>.<span class="title function_">getItem</span>(<span class="string">&quot;theme&quot;</span>) || <span class="string">&quot;light&quot;</span>;</span><br><span class="line"><span class="variable language_">document</span>.<span class="property">documentElement</span>.<span class="title function_">setAttribute</span>(<span class="string">&quot;data-theme&quot;</span>, savedTheme);</span><br></pre></td></tr></table></figure>
+
+<h4 id="1-3-为按钮添加事件监听"><a href="#1-3-为按钮添加事件监听" class="headerlink" title="1.3 为按钮添加事件监听"></a>1.3 为按钮添加事件监听</h4><p>在 HTML 中添加一个按钮来切换主题。</p>
+<figure class="highlight html"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">button</span> <span class="attr">onclick</span>=<span class="string">&quot;toggleDarkMode()&quot;</span>&gt;</span>切换暗黑模式<span class="tag">&lt;/<span class="name">button</span>&gt;</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="2-使用媒体查询自动匹配系统主题"><a href="#2-使用媒体查询自动匹配系统主题" class="headerlink" title="2. 使用媒体查询自动匹配系统主题"></a>2. 使用媒体查询自动匹配系统主题</h3><p>CSS 提供了一个 <code>prefers-color-scheme</code> 媒体查询，可以自动检测用户系统设置，匹配亮色或暗黑模式。</p>
+<figure class="highlight css"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/* 默认亮色模式 */</span></span><br><span class="line"><span class="selector-pseudo">:root</span> &#123;</span><br><span class="line">  <span class="attr">--background-color</span>: <span class="number">#ffffff</span>;</span><br><span class="line">  <span class="attr">--text-color</span>: <span class="number">#000000</span>;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">/* 暗黑模式 */</span></span><br><span class="line"><span class="keyword">@media</span> (<span class="attribute">prefers-color-scheme</span>: dark) &#123;</span><br><span class="line">  <span class="selector-pseudo">:root</span> &#123;</span><br><span class="line">    <span class="attr">--background-color</span>: <span class="number">#1e1e1e</span>;</span><br><span class="line">    <span class="attr">--text-color</span>: <span class="number">#ffffff</span>;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="selector-tag">body</span> &#123;</span><br><span class="line">  <span class="attribute">background-color</span>: <span class="built_in">var</span>(--background-color);</span><br><span class="line">  <span class="attribute">color</span>: <span class="built_in">var</span>(--text-color);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>此方法会根据用户的系统主题设置自动应用亮色或暗黑模式，用户可以在系统设置中调整。</p>
+<h3 id="3-使用-CSS-和-JavaScript-结合用户首选项"><a href="#3-使用-CSS-和-JavaScript-结合用户首选项" class="headerlink" title="3. 使用 CSS 和 JavaScript 结合用户首选项"></a>3. 使用 CSS 和 JavaScript 结合用户首选项</h3><p>可以结合媒体查询和 JavaScript 自动检测用户系统设置，同时提供按钮允许用户自定义选择。</p>
+<h4 id="3-1-检测用户系统主题设置"><a href="#3-1-检测用户系统主题设置" class="headerlink" title="3.1 检测用户系统主题设置"></a>3.1 检测用户系统主题设置</h4><p>当用户首次访问网站时，检测系统主题，优先使用用户系统的主题偏好。如果用户选择了特定的主题，则将其偏好保存到 <code>localStorage</code> 中。</p>
+<figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">function</span> <span class="title function_">initTheme</span>(<span class="params"></span>) &#123;</span><br><span class="line">  <span class="keyword">const</span> savedTheme = <span class="variable language_">localStorage</span>.<span class="title function_">getItem</span>(<span class="string">&quot;theme&quot;</span>);</span><br><span class="line"></span><br><span class="line">  <span class="keyword">if</span> (savedTheme) &#123;</span><br><span class="line">    <span class="variable language_">document</span>.<span class="property">documentElement</span>.<span class="title function_">setAttribute</span>(<span class="string">&quot;data-theme&quot;</span>, savedTheme);</span><br><span class="line">  &#125; <span class="keyword">else</span> <span class="keyword">if</span> (<span class="variable language_">window</span>.<span class="title function_">matchMedia</span>(<span class="string">&quot;(prefers-color-scheme: dark)&quot;</span>).<span class="property">matches</span>) &#123;</span><br><span class="line">    <span class="variable language_">document</span>.<span class="property">documentElement</span>.<span class="title function_">setAttribute</span>(<span class="string">&quot;data-theme&quot;</span>, <span class="string">&quot;dark&quot;</span>);</span><br><span class="line">  &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">    <span class="variable language_">document</span>.<span class="property">documentElement</span>.<span class="title function_">setAttribute</span>(<span class="string">&quot;data-theme&quot;</span>, <span class="string">&quot;light&quot;</span>);</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="title function_">initTheme</span>();</span><br></pre></td></tr></table></figure>
+
+<h4 id="3-2-切换主题并保存用户选择"><a href="#3-2-切换主题并保存用户选择" class="headerlink" title="3.2 切换主题并保存用户选择"></a>3.2 切换主题并保存用户选择</h4><figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">function</span> <span class="title function_">toggleDarkMode</span>(<span class="params"></span>) &#123;</span><br><span class="line">  <span class="keyword">const</span> currentTheme = <span class="variable language_">document</span>.<span class="property">documentElement</span>.<span class="title function_">getAttribute</span>(<span class="string">&quot;data-theme&quot;</span>);</span><br><span class="line">  <span class="keyword">const</span> newTheme = currentTheme === <span class="string">&quot;dark&quot;</span> ? <span class="string">&quot;light&quot;</span> : <span class="string">&quot;dark&quot;</span>;</span><br><span class="line">  <span class="variable language_">document</span>.<span class="property">documentElement</span>.<span class="title function_">setAttribute</span>(<span class="string">&quot;data-theme&quot;</span>, newTheme);</span><br><span class="line">  <span class="variable language_">localStorage</span>.<span class="title function_">setItem</span>(<span class="string">&quot;theme&quot;</span>, newTheme);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h4 id="3-3-HTML-示例"><a href="#3-3-HTML-示例" class="headerlink" title="3.3 HTML 示例"></a>3.3 HTML 示例</h4><figure class="highlight html"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">button</span> <span class="attr">onclick</span>=<span class="string">&quot;toggleDarkMode()&quot;</span>&gt;</span>切换暗黑模式<span class="tag">&lt;/<span class="name">button</span>&gt;</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="总结-1"><a href="#总结-1" class="headerlink" title="总结"></a>总结</h3><ul>
+<li><strong>CSS 变量法</strong>：定义变量并通过 <code>data-theme</code> 切换，非常灵活。</li>
+<li><strong>媒体查询</strong>：自动适应用户系统主题设置，便于实现无缝暗黑模式。</li>
+<li><strong>JavaScript 保存用户偏好</strong>：在 <code>localStorage</code> 中记录用户选择，提供更个性化的体验。</li>
+</ul>
+<h2 id="Angular-哪些方式能获取dom节点"><a href="#Angular-哪些方式能获取dom节点" class="headerlink" title="Angular 哪些方式能获取dom节点"></a>Angular 哪些方式能获取dom节点</h2><p>Angular 提供了多种方式来获取 DOM 节点，每种方式都有其适用场景。选择哪种方式取决于具体的需求和场景。</p>
+<ul>
+<li>ViewChild 和 ViewChildren: 用于获取模板中定义的元素或指令。</li>
+<li>ElementRef: 用于获取组件的根元素。</li>
+<li>@HostListener: 用于监听宿主元素的事件。</li>
+<li>Renderer2: 用于在组件中直接操作 DOM。</li>
+<li>原生JavaScript。</li>
+</ul>
+<p>一般情况下，推荐使用 ViewChild、ViewChildren 和 ElementRef 来获取 DOM 元素，因为它们与 Angular 的变更检测机制集成得更好。</p>
+<h2 id="Angular里面service的实现，service是应用在全生命周期里吗，为什么？"><a href="#Angular里面service的实现，service是应用在全生命周期里吗，为什么？" class="headerlink" title="Angular里面service的实现，service是应用在全生命周期里吗，为什么？"></a>Angular里面service的实现，service是应用在全生命周期里吗，为什么？</h2><p>在 Angular 中，服务（Service）是一种用于提供特定功能、数据和业务逻辑的单例对象。服务的设计和实现使得它们在整个应用程序的生命周期内可以被共享和重用。下面是关于 Angular 服务的实现及其在全生命周期中的应用原因的详细说明。</p>
+<h3 id="1-服务的基本实现"><a href="#1-服务的基本实现" class="headerlink" title="1. 服务的基本实现"></a>1. 服务的基本实现</h3><p>服务通常是一个使用 <code>@Injectable</code> 装饰器的类，允许将其注入到组件、其他服务或指令中。下面是一个简单的服务示例：</p>
+<figure class="highlight typescript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> &#123; <span class="title class_">Injectable</span> &#125; <span class="keyword">from</span> <span class="string">&#x27;@angular/core&#x27;</span>;</span><br><span class="line"></span><br><span class="line"><span class="meta">@Injectable</span>(&#123;</span><br><span class="line">  <span class="attr">providedIn</span>: <span class="string">&#x27;root&#x27;</span> <span class="comment">// 这里的 root 表示该服务在整个应用的生命周期内是单例的</span></span><br><span class="line">&#125;)</span><br><span class="line"><span class="keyword">export</span> <span class="keyword">class</span> <span class="title class_">ExampleService</span> &#123;</span><br><span class="line">  <span class="keyword">private</span> <span class="attr">data</span>: <span class="built_in">string</span>;</span><br><span class="line"></span><br><span class="line">  <span class="title function_">constructor</span>(<span class="params"></span>) &#123;</span><br><span class="line">    <span class="variable language_">this</span>.<span class="property">data</span> = <span class="string">&#x27;Hello, World!&#x27;</span>;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="title function_">getData</span>(): <span class="built_in">string</span> &#123;</span><br><span class="line">    <span class="keyword">return</span> <span class="variable language_">this</span>.<span class="property">data</span>;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="title function_">setData</span>(<span class="attr">newData</span>: <span class="built_in">string</span>): <span class="built_in">void</span> &#123;</span><br><span class="line">    <span class="variable language_">this</span>.<span class="property">data</span> = newData;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="2-服务的生命周期管理"><a href="#2-服务的生命周期管理" class="headerlink" title="2. 服务的生命周期管理"></a>2. 服务的生命周期管理</h3><p>服务的生命周期与应用程序的生命周期相同。这是通过提供服务的模块作用域来实现的。在 Angular 中，服务的实例通常是在根注入器（root injector）中创建的，从而使其在整个应用程序中共享。</p>
+<h4 id="2-1-单例模式"><a href="#2-1-单例模式" class="headerlink" title="2.1 单例模式"></a>2.1 单例模式</h4><p>使用 <code>@Injectable</code> 装饰器并将 <code>providedIn</code> 设置为 <code>root</code>，服务会被注册为单例，这意味着在应用的生命周期内只会创建一个服务实例。所有注入了该服务的组件和其他服务都将共享同一个实例。这样做的原因有以下几点：</p>
+<ul>
+<li><p><strong>数据共享</strong>：多个组件可以共享和访问同一个服务实例的数据，便于进行状态管理和跨组件通信。</p>
+</li>
+<li><p><strong>性能优化</strong>：由于只创建一个实例，减少了内存使用和性能开销。</p>
+</li>
+<li><p><strong>全局访问</strong>：任何组件或服务都可以随时访问和调用该服务的方法。</p>
+</li>
+</ul>
+<h3 id="3-服务的使用场景"><a href="#3-服务的使用场景" class="headerlink" title="3. 服务的使用场景"></a>3. 服务的使用场景</h3><ul>
+<li><p><strong>业务逻辑处理</strong>：将复杂的业务逻辑从组件中抽离到服务中，保持组件的简洁和可维护性。</p>
+</li>
+<li><p><strong>数据共享和状态管理</strong>：在多个组件之间共享数据，避免了 prop drilling（层层传递数据）。</p>
+</li>
+<li><p><strong>HTTP 请求</strong>：通常使用服务来处理 HTTP 请求，这样可以集中管理 API 调用，方便处理错误和响应。</p>
+</li>
+<li><p><strong>配置和环境变量</strong>：服务可以用于存储全局配置和环境变量，供各个组件使用。</p>
+</li>
+</ul>
+<h3 id="4-具体示例"><a href="#4-具体示例" class="headerlink" title="4. 具体示例"></a>4. 具体示例</h3><p>下面是一个具体示例，展示如何在组件中使用服务：</p>
+<figure class="highlight typescript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> &#123; <span class="title class_">Component</span>, <span class="title class_">OnInit</span> &#125; <span class="keyword">from</span> <span class="string">&#x27;@angular/core&#x27;</span>;</span><br><span class="line"><span class="keyword">import</span> &#123; <span class="title class_">ExampleService</span> &#125; <span class="keyword">from</span> <span class="string">&#x27;./example.service&#x27;</span>;</span><br><span class="line"></span><br><span class="line"><span class="meta">@Component</span>(&#123;</span><br><span class="line">  <span class="attr">selector</span>: <span class="string">&#x27;app-example&#x27;</span>,</span><br><span class="line">  <span class="attr">template</span>: <span class="string">`</span></span><br><span class="line"><span class="string">    &lt;h1&gt;&#123;&#123; data &#125;&#125;&lt;/h1&gt;</span></span><br><span class="line"><span class="string">    &lt;button (click)=&quot;changeData()&quot;&gt;改变数据&lt;/button&gt;</span></span><br><span class="line"><span class="string">  `</span></span><br><span class="line">&#125;)</span><br><span class="line"><span class="keyword">export</span> <span class="keyword">class</span> <span class="title class_">ExampleComponent</span> <span class="keyword">implements</span> <span class="title class_">OnInit</span> &#123;</span><br><span class="line">  <span class="attr">data</span>: <span class="built_in">string</span>;</span><br><span class="line"></span><br><span class="line">  <span class="title function_">constructor</span>(<span class="params"><span class="keyword">private</span> exampleService: ExampleService</span>) &#123;&#125;</span><br><span class="line"></span><br><span class="line">  <span class="title function_">ngOnInit</span>(): <span class="built_in">void</span> &#123;</span><br><span class="line">    <span class="variable language_">this</span>.<span class="property">data</span> = <span class="variable language_">this</span>.<span class="property">exampleService</span>.<span class="title function_">getData</span>(); <span class="comment">// 获取服务中的数据</span></span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="title function_">changeData</span>(): <span class="built_in">void</span> &#123;</span><br><span class="line">    <span class="variable language_">this</span>.<span class="property">exampleService</span>.<span class="title function_">setData</span>(<span class="string">&#x27;新数据&#x27;</span>); <span class="comment">// 修改服务中的数据</span></span><br><span class="line">    <span class="variable language_">this</span>.<span class="property">data</span> = <span class="variable language_">this</span>.<span class="property">exampleService</span>.<span class="title function_">getData</span>(); <span class="comment">// 更新组件中的数据</span></span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>在这个示例中，<code>ExampleComponent</code> 使用 <code>ExampleService</code> 来获取和设置数据。无论有多少个 <code>ExampleComponent</code> 实例，它们都会共享同一个 <code>ExampleService</code> 实例。</p>
+<h3 id="5-总结"><a href="#5-总结" class="headerlink" title="5. 总结"></a>5. 总结</h3><ul>
+<li>Angular 服务是应用程序的单例对象，具有全局共享的特性。</li>
+<li>服务的生命周期与整个应用程序相同，使得跨组件数据共享和业务逻辑管理变得简单而高效。</li>
+<li>通过使用服务，能够提高代码的可维护性和可重用性，同时简化组件的结构。</li>
+</ul>
+<h2 id="图片优化"><a href="#图片优化" class="headerlink" title="图片优化"></a>图片优化</h2><ol>
+<li>使用 srcset 和 sizes 属性</li>
+<li>使用NgOptimizedImage</li>
+<li>使用picture结合webp格式</li>
+</ol>
+<h2 id="Angular做到多少版本，要从14升级到18怎么做"><a href="#Angular做到多少版本，要从14升级到18怎么做" class="headerlink" title="Angular做到多少版本，要从14升级到18怎么做"></a>Angular做到多少版本，要从14升级到18怎么做</h2><p>使用<a target="_blank" rel="noopener" href="https://angular.dev/update-guide">https://angular.dev/update-guide</a></p>
+<h2 id="敏捷开发相较于之前的瀑布流的区别，敏捷开发的时间估算，多久一个sprint"><a href="#敏捷开发相较于之前的瀑布流的区别，敏捷开发的时间估算，多久一个sprint" class="headerlink" title="敏捷开发相较于之前的瀑布流的区别，敏捷开发的时间估算，多久一个sprint"></a>敏捷开发相较于之前的瀑布流的区别，敏捷开发的时间估算，多久一个sprint</h2><p>敏捷开发与传统的瀑布流开发方法相比，具有一些显著的区别，尤其是在流程、灵活性和团队协作方面。以下是一些主要区别和敏捷开发中时间估算的相关信息。</p>
+<h3 id="1-敏捷开发与瀑布流的区别"><a href="#1-敏捷开发与瀑布流的区别" class="headerlink" title="1. 敏捷开发与瀑布流的区别"></a>1. 敏捷开发与瀑布流的区别</h3><ul>
+<li><p><strong>开发流程</strong>：</p>
+<ul>
+<li><strong>瀑布流</strong>：线性流程，依次进行需求分析、设计、开发、测试和维护。每个阶段完成后再进入下一个阶段，通常不允许返回。</li>
+<li><strong>敏捷开发</strong>：迭代和增量的流程，强调短周期的开发和频繁交付，每个迭代（Sprint）都会进行需求、设计、开发、测试等步骤。</li>
+</ul>
+</li>
+<li><p><strong>灵活性和适应性</strong>：</p>
+<ul>
+<li><strong>瀑布流</strong>：对需求变化的适应性较差，需求一旦确定，后续阶段难以调整。</li>
+<li><strong>敏捷开发</strong>：鼓励频繁反馈和适应变化，团队可以根据用户反馈和市场变化灵活调整需求。</li>
+</ul>
+</li>
+<li><p><strong>用户参与</strong>：</p>
+<ul>
+<li><strong>瀑布流</strong>：用户通常在初期提供需求，后续参与较少，直到最终交付。</li>
+<li><strong>敏捷开发</strong>：用户和利益相关者持续参与，通过迭代反馈确保产品符合用户需求。</li>
+</ul>
+</li>
+<li><p><strong>团队协作</strong>：</p>
+<ul>
+<li><strong>瀑布流</strong>：团队角色较为分明，沟通相对较少，依赖文档。</li>
+<li><strong>敏捷开发</strong>：强调团队的跨职能协作，定期召开会议（如站会、回顾会）促进沟通和协作。</li>
+</ul>
+</li>
+</ul>
+<h3 id="2-敏捷开发的时间估算"><a href="#2-敏捷开发的时间估算" class="headerlink" title="2. 敏捷开发的时间估算"></a>2. 敏捷开发的时间估算</h3><p>在敏捷开发中，时间估算通常涉及以下几个方面：</p>
+<ul>
+<li><p><strong>Sprint 的周期</strong>：</p>
+<ul>
+<li>一个 Sprint 通常持续 <strong>1 到 4 周</strong>，常见的做法是 2 周。团队可以根据项目需求和团队成员的工作节奏选择合适的周期。</li>
+</ul>
+</li>
+<li><p><strong>时间盒（Time Box）</strong>：</p>
+<ul>
+<li>敏捷方法强调使用时间盒来控制工作节奏。在每个 Sprint 中，团队会定义要完成的任务，并在规定的时间内努力完成。</li>
+</ul>
+</li>
+<li><p><strong>故事点和任务估算</strong>：</p>
+<ul>
+<li>使用故事点（Story Points）来评估工作量，通常基于相对复杂度和完成时间。团队可以通过回顾历史数据来进行更准确的时间估算。</li>
+</ul>
+</li>
+</ul>
+<h3 id="3-Sprint-计划"><a href="#3-Sprint-计划" class="headerlink" title="3. Sprint 计划"></a>3. Sprint 计划</h3><ul>
+<li><p><strong>Sprint 计划会议</strong>：在每个 Sprint 开始时，团队会召开计划会议，确定要在该 Sprint 中完成的任务。团队会根据优先级和容量进行任务分配。</p>
+</li>
+<li><p><strong>每日站会</strong>：在 Sprint 进行中，团队每天进行短暂的站会，讨论进展、遇到的问题和计划。</p>
+</li>
+</ul>
+<h3 id="总结-2"><a href="#总结-2" class="headerlink" title="总结"></a>总结</h3><ul>
+<li><strong>敏捷开发</strong>：强调迭代、灵活性和团队协作，能够快速响应变化。</li>
+<li><strong>Sprint 周期</strong>：通常为 1 到 4 周，2 周为常见做法。</li>
+<li><strong>时间估算</strong>：使用故事点、任务估算和时间盒的方法来提高准确性和效率。</li>
+</ul>
+<p>这些特点使敏捷开发适合快速变化的项目需求和高动态环境。</p>
+</article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta"><i class="fas fa-circle-user fa-fw"></i>文章作者: </span><span class="post-copyright-info"><a href="http://blog.damingerdai.com">Arthur Ming</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta"><i class="fas fa-square-arrow-up-right fa-fw"></i>文章链接: </span><span class="post-copyright-info"><a href="http://blog.damingerdai.com/2024/10/26/front-end/angular-mock-interview/">http://blog.damingerdai.com/2024/10/26/front-end/angular-mock-interview/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta"><i class="fas fa-circle-exclamation fa-fw"></i>版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来自 <a href="http://blog.damingerdai.com" target="_blank">Damingerdai's Blog</a>！</span></div></div><div class="tag_share"><div class="post-meta__tag-list"></div><div class="post_share"><div class="social-share" data-image="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" data-sites="facebook,twitter,wechat,weibo,qq"></div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/butterfly-extsrc/sharejs/dist/css/share.min.css" media="print" onload="this.media='all'"><script src="https://cdn.jsdelivr.net/npm/butterfly-extsrc/sharejs/dist/js/social-share.min.js" defer></script></div></div><nav class="pagination-post" id="pagination"><div class="next-post pull-full"><a href="/2024/10/20/front-end/mock-interview/" title="模拟面试"><img class="cover" src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" onerror="onerror=null;src='/img/404.jpg'" alt="cover of next post"><div class="pagination-info"><div class="label">下一篇</div><div class="next_info">模拟面试</div></div></a></div></nav></div><div class="aside-content" id="aside-content"><div class="card-widget card-info"><div class="is-center"><div class="avatar-img"><img src="/img/avatar.png" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="author-info__name">Arthur Ming</div><div class="author-info__description">大明二代的博客</div></div><div class="card-info-data site-data is-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">38</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">47</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">8</div></a></div><a id="card-info-btn" target="_blank" rel="noopener" href="https://github.com/damingerdai"><i class="fab fa-github"></i><span>Follow Me</span></a><div class="card-info-social-icons is-center"><a class="social-icon" href="https://github.com/damingerdai" target="_blank" title="Github"><i class="fab fa-github" style="color: #24292e;"></i></a><a class="social-icon" href="mailto:mingguobin@live.com" target="_blank" title="Email"><i class="fas fa-envelope" style="color: #4a7dbe;"></i></a></div></div><div class="card-widget card-announcement"><div class="item-headline"><i class="fas fa-bullhorn fa-shake"></i><span>公告</span></div><div class="announcement_content">大家好，我是大明二代</div></div><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="item-headline"><i class="fas fa-stream"></i><span>目录</span><span class="toc-percentage"></span></div><div class="toc-content"><ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#%E5%89%8D%E8%A8%80"><span class="toc-number">1.</span> <span class="toc-text">前言</span></a></li><li class="toc-item toc-level-1"><a class="toc-link" href="#%E9%97%AE%E9%A2%98"><span class="toc-number">2.</span> <span class="toc-text">问题</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%89%8D%E7%AB%AFCSS%E7%9A%84%E4%BC%98%E5%85%88%E7%BA%A7"><span class="toc-number">2.1.</span> <span class="toc-text">前端CSS的优先级</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E6%80%BB%E7%BB%93"><span class="toc-number">2.1.1.</span> <span class="toc-text">总结</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#CSS%E4%B8%BB%E9%A2%98%E5%88%87%E6%8D%A2%E7%9A%84%E6%80%9D%E8%B7%AF%EF%BC%8C%E4%BB%A3%E7%A0%81%E6%80%8E%E4%B9%88%E5%81%9A%E5%85%A8%E5%B1%80%E7%9A%84%E5%8F%98%E9%87%8F"><span class="toc-number">2.2.</span> <span class="toc-text">CSS主题切换的思路，代码怎么做全局的变量</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E7%BD%91%E9%A1%B5%E7%9A%84%E6%9A%97%E9%BB%91%E6%A8%A1%E5%BC%8F%E6%80%8E%E4%B9%88%E5%AE%9E%E7%8E%B0"><span class="toc-number">2.3.</span> <span class="toc-text">网页的暗黑模式怎么实现</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#1-%E4%BD%BF%E7%94%A8-CSS-%E5%8F%98%E9%87%8F%E5%AE%9E%E7%8E%B0%E6%9A%97%E9%BB%91%E6%A8%A1%E5%BC%8F"><span class="toc-number">2.3.1.</span> <span class="toc-text">1. 使用 CSS 变量实现暗黑模式</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#1-1-%E5%AE%9A%E4%B9%89-CSS-%E5%8F%98%E9%87%8F"><span class="toc-number">2.3.1.1.</span> <span class="toc-text">1.1 定义 CSS 变量</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#1-2-%E4%BD%BF%E7%94%A8-JavaScript-%E5%88%87%E6%8D%A2%E4%B8%BB%E9%A2%98"><span class="toc-number">2.3.1.2.</span> <span class="toc-text">1.2 使用 JavaScript 切换主题</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#1-3-%E4%B8%BA%E6%8C%89%E9%92%AE%E6%B7%BB%E5%8A%A0%E4%BA%8B%E4%BB%B6%E7%9B%91%E5%90%AC"><span class="toc-number">2.3.1.3.</span> <span class="toc-text">1.3 为按钮添加事件监听</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#2-%E4%BD%BF%E7%94%A8%E5%AA%92%E4%BD%93%E6%9F%A5%E8%AF%A2%E8%87%AA%E5%8A%A8%E5%8C%B9%E9%85%8D%E7%B3%BB%E7%BB%9F%E4%B8%BB%E9%A2%98"><span class="toc-number">2.3.2.</span> <span class="toc-text">2. 使用媒体查询自动匹配系统主题</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-%E4%BD%BF%E7%94%A8-CSS-%E5%92%8C-JavaScript-%E7%BB%93%E5%90%88%E7%94%A8%E6%88%B7%E9%A6%96%E9%80%89%E9%A1%B9"><span class="toc-number">2.3.3.</span> <span class="toc-text">3. 使用 CSS 和 JavaScript 结合用户首选项</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#3-1-%E6%A3%80%E6%B5%8B%E7%94%A8%E6%88%B7%E7%B3%BB%E7%BB%9F%E4%B8%BB%E9%A2%98%E8%AE%BE%E7%BD%AE"><span class="toc-number">2.3.3.1.</span> <span class="toc-text">3.1 检测用户系统主题设置</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#3-2-%E5%88%87%E6%8D%A2%E4%B8%BB%E9%A2%98%E5%B9%B6%E4%BF%9D%E5%AD%98%E7%94%A8%E6%88%B7%E9%80%89%E6%8B%A9"><span class="toc-number">2.3.3.2.</span> <span class="toc-text">3.2 切换主题并保存用户选择</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#3-3-HTML-%E7%A4%BA%E4%BE%8B"><span class="toc-number">2.3.3.3.</span> <span class="toc-text">3.3 HTML 示例</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E6%80%BB%E7%BB%93-1"><span class="toc-number">2.3.4.</span> <span class="toc-text">总结</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Angular-%E5%93%AA%E4%BA%9B%E6%96%B9%E5%BC%8F%E8%83%BD%E8%8E%B7%E5%8F%96dom%E8%8A%82%E7%82%B9"><span class="toc-number">2.4.</span> <span class="toc-text">Angular 哪些方式能获取dom节点</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Angular%E9%87%8C%E9%9D%A2service%E7%9A%84%E5%AE%9E%E7%8E%B0%EF%BC%8Cservice%E6%98%AF%E5%BA%94%E7%94%A8%E5%9C%A8%E5%85%A8%E7%94%9F%E5%91%BD%E5%91%A8%E6%9C%9F%E9%87%8C%E5%90%97%EF%BC%8C%E4%B8%BA%E4%BB%80%E4%B9%88%EF%BC%9F"><span class="toc-number">2.5.</span> <span class="toc-text">Angular里面service的实现，service是应用在全生命周期里吗，为什么？</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#1-%E6%9C%8D%E5%8A%A1%E7%9A%84%E5%9F%BA%E6%9C%AC%E5%AE%9E%E7%8E%B0"><span class="toc-number">2.5.1.</span> <span class="toc-text">1. 服务的基本实现</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#2-%E6%9C%8D%E5%8A%A1%E7%9A%84%E7%94%9F%E5%91%BD%E5%91%A8%E6%9C%9F%E7%AE%A1%E7%90%86"><span class="toc-number">2.5.2.</span> <span class="toc-text">2. 服务的生命周期管理</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#2-1-%E5%8D%95%E4%BE%8B%E6%A8%A1%E5%BC%8F"><span class="toc-number">2.5.2.1.</span> <span class="toc-text">2.1 单例模式</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-%E6%9C%8D%E5%8A%A1%E7%9A%84%E4%BD%BF%E7%94%A8%E5%9C%BA%E6%99%AF"><span class="toc-number">2.5.3.</span> <span class="toc-text">3. 服务的使用场景</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#4-%E5%85%B7%E4%BD%93%E7%A4%BA%E4%BE%8B"><span class="toc-number">2.5.4.</span> <span class="toc-text">4. 具体示例</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#5-%E6%80%BB%E7%BB%93"><span class="toc-number">2.5.5.</span> <span class="toc-text">5. 总结</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%9B%BE%E7%89%87%E4%BC%98%E5%8C%96"><span class="toc-number">2.6.</span> <span class="toc-text">图片优化</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Angular%E5%81%9A%E5%88%B0%E5%A4%9A%E5%B0%91%E7%89%88%E6%9C%AC%EF%BC%8C%E8%A6%81%E4%BB%8E14%E5%8D%87%E7%BA%A7%E5%88%B018%E6%80%8E%E4%B9%88%E5%81%9A"><span class="toc-number">2.7.</span> <span class="toc-text">Angular做到多少版本，要从14升级到18怎么做</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E6%95%8F%E6%8D%B7%E5%BC%80%E5%8F%91%E7%9B%B8%E8%BE%83%E4%BA%8E%E4%B9%8B%E5%89%8D%E7%9A%84%E7%80%91%E5%B8%83%E6%B5%81%E7%9A%84%E5%8C%BA%E5%88%AB%EF%BC%8C%E6%95%8F%E6%8D%B7%E5%BC%80%E5%8F%91%E7%9A%84%E6%97%B6%E9%97%B4%E4%BC%B0%E7%AE%97%EF%BC%8C%E5%A4%9A%E4%B9%85%E4%B8%80%E4%B8%AAsprint"><span class="toc-number">2.8.</span> <span class="toc-text">敏捷开发相较于之前的瀑布流的区别，敏捷开发的时间估算，多久一个sprint</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#1-%E6%95%8F%E6%8D%B7%E5%BC%80%E5%8F%91%E4%B8%8E%E7%80%91%E5%B8%83%E6%B5%81%E7%9A%84%E5%8C%BA%E5%88%AB"><span class="toc-number">2.8.1.</span> <span class="toc-text">1. 敏捷开发与瀑布流的区别</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#2-%E6%95%8F%E6%8D%B7%E5%BC%80%E5%8F%91%E7%9A%84%E6%97%B6%E9%97%B4%E4%BC%B0%E7%AE%97"><span class="toc-number">2.8.2.</span> <span class="toc-text">2. 敏捷开发的时间估算</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-Sprint-%E8%AE%A1%E5%88%92"><span class="toc-number">2.8.3.</span> <span class="toc-text">3. Sprint 计划</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E6%80%BB%E7%BB%93-2"><span class="toc-number">2.8.4.</span> <span class="toc-text">总结</span></a></li></ol></li></ol></li></ol></div></div><div class="card-widget card-recent-post"><div class="item-headline"><i class="fas fa-history"></i><span>最新文章</span></div><div class="aside-list"><div class="aside-list-item"><a class="thumbnail" href="/2024/10/26/front-end/angular-mock-interview/" title="Angular的模拟面试"><img src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="Angular的模拟面试"/></a><div class="content"><a class="title" href="/2024/10/26/front-end/angular-mock-interview/" title="Angular的模拟面试">Angular的模拟面试</a><time datetime="2024-10-26T08:16:38.000Z" title="发表于 2024-10-26 16:16:38">2024-10-26</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2024/10/20/front-end/mock-interview/" title="模拟面试"><img src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="模拟面试"/></a><div class="content"><a class="title" href="/2024/10/20/front-end/mock-interview/" title="模拟面试">模拟面试</a><time datetime="2024-10-20T12:45:06.000Z" title="发表于 2024-10-20 20:45:06">2024-10-20</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2024/10/20/front-end/javascript-closure/" title="JavaScript中的闭包"><img src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="JavaScript中的闭包"/></a><div class="content"><a class="title" href="/2024/10/20/front-end/javascript-closure/" title="JavaScript中的闭包">JavaScript中的闭包</a><time datetime="2024-10-20T06:25:45.000Z" title="发表于 2024-10-20 14:25:45">2024-10-20</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2024/07/10/back-end/back-end-how-to-backup-postgres-docker-container/" title="使用docker-compose备份Postgres Docker容器的解决方案"><img src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="使用docker-compose备份Postgres Docker容器的解决方案"/></a><div class="content"><a class="title" href="/2024/07/10/back-end/back-end-how-to-backup-postgres-docker-container/" title="使用docker-compose备份Postgres Docker容器的解决方案">使用docker-compose备份Postgres Docker容器的解决方案</a><time datetime="2024-07-10T09:18:24.000Z" title="发表于 2024-07-10 17:18:24">2024-07-10</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2024/06/09/ai/how-to-use-langchain-in-10-minutes/" title="如何在10分钟内使用LangChain"><img src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="如何在10分钟内使用LangChain"/></a><div class="content"><a class="title" href="/2024/06/09/ai/how-to-use-langchain-in-10-minutes/" title="如何在10分钟内使用LangChain">如何在10分钟内使用LangChain</a><time datetime="2024-06-09T05:05:40.000Z" title="发表于 2024-06-09 13:05:40">2024-06-09</time></div></div></div></div></div></div></main><footer id="footer"><div id="footer-wrap"><div class="copyright">&copy;2020 - 2024 By Arthur Ming</div><div class="framework-info"><span>框架 </span><a target="_blank" rel="noopener" href="https://hexo.io">Hexo</a><span class="footer-separator">|</span><span>主题 </span><a target="_blank" rel="noopener" href="https://github.com/jerryc127/hexo-theme-butterfly">Butterfly</a></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="浅色和深色模式转换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside-config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><button id="go-up" type="button" title="回到顶部"><span class="scroll-percent"></span><i class="fas fa-arrow-up"></i></button></div></div><div><script src="/js/utils.js"></script><script src="/js/main.js"></script><script src="https://cdn.jsdelivr.net/npm/@fancyapps/ui/dist/fancybox/fancybox.umd.min.js"></script><div class="js-pjax"></div><script defer="defer" id="ribbon" src="https://cdn.jsdelivr.net/npm/butterfly-extsrc/dist/canvas-ribbon.min.js" size="150" alpha="0.6" zIndex="-1" mobile="false" data-click="true"></script><script async data-pjax src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script><div id="local-search"><div class="search-dialog"><nav class="search-nav"><span class="search-dialog-title">搜索</span><span id="loading-status"></span><button class="search-close-button"><i class="fas fa-times"></i></button></nav><div class="is-center" id="loading-database"><i class="fas fa-spinner fa-pulse"></i><span>  数据库加载中</span></div><div class="search-wrap"><div id="local-search-input"><div class="local-search-box"><input class="local-search-box--input" placeholder="搜索文章" type="text"/></div></div><hr/><div id="local-search-results"></div><div id="local-search-stats-wrap"></div></div></div><div id="search-mask"></div><script src="/js/search/local-search.js"></script></div></div></body></html>
