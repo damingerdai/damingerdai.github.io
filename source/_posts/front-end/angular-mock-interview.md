@@ -1,7 +1,8 @@
 ---
 title: Angular的模拟面试
 date: 2024-10-26 16:16:38
-tags:
+tags: [css, angular, 面试]
+categories: [前端]
 ---
 
 # 前言
