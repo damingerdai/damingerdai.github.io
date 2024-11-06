@@ -1,5 +1,5 @@
 ---
-title: 模拟面试
+title: 记录一下2024年10月18号和前同事的一次模拟面试
 date: 2024-10-20 20:45:06
 tags: [前端, javascript]
 categories: [前端,nodejs, 敏捷开发,  面试]
