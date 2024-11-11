@@ -73,17 +73,16 @@ const counter = createCounter(); // 调用外部函数，返回内部函数
 counter(); // 输出: 1
 counter(); // 输出: 2
 counter(); // 输出: 3
-
 ```
 
 ### javascript的原型链是什么
 
 JavaScript的原型链是用于实现继承的一种机制。
 
-- 每个对象都有一个**__proto__**属性，指向它的原型对象。
+- 每个对象都有一个\_\_proto\_\_ 属性，指向它的原型对象。
 - 如果在对象上找不到某个属性或方法，JavaScript 会沿着原型链向上查找，直到找到该属性或方法，或者到达原型链的顶端 null。
 - 函数的 prototype 属性是其实例对象的原型。通过这个机制，JavaScript 实现了属性和方法的共享和继承。
-- 原型链的顶端是 Object.prototype，它的 __proto__ 指向 null，表示原型链的结束
+- 原型链的顶端是 Object.prototype，它的 \_\_proto\_\_ 指向 null，表示原型链的结束
 
 例子：
 
@@ -109,7 +108,7 @@ console.log(Object.prototype.__proto__ === null); // true
 当你在 JavaScript 中使用 new 运算符时，它会执行以下四个步骤：
 
 - 创建一个新的空对象。
-- 将这个新对象的**__proto__**属性设置为构造函数的prototype对象，从而实现原型链继承。
+- 将这个新对象的\_\_proto\_\_属性设置为构造函数的prototype对象，从而实现原型链继承。
 - 调用构造函数，并将新对象作为函数内部的 this，让构造函数能够为新对象添加属性。
 - 如果构造函数返回的是对象类型的值，则返回这个对象；否则，返回新创建的对象
 
