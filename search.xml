@@ -4,6 +4,33 @@
   
     
     <entry>
+      <title>在k8s中如何强制删除处于Terminating状态的namesapce</title>
+      <link href="/2025/02/13/back-end/how-to-forcefully-delete-a-namespace-that-is-stuck-in-the-Terminating-state/"/>
+      <url>/2025/02/13/back-end/how-to-forcefully-delete-a-namespace-that-is-stuck-in-the-Terminating-state/</url>
+      
+        <content type="html"><![CDATA[<h2 id="概述"><a href="#概述" class="headerlink" title="概述"></a>概述</h2><p>在k3s中删除一个namespace十分简单，就是一个命令的事儿：</p><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">kubectl delete ns <span class="variable">$&#123;namespace&#125;</span></span><br></pre></td></tr></table></figure><p>但是可能存在删除失败或者namespace一直处于Terminating状态的话，那么上面的命令可能行不通。<br>这里介绍两种实用的解决方案去帮助我们解决。</p><p>注意: 这两种方案可能存在错误删除的情况，请谨慎操作。</p><h2 id="强制删除"><a href="#强制删除" class="headerlink" title="强制删除"></a>强制删除</h2><p>kubectl提供force和grace-period&#x3D;0两个参数帮助我们强制删除namespace：</p><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">kubectl delete ns <span class="variable">$&#123;namespace&#125;</span> --force --grace-period=0</span><br></pre></td></tr></table></figure><p>说明：</p><ul><li><p>–force：强制删除资源，跳过正常的删除流程。</p></li><li><p>–grace-period&#x3D;0：立即删除资源，不等待任何清理操作。</p></li></ul><h2 id="使用Kubernetes-API-删除"><a href="#使用Kubernetes-API-删除" class="headerlink" title="使用Kubernetes API 删除"></a>使用Kubernetes API 删除</h2><p>获取处于Terminating状态的namespace：</p><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">kubectl get ns |grep Terminating |awk &#123;<span class="string">&#x27;print $1&#x27;</span>&#125;</span><br></pre></td></tr></table></figure><p>调用Kubernetes API 删除指定的namespace</p><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">kubectl get ns <span class="variable">$&#123;namespace&#125;</span> -o json &gt;<span class="variable">$&#123;namespace&#125;</span>.json</span><br><span class="line">sed -i <span class="string">&#x27;/&quot;kubernetes&quot;/d&#x27;</span> <span class="variable">$&#123;namespace&#125;</span>.json</span><br><span class="line">kubectl replace --raw <span class="string">&quot;/api/v1/namespaces/<span class="variable">$&#123;namespace&#125;</span>/finalize&quot;</span> -f <span class="variable">$&#123;namespace&#125;</span>.json</span><br></pre></td></tr></table></figure><h2 id="参考资料"><a href="#参考资料" class="headerlink" title="参考资料"></a>参考资料</h2><ol><li><a href="https://segmentfault.com/a/1190000042972476">Kubernetes 的 NameSpace 无法删除应该怎么办</a></li><li><a href="https://www.cnblogs.com/sunshine99/p/17265300.html">kubernetes批量删除长期处于Terminating状态的namespace</a></li></ol>]]></content>
+      
+      
+      <categories>
+          
+          <category> 后端 </category>
+          
+      </categories>
+      
+      
+        <tags>
+            
+            <tag> k8s </tag>
+            
+            <tag> k3s </tag>
+            
+        </tags>
+      
+    </entry>
+    
+    
+    
+    <entry>
       <title>Spring Security 中基于用户信息的动态密码加密</title>
       <link href="/2025/02/08/back-end/dynamic-password-encryption-based-on-user-information-in-spring-security/"/>
       <url>/2025/02/08/back-end/dynamic-password-encryption-based-on-user-information-in-spring-security/</url>
