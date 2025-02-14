@@ -4,6 +4,35 @@
   
     
     <entry>
+      <title>在armbian上使用snap安装neovim</title>
+      <link href="/2025/02/14/software/install/use-snap-to-install-neovim-on-armbian/"/>
+      <url>/2025/02/14/software/install/use-snap-to-install-neovim-on-armbian/</url>
+      
+        <content type="html"><![CDATA[<h1 id="概述"><a href="#概述" class="headerlink" title="概述"></a>概述</h1><p>最近搞了一台armbian的机子，想在上面安装neovim，但是发现apt上的nvim版本太低了，只有0.4.0好像。经过一番的搜索，发现Snaps可以满足我的要求。</p><h1 id="Snaps介绍"><a href="#Snaps介绍" class="headerlink" title="Snaps介绍"></a>Snaps介绍</h1><p>Snaps是由Canonical提供的跨分发包管理系统的工具.Snaps 基本上是一个与其依赖项和库一起编译的应用程序——为应用程序运行提供了一个沙盒环境。它们安装起来更容易、更快捷，可以接收最新更新，并且不受操作系统和其他应用程序的限制。</p><h1 id="安装Snaps"><a href="#安装Snaps" class="headerlink" title="安装Snaps"></a>安装Snaps</h1><p>使用apt安装Snap；</p><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">sudo apt install snapd</span><br></pre></td></tr></table></figure><h1 id="安装neovim"><a href="#安装neovim" class="headerlink" title="安装neovim"></a>安装neovim</h1><p>使用snap安装neovim:</p><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">sudo snap install --classic nvim</span><br></pre></td></tr></table></figure><p>检查一下noevim的版本：</p><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">nvim --version</span><br></pre></td></tr></table></figure><p>输出如下：</p><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">NVIM v0.10.4</span><br><span class="line">Build <span class="built_in">type</span>: RelWithDebInfo</span><br><span class="line">LuaJIT 2.1.1713484068</span><br><span class="line">Run <span class="string">&quot;nvim -V1 -v&quot;</span> <span class="keyword">for</span> more info</span><br></pre></td></tr></table></figure><h1 id="参考资料"><a href="#参考资料" class="headerlink" title="参考资料"></a>参考资料</h1><ol><li><a href="https://www.cnblogs.com/pipci/p/16109561.html">如何在各种 Linux 发行版中安装和使用 Snap</a></li></ol>]]></content>
+      
+      
+      <categories>
+          
+          <category> 软件 </category>
+          
+      </categories>
+      
+      
+        <tags>
+            
+            <tag> snap </tag>
+            
+            <tag> armbian </tag>
+            
+            <tag> neovim </tag>
+            
+        </tags>
+      
+    </entry>
+    
+    
+    
+    <entry>
       <title>在k8s中如何强制删除处于Terminating状态的namesapce</title>
       <link href="/2025/02/13/back-end/how-to-forcefully-delete-a-namespace-that-is-stuck-in-the-Terminating-state/"/>
       <url>/2025/02/13/back-end/how-to-forcefully-delete-a-namespace-that-is-stuck-in-the-Terminating-state/</url>
