@@ -1,7 +1,7 @@
 ---
 title: Android Studio安装笔记
 date: 2021-01-01 19:08:46
-tags: [ndroid Studio,]
+tags: [Android Studio]
 categories: [软件]
 ---
 
