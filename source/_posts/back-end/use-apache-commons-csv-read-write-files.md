@@ -155,6 +155,63 @@ try (var fw = new FileWriter(path); var bw = new BufferedWriter(fw)) {
 }
 ```
 
+### 读csv文件
+
+CSVFormat除了可以用于写csv文件之外，还可以用于读csv文件。
+
+先获取文件路径并判断文件是否存在：
+
+```java
+ var path = nfsRootPath + File.separator + "workers_20250406.csv";
+var file = new File(path);
+if (!file.exists()) {
+    return;
+}
+```
+
+CSVFormat提供parse方法读取实现任意实现Reader接口的对象，这里我使用FileReader。
+
+```java
+try (var in = new FileReader(path)) {
+    var records = csvFormat.parse(in);
+    var format = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+    var workers = records.stream().map(record -> {
+        var worker = new Worker();
+        worker.setEmployeeNumber(record.get("employee_number"));
+        var version = record.get("version");
+        try {
+            worker.setVersion(Integer.parseInt(version));
+        } catch (NumberFormatException ex) {
+            ex.printStackTrace();
+        }
+        worker.setLastName(record.get("last_name"));
+        worker.setFirstName(record.get("first_name"));
+        worker.setGender(record.get("gender"));
+        worker.setDepartment(record.get("department"));
+        worker.setPosition(record.get("position"));
+        var hiredDate = record.get("hire_date");
+        if (Objects.nonNull(hiredDate) && StringUtils.isNoneBlank(hiredDate)) {
+            worker.setHireDate(LocalDate.parse(hiredDate, format));
+        }
+        worker.setEmail(record.get("email"));
+        worker.setPhoneNumber(record.get("phone_number"));
+        worker.setStatus(record.get("status"));
+
+        return worker;
+    }).toList();
+    System.out.println("workers sum: " + workers.size());
+    workers.forEach(System.out::println);
+} catch (IOException e) {
+    throw new RuntimeException(e);
+}
+```
+
+部分运行结果如下：
+
+```csv
+com.github.damingerdai.batcher.pojo.Worker@7b7b1448[id=<null>,employeeNumber=WK4745-87688,version=1,lastName=Schroeder,firstName=Anisha,gender=female,department=DevOps,position=Architect,hireDate=2021-06-30,email=anisha.schroeder@prohaska.net,phoneNumber=18878513958,status=probation]
+com.github.damingerdai.batcher.pojo.Worker@14624acc[id=<null>,employeeNumber=WK0980-74595,version=3,lastName=Schmidt,firstName=Isaias,gender=female,department=R&D,position=Junior Developer,hireDate=2021-10-19,email=isaias.schmidt@gottlieb.biz,phoneNumber=14535433286,status=resigned]
+```
 
 ## Faker
 
