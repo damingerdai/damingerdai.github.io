@@ -4,6 +4,19 @@
   
     
     <entry>
+      <title>在windows系统中如何给rust如何配置字节源</title>
+      <link href="/2025/04/30/back-end/rust-bytedance-mirror-windows/"/>
+      <url>/2025/04/30/back-end/rust-bytedance-mirror-windows/</url>
+      
+        <content type="html"><![CDATA[<h1 id="rust中如何配置字节源"><a href="#rust中如何配置字节源" class="headerlink" title="rust中如何配置字节源"></a>rust中如何配置字节源</h1><h2 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h2><p>本文的目的是在windows上安装或更新rust的时候通过配置字节的国内源来提高安装&#x2F;更新速度。非windows系统就可以直接参考<a href="https://rsproxy.cn/">rsproxy</a></p><h2 id="配置说明"><a href="#配置说明" class="headerlink" title="配置说明"></a>配置说明</h2><p>在powershell中设置 Rustup 镜像</p><figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="variable">$ENV:RUSTUP_DIST_SERVER</span>=<span class="string">&#x27;https://rsproxy.cn&#x27;</span></span><br><span class="line"><span class="variable">$ENV:RUSTUP_UPDATE_ROOT</span>=<span class="string">&#x27;https://rsproxy.cn/rustup&#x27;</span></span><br></pre></td></tr></table></figure><p>安装或者更新Rust</p><p>如果是安装rust，直接点击<code>rust-init.exe</code></p><p>如果是更新rust，直接运行rustup update命令</p><figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">rustup update</span><br></pre></td></tr></table></figure><h2 id="设置-crates-io-镜像"><a href="#设置-crates-io-镜像" class="headerlink" title="设置 crates.io 镜像"></a>设置 crates.io 镜像</h2><p>在当前用户的主目录（以我本地为例：D:\Users\daming）下的<code>.cargo</code>文件夹中创建<code>config</code>文件。</p><figure class="highlight toml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="section">[source.crates-io]</span></span><br><span class="line"><span class="attr">replace-with</span> = <span class="string">&#x27;rsproxy-sparse&#x27;</span></span><br><span class="line"><span class="section">[source.rsproxy]</span></span><br><span class="line"><span class="attr">registry</span> = <span class="string">&quot;https://rsproxy.cn/crates.io-index&quot;</span></span><br><span class="line"><span class="section">[source.rsproxy-sparse]</span></span><br><span class="line"><span class="attr">registry</span> = <span class="string">&quot;sparse+https://rsproxy.cn/index/&quot;</span></span><br><span class="line"><span class="section">[registries.rsproxy]</span></span><br><span class="line"><span class="attr">index</span> = <span class="string">&quot;https://rsproxy.cn/crates.io-index&quot;</span></span><br><span class="line"><span class="section">[net]</span></span><br><span class="line"><span class="attr">git-fetch-with-cli</span> = <span class="literal">true</span></span><br></pre></td></tr></table></figure><h2 id="参考资料"><a href="#参考资料" class="headerlink" title="参考资料"></a>参考资料</h2><ol><li><a href="https://rsproxy.cn/">rsproxy</a></li><li><a href="https://www.sunzhongwei.com/windows-11-install-rust-with-china-mirror">Windows 11 上通过国内源安装 Rust</a></li><li><a href="https://www.cnblogs.com/manqing321/p/17026725.html">rustup-init.exe 安装失败及其解决方案</a></li></ol>]]></content>
+      
+      
+      
+    </entry>
+    
+    
+    
+    <entry>
       <title>使用apache commons-csv读写csv文件</title>
       <link href="/2025/04/07/back-end/use-apache-commons-csv-read-write-files/"/>
       <url>/2025/04/07/back-end/use-apache-commons-csv-read-write-files/</url>
