@@ -56,23 +56,23 @@ image: joxit/docker-registry-ui:main
 container_name: registry-ui
 restart: always
 ports:
-    - 5001:80
+  - 5001:80
 environment:
-    - SINGLE_REGISTRY=true
-    - REGISTRY_TITLE=Docker Registry UI
-    - DELETE_IMAGES=true
-    - SHOW_CONTENT_DIGEST=true
-    - NGINX_PROXY_PASS_URL=http://registry:5000
-    - SHOW_CATALOG_NB_TAGS=true
-    - CATALOG_MIN_BRANCHES=1
-    - CATALOG_MAX_BRANCHES=1
-    - TAGLIST_PAGE_SIZE=100
-    - REGISTRY_SECURED=false
-    - CATALOG_ELEMENTS_LIMIT=1000
+  - SINGLE_REGISTRY=true
+  - REGISTRY_TITLE=Docker Registry UI
+  - DELETE_IMAGES=true
+  - SHOW_CONTENT_DIGEST=true
+  - NGINX_PROXY_PASS_URL=http://registry:5000
+  - SHOW_CATALOG_NB_TAGS=true
+  - CATALOG_MIN_BRANCHES=1
+  - CATALOG_MAX_BRANCHES=1
+  - TAGLIST_PAGE_SIZE=100
+  - REGISTRY_SECURED=false
+  - CATALOG_ELEMENTS_LIMIT=1000
 networks:
-    - registry-network
+  - registry-network
 extra_hosts:
-    - host.docker.internal:host-gateway
+  - host.docker.internal:host-gateway
 ```
 
 然后通过·docker compose up -d·就可以启动了。
@@ -83,7 +83,7 @@ docker默认不支持http协议，需要额外配置, 通过在/etc/docker/daemo
 
 ```json
 {
-    "insecure-registries": ["192.168.31.220:5000"]
+  "insecure-registries": ["192.168.31.220:5000"]
 }
 ```
 
@@ -119,6 +119,14 @@ configs:
 mirrors定义镜像仓库的镜像规则（mirror），用于指定如何访问特定的私有仓库。当容器运行时尝试拉取镜像时，会根据 mirrors 的配置决定从哪个地址拉取。
 configs定义私有仓库的认证和 TLS 配置。当访问私有仓库时，容器运行时会使用这里配置的用户名、密码和 TLS 设置。
 
+有的时候k3s不一定能够实时自动监听registries.yaml的改动，所以最好的方式还是重启k3s:
+
+```bash
+sudo systemctl restart k3s-agent   # worker 节点
+# 或者
+sudo systemctl restart k3s         # server 节点
+```
+
 现在可以通过创建一个pod去测试k3s是否正常访问私有仓库。
 
 这里推荐使用crictl去直接拉取私有仓库的镜像。
@@ -131,3 +139,4 @@ sudo crictl pull 192.168.31.220:5000/hoteler-api:07e1b87e82ccfc49e5bee7d3d88cf2c
 
 1. [Docker login 登录私服，报错； http: server gave HTTP response to HTTPS client](https://blog.csdn.net/tergou/article/details/120422445)
 2. [Private Registry Configuration](https://docs.k3s.io/zh/installation/private-registry)
+
