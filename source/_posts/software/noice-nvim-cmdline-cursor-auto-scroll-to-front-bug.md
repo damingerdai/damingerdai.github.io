@@ -1,5 +1,5 @@
 ---
-title: noice.nvim在cmdlie中的光标自动滚动到最前面的bug
+title: noice.nvim在cmdline中的光标自动滚动到最前面的bug
 date: 2025-05-22 21:58:27
 tags: [neovim, iterm2, nocie.nvim]
 categories: [软件]
