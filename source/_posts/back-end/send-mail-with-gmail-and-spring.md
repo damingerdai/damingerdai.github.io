@@ -44,6 +44,23 @@ google似乎默认并不想让用户直接创建应用专用密码，需要通�
 implementation 'org.springframework.boot:spring-boot-starter-mail:${spring-boot-version}'
 ```
 
+添加配置：
+
+```yaml
+spring:
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: pollardsmithal899@gmail.com
+    password: 'your app password'
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+```
+
 最后可以使用JavaMailSenderImpl发送邮件了；
 
 ```java
