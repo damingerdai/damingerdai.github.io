@@ -1,0 +1,191 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="dark"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1.0,viewport-fit=cover"><title>使用systemd部署podman的容器 | Damingerdai's Blog</title><meta name="author" content="Arthur Ming"><meta name="copyright" content="Arthur Ming"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#0d0d0d"><meta name="description" content="podman的问题podman是一个容器运行时环境，提供与 Docker 非常相似的功能并不需要在你的系统上运行任何守护进程。没有守护进程就意味着如果你想使用podman部署容器，是没有办法使用类似docker的方式去实现自动重启功能。如果使用k8s部署容器那问题不大，如果就纯容器部署，可以使用podman给出的方案： 123456789101112131415161718192021222324">
+<meta property="og:type" content="article">
+<meta property="og:title" content="使用systemd部署podman的容器">
+<meta property="og:url" content="http://blog.damingerdai.com/2025/07/20/back-end/use-systemd-to-deploy-podman-build-by-podman/index.html">
+<meta property="og:site_name" content="Damingerdai&#39;s Blog">
+<meta property="og:description" content="podman的问题podman是一个容器运行时环境，提供与 Docker 非常相似的功能并不需要在你的系统上运行任何守护进程。没有守护进程就意味着如果你想使用podman部署容器，是没有办法使用类似docker的方式去实现自动重启功能。如果使用k8s部署容器那问题不大，如果就纯容器部署，可以使用podman给出的方案： 123456789101112131415161718192021222324">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg">
+<meta property="article:published_time" content="2025-07-20T01:57:01.000Z">
+<meta property="article:modified_time" content="2025-07-20T02:20:41.085Z">
+<meta property="article:author" content="Arthur Ming">
+<meta property="article:tag" content="podman">
+<meta property="article:tag" content="容器">
+<meta property="article:tag" content="systemd">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg"><link rel="shortcut icon" href="/img/avatar.png"><link rel="canonical" href="http://blog.damingerdai.com/2025/07/20/back-end/use-systemd-to-deploy-podman-build-by-podman/index.html"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><link rel="stylesheet" href="/css/index.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free/css/all.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/ui/dist/fancybox/fancybox.min.css" media="print" onload="this.media='all'"><script>const GLOBAL_CONFIG = {
+  root: '/',
+  algolia: undefined,
+  localSearch: {"path":"/search.xml","preload":false,"top_n_per_article":1,"unescape":false,"languages":{"hits_empty":"找不到您查询的内容：${query}","hits_stats":"共找到 ${hits} 篇文章"}},
+  translate: undefined,
+  noticeOutdate: undefined,
+  highlight: {"plugin":"highlight.js","highlightCopy":true,"highlightLang":true,"highlightHeightLimit":false},
+  copy: {
+    success: '复制成功',
+    error: '复制错误',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '',
+  dateSuffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: undefined,
+  lightbox: 'fancybox',
+  Snackbar: undefined,
+  infinitegrid: {
+    js: 'https://cdn.jsdelivr.net/npm/@egjs/infinitegrid/dist/infinitegrid.min.js',
+    buttonText: '加载更多'
+  },
+  isPhotoFigcaption: false,
+  islazyload: false,
+  isAnchor: false,
+  percent: {
+    toc: true,
+    rightside: false,
+  },
+  autoDarkmode: true
+}</script><script id="config-diff">var GLOBAL_CONFIG_SITE = {
+  title: '使用systemd部署podman的容器',
+  isPost: true,
+  isHome: false,
+  isHighlightShrink: false,
+  isToc: true,
+  postUpdate: '2025-07-20 10:20:41'
+}</script><script>(win=>{
+      win.saveToLocal = {
+        set: (key, value, ttl) => {
+          if (ttl === 0) return
+          const now = Date.now()
+          const expiry = now + ttl * 86400000
+          const item = {
+            value,
+            expiry
+          }
+          localStorage.setItem(key, JSON.stringify(item))
+        },
+      
+        get: key => {
+          const itemStr = localStorage.getItem(key)
+      
+          if (!itemStr) {
+            return undefined
+          }
+          const item = JSON.parse(itemStr)
+          const now = Date.now()
+      
+          if (now > item.expiry) {
+            localStorage.removeItem(key)
+            return undefined
+          }
+          return item.value
+        }
+      }
+    
+      win.getScript = (url, attr = {}) => new Promise((resolve, reject) => {
+        const script = document.createElement('script')
+        script.src = url
+        script.async = true
+        script.onerror = reject
+        script.onload = script.onreadystatechange = function() {
+          const loadState = this.readyState
+          if (loadState && loadState !== 'loaded' && loadState !== 'complete') return
+          script.onload = script.onreadystatechange = null
+          resolve()
+        }
+
+        Object.keys(attr).forEach(key => {
+          script.setAttribute(key, attr[key])
+        })
+
+        document.head.appendChild(script)
+      })
+    
+      win.getCSS = (url, id = false) => new Promise((resolve, reject) => {
+        const link = document.createElement('link')
+        link.rel = 'stylesheet'
+        link.href = url
+        if (id) link.id = id
+        link.onerror = reject
+        link.onload = link.onreadystatechange = function() {
+          const loadState = this.readyState
+          if (loadState && loadState !== 'loaded' && loadState !== 'complete') return
+          link.onload = link.onreadystatechange = null
+          resolve()
+        }
+        document.head.appendChild(link)
+      })
+    
+      win.activateDarkMode = () => {
+        document.documentElement.setAttribute('data-theme', 'dark')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+        }
+      }
+      win.activateLightMode = () => {
+        document.documentElement.setAttribute('data-theme', 'light')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#ffffff')
+        }
+      }
+      const t = saveToLocal.get('theme')
+    
+          const isDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches
+          const isLightMode = window.matchMedia('(prefers-color-scheme: light)').matches
+          const isNotSpecified = window.matchMedia('(prefers-color-scheme: no-preference)').matches
+          const hasNoSupport = !isDarkMode && !isLightMode && !isNotSpecified
+
+          if (t === undefined) {
+            if (isLightMode) activateLightMode()
+            else if (isDarkMode) activateDarkMode()
+            else if (isNotSpecified || hasNoSupport) {
+              const now = new Date()
+              const hour = now.getHours()
+              const isNight = hour <= 6 || hour >= 18
+              isNight ? activateDarkMode() : activateLightMode()
+            }
+            window.matchMedia('(prefers-color-scheme: dark)').addListener(e => {
+              if (saveToLocal.get('theme') === undefined) {
+                e.matches ? activateDarkMode() : activateLightMode()
+              }
+            })
+          } else if (t === 'light') activateLightMode()
+          else activateDarkMode()
+        
+      const asideStatus = saveToLocal.get('aside-status')
+      if (asideStatus !== undefined) {
+        if (asideStatus === 'hide') {
+          document.documentElement.classList.add('hide-aside')
+        } else {
+          document.documentElement.classList.remove('hide-aside')
+        }
+      }
+    
+      const detectApple = () => {
+        if(/iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent)){
+          document.documentElement.classList.add('apple')
+        }
+      }
+      detectApple()
+    })(window)</script><link rel="stylesheet" href="/css/styles.css"><meta name="generator" content="Hexo 7.2.0"></head><body><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="avatar-img is-center"><img src="/img/avatar.png" onerror="onerror=null;src='/img/friend_404.gif'" alt="avatar"/></div><div class="sidebar-site-data site-data is-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">51</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">59</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">8</div></a></div><hr class="custom-hr"/><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归类</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page group" href="javascript:void(0);"><i class="fa-fw fas fa-list"></i><span> 其他</span><i class="fas fa-chevron-down"></i></a><ul class="menus_item_child"><li><a class="site-page child" href="/others/learning"><i class="fa-fw fas fa-graduation-cap"></i><span> 学习课程</span></a></li><li><a class="site-page child" href="/others/link/"><i class="fa-fw fas fa-link"></i><span> 链接</span></a></li><li><a class="site-page child" href="/others/interview/"><i class="fa-fw fas fa-glide"></i><span> 面试</span></a></li></ul></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于</span></a></div></div></div></div><div class="post" id="body-wrap"><header class="post-bg" id="page-header" style="background-image: url('https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg')"><nav id="nav"><span id="blog-info"><a href="/" title="Damingerdai's Blog"><span class="site-name">Damingerdai's Blog</span></a></span><div id="menus"><div id="search-button"><a class="site-page social-icon search" href="javascript:void(0);"><i class="fas fa-search fa-fw"></i><span> 搜索</span></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归类</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page group" href="javascript:void(0);"><i class="fa-fw fas fa-list"></i><span> 其他</span><i class="fas fa-chevron-down"></i></a><ul class="menus_item_child"><li><a class="site-page child" href="/others/learning"><i class="fa-fw fas fa-graduation-cap"></i><span> 学习课程</span></a></li><li><a class="site-page child" href="/others/link/"><i class="fa-fw fas fa-link"></i><span> 链接</span></a></li><li><a class="site-page child" href="/others/interview/"><i class="fa-fw fas fa-glide"></i><span> 面试</span></a></li></ul></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于</span></a></div></div><div id="toggle-menu"><a class="site-page" href="javascript:void(0);"><i class="fas fa-bars fa-fw"></i></a></div></div></nav><div id="post-info"><h1 class="post-title">使用systemd部署podman的容器</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2025-07-20T01:57:01.000Z" title="发表于 2025-07-20 09:57:01">2025-07-20</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2025-07-20T02:20:41.085Z" title="更新于 2025-07-20 10:20:41">2025-07-20</time></span><span class="post-meta-categories"><span class="post-meta-separator">|</span><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/%E5%90%8E%E7%AB%AF/">后端</a></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-pv-cv" id="" data-flag-title="使用systemd部署podman的容器"><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">阅读量:</span><span id="busuanzi_value_page_pv"><i class="fa-solid fa-spinner fa-spin"></i></span></span></div></div></div></header><main class="layout" id="content-inner"><div id="post"><article class="post-content" id="article-container"><h1 id="podman的问题"><a href="#podman的问题" class="headerlink" title="podman的问题"></a>podman的问题</h1><p>podman是一个容器运行时环境，提供与 Docker 非常相似的功能并不需要在你的系统上运行任何守护进程。没有守护进程就意味着如果你想使用podman部署容器，是没有办法使用类似docker的方式去实现自动重启功能。如果使用k8s部署容器那问题不大，如果就纯容器部署，可以使用podman给出的方案：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br></pre></td><td class="code"><pre><span class="line">podman generate systemd --<span class="built_in">help</span></span><br><span class="line">[DEPRECATED] Generate systemd units</span><br><span class="line"></span><br><span class="line">Description:</span><br><span class="line">  Generate systemd units <span class="keyword">for</span> a pod or container.</span><br><span class="line">  The generated units can later be controlled via systemctl(1).</span><br><span class="line"></span><br><span class="line">DEPRECATED <span class="built_in">command</span>:</span><br><span class="line">It is recommended to use Quadlets <span class="keyword">for</span> running containers and pods under systemd.</span><br><span class="line"></span><br><span class="line">Please refer to podman-systemd.unit(5) <span class="keyword">for</span> details.</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">Usage:</span><br><span class="line">  podman generate systemd [options] &#123;CONTAINER|POD&#125;</span><br><span class="line"></span><br><span class="line">Examples:</span><br><span class="line">  podman generate systemd CTR</span><br><span class="line">  podman generate systemd --new --time 10 CTR</span><br><span class="line">  podman generate systemd --files --name POD</span><br><span class="line"></span><br><span class="line">Options:</span><br><span class="line">      --after stringArray         Add dependencies order to the generated unit file</span><br><span class="line">      --container-prefix string   Systemd unit name prefix <span class="keyword">for</span> containers (default <span class="string">&quot;container&quot;</span>)</span><br><span class="line">  -e, --<span class="built_in">env</span> stringArray           Set environment variables to the systemd unit files</span><br><span class="line">  -f, --files                     Generate .service files instead of printing to stdout</span><br><span class="line">      --format string             Print the created units <span class="keyword">in</span> specified format (json)</span><br><span class="line">  -n, --name                      Use container/pod names instead of IDs</span><br><span class="line">      --new                       Create a new container or pod instead of starting an existing one</span><br><span class="line">      --no-header                 Skip header generation</span><br><span class="line">      --pod-prefix string         Systemd unit name prefix <span class="keyword">for</span> pods (default <span class="string">&quot;pod&quot;</span>)</span><br><span class="line">      --requires stringArray      Similar to wants, but declares stronger requirement dependencies</span><br><span class="line">      --restart-policy string     Systemd restart-policy (default <span class="string">&quot;on-failure&quot;</span>)</span><br><span class="line">      --restart-sec uint          Systemd restart-sec</span><br><span class="line">      --separator string          Systemd unit name separator between name/id and prefix (default <span class="string">&quot;-&quot;</span>)</span><br><span class="line">      --start-timeout uint        Start <span class="built_in">timeout</span> override</span><br><span class="line">      --stop-timeout uint         Stop <span class="built_in">timeout</span> override (default 10)</span><br><span class="line">      --template                  Make it a template file and use %i and %I specifiers. Working only <span class="keyword">for</span> containers</span><br><span class="line">      --wants stringArray         Add (weak) requirement dependencies to the generated unit file</span><br></pre></td></tr></table></figure>
+
+<h1 id="systemd"><a href="#systemd" class="headerlink" title="systemd"></a>systemd</h1><p>systemd是Linux系统的一套基本构建模块。它提供了一个系统和服务管理器，作为PID 1运行并启动系统的其余部分。systemd是在引导期间启动的第一个守护进程，也是在关闭期间终止的最后一个守护进程。利用这个特性，可以使用systemd去监控容器的运行状态</p>
+<h1 id="例子"><a href="#例子" class="headerlink" title="例子"></a>例子</h1><p>这里使用<a target="_blank" rel="noopener" href="https://github.com/damingerdai/health-master">health-master</a>作为例子。</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 获取名为 health-master 的容器 ID</span></span><br><span class="line">CONTAINER_ID=$(podman ps -a --filter <span class="string">&quot;name=health-master&quot;</span> --format <span class="string">&quot;&#123;&#123;.ID&#125;&#125;&quot;</span>)</span><br><span class="line"></span><br><span class="line"><span class="keyword">if</span> [ -z <span class="string">&quot;<span class="variable">$CONTAINER_ID</span>&quot;</span> ]; <span class="keyword">then</span></span><br><span class="line">  <span class="built_in">echo</span> <span class="string">&quot;未找到名为 health-master 的容器。&quot;</span> &gt;&amp;2</span><br><span class="line">  <span class="built_in">exit</span> 1</span><br><span class="line"><span class="keyword">fi</span></span><br><span class="line"></span><br><span class="line"><span class="built_in">echo</span> <span class="string">&quot;找到容器 health-master，ID 为 <span class="variable">$CONTAINER_ID</span>&quot;</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 定义服务文件的存储路径</span></span><br><span class="line">SERVICE_FILE_PATH=<span class="string">&quot;<span class="variable">$HOME</span>/.config/systemd/user&quot;</span></span><br><span class="line"></span><br><span class="line">SERVICE_NAME=<span class="string">&quot;podman-health-master&quot;</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 使用 podman generate systemd 创建服务文件</span></span><br><span class="line"><span class="built_in">echo</span> <span class="string">&quot;正在生成 systemd 服务文件...&quot;</span></span><br><span class="line">podman generate systemd --name --restart-policy=on-failure -t 10 <span class="string">&quot;<span class="variable">$CONTAINER_ID</span>&quot;</span> &gt;<span class="string">&quot;<span class="variable">$SERVICE_FILE_PATH</span>/<span class="variable">$SERVICE_NAME</span>.service&quot;</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">if</span> [ $? -ne 0 ]; <span class="keyword">then</span></span><br><span class="line">  <span class="built_in">echo</span> <span class="string">&quot;错误: 无法生成 <span class="variable">$SERVICE_NAME</span> 服务。&quot;</span> &gt;&amp;2</span><br><span class="line">  <span class="built_in">exit</span> 1</span><br><span class="line"><span class="keyword">fi</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 修复 SELinux 上下文（如启用 SELinux）</span></span><br><span class="line">restorecon -RvF <span class="string">&quot;<span class="variable">$SERVICE_FILE_PATH</span>/<span class="variable">$SERVICE_NAME</span>.service&quot;</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 启用用户级 systemd 支持（首次需运行）</span></span><br><span class="line">loginctl enable-linger <span class="string">&quot;<span class="variable">$USER</span>&quot;</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 重新加载 systemd 配置</span></span><br><span class="line"><span class="built_in">echo</span> <span class="string">&quot;重新加载 systemd 配置...&quot;</span></span><br><span class="line">systemctl --user daemon-reload</span><br><span class="line"></span><br><span class="line"><span class="keyword">if</span> [ $? -ne 0 ]; <span class="keyword">then</span></span><br><span class="line">  <span class="built_in">echo</span> <span class="string">&quot;错误: 无法重新加载 systemd 配置。&quot;</span> &gt;&amp;2</span><br><span class="line">  <span class="built_in">exit</span> 1</span><br><span class="line"><span class="keyword">fi</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 启用服务</span></span><br><span class="line"><span class="built_in">echo</span> <span class="string">&quot;启用服务 <span class="variable">$SERVICE_NAME</span>...&quot;</span></span><br><span class="line">systemctl --user <span class="built_in">enable</span> --now <span class="string">&quot;<span class="variable">$SERVICE_NAME</span>&quot;</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">if</span> [ $? -ne 0 ]; <span class="keyword">then</span></span><br><span class="line">  <span class="built_in">echo</span> <span class="string">&quot;错误: 无法启用服务 <span class="variable">$SERVICE_NAME</span>。&quot;</span> &gt;&amp;2</span><br><span class="line">  <span class="built_in">exit</span> 1</span><br><span class="line"><span class="keyword">fi</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 启动服务</span></span><br><span class="line"><span class="built_in">echo</span> <span class="string">&quot;启动服务 <span class="variable">$SERVICE_NAME</span>...&quot;</span></span><br><span class="line">systemctl --user start <span class="string">&quot;<span class="variable">$SERVICE_NAME</span>&quot;</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">if</span> [ $? -ne 0 ]; <span class="keyword">then</span></span><br><span class="line">  <span class="built_in">echo</span> <span class="string">&quot;错误: 无法启动服务 <span class="variable">$SERVICE_NAME</span>。&quot;</span> &gt;&amp;2</span><br><span class="line">  <span class="built_in">exit</span> 1</span><br><span class="line"><span class="keyword">fi</span></span><br><span class="line"></span><br><span class="line"><span class="built_in">echo</span> <span class="string">&quot;服务 <span class="variable">$SERVICE_NAME</span> 已成功创建并启动。&quot;</span></span><br><span class="line"><span class="built_in">echo</span> <span class="string">&quot;你现在可以使用以下命令管理服务:&quot;</span></span><br><span class="line"><span class="built_in">echo</span> <span class="string">&quot;  systemctl --user status <span class="variable">$SERVICE_NAME</span>  # 查看服务状态&quot;</span></span><br><span class="line"><span class="built_in">echo</span> <span class="string">&quot;  systemctl --user stop <span class="variable">$SERVICE_NAME</span>    # 停止服务&quot;</span></span><br><span class="line"><span class="built_in">echo</span> <span class="string">&quot;  systemctl --user restart <span class="variable">$SERVICE_NAME</span> # 重启服务&quot;</span></span><br></pre></td></tr></table></figure>
+
+<h1 id="问题"><a href="#问题" class="headerlink" title="问题"></a>问题</h1><p>podman generate systemd在podman 4.4的时候就已经弃用了，目前推荐使用<a target="_blank" rel="noopener" href="https://docs.podman.io/en/latest/markdown/podman-systemd.unit.5.html">Quadlet</a></p>
+<h1 id="引用"><a href="#引用" class="headerlink" title="引用"></a>引用</h1><ol>
+<li><a target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/47706426">使用 Podman 以非 root 用户身份运行 Linux 容器</a></li>
+<li><a target="_blank" rel="noopener" href="https://systemd.io/">System and Service Manager</a></li>
+<li><a target="_blank" rel="noopener" href="https://segmentfault.com/a/1190000044854265">Linux Systemd基础教程</a></li>
+<li><a target="_blank" rel="noopener" href="https://github.com/containers/podman/discussions/20218">How to replace the “podman generate systemd” command since its deprecated</a></li>
+</ol>
+</article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta"><i class="fas fa-circle-user fa-fw"></i>文章作者: </span><span class="post-copyright-info"><a href="http://blog.damingerdai.com">Arthur Ming</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta"><i class="fas fa-square-arrow-up-right fa-fw"></i>文章链接: </span><span class="post-copyright-info"><a href="http://blog.damingerdai.com/2025/07/20/back-end/use-systemd-to-deploy-podman-build-by-podman/">http://blog.damingerdai.com/2025/07/20/back-end/use-systemd-to-deploy-podman-build-by-podman/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta"><i class="fas fa-circle-exclamation fa-fw"></i>版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来自 <a href="http://blog.damingerdai.com" target="_blank">Damingerdai's Blog</a>！</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/podman/">podman</a><a class="post-meta__tags" href="/tags/%E5%AE%B9%E5%99%A8/">容器</a><a class="post-meta__tags" href="/tags/systemd/">systemd</a></div><div class="post_share"><div class="social-share" data-image="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" data-sites="facebook,twitter,wechat,weibo,qq"></div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/butterfly-extsrc/sharejs/dist/css/share.min.css" media="print" onload="this.media='all'"><script src="https://cdn.jsdelivr.net/npm/butterfly-extsrc/sharejs/dist/js/social-share.min.js" defer></script></div></div><nav class="pagination-post" id="pagination"><div class="next-post pull-full"><a href="/2025/06/22/back-end/send-mail-with-gmail-and-spring/" title="在spring中使用gmail发送邮件"><img class="cover" src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" onerror="onerror=null;src='/img/404.jpg'" alt="cover of next post"><div class="pagination-info"><div class="label">下一篇</div><div class="next_info">在spring中使用gmail发送邮件</div></div></a></div></nav><div class="relatedPosts"><div class="headline"><i class="fas fa-thumbs-up fa-fw"></i><span>相关推荐</span></div><div class="relatedPosts-list"><div><a href="/2024/01/21/software/podman-hello-world/" title="Podman的hello world入门"><img class="cover" src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2024-01-21</div><div class="title">Podman的hello world入门</div></div></a></div></div></div></div><div class="aside-content" id="aside-content"><div class="card-widget card-info"><div class="is-center"><div class="avatar-img"><img src="/img/avatar.png" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="author-info__name">Arthur Ming</div><div class="author-info__description">大明二代的博客</div></div><div class="card-info-data site-data is-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">51</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">59</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">8</div></a></div><a id="card-info-btn" target="_blank" rel="noopener" href="https://github.com/damingerdai"><i class="fab fa-github"></i><span>Follow Me</span></a><div class="card-info-social-icons is-center"><a class="social-icon" href="https://github.com/damingerdai" target="_blank" title="Github"><i class="fab fa-github" style="color: #24292e;"></i></a><a class="social-icon" href="mailto:mingguobin@live.com" target="_blank" title="Email"><i class="fas fa-envelope" style="color: #4a7dbe;"></i></a></div></div><div class="card-widget card-announcement"><div class="item-headline"><i class="fas fa-bullhorn fa-shake"></i><span>公告</span></div><div class="announcement_content">大家好，我是大明二代</div></div><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="item-headline"><i class="fas fa-stream"></i><span>目录</span><span class="toc-percentage"></span></div><div class="toc-content"><ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#podman%E7%9A%84%E9%97%AE%E9%A2%98"><span class="toc-number">1.</span> <span class="toc-text">podman的问题</span></a></li><li class="toc-item toc-level-1"><a class="toc-link" href="#systemd"><span class="toc-number">2.</span> <span class="toc-text">systemd</span></a></li><li class="toc-item toc-level-1"><a class="toc-link" href="#%E4%BE%8B%E5%AD%90"><span class="toc-number">3.</span> <span class="toc-text">例子</span></a></li><li class="toc-item toc-level-1"><a class="toc-link" href="#%E9%97%AE%E9%A2%98"><span class="toc-number">4.</span> <span class="toc-text">问题</span></a></li><li class="toc-item toc-level-1"><a class="toc-link" href="#%E5%BC%95%E7%94%A8"><span class="toc-number">5.</span> <span class="toc-text">引用</span></a></li></ol></div></div><div class="card-widget card-recent-post"><div class="item-headline"><i class="fas fa-history"></i><span>最新文章</span></div><div class="aside-list"><div class="aside-list-item"><a class="thumbnail" href="/2025/07/20/back-end/use-systemd-to-deploy-podman-build-by-podman/" title="使用systemd部署podman的容器"><img src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="使用systemd部署podman的容器"/></a><div class="content"><a class="title" href="/2025/07/20/back-end/use-systemd-to-deploy-podman-build-by-podman/" title="使用systemd部署podman的容器">使用systemd部署podman的容器</a><time datetime="2025-07-20T01:57:01.000Z" title="发表于 2025-07-20 09:57:01">2025-07-20</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2025/06/22/back-end/send-mail-with-gmail-and-spring/" title="在spring中使用gmail发送邮件"><img src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="在spring中使用gmail发送邮件"/></a><div class="content"><a class="title" href="/2025/06/22/back-end/send-mail-with-gmail-and-spring/" title="在spring中使用gmail发送邮件">在spring中使用gmail发送邮件</a><time datetime="2025-06-22T09:16:53.000Z" title="发表于 2025-06-22 17:16:53">2025-06-22</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2025/05/22/software/noice-nvim-cmdline-cursor-auto-scroll-to-front-bug/" title="noice.nvim在cmdline中的光标自动滚动到最前面的bug"><img src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="noice.nvim在cmdline中的光标自动滚动到最前面的bug"/></a><div class="content"><a class="title" href="/2025/05/22/software/noice-nvim-cmdline-cursor-auto-scroll-to-front-bug/" title="noice.nvim在cmdline中的光标自动滚动到最前面的bug">noice.nvim在cmdline中的光标自动滚动到最前面的bug</a><time datetime="2025-05-22T13:58:27.000Z" title="发表于 2025-05-22 21:58:27">2025-05-22</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2025/04/30/back-end/rust-bytedance-mirror-windows/" title="在windows系统中如何给rust如何配置字节源"><img src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="在windows系统中如何给rust如何配置字节源"/></a><div class="content"><a class="title" href="/2025/04/30/back-end/rust-bytedance-mirror-windows/" title="在windows系统中如何给rust如何配置字节源">在windows系统中如何给rust如何配置字节源</a><time datetime="2025-04-30T08:57:06.000Z" title="发表于 2025-04-30 16:57:06">2025-04-30</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2025/04/07/back-end/use-apache-commons-csv-read-write-files/" title="使用apache commons-csv读写csv文件"><img src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="使用apache commons-csv读写csv文件"/></a><div class="content"><a class="title" href="/2025/04/07/back-end/use-apache-commons-csv-read-write-files/" title="使用apache commons-csv读写csv文件">使用apache commons-csv读写csv文件</a><time datetime="2025-04-07T12:55:16.000Z" title="发表于 2025-04-07 20:55:16">2025-04-07</time></div></div></div></div></div></div></main><footer id="footer"><div id="footer-wrap"><div class="copyright">&copy;2020 - 2025 By Arthur Ming</div><div class="framework-info"><span>框架 </span><a target="_blank" rel="noopener" href="https://hexo.io">Hexo</a><span class="footer-separator">|</span><span>主题 </span><a target="_blank" rel="noopener" href="https://github.com/jerryc127/hexo-theme-butterfly">Butterfly</a></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="浅色和深色模式转换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside-config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><button id="go-up" type="button" title="回到顶部"><span class="scroll-percent"></span><i class="fas fa-arrow-up"></i></button></div></div><div><script src="/js/utils.js"></script><script src="/js/main.js"></script><script src="https://cdn.jsdelivr.net/npm/@fancyapps/ui/dist/fancybox/fancybox.umd.min.js"></script><div class="js-pjax"></div><script defer="defer" id="ribbon" src="https://cdn.jsdelivr.net/npm/butterfly-extsrc/dist/canvas-ribbon.min.js" size="150" alpha="0.6" zIndex="-1" mobile="false" data-click="true"></script><script async data-pjax src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script><div id="local-search"><div class="search-dialog"><nav class="search-nav"><span class="search-dialog-title">搜索</span><span id="loading-status"></span><button class="search-close-button"><i class="fas fa-times"></i></button></nav><div class="is-center" id="loading-database"><i class="fas fa-spinner fa-pulse"></i><span>  数据库加载中</span></div><div class="search-wrap"><div id="local-search-input"><div class="local-search-box"><input class="local-search-box--input" placeholder="搜索文章" type="text"/></div></div><hr/><div id="local-search-results"></div><div id="local-search-stats-wrap"></div></div></div><div id="search-mask"></div><script src="/js/search/local-search.js"></script></div></div></body></html>
