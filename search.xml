@@ -4,6 +4,31 @@
   
     
     <entry>
+      <title>podman登录非https的私有仓库</title>
+      <link href="/2025/08/11/back-end/podman-login-nohttps-private-registery/"/>
+      <url>/2025/08/11/back-end/podman-login-nohttps-private-registery/</url>
+      
+        <content type="html"><![CDATA[<h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><p>本文的目的是为了解决podman登陆非https的私有仓库。<br>这里使用192.168.31.220:5000威力</p><h1 id="方案1：禁用-TLS-验证（临时解决方案）"><a href="#方案1：禁用-TLS-验证（临时解决方案）" class="headerlink" title="方案1：禁用 TLS 验证（临时解决方案）"></a>方案1：禁用 TLS 验证（临时解决方案）</h1><p>对于测试环境或内部信任的网络，可以临时禁用 TLS 验证：</p><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">podman login --tls-verify=<span class="literal">false</span> 192.168.31.220:5000</span><br></pre></td></tr></table></figure><blockquote><p>注意：生产环境不建议禁用 TLS 验证，这会降低安全性。</p></blockquote><h1 id="方案2-配置仓库为不安全仓库"><a href="#方案2-配置仓库为不安全仓库" class="headerlink" title="方案2: 配置仓库为不安全仓库"></a>方案2: 配置仓库为不安全仓库</h1><p>编辑 &#x2F;etc&#x2F;containers&#x2F;registries.conf文件，添加以下内容：</p><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">[[registry]]</span><br><span class="line">location = <span class="string">&quot;192.168.31.220:5000&quot;</span></span><br><span class="line">insecure = <span class="literal">true</span></span><br></pre></td></tr></table></figure><h1 id="方案3：正确配置-HTTPS（生产环境推荐）"><a href="#方案3：正确配置-HTTPS（生产环境推荐）" class="headerlink" title="方案3：正确配置 HTTPS（生产环境推荐）"></a>方案3：正确配置 HTTPS（生产环境推荐）</h1><p>如果这是生产环境，建议为您的私有仓库配置正确的 HTTPS。</p>]]></content>
+      
+      
+      <categories>
+          
+          <category> 后端 </category>
+          
+      </categories>
+      
+      
+        <tags>
+            
+            <tag> podman </tag>
+            
+        </tags>
+      
+    </entry>
+    
+    
+    
+    <entry>
       <title>使用systemd部署podman的容器</title>
       <link href="/2025/07/20/back-end/use-systemd-to-deploy-podman-build-by-podman/"/>
       <url>/2025/07/20/back-end/use-systemd-to-deploy-podman-build-by-podman/</url>
@@ -450,11 +475,11 @@
       
         <tags>
             
+            <tag> bazel </tag>
+            
             <tag> spring boot </tag>
             
             <tag> java </tag>
-            
-            <tag> bazel </tag>
             
         </tags>
       
@@ -544,9 +569,9 @@
       
         <tags>
             
-            <tag> k8s </tag>
-            
             <tag> docker </tag>
+            
+            <tag> k8s </tag>
             
             <tag> Docker Desktop </tag>
             
@@ -845,9 +870,9 @@
       
         <tags>
             
-            <tag> k8s </tag>
-            
             <tag> docker </tag>
+            
+            <tag> k8s </tag>
             
             <tag> k3s </tag>
             
@@ -876,11 +901,11 @@
       
         <tags>
             
+            <tag> docker </tag>
+            
             <tag> github </tag>
             
             <tag> github action </tag>
-            
-            <tag> docker </tag>
             
         </tags>
       
@@ -905,9 +930,9 @@
       
         <tags>
             
-            <tag> k8s </tag>
-            
             <tag> docker </tag>
+            
+            <tag> k8s </tag>
             
             <tag> minikube </tag>
             
@@ -1063,9 +1088,9 @@
       
         <tags>
             
-            <tag> docker </tag>
-            
             <tag> nodejs </tag>
+            
+            <tag> docker </tag>
             
         </tags>
       
@@ -1169,9 +1194,9 @@
       
         <tags>
             
-            <tag> bazel </tag>
-            
             <tag> angular </tag>
+            
+            <tag> bazel </tag>
             
         </tags>
       
@@ -1196,9 +1221,9 @@
       
         <tags>
             
-            <tag> bazel </tag>
-            
             <tag> angular </tag>
+            
+            <tag> bazel </tag>
             
         </tags>
       
@@ -1250,9 +1275,9 @@
       
         <tags>
             
-            <tag> k8s </tag>
-            
             <tag> docker </tag>
+            
+            <tag> k8s </tag>
             
             <tag> Docker Desktop </tag>
             
