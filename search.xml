@@ -8,7 +8,7 @@
       <link href="/2025/08/13/software/how-register-mailgun-with-china-mobile-number/"/>
       <url>/2025/08/13/software/how-register-mailgun-with-china-mobile-number/</url>
       
-        <content type="html"><![CDATA[<h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><p>Mailgun 是一个专为开发者设计的邮件发送平台，支持通过 API 高效、稳定地发送和接收邮件。它广泛用于用户通知、营销邮件、自动化开发信等场景。每个月可免费发送10000封邮件，可以添加1000个域名，每封邮件都有跟踪日志，简单明了的管理界面。</p><h1 id="注册"><a href="#注册" class="headerlink" title="注册"></a>注册</h1><p>点 mailgun.com 右上角的“start for free“进去是不会给免费版选项的，只有 free trial，而 <a href="https://www.mailgun.com/pricing/">https://www.mailgun.com/pricing/</a> 页面则有免费 plan，常规注册即可，无需填写信用卡.</p><h1 id="验证"><a href="#验证" class="headerlink" title="验证"></a>验证</h1><p>mailgun会发送邮件要求验证号码。在验证页面会要求用户提供手机号验证。但是对中国手机号码来说，可能存在收不到验证码的可能。</p><p><img src="https://raw.githubusercontent.com/damingerdai/damingerdai.github.io/master/assets/software/mailgun-validate-error.png" alt="mailgun验证码失败"></p><h1 id="解决"><a href="#解决" class="headerlink" title="解决"></a>解决</h1><p>在mailgun后台，点击右上角的问号❓，点击“Support”按钮。提交一个工单，点击左下方“Open a ticket”的开工单按钮。在开工单页面下拉选择“Account Management”类别，然后输入问题标题和具体内容。</p><p>这是我总结的模版：</p><pre><code class="md">Subject: Unable to Verify Email Due to Excessive VerificationContent:I am unable to complete email verification because I encountered an issue after entering my mobile phone number (+86 xxxxxxxxxxx) and requesting a verification code. The system notified me that I have exceeded the allowed number of attempts, along with other unspecified reminders.然后大概在24小时内就能解决。(我是40分钟就解决了)。# 其他别相信咸鱼上那帮所谓提供海外手机号码验证服务的那帮垃圾。# 引用1. [Mailgun账号注册、域名配置、API开通教程](https://www.jiadingqiang.com/31941.html)2. [Mailgun China](https://mailgun-china.com/)3. [国外Mailgun邮件服务账号验证不成功怎么办](https://zhuanlan.zhihu.com/p/685968877)</code></pre>]]></content>
+        <content type="html"><![CDATA[<h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><p>Mailgun 是一个专为开发者设计的邮件发送平台，支持通过 API 高效、稳定地发送和接收邮件。它广泛用于用户通知、营销邮件、自动化开发信等场景。每个月可免费发送10000封邮件，可以添加1000个域名，每封邮件都有跟踪日志，简单明了的管理界面。</p><h1 id="注册"><a href="#注册" class="headerlink" title="注册"></a>注册</h1><p>点 mailgun.com 右上角的“start for free“进去是不会给免费版选项的，只有 free trial，而 <a href="https://www.mailgun.com/pricing/">https://www.mailgun.com/pricing/</a> 页面则有免费 plan，常规注册即可，无需填写信用卡.</p><h1 id="验证"><a href="#验证" class="headerlink" title="验证"></a>验证</h1><p>mailgun会发送邮件要求验证号码。在验证页面会要求用户提供手机号验证。但是对中国手机号码来说，可能存在收不到验证码的可能。</p><p><img src="https://raw.githubusercontent.com/damingerdai/damingerdai.github.io/master/assets/software/mailgun-validate-error.png" alt="mailgun验证码失败"></p><h1 id="解决"><a href="#解决" class="headerlink" title="解决"></a>解决</h1><p>在mailgun后台，点击右上角的问号❓，点击“Support”按钮。提交一个工单，点击左下方“Open a ticket”的开工单按钮。在开工单页面下拉选择“Account Management”类别，然后输入问题标题和具体内容。</p><p>这是我总结的模版：</p><figure class="highlight md"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">Subject: Unable to Verify Email Due to Excessive Verification</span><br><span class="line"></span><br><span class="line">Content:</span><br><span class="line">I am unable to complete email verification because I encountered an issue after entering my mobile phone number (+86 xxxxxxxxxxx) and requesting a verification code. The system notified me that I have exceeded the allowed number of attempts, along with other unspecified reminders.</span><br></pre></td></tr></table></figure><p>然后大概在24小时内就能解决。(我是40分钟就解决了)。</p><h1 id="其他"><a href="#其他" class="headerlink" title="其他"></a>其他</h1><p>别相信咸鱼上那帮所谓提供海外手机号码验证服务的那帮垃圾。</p><h1 id="引用"><a href="#引用" class="headerlink" title="引用"></a>引用</h1><ol><li><a href="https://www.jiadingqiang.com/31941.html">Mailgun账号注册、域名配置、API开通教程</a></li><li><a href="https://mailgun-china.com/">Mailgun China</a></li><li><a href="https://zhuanlan.zhihu.com/p/685968877">国外Mailgun邮件服务账号验证不成功怎么办</a></li></ol>]]></content>
       
       
       <categories>
@@ -371,9 +371,9 @@
       
         <tags>
             
-            <tag> css </tag>
-            
             <tag> angular </tag>
+            
+            <tag> css </tag>
             
             <tag> 面试 </tag>
             
@@ -502,9 +502,9 @@
             
             <tag> spring boot </tag>
             
-            <tag> java </tag>
-            
             <tag> bazel </tag>
+            
+            <tag> java </tag>
             
         </tags>
       
