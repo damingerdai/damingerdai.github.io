@@ -30,6 +30,7 @@ Subject: Unable to Verify Email Due to Excessive Verification
 
 Content:
 I am unable to complete email verification because I encountered an issue after entering my mobile phone number (+86 xxxxxxxxxxx) and requesting a verification code. The system notified me that I have exceeded the allowed number of attempts, along with other unspecified reminders.
+```
 
 然后大概在24小时内就能解决。(我是40分钟就解决了)。
 
