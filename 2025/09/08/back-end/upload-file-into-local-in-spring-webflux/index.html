@@ -1,0 +1,222 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="dark"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1.0,viewport-fit=cover"><title>在 Spring WebFlux 中实现文件上传到本地 | Damingerdai's Blog</title><meta name="author" content="Arthur Ming"><meta name="copyright" content="Arthur Ming"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#0d0d0d"><meta name="description" content="在 Spring WebFlux 中实现文件上传到本地引言本文旨在介绍如何在 Spring WebFlux 框架下，实现将文件上传至本地服务器的功能。虽然目前的代码示例侧重于本地存储，但其设计思路也为未来扩展至对象存储服务（如 MinIO）奠定了基础。通过本文的学习，您将掌握在响应式编程模型下处理文件上传的关键技术。  具体实现过程1. 项目搭建与依赖引入首先，您需要一个基于 Spring Boo">
+<meta property="og:type" content="article">
+<meta property="og:title" content="在 Spring WebFlux 中实现文件上传到本地">
+<meta property="og:url" content="http://blog.damingerdai.com/2025/09/08/back-end/upload-file-into-local-in-spring-webflux/index.html">
+<meta property="og:site_name" content="Damingerdai&#39;s Blog">
+<meta property="og:description" content="在 Spring WebFlux 中实现文件上传到本地引言本文旨在介绍如何在 Spring WebFlux 框架下，实现将文件上传至本地服务器的功能。虽然目前的代码示例侧重于本地存储，但其设计思路也为未来扩展至对象存储服务（如 MinIO）奠定了基础。通过本文的学习，您将掌握在响应式编程模型下处理文件上传的关键技术。  具体实现过程1. 项目搭建与依赖引入首先，您需要一个基于 Spring Boo">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg">
+<meta property="article:published_time" content="2025-09-08T14:17:15.000Z">
+<meta property="article:modified_time" content="2025-09-08T14:19:32.991Z">
+<meta property="article:author" content="Arthur Ming">
+<meta property="article:tag" content="gradle">
+<meta property="article:tag" content="spring boot">
+<meta property="article:tag" content="spring webflux">
+<meta property="article:tag" content="文件上传">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg"><link rel="shortcut icon" href="/img/avatar.png"><link rel="canonical" href="http://blog.damingerdai.com/2025/09/08/back-end/upload-file-into-local-in-spring-webflux/index.html"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><link rel="stylesheet" href="/css/index.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free/css/all.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/ui/dist/fancybox/fancybox.min.css" media="print" onload="this.media='all'"><script>const GLOBAL_CONFIG = {
+  root: '/',
+  algolia: undefined,
+  localSearch: {"path":"/search.xml","preload":false,"top_n_per_article":1,"unescape":false,"languages":{"hits_empty":"找不到您查询的内容：${query}","hits_stats":"共找到 ${hits} 篇文章"}},
+  translate: undefined,
+  noticeOutdate: undefined,
+  highlight: {"plugin":"highlight.js","highlightCopy":true,"highlightLang":true,"highlightHeightLimit":false},
+  copy: {
+    success: '复制成功',
+    error: '复制错误',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '',
+  dateSuffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: undefined,
+  lightbox: 'fancybox',
+  Snackbar: undefined,
+  infinitegrid: {
+    js: 'https://cdn.jsdelivr.net/npm/@egjs/infinitegrid/dist/infinitegrid.min.js',
+    buttonText: '加载更多'
+  },
+  isPhotoFigcaption: false,
+  islazyload: false,
+  isAnchor: false,
+  percent: {
+    toc: true,
+    rightside: false,
+  },
+  autoDarkmode: true
+}</script><script id="config-diff">var GLOBAL_CONFIG_SITE = {
+  title: '在 Spring WebFlux 中实现文件上传到本地',
+  isPost: true,
+  isHome: false,
+  isHighlightShrink: false,
+  isToc: true,
+  postUpdate: '2025-09-08 22:19:32'
+}</script><script>(win=>{
+      win.saveToLocal = {
+        set: (key, value, ttl) => {
+          if (ttl === 0) return
+          const now = Date.now()
+          const expiry = now + ttl * 86400000
+          const item = {
+            value,
+            expiry
+          }
+          localStorage.setItem(key, JSON.stringify(item))
+        },
+      
+        get: key => {
+          const itemStr = localStorage.getItem(key)
+      
+          if (!itemStr) {
+            return undefined
+          }
+          const item = JSON.parse(itemStr)
+          const now = Date.now()
+      
+          if (now > item.expiry) {
+            localStorage.removeItem(key)
+            return undefined
+          }
+          return item.value
+        }
+      }
+    
+      win.getScript = (url, attr = {}) => new Promise((resolve, reject) => {
+        const script = document.createElement('script')
+        script.src = url
+        script.async = true
+        script.onerror = reject
+        script.onload = script.onreadystatechange = function() {
+          const loadState = this.readyState
+          if (loadState && loadState !== 'loaded' && loadState !== 'complete') return
+          script.onload = script.onreadystatechange = null
+          resolve()
+        }
+
+        Object.keys(attr).forEach(key => {
+          script.setAttribute(key, attr[key])
+        })
+
+        document.head.appendChild(script)
+      })
+    
+      win.getCSS = (url, id = false) => new Promise((resolve, reject) => {
+        const link = document.createElement('link')
+        link.rel = 'stylesheet'
+        link.href = url
+        if (id) link.id = id
+        link.onerror = reject
+        link.onload = link.onreadystatechange = function() {
+          const loadState = this.readyState
+          if (loadState && loadState !== 'loaded' && loadState !== 'complete') return
+          link.onload = link.onreadystatechange = null
+          resolve()
+        }
+        document.head.appendChild(link)
+      })
+    
+      win.activateDarkMode = () => {
+        document.documentElement.setAttribute('data-theme', 'dark')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+        }
+      }
+      win.activateLightMode = () => {
+        document.documentElement.setAttribute('data-theme', 'light')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#ffffff')
+        }
+      }
+      const t = saveToLocal.get('theme')
+    
+          const isDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches
+          const isLightMode = window.matchMedia('(prefers-color-scheme: light)').matches
+          const isNotSpecified = window.matchMedia('(prefers-color-scheme: no-preference)').matches
+          const hasNoSupport = !isDarkMode && !isLightMode && !isNotSpecified
+
+          if (t === undefined) {
+            if (isLightMode) activateLightMode()
+            else if (isDarkMode) activateDarkMode()
+            else if (isNotSpecified || hasNoSupport) {
+              const now = new Date()
+              const hour = now.getHours()
+              const isNight = hour <= 6 || hour >= 18
+              isNight ? activateDarkMode() : activateLightMode()
+            }
+            window.matchMedia('(prefers-color-scheme: dark)').addListener(e => {
+              if (saveToLocal.get('theme') === undefined) {
+                e.matches ? activateDarkMode() : activateLightMode()
+              }
+            })
+          } else if (t === 'light') activateLightMode()
+          else activateDarkMode()
+        
+      const asideStatus = saveToLocal.get('aside-status')
+      if (asideStatus !== undefined) {
+        if (asideStatus === 'hide') {
+          document.documentElement.classList.add('hide-aside')
+        } else {
+          document.documentElement.classList.remove('hide-aside')
+        }
+      }
+    
+      const detectApple = () => {
+        if(/iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent)){
+          document.documentElement.classList.add('apple')
+        }
+      }
+      detectApple()
+    })(window)</script><link rel="stylesheet" href="/css/styles.css"><meta name="generator" content="Hexo 7.3.0"></head><body><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="avatar-img is-center"><img src="/img/avatar.png" onerror="onerror=null;src='/img/friend_404.gif'" alt="avatar"/></div><div class="sidebar-site-data site-data is-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">56</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">65</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">8</div></a></div><hr class="custom-hr"/><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归类</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page group" href="javascript:void(0);"><i class="fa-fw fas fa-list"></i><span> 其他</span><i class="fas fa-chevron-down"></i></a><ul class="menus_item_child"><li><a class="site-page child" href="/others/learning"><i class="fa-fw fas fa-graduation-cap"></i><span> 学习课程</span></a></li><li><a class="site-page child" href="/others/link/"><i class="fa-fw fas fa-link"></i><span> 链接</span></a></li><li><a class="site-page child" href="/others/interview/"><i class="fa-fw fas fa-glide"></i><span> 面试</span></a></li></ul></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于</span></a></div></div></div></div><div class="post" id="body-wrap"><header class="post-bg" id="page-header" style="background-image: url('https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg')"><nav id="nav"><span id="blog-info"><a href="/" title="Damingerdai's Blog"><span class="site-name">Damingerdai's Blog</span></a></span><div id="menus"><div id="search-button"><a class="site-page social-icon search" href="javascript:void(0);"><i class="fas fa-search fa-fw"></i><span> 搜索</span></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归类</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page group" href="javascript:void(0);"><i class="fa-fw fas fa-list"></i><span> 其他</span><i class="fas fa-chevron-down"></i></a><ul class="menus_item_child"><li><a class="site-page child" href="/others/learning"><i class="fa-fw fas fa-graduation-cap"></i><span> 学习课程</span></a></li><li><a class="site-page child" href="/others/link/"><i class="fa-fw fas fa-link"></i><span> 链接</span></a></li><li><a class="site-page child" href="/others/interview/"><i class="fa-fw fas fa-glide"></i><span> 面试</span></a></li></ul></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于</span></a></div></div><div id="toggle-menu"><a class="site-page" href="javascript:void(0);"><i class="fas fa-bars fa-fw"></i></a></div></div></nav><div id="post-info"><h1 class="post-title">在 Spring WebFlux 中实现文件上传到本地</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2025-09-08T14:17:15.000Z" title="发表于 2025-09-08 22:17:15">2025-09-08</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2025-09-08T14:19:32.991Z" title="更新于 2025-09-08 22:19:32">2025-09-08</time></span><span class="post-meta-categories"><span class="post-meta-separator">|</span><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/%E5%90%8E%E7%AB%AF/">后端</a></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-pv-cv" id="" data-flag-title="在 Spring WebFlux 中实现文件上传到本地"><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">阅读量:</span><span id="busuanzi_value_page_pv"><i class="fa-solid fa-spinner fa-spin"></i></span></span></div></div></div></header><main class="layout" id="content-inner"><div id="post"><article class="post-content" id="article-container"><h1 id="在-Spring-WebFlux-中实现文件上传到本地"><a href="#在-Spring-WebFlux-中实现文件上传到本地" class="headerlink" title="在 Spring WebFlux 中实现文件上传到本地"></a>在 Spring WebFlux 中实现文件上传到本地</h1><h2 id="引言"><a href="#引言" class="headerlink" title="引言"></a>引言</h2><p>本文旨在介绍如何在 Spring WebFlux 框架下，实现将文件上传至本地服务器的功能。虽然目前的代码示例侧重于本地存储，但其设计思路也为未来扩展至对象存储服务（如 MinIO）奠定了基础。通过本文的学习，您将掌握在响应式编程模型下处理文件上传的关键技术。</p>
+<hr>
+<h2 id="具体实现过程"><a href="#具体实现过程" class="headerlink" title="具体实现过程"></a>具体实现过程</h2><h2 id="1-项目搭建与依赖引入"><a href="#1-项目搭建与依赖引入" class="headerlink" title="1. 项目搭建与依赖引入"></a>1. 项目搭建与依赖引入</h2><p>首先，您需要一个基于 Spring Boot 3.5.0 的项目。如果您使用 Gradle 作为构建工具，可以在 <code>build.gradle</code> 文件中添加以下依赖：</p>
+<figure class="highlight gradle"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">dependencies</span> &#123;</span><br><span class="line">    <span class="comment">// ... 其他 Spring Boot 依赖</span></span><br><span class="line">    implementation <span class="string">&#x27;org.springframework.boot:spring-boot-starter-webflux&#x27;</span></span><br><span class="line">    implementation <span class="string">&#x27;io.projectreactor:reactor-core&#x27;</span></span><br><span class="line">    <span class="comment">// Swagger UI 依赖</span></span><br><span class="line">    implementation <span class="string">&#x27;org.springdoc:springdoc-openapi-starter-webfluxui:2.5.0&#x27;</span> <span class="comment">// 请检查最新版本</span></span><br><span class="line">    <span class="comment">// ...</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><code>spring-boot-starter-webflux</code> 提供了构建响应式 Web 应用所需的核心功能，而 <code>reactor-core</code> 则是 Project Reactor 的核心库，为响应式编程提供支持。<code>springdoc-openapi-starter-webfluxui</code> 则是集成 Swagger UI 所需的依赖。</p>
+<h2 id="2-编写-Controller"><a href="#2-编写-Controller" class="headerlink" title="2. 编写 Controller"></a>2. 编写 Controller</h2><p>接下来，我们将编写 <code>FileController</code> 来处理文件上传请求。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> org.springframework.core.io.buffer.DataBufferUtils;</span><br><span class="line"><span class="keyword">import</span> org.springframework.http.codec.multipart.FilePart;</span><br><span class="line"><span class="keyword">import</span> org.springframework.web.bind.annotation.PostMapping;</span><br><span class="line"><span class="keyword">import</span> org.springframework.web.bind.annotation.RequestPart;</span><br><span class="line"><span class="keyword">import</span> org.springframework.web.bind.annotation.RestController;</span><br><span class="line"><span class="keyword">import</span> reactor.core.publisher.Mono;</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> java.nio.file.Paths;</span><br><span class="line"><span class="keyword">import</span> java.nio.file.Path;</span><br><span class="line"><span class="keyword">import</span> java.nio.file.StandardOpenOption;</span><br><span class="line"><span class="keyword">import</span> java.io.IOException;</span><br><span class="line"></span><br><span class="line"><span class="meta">@RestController</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">FileController</span> &#123;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@PostMapping(&quot;/upload&quot;)</span></span><br><span class="line">    <span class="keyword">public</span> Mono&lt;String&gt; <span class="title function_">uploadFile</span><span class="params">(<span class="meta">@RequestPart(&quot;file&quot;)</span> Mono&lt;FilePart&gt; filePartMono)</span> &#123;</span><br><span class="line">        <span class="keyword">return</span> filePartMono.flatMap(filePart -&gt; &#123;</span><br><span class="line">            <span class="comment">// 获取用户目录</span></span><br><span class="line">            <span class="type">var</span> <span class="variable">userDir</span> <span class="operator">=</span> System.getProperty(<span class="string">&quot;user.dir&quot;</span>);</span><br><span class="line">            <span class="comment">// 构建文件保存路径，这里假设保存在项目根目录下的 nfs 文件夹中</span></span><br><span class="line">            <span class="comment">// 您可以根据实际需求修改路径</span></span><br><span class="line">            <span class="type">Path</span> <span class="variable">path</span> <span class="operator">=</span> Paths.get(userDir, <span class="string">&quot;nfs&quot;</span>, filePart.filename());</span><br><span class="line"></span><br><span class="line">            <span class="comment">// 确保 nfs 目录存在，如果不存在则创建</span></span><br><span class="line">            <span class="keyword">try</span> &#123;</span><br><span class="line">                java.nio.file.Files.createDirectories(path.getParent());</span><br><span class="line">            &#125; <span class="keyword">catch</span> (IOException e) &#123;</span><br><span class="line">                <span class="keyword">return</span> Mono.error(<span class="keyword">new</span> <span class="title class_">RuntimeException</span>(<span class="string">&quot;Failed to create upload directory&quot;</span>, e));</span><br><span class="line">            &#125;</span><br><span class="line"></span><br><span class="line">            <span class="comment">// 使用 transferTo 将文件内容写入到指定路径</span></span><br><span class="line">            <span class="comment">// transferTo 方法返回一个 Mono&lt;Void&gt;，表示操作的完成</span></span><br><span class="line">            <span class="keyword">return</span> filePart.transferTo(path)</span><br><span class="line">                    <span class="comment">// then 方法用于在前一个 Mono 完成后执行下一个操作</span></span><br><span class="line">                    <span class="comment">// 这里我们返回一个包含成功消息的 Mono&lt;String&gt;</span></span><br><span class="line">                    .then(Mono.just(<span class="string">&quot;File uploaded successfully: &quot;</span> + filePart.filename()));</span><br><span class="line">        &#125;);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><strong>关键点解析：</strong></p>
+<ul>
+<li><strong><code>@RestController</code></strong>: 这是一个组合注解，等同于 <code>@Controller</code> 和 <code>@ResponseBody</code>，表明此类中的方法将返回数据而不是视图名称。</li>
+<li><strong><code>@PostMapping(&quot;/upload&quot;)</code></strong>: 指定该方法处理 HTTP POST 请求到 <code>/upload</code> 路径。</li>
+<li><strong><code>@RequestPart(&quot;file&quot;) Mono&lt;FilePart&gt; filePartMono</code></strong>:<ul>
+<li><code>@RequestPart</code> 注解用于接收 <code>multipart/form-data</code> 请求中的部分。这里的 <code>&quot;file&quot;</code> 对应 HTML form 表单中 <code>&lt;input type=&quot;file&quot; name=&quot;file&quot;&gt;</code> 的 <code>name</code> 属性。</li>
+<li><code>Mono&lt;FilePart&gt;</code> 表示这是一个异步的、最多包含一个元素的发布者，代表上传的文件。Spring WebFlux 使用 Reactor 库进行响应式编程，<code>Mono</code> 是其核心组件之一。</li>
+</ul>
+</li>
+<li><strong><code>filePart.transferTo(path)</code></strong>:<ul>
+<li>这是 Spring WebFlux 提供的用于将上传的文件内容 <strong>直接传输</strong> 到指定 <code>Path</code> 的方法。</li>
+<li>它返回一个 <code>Mono&lt;Void&gt;</code>，表示文件传输操作的完成，但不会返回任何数据。在响应式流中，<code>Void</code> 表示一个操作的完成信号。</li>
+</ul>
+</li>
+<li><strong><code>.then(...)</code></strong>:<ul>
+<li><code>then()</code> 操作符用于在源 <code>Mono</code>（在这里是 <code>filePart.transferTo(path)</code>）完成（发出完成信号）后，执行另一个 <code>Mono</code>。</li>
+<li><code>Mono.just(&quot;File uploaded successfully: &quot; + filePart.filename())</code> 创建了一个新的 <code>Mono</code>，它会发出一个包含成功消息的字符串。</li>
+<li>因此，<code>.then(...)</code> 确保了文件传输完成后，再发出成功上传的消息。</li>
+</ul>
+</li>
+</ul>
+<h2 id="3-使用-cURL-调用"><a href="#3-使用-cURL-调用" class="headerlink" title="3. 使用 cURL 调用"></a>3. 使用 cURL 调用</h2><p>您可以使用 <code>curl</code> 命令来测试这个上传接口：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">curl -X POST -F <span class="string">&quot;file=@/path/to/your/local/file.txt&quot;</span> http://localhost:8080/upload</span><br></pre></td></tr></table></figure>
+
+<p>请将 <code>/path/to/your/local/file.txt</code> 替换为您本地实际文件的路径。</p>
+<hr>
+<h2 id="Swagger-UI-支持"><a href="#Swagger-UI-支持" class="headerlink" title="Swagger UI 支持"></a>Swagger UI 支持</h2><p>为了方便 API 的可视化和测试，我们可以为其添加 Swagger UI 支持。</p>
+<h2 id="1-添加依赖"><a href="#1-添加依赖" class="headerlink" title="1. 添加依赖"></a>1. 添加依赖</h2><p>如前所述，在 <code>build.gradle</code> 中添加 <code>springdoc-openapi-starter-webfluxui</code> 依赖：</p>
+<figure class="highlight gradle"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">dependencies</span> &#123;</span><br><span class="line">    <span class="comment">// ...</span></span><br><span class="line">    implementation <span class="string">&#x27;org.springdoc:springdoc-openapi-starter-webfluxui:2.5.0&#x27;</span> <span class="comment">// 请检查最新版本</span></span><br><span class="line">    <span class="comment">// ...</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h2 id="2-配置-Controller-注解"><a href="#2-配置-Controller-注解" class="headerlink" title="2. 配置 Controller 注解"></a>2. 配置 Controller 注解</h2><p><code>springdoc-openapi</code> 库会自动扫描带有 Spring MVC 或 Spring WebFlux 注解的 Controller。您只需要确保您的 Controller 和方法使用了标准的 Spring WebFlux 注解（如 <code>@RestController</code>, <code>@PostMapping</code>, <code>@RequestPart</code> 等），<code>springdoc-openapi</code> 就会自动为您生成 OpenAPI 文档，并在启动后通过访问 <code>/swagger-ui.html</code> （或其他默认路径，具体取决于版本和配置）来查看。</p>
+<p>在上面的 <code>FileController</code> 示例中，已经使用了 <code>@RestController</code> 和 <code>@PostMapping</code> 等注解，因此无需额外的配置即可支持 Swagger UI。</p>
+<p>在项目启动后，访问 <code>http://localhost:8080/swagger-ui.html</code> （假设您的应用运行在 8080 端口），您就可以看到文件上传接口的 Swagger UI 界面了。</p>
+<hr>
+<p>通过以上步骤，您就成功地在 Spring WebFlux 中实现了一个文件上传到本地的功能，并为其添加了 Swagger UI 支持。您可以基于此进一步扩展，例如添加文件类型校验、大小限制，以及将文件存储目标切换为 MinIO 等对象存储服务。</p>
+</article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta"><i class="fas fa-circle-user fa-fw"></i>文章作者: </span><span class="post-copyright-info"><a href="http://blog.damingerdai.com">Arthur Ming</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta"><i class="fas fa-square-arrow-up-right fa-fw"></i>文章链接: </span><span class="post-copyright-info"><a href="http://blog.damingerdai.com/2025/09/08/back-end/upload-file-into-local-in-spring-webflux/">http://blog.damingerdai.com/2025/09/08/back-end/upload-file-into-local-in-spring-webflux/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta"><i class="fas fa-circle-exclamation fa-fw"></i>版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来自 <a href="http://blog.damingerdai.com" target="_blank">Damingerdai's Blog</a>！</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/gradle/">gradle</a><a class="post-meta__tags" href="/tags/spring-boot/">spring boot</a><a class="post-meta__tags" href="/tags/spring-webflux/">spring webflux</a><a class="post-meta__tags" href="/tags/%E6%96%87%E4%BB%B6%E4%B8%8A%E4%BC%A0/">文件上传</a></div><div class="post_share"><div class="social-share" data-image="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" data-sites="facebook,twitter,wechat,weibo,qq"></div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/butterfly-extsrc/sharejs/dist/css/share.min.css" media="print" onload="this.media='all'"><script src="https://cdn.jsdelivr.net/npm/butterfly-extsrc/sharejs/dist/js/social-share.min.js" defer></script></div></div><nav class="pagination-post" id="pagination"><div class="next-post pull-full"><a href="/2025/09/01/back-end/gradle-force-specific-version-of-spring-web-jar/" title="Gradle 强制使用指定版本的 Spring Web JAR"><img class="cover" src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" onerror="onerror=null;src='/img/404.jpg'" alt="cover of next post"><div class="pagination-info"><div class="label">下一篇</div><div class="next_info">Gradle 强制使用指定版本的 Spring Web JAR</div></div></a></div></nav><div class="relatedPosts"><div class="headline"><i class="fas fa-thumbs-up fa-fw"></i><span>相关推荐</span></div><div class="relatedPosts-list"><div><a href="/2025/09/01/back-end/gradle-force-specific-version-of-spring-web-jar/" title="Gradle 强制使用指定版本的 Spring Web JAR"><img class="cover" src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2025-09-01</div><div class="title">Gradle 强制使用指定版本的 Spring Web JAR</div></div></a></div><div><a href="/2021/10/29/back-end/gradle-ali-mirror/" title="Gradle配置阿里镜像"><img class="cover" src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2021-10-29</div><div class="title">Gradle配置阿里镜像</div></div></a></div><div><a href="/2021/11/29/back-end/migrate-springdoc-from-springfox/" title="从springfox迁移到springdoc"><img class="cover" src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2021-11-29</div><div class="title">从springfox迁移到springdoc</div></div></a></div><div><a href="/2024/02/11/back-end/use-bazel-build-and-run-spring-boot/" title="使用bazel构建spring boot项目"><img class="cover" src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2024-02-11</div><div class="title">使用bazel构建spring boot项目</div></div></a></div></div></div></div><div class="aside-content" id="aside-content"><div class="card-widget card-info"><div class="is-center"><div class="avatar-img"><img src="/img/avatar.png" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="author-info__name">Arthur Ming</div><div class="author-info__description">大明二代的博客</div></div><div class="card-info-data site-data is-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">56</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">65</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">8</div></a></div><a id="card-info-btn" target="_blank" rel="noopener" href="https://github.com/damingerdai"><i class="fab fa-github"></i><span>Follow Me</span></a><div class="card-info-social-icons is-center"><a class="social-icon" href="https://github.com/damingerdai" target="_blank" title="Github"><i class="fab fa-github" style="color: #24292e;"></i></a><a class="social-icon" href="mailto:mingguobin@live.com" target="_blank" title="Email"><i class="fas fa-envelope" style="color: #4a7dbe;"></i></a></div></div><div class="card-widget card-announcement"><div class="item-headline"><i class="fas fa-bullhorn fa-shake"></i><span>公告</span></div><div class="announcement_content">大家好，我是大明二代</div></div><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="item-headline"><i class="fas fa-stream"></i><span>目录</span><span class="toc-percentage"></span></div><div class="toc-content"><ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#%E5%9C%A8-Spring-WebFlux-%E4%B8%AD%E5%AE%9E%E7%8E%B0%E6%96%87%E4%BB%B6%E4%B8%8A%E4%BC%A0%E5%88%B0%E6%9C%AC%E5%9C%B0"><span class="toc-number">1.</span> <span class="toc-text">在 Spring WebFlux 中实现文件上传到本地</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%BC%95%E8%A8%80"><span class="toc-number">1.1.</span> <span class="toc-text">引言</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%85%B7%E4%BD%93%E5%AE%9E%E7%8E%B0%E8%BF%87%E7%A8%8B"><span class="toc-number">1.2.</span> <span class="toc-text">具体实现过程</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#1-%E9%A1%B9%E7%9B%AE%E6%90%AD%E5%BB%BA%E4%B8%8E%E4%BE%9D%E8%B5%96%E5%BC%95%E5%85%A5"><span class="toc-number">1.3.</span> <span class="toc-text">1. 项目搭建与依赖引入</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#2-%E7%BC%96%E5%86%99-Controller"><span class="toc-number">1.4.</span> <span class="toc-text">2. 编写 Controller</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#3-%E4%BD%BF%E7%94%A8-cURL-%E8%B0%83%E7%94%A8"><span class="toc-number">1.5.</span> <span class="toc-text">3. 使用 cURL 调用</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Swagger-UI-%E6%94%AF%E6%8C%81"><span class="toc-number">1.6.</span> <span class="toc-text">Swagger UI 支持</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#1-%E6%B7%BB%E5%8A%A0%E4%BE%9D%E8%B5%96"><span class="toc-number">1.7.</span> <span class="toc-text">1. 添加依赖</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#2-%E9%85%8D%E7%BD%AE-Controller-%E6%B3%A8%E8%A7%A3"><span class="toc-number">1.8.</span> <span class="toc-text">2. 配置 Controller 注解</span></a></li></ol></li></ol></div></div><div class="card-widget card-recent-post"><div class="item-headline"><i class="fas fa-history"></i><span>最新文章</span></div><div class="aside-list"><div class="aside-list-item"><a class="thumbnail" href="/2025/09/08/back-end/upload-file-into-local-in-spring-webflux/" title="在 Spring WebFlux 中实现文件上传到本地"><img src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="在 Spring WebFlux 中实现文件上传到本地"/></a><div class="content"><a class="title" href="/2025/09/08/back-end/upload-file-into-local-in-spring-webflux/" title="在 Spring WebFlux 中实现文件上传到本地">在 Spring WebFlux 中实现文件上传到本地</a><time datetime="2025-09-08T14:17:15.000Z" title="发表于 2025-09-08 22:17:15">2025-09-08</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2025/09/01/back-end/gradle-force-specific-version-of-spring-web-jar/" title="Gradle 强制使用指定版本的 Spring Web JAR"><img src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="Gradle 强制使用指定版本的 Spring Web JAR"/></a><div class="content"><a class="title" href="/2025/09/01/back-end/gradle-force-specific-version-of-spring-web-jar/" title="Gradle 强制使用指定版本的 Spring Web JAR">Gradle 强制使用指定版本的 Spring Web JAR</a><time datetime="2025-09-01T12:10:01.000Z" title="发表于 2025-09-01 20:10:01">2025-09-01</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2025/08/17/software/deploying-rancher-via-helm-in-rrivate-kubernetes-with-custom-domain-configuration/" title="在内网 Kubernetes 集群上使用 Helm 安装 Rancher 并支持域名访问"><img src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="在内网 Kubernetes 集群上使用 Helm 安装 Rancher 并支持域名访问"/></a><div class="content"><a class="title" href="/2025/08/17/software/deploying-rancher-via-helm-in-rrivate-kubernetes-with-custom-domain-configuration/" title="在内网 Kubernetes 集群上使用 Helm 安装 Rancher 并支持域名访问">在内网 Kubernetes 集群上使用 Helm 安装 Rancher 并支持域名访问</a><time datetime="2025-08-17T06:42:31.000Z" title="发表于 2025-08-17 14:42:31">2025-08-17</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2025/08/13/software/how-register-mailgun-with-china-mobile-number/" title="使用中国手机号码验证mailgun账号"><img src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="使用中国手机号码验证mailgun账号"/></a><div class="content"><a class="title" href="/2025/08/13/software/how-register-mailgun-with-china-mobile-number/" title="使用中国手机号码验证mailgun账号">使用中国手机号码验证mailgun账号</a><time datetime="2025-08-13T11:38:39.000Z" title="发表于 2025-08-13 19:38:39">2025-08-13</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2025/08/11/back-end/podman-login-nohttps-private-registery/" title="podman登录非https的私有仓库"><img src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="podman登录非https的私有仓库"/></a><div class="content"><a class="title" href="/2025/08/11/back-end/podman-login-nohttps-private-registery/" title="podman登录非https的私有仓库">podman登录非https的私有仓库</a><time datetime="2025-08-11T14:33:06.000Z" title="发表于 2025-08-11 22:33:06">2025-08-11</time></div></div></div></div></div></div></main><footer id="footer"><div id="footer-wrap"><div class="copyright">&copy;2020 - 2025 By Arthur Ming</div><div class="framework-info"><span>框架 </span><a target="_blank" rel="noopener" href="https://hexo.io">Hexo</a><span class="footer-separator">|</span><span>主题 </span><a target="_blank" rel="noopener" href="https://github.com/jerryc127/hexo-theme-butterfly">Butterfly</a></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="浅色和深色模式转换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside-config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><button id="go-up" type="button" title="回到顶部"><span class="scroll-percent"></span><i class="fas fa-arrow-up"></i></button></div></div><div><script src="/js/utils.js"></script><script src="/js/main.js"></script><script src="https://cdn.jsdelivr.net/npm/@fancyapps/ui/dist/fancybox/fancybox.umd.min.js"></script><div class="js-pjax"></div><script defer="defer" id="ribbon" src="https://cdn.jsdelivr.net/npm/butterfly-extsrc/dist/canvas-ribbon.min.js" size="150" alpha="0.6" zIndex="-1" mobile="false" data-click="true"></script><script async data-pjax src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script><div id="local-search"><div class="search-dialog"><nav class="search-nav"><span class="search-dialog-title">搜索</span><span id="loading-status"></span><button class="search-close-button"><i class="fas fa-times"></i></button></nav><div class="is-center" id="loading-database"><i class="fas fa-spinner fa-pulse"></i><span>  数据库加载中</span></div><div class="search-wrap"><div id="local-search-input"><div class="local-search-box"><input class="local-search-box--input" placeholder="搜索文章" type="text"/></div></div><hr/><div id="local-search-results"></div><div id="local-search-stats-wrap"></div></div></div><div id="search-mask"></div><script src="/js/search/local-search.js"></script></div></div></body></html>
