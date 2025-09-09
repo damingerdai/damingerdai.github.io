@@ -23,14 +23,13 @@ categories: [后端]
 dependencies {
     // ... 其他 Spring Boot 依赖
     implementation 'org.springframework.boot:spring-boot-starter-webflux'
-    implementation 'io.projectreactor:reactor-core'
     // Swagger UI 依赖
-    implementation 'org.springdoc:springdoc-openapi-starter-webfluxui:2.5.0' // 请检查最新版本
+    implementation 'org.springdoc:springdoc-openapi-starter-webflux-ui:2.8.6' // 请检查最新版本
     // ...
 }
 ```
 
-`spring-boot-starter-webflux` 提供了构建响应式 Web 应用所需的核心功能，而 `reactor-core` 则是 Project Reactor 的核心库，为响应式编程提供支持。`springdoc-openapi-starter-webfluxui` 则是集成 Swagger UI 所需的依赖。
+`spring-boot-starter-webflux` 提供了构建响应式 Web 应用所需的核心功能，`springdoc-openapi-starter-webfluxui` 则是集成 Swagger UI 所需的依赖。
 
 ## 2\. 编写 Controller
 
@@ -49,10 +48,10 @@ import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.io.IOException;
 
-@RestController
+Controller
 public class FileController {
 
-    @PostMapping("/upload")
+    @PostMapping("/file")
     public Mono<String> uploadFile(@RequestPart("file") Mono<FilePart> filePartMono) {
         return filePartMono.flatMap(filePart -> {
             // 获取用户目录
@@ -99,10 +98,12 @@ public class FileController {
 您可以使用 `curl` 命令来测试这个上传接口：
 
 ```bash
-curl -X POST -F "file=@/path/to/your/local/file.txt" http://localhost:8080/upload
+curl -X 'POST' \
+  'http://localhost:8080/file' \
+  -H 'accept: application/json' \
+  -H 'Content-Type: multipart/form-data' \
+  -F 'file=@Arthur-Ming-FlowCV-Resume-20241101 (1).pdf;type=application/pdf'
 ```
-
-请将 `/path/to/your/local/file.txt` 替换为您本地实际文件的路径。
 
 -----
 
@@ -117,7 +118,7 @@ curl -X POST -F "file=@/path/to/your/local/file.txt" http://localhost:8080/uploa
 ```gradle
 dependencies {
     // ...
-    implementation 'org.springdoc:springdoc-openapi-starter-webfluxui:2.5.0' // 请检查最新版本
+    implementation 'org.springdoc:springdoc-openapi-starter-webflux-ui:2.8.6' // 请检查最新版本
     // ...
 }
 ```
@@ -126,7 +127,26 @@ dependencies {
 
 `springdoc-openapi` 库会自动扫描带有 Spring MVC 或 Spring WebFlux 注解的 Controller。您只需要确保您的 Controller 和方法使用了标准的 Spring WebFlux 注解（如 `@RestController`, `@PostMapping`, `@RequestPart` 等），`springdoc-openapi` 就会自动为您生成 OpenAPI 文档，并在启动后通过访问 `/swagger-ui.html` （或其他默认路径，具体取决于版本和配置）来查看。
 
-在上面的 `FileController` 示例中，已经使用了 `@RestController` 和 `@PostMapping` 等注解，因此无需额外的配置即可支持 Swagger UI。
+```java
+@Operation(
+    summary = "Upload a single file",
+    description = "Uploads a single file to the server's NFS directory.",
+    requestBody = @RequestBody(
+            description = "File to upload",
+            required = true,
+            content = @Content(
+                    mediaType = "multipart/form-data",
+                    schema = @Schema(implementation = FileUploadRequest.class) // Use a custom schema
+            )
+    ),
+    responses = {
+            @ApiResponse(responseCode = "200", description = "File uploaded successfully",
+                    content = @Content(mediaType = "application/json", schema = @Schema(type = "string"))),
+            @ApiResponse(responseCode = "400", description = "Bad Request"),
+            @ApiResponse(responseCode = "500", description = "Internal Server Error")
+    }
+)
+```
 
 在项目启动后，访问 `http://localhost:8080/swagger-ui.html` （假设您的应用运行在 8080 端口），您就可以看到文件上传接口的 Swagger UI 界面了。
 
