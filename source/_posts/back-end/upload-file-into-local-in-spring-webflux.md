@@ -80,8 +80,7 @@ public class FileController {
 
 **关键点解析：**
 
-  * **`@RestController`**: 这是一个组合注解，等同于 `@Controller` 和 `@ResponseBody`，表明此类中的方法将返回数据而不是视图名称。
-  * **`@PostMapping("/upload")`**: 指定该方法处理 HTTP POST 请求到 `/upload` 路径。
+  * **`@PostMapping("/file")`**: 指定该方法处理 HTTP POST 请求到 `/file` 路径。
   * **`@RequestPart("file") Mono<FilePart> filePartMono`**:
       * `@RequestPart` 注解用于接收 `multipart/form-data` 请求中的部分。这里的 `"file"` 对应 HTML form 表单中 `<input type="file" name="file">` 的 `name` 属性。
       * `Mono<FilePart>` 表示这是一个异步的、最多包含一个元素的发布者，代表上传的文件。Spring WebFlux 使用 Reactor 库进行响应式编程，`Mono` 是其核心组件之一。
