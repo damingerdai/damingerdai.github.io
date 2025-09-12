@@ -43,9 +43,8 @@ import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
 import reactor.core.publisher.Mono;
 
+import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.nio.file.Path;
-import java.nio.file.StandardOpenOption;
 import java.io.IOException;
 
 Controller
@@ -58,11 +57,11 @@ public class FileController {
             var userDir = System.getProperty("user.dir");
             // 构建文件保存路径，这里假设保存在项目根目录下的 nfs 文件夹中
             // 您可以根据实际需求修改路径
-            Path path = Paths.get(userDir, "nfs", filePart.filename());
+            var path = Paths.get(userDir, "nfs", filePart.filename());
 
             // 确保 nfs 目录存在，如果不存在则创建
             try {
-                java.nio.file.Files.createDirectories(path.getParent());
+                Files.createDirectories(path.getParent());
             } catch (IOException e) {
                 return Mono.error(new RuntimeException("Failed to create upload directory", e));
             }
@@ -101,8 +100,10 @@ curl -X 'POST' \
   'http://localhost:8080/file' \
   -H 'accept: application/json' \
   -H 'Content-Type: multipart/form-data' \
-  -F 'file=@Arthur-Ming-FlowCV-Resume-20241101 (1).pdf;type=application/pdf'
+  -F 'file=@Arthur-Ming-FlowCV-Resume-20241101.pdf;type=application/pdf'
 ```
+
+将`Arthur-Ming-FlowCV-Resume-20241101.pdf`改成实际文件路径就即可
 
 -----
 
@@ -145,6 +146,31 @@ dependencies {
             @ApiResponse(responseCode = "500", description = "Internal Server Error")
     }
 )
+
+```
+
+`FileUploadRequest`定义如下：
+
+```java
+import io.swagger.v3.oas.annotations.media.Schema;
+import org.springframework.http.codec.multipart.FilePart;
+
+public class FileUploadRequest {
+
+    @Schema(type = "string", format = "binary", description = "The file to be uploaded")
+    private FilePart file; // The name "file" here should match the @RequestPart name in your controller
+
+    // Getters and setters are not strictly necessary for springdoc to pick up the schema,
+    // but it's good practice if you were to use this class for other purposes.
+
+    public FilePart getFile() {
+        return file;
+    }
+
+    public void setFile(FilePart file) {
+        this.file = file;
+    }
+}
 ```
 
 在项目启动后，访问 `http://localhost:8080/swagger-ui.html` （假设您的应用运行在 8080 端口），您就可以看到文件上传接口的 Swagger UI 界面了。
