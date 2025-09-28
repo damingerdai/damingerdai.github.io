@@ -4,6 +4,35 @@
   
     
     <entry>
+      <title>为 Angular Material 应用添加完美深色模式支持</title>
+      <link href="/2025/09/28/front-end/angular-material-perfect-dark-mode/"/>
+      <url>/2025/09/28/front-end/angular-material-perfect-dark-mode/</url>
+      
+        <content type="html"><![CDATA[<h1 id="💡-为-Angular-Material-应用添加完美深色模式支持"><a href="#💡-为-Angular-Material-应用添加完美深色模式支持" class="headerlink" title="💡 为 Angular Material 应用添加完美深色模式支持"></a>💡 为 Angular Material 应用添加完美深色模式支持</h1><p>深色模式（Dark Mode）是现代应用不可或缺的功能。它不仅能提升用户在低光环境下的舒适度，还能让应用看起来更专业、更时尚。</p><p>如果你正在使用 <strong>Angular Material</strong>，实现深色模式可以非常优雅和高效。本文将分享我如何通过一个独立的 **<code>ThemePickerComponent</code>**，结合 <strong>Angular Signals</strong> 和 <strong>系统偏好检测</strong>，为我的应用添加深色模式的完整过程。</p><h2 id="🛠️-核心思路概览"><a href="#🛠️-核心思路概览" class="headerlink" title="🛠️ 核心思路概览"></a>🛠️ 核心思路概览</h2><p>我的深色模式解决方案基于以下几个关键机制：</p><ol><li><strong>CSS 变量与 <code>color-scheme</code></strong>: 利用 Angular Material 基于 CSS 变量的主题机制，并通过在 <code>&lt;html&gt;</code> 标签上切换 <code>color-scheme</code> 属性来控制主题。</li><li><strong>Angular Signals</strong>: 使用 <strong><code>signal()</code></strong> 存储和管理当前的主题模式 (<code>&#39;light&#39;</code> 或 <code>&#39;dark&#39;</code>)。</li><li><strong>持久化与偏好</strong>: 通过 <code>localStorage</code> 记住用户的选择，同时使用 <code>window.matchMedia</code> 监听用户操作系统的偏好设置。</li></ol><h2 id="💻-关键代码解析与实现步骤"><a href="#💻-关键代码解析与实现步骤" class="headerlink" title="💻 关键代码解析与实现步骤"></a>💻 关键代码解析与实现步骤</h2><h3 id="1-配置主题和-color-scheme-styles-scss"><a href="#1-配置主题和-color-scheme-styles-scss" class="headerlink" title="1. 配置主题和 color-scheme (styles.scss)"></a>1. 配置主题和 <code>color-scheme</code> (<code>styles.scss</code>)</h3><p>在全局样式文件中，我们确保应用能响应 <code>color-scheme</code> 变化，并设置 Material 主题。</p><figure class="highlight scss"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/* ui/src/styles.scss */</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">@use</span> <span class="string">&#x27;@angular/material&#x27;</span> as mat;</span><br><span class="line"></span><br><span class="line"><span class="selector-tag">html</span>, <span class="selector-tag">body</span> &#123;</span><br><span class="line">  <span class="attribute">font-family</span>: Roboto, <span class="string">&quot;Helvetica Neue&quot;</span>, sans-serif;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="selector-tag">html</span> &#123;</span><br><span class="line">  <span class="attribute">background-color</span>: <span class="built_in">var</span>(--mat-sys-surface);</span><br><span class="line">  <span class="attribute">color</span>: <span class="built_in">var</span>(--mat-sys-on-surface);</span><br><span class="line">  <span class="comment">// ✨ 关键：允许浏览器知道页面支持两种颜色方案</span></span><br><span class="line">  <span class="attribute">color</span>-scheme: light dark;</span><br><span class="line"></span><br><span class="line">  <span class="keyword">@include</span> mat.theme((</span><br><span class="line">        <span class="attribute">color</span>: (</span><br><span class="line">          // Material 会根据 color-scheme 自动应用 light/dark 调色板</span><br><span class="line">          <span class="attribute">primary</span>: mat.<span class="variable">$rose-palette</span>, </span><br><span class="line">          <span class="attribute">tertiary</span>: mat.<span class="variable">$red-palette</span>,</span><br><span class="line">      ),</span><br><span class="line">      <span class="attribute">typography</span>: Roboto,</span><br><span class="line">      <span class="attribute">density</span>: <span class="number">0</span>,</span><br><span class="line">  ));</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure><p>我们通过 <code>background-color: var(--mat-sys-surface)</code> 来使用 Material <strong>系统级 CSS 变量</strong>，确保背景颜色随着主题切换而正确变化。</p><h3 id="2-ThemePickerComponent：主题切换器"><a href="#2-ThemePickerComponent：主题切换器" class="headerlink" title="2. ThemePickerComponent：主题切换器"></a>2. <code>ThemePickerComponent</code>：主题切换器</h3><p>这是整个功能的核心。它负责初始化、监听和切换主题。</p><h4 id="A-HTML-模板：根据模式切换图标"><a href="#A-HTML-模板：根据模式切换图标" class="headerlink" title="A. HTML 模板：根据模式切换图标"></a>A. HTML 模板：根据模式切换图标</h4><p>我们使用 <code>mat-icon-button</code> 和 <code>@if</code> 语法根据 <code>mode()</code> 的值显示太阳或月亮图标。</p><figure class="highlight html"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">button</span> <span class="attr">class</span>=<span class="string">&quot;theme-button&quot;</span> <span class="attr">mat-icon-button</span></span></span><br><span class="line"><span class="tag">    [<span class="attr">matTooltip</span>]=<span class="string">&quot;&#x27;Change Theme&#x27;&quot;</span></span></span><br><span class="line"><span class="tag">    (<span class="attr">click</span>)=<span class="string">&quot;changeMode()&quot;</span></span></span><br><span class="line"><span class="tag">  &gt;</span></span><br><span class="line">     @if (mode() === &#x27;dark&#x27;) &#123;</span><br><span class="line">       <span class="tag">&lt;<span class="name">mat-icon</span>&gt;</span>dark_mode<span class="tag">&lt;/<span class="name">mat-icon</span>&gt;</span></span><br><span class="line">     &#125; @else &#123;</span><br><span class="line">       <span class="tag">&lt;<span class="name">mat-icon</span>&gt;</span>light_mode<span class="tag">&lt;/<span class="name">mat-icon</span>&gt;</span></span><br><span class="line">     &#125;</span><br><span class="line"><span class="tag">&lt;/<span class="name">button</span>&gt;</span></span><br></pre></td></tr></table></figure><h4 id="B-TypeScript-逻辑：Signals-Effects-和持久化"><a href="#B-TypeScript-逻辑：Signals-Effects-和持久化" class="headerlink" title="B. TypeScript 逻辑：Signals, Effects, 和持久化"></a>B. TypeScript 逻辑：Signals, Effects, 和持久化</h4><figure class="highlight typescript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// ui/src/app/components/theme-picker/theme-picker.component.ts</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> &#123; afterNextRender, <span class="title class_">Component</span>, effect, inject, <span class="title class_">OnInit</span>, <span class="title class_">Renderer2</span>, signal &#125; <span class="keyword">from</span> <span class="string">&#x27;@angular/core&#x27;</span>;</span><br><span class="line"><span class="comment">// ... 导入 MatButtonModule, MatIconModule, MatTooltipModule</span></span><br><span class="line"></span><br><span class="line"><span class="meta">@Component</span>(&#123;...&#125;)</span><br><span class="line"><span class="keyword">export</span> <span class="keyword">class</span> <span class="title class_">ThemePickerComponent</span> <span class="keyword">implements</span> <span class="title class_">OnInit</span> &#123;</span><br><span class="line">  <span class="keyword">static</span> storageKey = <span class="string">&#x27;batcher-ui-theme&#x27;</span>;</span><br><span class="line">  mode = <span class="title function_">signal</span>(<span class="string">&#x27;light&#x27;</span>);</span><br><span class="line">  <span class="keyword">private</span> renderer = <span class="title function_">inject</span>(<span class="title class_">Renderer2</span>);</span><br><span class="line"></span><br><span class="line">  <span class="title function_">constructor</span>(<span class="params"></span>) &#123;</span><br><span class="line">    <span class="comment">// 1. 响应式更新：当 mode() 变化时，更新 &lt;html&gt; 元素的 color-scheme</span></span><br><span class="line">    <span class="title function_">effect</span>(<span class="function">() =&gt;</span> &#123;</span><br><span class="line">      <span class="keyword">const</span> mode = <span class="variable language_">this</span>.<span class="title function_">mode</span>();</span><br><span class="line">      <span class="variable language_">this</span>.<span class="property">renderer</span>.<span class="title function_">setStyle</span>(<span class="variable language_">document</span>.<span class="property">documentElement</span>, <span class="string">&#x27;color-scheme&#x27;</span>, mode);</span><br><span class="line">    &#125;);</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 2. 初始化：客户端渲染后，加载存储或系统偏好</span></span><br><span class="line">    <span class="title function_">afterNextRender</span>(<span class="function">() =&gt;</span> &#123;</span><br><span class="line">      <span class="comment">// 优先加载 localStorage 存储的模式，否则检测系统偏好</span></span><br><span class="line">      <span class="keyword">const</span> systemPreference = <span class="variable language_">window</span>.<span class="title function_">matchMedia</span>(<span class="string">&#x27;(prefers-color-scheme: dark)&#x27;</span>).<span class="property">matches</span> ? <span class="string">&#x27;dark&#x27;</span> : <span class="string">&#x27;light&#x27;</span>;</span><br><span class="line">      <span class="keyword">const</span> storedMode = <span class="variable language_">this</span>.<span class="title function_">getStoredMode</span>() || systemPreference;</span><br><span class="line">      </span><br><span class="line">      <span class="keyword">if</span> (storedMode) &#123;</span><br><span class="line">        <span class="variable language_">this</span>.<span class="property">mode</span>.<span class="title function_">set</span>(storedMode);</span><br><span class="line">      &#125;</span><br><span class="line">    &#125;);</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="title function_">ngOnInit</span>(): <span class="built_in">void</span> &#123;</span><br><span class="line">    <span class="comment">// 3. 实时监听：如果用户未设置过偏好，跟随系统主题的实时变化</span></span><br><span class="line">    <span class="variable language_">window</span>.<span class="title function_">matchMedia</span>(<span class="string">&#x27;(prefers-color-scheme: dark)&#x27;</span>).<span class="title function_">addEventListener</span>(<span class="string">&#x27;change&#x27;</span>, <span class="function"><span class="params">e</span> =&gt;</span> &#123;</span><br><span class="line">      <span class="keyword">const</span> storedMode = <span class="variable language_">this</span>.<span class="title function_">getStoredMode</span>();</span><br><span class="line">      <span class="keyword">if</span> (!storedMode) &#123;</span><br><span class="line">        <span class="variable language_">this</span>.<span class="property">mode</span>.<span class="title function_">set</span>(e.<span class="property">matches</span> ? <span class="string">&#x27;dark&#x27;</span> : <span class="string">&#x27;light&#x27;</span>);</span><br><span class="line">      &#125;</span><br><span class="line">    &#125;);</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="title function_">changeMode</span>(): <span class="built_in">void</span> &#123;</span><br><span class="line">    <span class="keyword">const</span> newMode = <span class="variable language_">this</span>.<span class="title function_">mode</span>() === <span class="string">&#x27;light&#x27;</span> ? <span class="string">&#x27;dark&#x27;</span> : <span class="string">&#x27;light&#x27;</span>;</span><br><span class="line">    <span class="variable language_">this</span>.<span class="property">mode</span>.<span class="title function_">set</span>(newMode);</span><br><span class="line">    <span class="variable language_">this</span>.<span class="title function_">storeMode</span>(newMode);</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="comment">// 4. 持久化方法 (storeMode, getStoredMode)</span></span><br><span class="line">  <span class="title function_">storeMode</span>(<span class="attr">mode</span>: <span class="built_in">string</span>): <span class="built_in">void</span> &#123;</span><br><span class="line">    <span class="keyword">try</span> &#123;</span><br><span class="line">      <span class="variable language_">localStorage</span>.<span class="title function_">setItem</span>(<span class="title class_">ThemePickerComponent</span>.<span class="property">storageKey</span>, mode);</span><br><span class="line">    &#125; <span class="keyword">catch</span> &#123; <span class="comment">/* ignore */</span> &#125;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="title function_">getStoredMode</span>(): <span class="built_in">string</span> | <span class="literal">null</span> &#123;</span><br><span class="line">    <span class="keyword">try</span> &#123;</span><br><span class="line">      <span class="keyword">return</span> <span class="variable language_">localStorage</span>.<span class="title function_">getItem</span>(<span class="title class_">ThemePickerComponent</span>.<span class="property">storageKey</span>);</span><br><span class="line">    &#125; <span class="keyword">catch</span> &#123; <span class="keyword">return</span> <span class="literal">null</span>; &#125;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure><h4 id="C-SCSS处理-可选"><a href="#C-SCSS处理-可选" class="headerlink" title="C. SCSS处理(可选)"></a>C. SCSS处理(可选)</h4><p>修改icon的颜色去适配material 3的配色</p><figure class="highlight css"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="selector-class">.theme-button</span> &#123;</span><br><span class="line">    <span class="attribute">color</span>: <span class="built_in">var</span>(--mat-primary);</span><br><span class="line">&#125;</span><br><span class="line"></span><br></pre></td></tr></table></figure><h3 id="3-集成到导航栏-navigation-component-html"><a href="#3-集成到导航栏-navigation-component-html" class="headerlink" title="3. 集成到导航栏 (navigation.component.html)"></a>3. 集成到导航栏 (<code>navigation.component.html</code>)</h3><p>我们将 <code>app-theme-picker</code> 组件放置在应用导航栏（<code>mat-toolbar</code>）的右侧。</p><figure class="highlight html"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">mat-toolbar</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">div</span> <span class="attr">class</span>=<span class="string">&quot;flex-grow-1&quot;</span>&gt;</span><span class="tag">&lt;/<span class="name">div</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">app-theme-picker</span> <span class="attr">class</span>=<span class="string">&quot;theme-picker&quot;</span>&gt;</span><span class="tag">&lt;/<span class="name">app-theme-picker</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">mat-toolbar</span>&gt;</span></span><br></pre></td></tr></table></figure><p><strong>导航栏样式调整</strong></p><p>我们还调整了导航栏的背景色，使其使用更适合作为容器背景的 Material 系统变量。</p><figure class="highlight scss"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/* ui/src/app/components/navigation/navigation.component.scss */</span></span><br><span class="line"></span><br><span class="line"><span class="selector-pseudo">:host</span> &#123;</span><br><span class="line">  <span class="attribute">color</span>: <span class="built_in">var</span>(--mat-sys-primary);</span><br><span class="line">  <span class="comment">// 更改为使用 surface-container-low，这通常更适合作为页面/容器的背景</span></span><br><span class="line">  <span class="attribute">background</span>: <span class="built_in">var</span>(--mat-sys-surface-container-low);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// ... 省略其他样式</span></span><br><span class="line"></span><br><span class="line"><span class="selector-class">.flex-grow-1</span> &#123;</span><br><span class="line">  <span class="attribute">flex-grow</span>: <span class="number">1</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure><h2 id="✨-总结"><a href="#✨-总结" class="headerlink" title="✨ 总结"></a>✨ 总结</h2><p>通过上述实现，我们的 Angular Material 应用获得了：</p><ol><li><strong>用户自定义</strong>: 用户可以随时通过点击按钮切换光亮&#x2F;深色模式。</li><li><strong>偏好记忆</strong>: 应用会记住用户的选择，即使重新打开浏览器也不会丢失。</li><li><strong>尊重系统设置</strong>: 如果用户从未手动切换过主题，应用会默认跟随操作系统的偏好设置。</li></ol><p>使用 Angular Signals 和 Effects 极大地简化了状态管理和响应式更新，让深色模式的实现既强大又简洁！</p><h2 id="🔗-完整的代码变更"><a href="#🔗-完整的代码变更" class="headerlink" title="🔗 完整的代码变更"></a>🔗 完整的代码变更</h2><p>你可以查看这个 GitHub Commit 来了解所有相关的代码修改：</p><p><a href="https://github.com/damingerdai/batcher/commit/facf4c29833b549cf756aa2c711a0d329210bc79">fix(ui): add dark mode</a></p>]]></content>
+      
+      
+      <categories>
+          
+          <category> 前端 </category>
+          
+      </categories>
+      
+      
+        <tags>
+            
+            <tag> angular </tag>
+            
+            <tag> angular material </tag>
+            
+            <tag> dark mode </tag>
+            
+        </tags>
+      
+    </entry>
+    
+    
+    
+    <entry>
       <title>Spring WebFlux 文件上传：从本地存储到 MinIO 集成 🚀</title>
       <link href="/2025/09/27/back-end/spring-webflux-file-upload-to-minio/"/>
       <url>/2025/09/27/back-end/spring-webflux-file-upload-to-minio/</url>
@@ -408,9 +437,9 @@
       
         <tags>
             
-            <tag> 前端 </tag>
-            
             <tag> javascript </tag>
+            
+            <tag> 前端 </tag>
             
         </tags>
       
@@ -489,9 +518,9 @@
       
         <tags>
             
-            <tag> css </tag>
-            
             <tag> angular </tag>
+            
+            <tag> css </tag>
             
             <tag> 面试 </tag>
             
@@ -524,9 +553,9 @@
       
         <tags>
             
-            <tag> 前端 </tag>
-            
             <tag> javascript </tag>
+            
+            <tag> 前端 </tag>
             
         </tags>
       
@@ -618,11 +647,11 @@
       
         <tags>
             
+            <tag> bazel </tag>
+            
             <tag> spring boot </tag>
             
             <tag> java </tag>
-            
-            <tag> bazel </tag>
             
         </tags>
       
@@ -712,9 +741,9 @@
       
         <tags>
             
-            <tag> k8s </tag>
-            
             <tag> docker </tag>
+            
+            <tag> k8s </tag>
             
             <tag> Docker Desktop </tag>
             
@@ -1013,9 +1042,9 @@
       
         <tags>
             
-            <tag> k8s </tag>
-            
             <tag> docker </tag>
+            
+            <tag> k8s </tag>
             
             <tag> k3s </tag>
             
@@ -1044,11 +1073,11 @@
       
         <tags>
             
+            <tag> docker </tag>
+            
             <tag> github </tag>
             
             <tag> github action </tag>
-            
-            <tag> docker </tag>
             
         </tags>
       
@@ -1073,9 +1102,9 @@
       
         <tags>
             
-            <tag> k8s </tag>
-            
             <tag> docker </tag>
+            
+            <tag> k8s </tag>
             
             <tag> minikube </tag>
             
@@ -1231,9 +1260,9 @@
       
         <tags>
             
-            <tag> docker </tag>
-            
             <tag> nodejs </tag>
+            
+            <tag> docker </tag>
             
         </tags>
       
@@ -1337,9 +1366,9 @@
       
         <tags>
             
-            <tag> bazel </tag>
-            
             <tag> angular </tag>
+            
+            <tag> bazel </tag>
             
         </tags>
       
@@ -1364,9 +1393,9 @@
       
         <tags>
             
-            <tag> bazel </tag>
-            
             <tag> angular </tag>
+            
+            <tag> bazel </tag>
             
         </tags>
       
@@ -1418,9 +1447,9 @@
       
         <tags>
             
-            <tag> k8s </tag>
-            
             <tag> docker </tag>
+            
+            <tag> k8s </tag>
             
             <tag> Docker Desktop </tag>
             
