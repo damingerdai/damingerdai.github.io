@@ -4,6 +4,39 @@
   
     
     <entry>
+      <title>📝 PostgreSQL 18.x Docker 镜像 PGDATA 路径变更说明</title>
+      <link href="/2025/10/04/software/postgresql-18-docker-pgdata-path-changes/"/>
+      <url>/2025/10/04/software/postgresql-18-docker-pgdata-path-changes/</url>
+      
+        <content type="html"><![CDATA[<h1 id="📝-PostgreSQL-18-x-Docker-镜像-PGDATA-路径变更说明"><a href="#📝-PostgreSQL-18-x-Docker-镜像-PGDATA-路径变更说明" class="headerlink" title="📝 PostgreSQL 18.x Docker 镜像 PGDATA 路径变更说明"></a>📝 PostgreSQL 18.x Docker 镜像 PGDATA 路径变更说明</h1><p>本文档旨在记录 PostgreSQL 官方 Docker 镜像自版本 18.0 起，其默认数据目录（PGDATA）路径的变化，并指导如何正确配置卷挂载以实现数据持久化。</p><h1 id="🚀-核心变更：PGDATA-路径版本化"><a href="#🚀-核心变更：PGDATA-路径版本化" class="headerlink" title="🚀 核心变更：PGDATA 路径版本化"></a>🚀 核心变更：PGDATA 路径版本化</h1><p>从 PostgreSQL 18.x 开始，官方 Docker 镜像将数据库的数据存储位置 (PGDATA 环境变量) 更改为版本特定的路径。</p><hr><h2 id="PostgreSQL-PGDATA-路径变更"><a href="#PostgreSQL-PGDATA-路径变更" class="headerlink" title="PostgreSQL PGDATA 路径变更"></a>PostgreSQL PGDATA 路径变更</h2><table><thead><tr><th align="center">PostgreSQL 版本</th><th align="center">旧版本 PGDATA 默认路径</th><th align="center">18.x 版本 PGDATA 默认路径</th></tr></thead><tbody><tr><td align="center"><strong>17.x 及以前</strong></td><td align="center"><code>/var/lib/postgresql/data</code></td><td align="center">N&#x2F;A</td></tr><tr><td align="center"><strong>18.x 及以后</strong></td><td align="center">N&#x2F;A</td><td align="center"><code>/var/lib/postgresql/18/docker</code></td></tr></tbody></table><h2 id="🔍-变更原因"><a href="#🔍-变更原因" class="headerlink" title="🔍 变更原因"></a>🔍 变更原因</h2><p>采用版本化的 PGDATA 路径有以下重要意义：</p><ol><li>便于升级 (pg_upgrade): 允许用户将不同主版本的数据库数据目录（例如 &#x2F;var&#x2F;lib&#x2F;postgresql&#x2F;17&#x2F;docker 和 &#x2F;var&#x2F;lib&#x2F;postgresql&#x2F;18&#x2F;docker）并行挂载到父目录 &#x2F;var&#x2F;lib&#x2F;postgresql 下，从而更有效地利用 pg_upgrade 等工具进行版本间升级。</li><li>确保数据持久性: 在重新创建或升级容器时，通过将卷准确挂载到版本特定的路径，确保了数据的正确持久化。</li></ol><h1 id="💾-数据持久化配置"><a href="#💾-数据持久化配置" class="headerlink" title="💾 数据持久化配置"></a>💾 数据持久化配置</h1><p>当使用 PostgreSQL 18.x 官方镜像时，必须将您的持久化卷（无论是命名卷还是绑定挂载）挂载到新的 <code>PGDATA</code> 路径：<code>/var/lib/postgresql/18/docker</code>。</p><h2 id="使用-Docker-Compose"><a href="#使用-Docker-Compose" class="headerlink" title="使用 Docker Compose"></a>使用 Docker Compose</h2><p>在您的 docker-compose.yaml 文件中，应将卷配置指向新的路径：</p><figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">services:</span></span><br><span class="line">  <span class="attr">postgres:</span></span><br><span class="line">    <span class="attr">image:</span> <span class="string">postgres:18.0-alpine3.22</span></span><br><span class="line">    <span class="attr">container_name:</span> <span class="string">postgres</span></span><br><span class="line">    <span class="comment"># ... 其他配置 ...</span></span><br><span class="line">    <span class="attr">volumes:</span></span><br><span class="line">      <span class="comment"># ⚠️ 必须指向版本特定的 PGDATA 路径</span></span><br><span class="line">      <span class="bullet">-</span> <span class="string">pg18-data-volume:/var/lib/postgresql/18/docker</span></span><br><span class="line"></span><br><span class="line"><span class="attr">volumes:</span></span><br><span class="line">  <span class="attr">pg18-data-volume:</span></span><br></pre></td></tr></table></figure><h2 id="使用-Docker-Run-绑定挂载示例"><a href="#使用-Docker-Run-绑定挂载示例" class="headerlink" title="使用 Docker Run (绑定挂载示例)"></a>使用 Docker Run (绑定挂载示例)</h2><p>使用 <code>docker run</code> 命令进行绑定挂载时，也需要指定新的路径：</p><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">docker run -d \</span><br><span class="line">  -v my_postgres_data:/var/lib/postgresql/18/docker \</span><br><span class="line">  -e POSTGRES_PASSWORD=your_password \</span><br><span class="line">  --name postgres18 \</span><br><span class="line">  postgres:18.0-alpline3.22</span><br></pre></td></tr></table></figure><h1 id="⚠️-升级注意事项"><a href="#⚠️-升级注意事项" class="headerlink" title="⚠️ 升级注意事项"></a>⚠️ 升级注意事项</h1><p>在从 PostgreSQL 17.x 或更早版本升级到 18.x 时，由于主版本之间的内部存储格式不兼容，不能简单地更改镜像标签并重用旧的 &#x2F;var&#x2F;lib&#x2F;postgresql&#x2F;data 卷。</p><p>正确的主版本升级流程应是：</p><ol><li>从旧版本容器中执行 pg_dumpall 创建完整的 SQL 备份。</li><li>停止旧容器，创建并启动一个新的 PostgreSQL 18.x 容器，并使用 新路径 挂载卷。</li><li>将第 1 步中的 SQL 备份文件导入（psql）到新的 PostgreSQL 18.x 容器中。</li></ol>]]></content>
+      
+      
+      <categories>
+          
+          <category> 软件 </category>
+          
+      </categories>
+      
+      
+        <tags>
+            
+            <tag> docker </tag>
+            
+            <tag> 容器 </tag>
+            
+            <tag> docker compose </tag>
+            
+            <tag> postgres </tag>
+            
+            <tag> postgres18 </tag>
+            
+        </tags>
+      
+    </entry>
+    
+    
+    
+    <entry>
       <title>为 Angular Material 应用添加完美深色模式支持</title>
       <link href="/2025/09/28/front-end/angular-material-perfect-dark-mode/"/>
       <url>/2025/09/28/front-end/angular-material-perfect-dark-mode/</url>
@@ -437,9 +470,9 @@
       
         <tags>
             
-            <tag> javascript </tag>
-            
             <tag> 前端 </tag>
+            
+            <tag> javascript </tag>
             
         </tags>
       
@@ -553,9 +586,9 @@
       
         <tags>
             
-            <tag> javascript </tag>
-            
             <tag> 前端 </tag>
+            
+            <tag> javascript </tag>
             
         </tags>
       
@@ -647,11 +680,11 @@
       
         <tags>
             
-            <tag> bazel </tag>
-            
             <tag> spring boot </tag>
             
             <tag> java </tag>
+            
+            <tag> bazel </tag>
             
         </tags>
       
@@ -741,9 +774,9 @@
       
         <tags>
             
-            <tag> docker </tag>
-            
             <tag> k8s </tag>
+            
+            <tag> docker </tag>
             
             <tag> Docker Desktop </tag>
             
@@ -1042,9 +1075,9 @@
       
         <tags>
             
-            <tag> docker </tag>
-            
             <tag> k8s </tag>
+            
+            <tag> docker </tag>
             
             <tag> k3s </tag>
             
@@ -1073,11 +1106,11 @@
       
         <tags>
             
-            <tag> docker </tag>
-            
             <tag> github </tag>
             
             <tag> github action </tag>
+            
+            <tag> docker </tag>
             
         </tags>
       
@@ -1102,9 +1135,9 @@
       
         <tags>
             
-            <tag> docker </tag>
-            
             <tag> k8s </tag>
+            
+            <tag> docker </tag>
             
             <tag> minikube </tag>
             
@@ -1260,9 +1293,9 @@
       
         <tags>
             
-            <tag> nodejs </tag>
-            
             <tag> docker </tag>
+            
+            <tag> nodejs </tag>
             
         </tags>
       
@@ -1366,9 +1399,9 @@
       
         <tags>
             
-            <tag> angular </tag>
-            
             <tag> bazel </tag>
+            
+            <tag> angular </tag>
             
         </tags>
       
@@ -1393,9 +1426,9 @@
       
         <tags>
             
-            <tag> angular </tag>
-            
             <tag> bazel </tag>
+            
+            <tag> angular </tag>
             
         </tags>
       
@@ -1447,9 +1480,9 @@
       
         <tags>
             
-            <tag> docker </tag>
-            
             <tag> k8s </tag>
+            
+            <tag> docker </tag>
             
             <tag> Docker Desktop </tag>
             
