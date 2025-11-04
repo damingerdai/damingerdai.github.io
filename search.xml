@@ -4,6 +4,35 @@
   
     
     <entry>
+      <title>Bazel 8 Bzlmod 迁移记录：从 WORKSPACE 到 MODULE.bazel</title>
+      <link href="/2025/11/03/back-end/bazel8-bzlmod-migration/"/>
+      <url>/2025/11/03/back-end/bazel8-bzlmod-migration/</url>
+      
+        <content type="html"><![CDATA[<h1 id="Bazel-8-Bzlmod-迁移记录：从-WORKSPACE-到-MODULE-bazel"><a href="#Bazel-8-Bzlmod-迁移记录：从-WORKSPACE-到-MODULE-bazel" class="headerlink" title="Bazel 8 Bzlmod 迁移记录：从 WORKSPACE 到 MODULE.bazel"></a>Bazel 8 Bzlmod 迁移记录：从 WORKSPACE 到 MODULE.bazel</h1><p>本文档记录了项目 <code>hoteler</code> 从 Bazel 旧版 <code>WORKSPACE</code> 机制迁移到 Bazel 8 Bzlmod（Bazel 模块系统）的完整过程，重点记录了在迁移 Java 和 Maven 依赖时遇到的关键问题及其解决方案。</p><h2 id="1-迁移背景与目标"><a href="#1-迁移背景与目标" class="headerlink" title="1. 迁移背景与目标"></a>1. 迁移背景与目标</h2><ul><li><strong>原 Bazel 版本:</strong> Bazel 7.x</li><li><strong>目标 Bazel 版本:</strong> Bazel 8.4.2 </li><li><strong>目标:</strong> 完全移除 <code>WORKSPACE</code> 文件，将所有外部依赖（包括规则集和 Maven Artifacts）迁移到 <code>MODULE.bazel</code> 文件中进行管理。</li><li><strong>涉及的关键规则集:</strong> <code>rules_java</code>、<code>rules_jvm_external</code>、<code>rules_spring</code>。</li></ul><h2 id="2-原始-WORKSPACE-结构概述"><a href="#2-原始-WORKSPACE-结构概述" class="headerlink" title="2. 原始 WORKSPACE 结构概述"></a>2. 原始 WORKSPACE 结构概述</h2><p>项目原先使用传统的 <code>WORKSPACE</code> 文件管理依赖，主要依赖 <code>http_archive</code> 引入规则集，并使用 <code>rules_jvm_external</code> 的 <code>maven_install</code> 函数定义所有 Maven 依赖。</p><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># WORKSPACE (简化结构)</span></span><br><span class="line">workspace(name = <span class="string">&quot;hoteler&quot;</span>)</span><br><span class="line"><span class="comment"># 通过 http_archive 引入 rules_jvm_external 和 rules_spring</span></span><br><span class="line">load(<span class="string">&quot;@bazel_tools//tools/build_defs/repo:http.bzl&quot;</span>, <span class="string">&quot;http_archive&quot;</span>)</span><br><span class="line">http_archive(...) <span class="comment"># rules_jvm_external</span></span><br><span class="line">http_archive(...) <span class="comment"># rules_spring</span></span><br><span class="line"><span class="comment"># 使用 maven_install 定义所有 Maven 依赖，并将其暴露为 @maven 代码库</span></span><br><span class="line">load(<span class="string">&quot;@rules_jvm_external//:defs.bzl&quot;</span>, <span class="string">&quot;maven_install&quot;</span>)</span><br><span class="line">maven_install(</span><br><span class="line">    artifacts = [...], <span class="comment"># 包含 Spring Boot, Mybatis, JWT 等所有依赖</span></span><br><span class="line">    maven_install_json = <span class="string">&quot;@//:maven_install.json&quot;</span>,</span><br><span class="line">)</span><br><span class="line">load(<span class="string">&quot;@maven//:defs.bzl&quot;</span>, <span class="string">&quot;pinned_maven_install&quot;</span>)</span><br><span class="line">pinned_maven_install()</span><br></pre></td></tr></table></figure><h2 id="3-Bzlmod-迁移与问题记录"><a href="#3-Bzlmod-迁移与问题记录" class="headerlink" title="3. Bzlmod 迁移与问题记录"></a>3. Bzlmod 迁移与问题记录</h2><p>迁移过程主要集中在 <code>MODULE.bazel</code> 文件的创建和调整上，遇到了 Bazel 8 Bzlmod 机制的多个严格限制。</p><h3 id="3-1-遇到的第一个问题：load-语句限制"><a href="#3-1-遇到的第一个问题：load-语句限制" class="headerlink" title="3.1 遇到的第一个问题：load 语句限制"></a>3.1 遇到的第一个问题：<code>load</code> 语句限制</h3><p><strong>问题描述:</strong><br>尝试在 <code>MODULE.bazel</code> 文件中直接使用 <code>load</code> 语句引入 <code>rules_jvm_external</code> 扩展和本地 <code>.bzl</code> 文件时，Bazel 报错 <code>load statements may not be used in MODULE.bazel files</code>。</p><p><strong>原因分析:</strong><br><code>MODULE.bazel</code> 文件只允许使用声明性语句如 <code>module()</code>, <code>bazel_dep()</code>, 和 <code>use_extension()</code>。任何形式的 <code>load</code> 语句（包括加载模块扩展）都必须被重写为 <code>use_extension</code> 模式。</p><p><strong>初步解决方案 (失败)：</strong><br>最初尝试将 <code>load</code> 用于模块扩展也失败，因为它与 <code>use_extension</code> 的语法要求不符。</p><h3 id="3-2-遇到的第二个问题：核心依赖缺失-rules-java"><a href="#3-2-遇到的第二个问题：核心依赖缺失-rules-java" class="headerlink" title="3.2 遇到的第二个问题：核心依赖缺失 (rules_java)"></a>3.2 遇到的第二个问题：核心依赖缺失 (<code>rules_java</code>)</h3><p><strong>问题描述:</strong><br>在成功引入 <code>rules_jvm_external</code> 后，构建失败，报错 <code>No repository visible as &#39;@rules_java&#39; from main repository</code>。</p><p><strong>原因分析:</strong><br>在 Bzlmod 中，即使是 Java 项目的核心规则集 <code>rules_java</code> 也需要被显式声明。<code>rules_jvm_external</code> 和 <code>rules_spring</code> 都依赖于它。</p><p><strong>解决方案:</strong><br>在 <code>MODULE.bazel</code> 中显式添加 <code>rules_java</code> 依赖，并根据最终构建需求将其版本设置为 <code>8.16.1</code>。</p><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">bazel_dep(</span><br><span class="line">    name = <span class="string">&quot;rules_java&quot;</span>,</span><br><span class="line">    version = <span class="string">&quot;8.16.1&quot;</span>, </span><br><span class="line">)</span><br></pre></td></tr></table></figure><h3 id="3-3-遇到的第三个问题：-maven-仓库可见性问题"><a href="#3-3-遇到的第三个问题：-maven-仓库可见性问题" class="headerlink" title="3.3 遇到的第三个问题：@maven 仓库可见性问题"></a>3.3 遇到的第三个问题：<code>@maven</code> 仓库可见性问题</h3><p><strong>问题描述:</strong><br>在 <code>BUILD.bazel</code> 文件中引用 Maven 依赖时，持续收到错误 <code>No repository visible as &#39;@maven&#39; from main repository</code> 或 <code>No repository visible as &#39;@unpinned_maven&#39; from main repository</code>。</p><p><strong>原因分析:</strong><br>在 Bzlmod 中，模块扩展（如 <code>rules_jvm_external</code> 的 <code>maven</code> 扩展）创建的代码库（如 <code>@maven</code>）不会自动对主模块可见。需要一个额外的步骤来将该代码库导入到主模块的命名空间。</p><p><strong>解决方案 (最终):</strong><br>使用 <code>use_repo</code> 函数将模块扩展生成的 <code>maven</code> 仓库导入。这是 <code>rules_jvm_external</code> 在 Bazel 8 中推荐的 Bzlmod 导入方式:</p><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># MODULE.bazel (最终结构的关键变动)</span></span><br><span class="line">maven = use_extension(<span class="string">&quot;@rules_jvm_external//:extensions.bzl&quot;</span>, <span class="string">&quot;maven&quot;</span>)</span><br><span class="line"></span><br><span class="line"><span class="comment"># 使用 use_repo 将扩展生成的 &#x27;maven&#x27; 仓库导入主模块</span></span><br><span class="line">use_repo(maven, <span class="string">&quot;maven&quot;</span>)</span><br><span class="line"></span><br><span class="line">maven.install(</span><br><span class="line">    lock_file = <span class="string">&quot;//:maven_install.json&quot;</span>, <span class="comment"># 修正了参数名</span></span><br><span class="line">    artifacts = [...],</span><br><span class="line">    <span class="comment"># ...</span></span><br><span class="line">)</span><br></pre></td></tr></table></figure><h2 id="4-最终-Bzlmod-配置与-BUILD-文件"><a href="#4-最终-Bzlmod-配置与-BUILD-文件" class="headerlink" title="4. 最终 Bzlmod 配置与 BUILD 文件"></a>4. 最终 Bzlmod 配置与 BUILD 文件</h2><p>以下是完成迁移后项目的最终依赖管理文件。</p><h3 id="4-1-最终的-MODULE-bazel-文件"><a href="#4-1-最终的-MODULE-bazel-文件" class="headerlink" title="4.1 最终的 MODULE.bazel 文件"></a>4.1 最终的 MODULE.bazel 文件</h3><p>该文件集成了所有规则集依赖、版本修正和 Maven 扩展配置。</p><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br></pre></td><td class="code"><pre><span class="line">module(</span><br><span class="line">    name = <span class="string">&quot;hoteler&quot;</span>,</span><br><span class="line">    compatibility_level = <span class="number">1</span>,</span><br><span class="line">)</span><br><span class="line"></span><br><span class="line">bazel_dep(</span><br><span class="line">    name = <span class="string">&quot;rules_java&quot;</span>,</span><br><span class="line">    version = <span class="string">&quot;8.16.1&quot;</span>, </span><br><span class="line">)</span><br><span class="line"></span><br><span class="line">bazel_dep(</span><br><span class="line">    name = <span class="string">&quot;rules_jvm_external&quot;</span>,</span><br><span class="line">    version = <span class="string">&quot;6.7&quot;</span>, <span class="comment"># 解决版本冲突</span></span><br><span class="line">)</span><br><span class="line"></span><br><span class="line">bazel_dep(</span><br><span class="line">    name = <span class="string">&quot;rules_spring&quot;</span>,</span><br><span class="line">    version = <span class="string">&quot;2.6.3&quot;</span>,</span><br><span class="line">)</span><br><span class="line"></span><br><span class="line"><span class="comment"># 使用 use_extension 激活 Maven 扩展</span></span><br><span class="line">maven = use_extension(<span class="string">&quot;@rules_jvm_external//:extensions.bzl&quot;</span>, <span class="string">&quot;maven&quot;</span>)</span><br><span class="line"></span><br><span class="line"><span class="comment"># 导入 Maven 仓库，使其在 BUILD 文件中可见为 @maven</span></span><br><span class="line">use_repo(maven, <span class="string">&quot;maven&quot;</span>)</span><br><span class="line"></span><br><span class="line"><span class="comment"># 配置 Maven 依赖</span></span><br><span class="line">maven.install(</span><br><span class="line">    lock_file = <span class="string">&quot;//:maven_install.json&quot;</span>,</span><br><span class="line">    artifacts = [</span><br><span class="line">        <span class="string">&quot;org.springframework.boot:spring-boot-starter-web:3.5.5&quot;</span>,</span><br><span class="line">        <span class="comment"># ... (所有 Maven 依赖项，包括补充的 cn.hutool:hutool-crypto 等)</span></span><br><span class="line">    ],</span><br><span class="line">    fetch_sources = <span class="literal">True</span>,</span><br><span class="line">    repositories = [</span><br><span class="line">        <span class="string">&quot;https://maven.aliyun.com/repository/central&quot;</span>,</span><br><span class="line">        <span class="comment"># ... (所有仓库)</span></span><br><span class="line">    ],</span><br><span class="line">)</span><br></pre></td></tr></table></figure><h3 id="4-2-最终的-BUILD-bazel-引用"><a href="#4-2-最终的-BUILD-bazel-引用" class="headerlink" title="4.2 最终的 BUILD.bazel 引用"></a>4.2 最终的 BUILD.bazel 引用</h3><p>在 <code>BUILD.bazel</code> 文件中，所有对 Maven 依赖的引用都保持使用 <code>@maven//:...</code> 别名，因为 <code>MODULE.bazel</code> 文件已通过 <code>use_repo(maven, &quot;maven&quot;)</code> 语句确保了 <code>maven</code> 代码库的可见性。</p><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># BUILD.bazel (部分内容)</span></span><br><span class="line">java_library(</span><br><span class="line">    name = <span class="string">&quot;java-maven-lib&quot;</span>,</span><br><span class="line">    srcs = glob([<span class="string">&quot;src/main/java/org/daming/hoteler/*.java&quot;</span>]),</span><br><span class="line">    deps = [</span><br><span class="line">        <span class="string">&quot;@maven//:org_springframework_boot_spring_boot_starter_web&quot;</span>,</span><br><span class="line">        <span class="string">&quot;@maven//:io_jsonwebtoken_jjwt_api&quot;</span>,</span><br><span class="line">        <span class="comment"># ... (所有其他 @maven 引用)</span></span><br><span class="line">    ],</span><br><span class="line">    <span class="comment"># ...</span></span><br><span class="line">)</span><br></pre></td></tr></table></figure><h2 id="5-结论"><a href="#5-结论" class="headerlink" title="5. 结论"></a>5. 结论</h2><p>通过将规则集定义从 <code>http_archive</code> 迁移到 <code>bazel_dep</code>，并将 <code>maven_install</code> 逻辑封装到 <code>use_extension</code> 和 <code>use_repo</code> 组合中，项目成功实现了到 Bazel 8 Bzlmod 的完全迁移，并移除了 <code>WORKSPACE</code> 文件。迁移的关键在于理解 Bazel 8 对依赖导入和名称空间可见性的严格要求。</p>]]></content>
+      
+      
+      <categories>
+          
+          <category> 后端 </category>
+          
+      </categories>
+      
+      
+        <tags>
+            
+            <tag> spring boot </tag>
+            
+            <tag> bazel </tag>
+            
+            <tag> bzlmod </tag>
+            
+        </tags>
+      
+    </entry>
+    
+    
+    
+    <entry>
       <title>📝 PostgreSQL 18.x Docker 镜像 PGDATA 路径变更说明</title>
       <link href="/2025/10/04/software/postgresql-18-docker-pgdata-path-changes/"/>
       <url>/2025/10/04/software/postgresql-18-docker-pgdata-path-changes/</url>
@@ -22,11 +51,11 @@
             
             <tag> docker </tag>
             
+            <tag> postgres </tag>
+            
             <tag> 容器 </tag>
             
             <tag> docker compose </tag>
-            
-            <tag> postgres </tag>
             
             <tag> postgres18 </tag>
             
@@ -82,9 +111,9 @@
       
         <tags>
             
-            <tag> gradle </tag>
-            
             <tag> spring boot </tag>
+            
+            <tag> gradle </tag>
             
             <tag> spring webflux </tag>
             
@@ -113,9 +142,9 @@
       
         <tags>
             
-            <tag> gradle </tag>
-            
             <tag> spring boot </tag>
+            
+            <tag> gradle </tag>
             
             <tag> spring webflux </tag>
             
@@ -144,9 +173,9 @@
       
         <tags>
             
-            <tag> gradle </tag>
-            
             <tag> spring boot </tag>
+            
+            <tag> gradle </tag>
             
         </tags>
       
@@ -470,9 +499,9 @@
       
         <tags>
             
-            <tag> javascript </tag>
-            
             <tag> 前端 </tag>
+            
+            <tag> javascript </tag>
             
         </tags>
       
@@ -586,9 +615,9 @@
       
         <tags>
             
-            <tag> javascript </tag>
-            
             <tag> 前端 </tag>
+            
+            <tag> javascript </tag>
             
         </tags>
       
@@ -629,6 +658,22 @@
         <content type="html"><![CDATA[<h1 id="使用docker-compose备份Postgres-Docker容器的解决方案"><a href="#使用docker-compose备份Postgres-Docker容器的解决方案" class="headerlink" title="使用docker-compose备份Postgres Docker容器的解决方案"></a>使用docker-compose备份Postgres Docker容器的解决方案</h1><h2 id="备份"><a href="#备份" class="headerlink" title="备份"></a>备份</h2><p>使用<code>pg_dumpall</code>命令备份Postgres数据库。</p><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">docker-compose <span class="built_in">exec</span> &lt;postgres_service&gt; pg_dumpall -U postgres &gt; dump_`<span class="built_in">date</span> +%Y-%m-%d<span class="string">&quot;_&quot;</span>%H_%M_%S`.sql</span><br></pre></td></tr></table></figure><ol><li><code>docker-compose exec &lt;postgres_service&gt;</code> 在名为<code>&lt;postgres_service&gt;</code>的Postgres容器上执行命令。</li><li><code>-U postgres</code> 指定数据库的用户名。Docker的默认用户名是<code>postgres</code>，如果你使用不同的用户名，请进行修改。</li></ol><h2 id="恢复"><a href="#恢复" class="headerlink" title="恢复"></a>恢复</h2><p>将<code>dump_</code>date +%Y-%m-%d”<em>“%H</em>%M_%S<code>.sql</code>文件放置在<code>backup</code>文件夹中。</p><p>然后使用Docker卷将<code>backup</code>文件夹绑定到Postgres容器上：</p><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">volumes:</span><br><span class="line">    - ./backup:/backup</span><br></pre></td></tr></table></figure><p>删除现有的Postgres容器并创建一个新的容器：</p><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">docker-compose down &amp;&amp; docker-compose up -d</span><br></pre></td></tr></table></figure><p>执行数据库导入命令：</p><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">docker-compose <span class="built_in">exec</span> postgres psql -f /backup/dump_xxx.sql postgres -U postgres</span><br></pre></td></tr></table></figure><h2 id="参考资料"><a href="#参考资料" class="headerlink" title="参考资料"></a>参考资料</h2><ol><li><a href="https://wdt.im/posts/docker-compose-postgres-backup-restore/">使用docker-compose备份和恢复Postgres数据库</a></li></ol>]]></content>
       
       
+      <categories>
+          
+          <category> 后端 </category>
+          
+      </categories>
+      
+      
+        <tags>
+            
+            <tag> docker </tag>
+            
+            <tag> docker-compose </tag>
+            
+            <tag> postgres </tag>
+            
+        </tags>
       
     </entry>
     
@@ -682,9 +727,9 @@
             
             <tag> spring boot </tag>
             
-            <tag> java </tag>
-            
             <tag> bazel </tag>
+            
+            <tag> java </tag>
             
         </tags>
       
@@ -1106,11 +1151,11 @@
       
         <tags>
             
+            <tag> docker </tag>
+            
             <tag> github </tag>
             
             <tag> github action </tag>
-            
-            <tag> docker </tag>
             
         </tags>
       
