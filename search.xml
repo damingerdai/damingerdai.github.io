@@ -4,6 +4,35 @@
   
     
     <entry>
+      <title>Spring Cloud Gateway 聚合 Swagger UI：实现微服务统一 API 文档入口</title>
+      <link href="/2026/01/07/back-end/spring-cloud-gateway-swagger-ui-aggregation/"/>
+      <url>/2026/01/07/back-end/spring-cloud-gateway-swagger-ui-aggregation/</url>
+      
+        <content type="html"><![CDATA[<h1 id="🚀-前言"><a href="#🚀-前言" class="headerlink" title="🚀 前言"></a>🚀 前言</h1><p>在微服务架构中，随着服务数量的增加，每个业务服务（如 <code>auth</code>、<code>workflow</code>）都有自己独立的 Swagger UI 页面。对于开发者和测试人员来说，频繁切换不同的 URL 和端口来查看 API 文档非常低效。</p><p>为了解决这个问题，我在我的开源项目 <a href="https://github.com/damingerdai/hoteler-cloud">hoteler-cloud</a> 中，利用 <strong>Spring Cloud Gateway</strong> 和 <strong>Springdoc OpenAPI</strong> 实现了 Swagger UI 的聚合。现在，只需要访问网关服务（orchestration）的一个地址，即可通过下拉菜单切换所有后端服务的 API 文档。</p><h1 id="💡-核心思路"><a href="#💡-核心思路" class="headerlink" title="💡 核心思路"></a>💡 核心思路</h1><ol><li><strong>网关层引入 UI 依赖</strong>：在网关服务 <code>orchestration</code> 中引入支持 WebFlux 的 Springdoc UI 包。</li><li><strong>配置聚合路由</strong>：在 <code>application.yml</code> 中配置 <code>springdoc.swagger-ui.urls</code>，手动指定各微服务 OpenAPI 定义文件的路径。</li><li><strong>网关转发逻辑</strong>：利用网关现有的路由机制，确保能够正确转发对各服务 <code>/v3/api-docs</code> 接口的请求。</li></ol><h1 id="🛠️-具体实现步骤"><a href="#🛠️-具体实现步骤" class="headerlink" title="🛠️ 具体实现步骤"></a>🛠️ 具体实现步骤</h1><h2 id="1-添加依赖"><a href="#1-添加依赖" class="headerlink" title="1. 添加依赖"></a>1. 添加依赖</h2><p>在 <code>orchestration</code> (Gateway) 服务的 <code>pom.xml</code> 中引入 <code>springdoc-openapi-starter-webflux-ui</code>。</p><blockquote><p><strong>注意</strong>：由于 Spring Cloud Gateway 是基于 WebFlux 构建的，必须使用对应的 WebFlux Starter。</p></blockquote><figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">dependency</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">groupId</span>&gt;</span>org.springdoc<span class="tag">&lt;/<span class="name">groupId</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">artifactId</span>&gt;</span>springdoc-openapi-starter-webflux-ui<span class="tag">&lt;/<span class="name">artifactId</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">version</span>&gt;</span>$&#123;springdoc.version&#125;<span class="tag">&lt;/<span class="name">version</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">dependency</span>&gt;</span></span><br><span class="line"></span><br></pre></td></tr></table></figure><h2 id="2-配置-application-yml"><a href="#2-配置-application-yml" class="headerlink" title="2. 配置 application.yml"></a>2. 配置 application.yml</h2><p>这是最关键的一步。我们需要在网关的配置文件中告诉 Swagger UI 去哪里拉取其他服务的 API 定义（JSON 格式）。</p><figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">springdoc:</span></span><br><span class="line">  <span class="attr">swagger-ui:</span></span><br><span class="line">    <span class="comment"># 启用聚合功能并定义下拉菜单</span></span><br><span class="line">    <span class="attr">urls:</span></span><br><span class="line">      <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">认证服务</span> <span class="string">(Auth</span> <span class="string">Service)</span></span><br><span class="line">        <span class="attr">url:</span> <span class="string">/auth/v3/api-docs</span></span><br><span class="line">      <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">工作流服务</span> <span class="string">(Workflow</span> <span class="string">Service)</span></span><br><span class="line">        <span class="attr">url:</span> <span class="string">/workflow/v3/api-docs</span></span><br><span class="line">    <span class="comment"># 自定义 Swagger UI 的路径</span></span><br><span class="line">    <span class="attr">path:</span> <span class="string">/swagger-ui.html</span></span><br><span class="line"></span><br><span class="line"><span class="attr">spring:</span></span><br><span class="line">  <span class="attr">cloud:</span></span><br><span class="line">    <span class="attr">gateway:</span></span><br><span class="line">      <span class="attr">routes:</span></span><br><span class="line">        <span class="bullet">-</span> <span class="attr">id:</span> <span class="string">auth-service</span></span><br><span class="line">          <span class="attr">uri:</span> <span class="string">lb://auth</span></span><br><span class="line">          <span class="attr">predicates:</span></span><br><span class="line">            <span class="bullet">-</span> <span class="string">Path=/auth/**</span></span><br><span class="line">          <span class="attr">filters:</span></span><br><span class="line">            <span class="bullet">-</span> <span class="string">StripPrefix=1</span></span><br><span class="line">        <span class="bullet">-</span> <span class="attr">id:</span> <span class="string">workflow-service</span></span><br><span class="line">          <span class="attr">uri:</span> <span class="string">lb://workflow</span></span><br><span class="line">          <span class="attr">predicates:</span></span><br><span class="line">            <span class="bullet">-</span> <span class="string">Path=/workflow/**</span></span><br><span class="line">          <span class="attr">filters:</span></span><br><span class="line">            <span class="bullet">-</span> <span class="string">StripPrefix=1</span></span><br><span class="line"></span><br></pre></td></tr></table></figure><p><strong>配置说明：</strong></p><ul><li><code>urls</code> 列表中的 <code>url</code> 属性必须能够被网关路由规则匹配。</li><li>例如，访问 <code>/auth/v3/api-docs</code> 时，网关会根据 <code>auth-service</code> 的路由规则将其转发到真正的 <code>auth</code> 服务。</li></ul><h2 id="3-微服务侧配置"><a href="#3-微服务侧配置" class="headerlink" title="3. 微服务侧配置"></a>3. 微服务侧配置</h2><p>确保 <code>auth</code> 和 <code>workflow</code> 服务本身也引入了 Springdoc 依赖，并且没有禁用 <code>api-docs</code> 路径。</p><h1 id="✅-效果展示"><a href="#✅-效果展示" class="headerlink" title="✅ 效果展示"></a>✅ 效果展示</h1><p>现在，当我们启动所有服务并访问网关地址：<br><code>http://localhost:8080/swagger-ui.html</code></p><ol><li>页面右上角会出现一个 <strong>Select a definition</strong> 的下拉选框。</li><li>下拉菜单中会显示“认证服务”和“工作流服务”。</li><li>切换选项后，页面会动态加载对应服务的 API 列表，并可以直接进行接口调试。</li></ol><h1 id="⚠️-避坑指南"><a href="#⚠️-避坑指南" class="headerlink" title="⚠️ 避坑指南"></a>⚠️ 避坑指南</h1><ul><li>**跨域问题 (CORS)**：如果网关和子服务不在同一个域，可能会遇到跨域问题。建议在网关层通过 Spring Cloud Gateway 的配置统一处理 CORS。</li><li><strong>路径匹配</strong>：确保 <code>springdoc.swagger-ui.urls</code> 里的路径与 Gateway 的 <code>routes</code> 配置能够对应上，否则会出现 404 无法加载 JSON 的情况。</li><li><strong>版本兼容</strong>：Spring Boot 3.x 务必使用 <code>springdoc-openapi-starter-webflux-ui</code> 而不是旧版的 <code>springdoc-openapi-ui</code>。</li></ul><h1 id="📝-总结"><a href="#📝-总结" class="headerlink" title="📝 总结"></a>📝 总结</h1><p>通过在网关层聚合 Swagger UI，我们不仅提升了开发体验，还统一了系统的入口。这也是构建企业级微服务架构中“开发者友好型”基础设施的重要一环。</p><p>如果你对实现细节感兴趣，欢迎查看我的 PR 详情：<br>🔗 <a href="https://github.com/damingerdai/hoteler-cloud/pull/149">PR #149: Feat: add swagger ui for orchestration</a></p><p><strong>项目地址：</strong> <a href="https://www.google.com/url?sa=E&source=gmail&q=https://github.com/damingerdai/hoteler-cloud">damingerdai&#x2F;hoteler-cloud</a><br>如果你觉得这个项目对你有帮助，欢迎点个 <strong>Star</strong> ⭐！</p>]]></content>
+      
+      
+      <categories>
+          
+          <category> 后端 </category>
+          
+      </categories>
+      
+      
+        <tags>
+            
+            <tag> spring cloud </tag>
+            
+            <tag> spring cloud gateway </tag>
+            
+            <tag> open api </tag>
+            
+        </tags>
+      
+    </entry>
+    
+    
+    
+    <entry>
       <title>基于 Microsoft Graph API 与 React Email 构建现代化邮件发送系统</title>
       <link href="/2025/12/27/front-end/react-email-ms-graph-nodemailer/"/>
       <url>/2025/12/27/front-end/react-email-ms-graph-nodemailer/</url>
@@ -384,6 +413,20 @@
         <content type="html"><![CDATA[<h1 id="申请gmail的应用专用密码"><a href="#申请gmail的应用专用密码" class="headerlink" title="申请gmail的应用专用密码"></a>申请gmail的应用专用密码</h1><p>首先你需要一个gmail账号，然后才能申请gmail的应用专用密码。</p><p>想要申请应用专用密码必须开启两步验证：</p><p><img src="https://raw.githubusercontent.com/damingerdai/damingerdai.github.io/master/assets/back-end/gmail-two-step-vertify.png" alt="开启两步验证页面"></p><p>google似乎默认并不想让用户直接创建应用专用密码，需要通过右上角搜索框输入“应用专用密码”才能进入相关页面。如果使用英文页面则搜索“App Password”。</p><p><img src="https://raw.githubusercontent.com/damingerdai/damingerdai.github.io/master/assets/back-end/search-app-password-gmail.png" alt="搜索应用专用密码"></p><p>然后你就可以创建“应用专用密码”</p><p><img src="https://raw.githubusercontent.com/damingerdai/damingerdai.github.io/master/assets/back-end/create-app-password-in-gmail.png" alt="创建“应用专用密码”"></p><p>保存密码，gmail仅仅会显示这一次。</p><h1 id="使用spring发送邮件"><a href="#使用spring发送邮件" class="headerlink" title="使用spring发送邮件"></a>使用spring发送邮件</h1><p>这里实际使用的是spring boot。</p><p>导入<em>spring-boot-starter-mail</em>:</p><p>对于maven用户：</p><figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">dependency</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">groupId</span>&gt;</span>org.springframework.boot<span class="tag">&lt;/<span class="name">groupId</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">artifactId</span>&gt;</span>spring-boot-starter-mail<span class="tag">&lt;/<span class="name">artifactId</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">version</span>&gt;</span>$&#123;spring-boot-version&#125;<span class="tag">&lt;/<span class="name">version</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">dependency</span>&gt;</span></span><br></pre></td></tr></table></figure><p>对于gradle用户：</p><figure class="highlight groovy"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">implementation <span class="string">&#x27;org.springframework.boot:spring-boot-starter-mail:$&#123;spring-boot-version&#125;&#x27;</span></span><br></pre></td></tr></table></figure><p>添加配置：</p><figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">spring:</span></span><br><span class="line">  <span class="attr">mail:</span></span><br><span class="line">    <span class="attr">host:</span> <span class="string">smtp.gmail.com</span></span><br><span class="line">    <span class="attr">port:</span> <span class="number">587</span></span><br><span class="line">    <span class="attr">username:</span> <span class="string">pollardsmithal899@gmail.com</span></span><br><span class="line">    <span class="attr">password:</span> <span class="string">&#x27;your app password&#x27;</span></span><br><span class="line">    <span class="attr">properties:</span></span><br><span class="line">      <span class="attr">mail:</span></span><br><span class="line">        <span class="attr">smtp:</span></span><br><span class="line">          <span class="attr">auth:</span> <span class="literal">true</span></span><br><span class="line">          <span class="attr">starttls:</span></span><br><span class="line">            <span class="attr">enable:</span> <span class="literal">true</span></span><br></pre></td></tr></table></figure><p>最后可以使用JavaMailSenderImpl发送邮件了；</p><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"> <span class="type">dvar</span> <span class="variable">message</span> <span class="operator">=</span> javaMailSender.createMimeMessage();</span><br><span class="line"><span class="type">var</span> <span class="variable">helper</span> <span class="operator">=</span> <span class="keyword">new</span> <span class="title class_">MimeMessageHelper</span>(message, <span class="literal">true</span>);</span><br><span class="line">helper.setTo(<span class="string">&quot;mingguobin@live.com&quot;</span>);</span><br><span class="line">helper.setSubject(<span class="string">&quot;batcher support&quot;</span>);</span><br><span class="line">helper.setText(<span class="string">&quot;hello, this is batcher&quot;</span>);</span><br><span class="line">javaMailSender.send(message);</span><br></pre></td></tr></table></figure><h1 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h1><ol><li><a href="https://support.google.com/accounts/answer/185833">使用应用专用密码登录</a></li><li><a href="https://shallowsky.com/blog/tech/email/gmail-app-passwds.html">Gmail with an App Password</a></li><li><a href="https://www.baeldung.com/spring-email">Guide to Spring Email</a></li><li><a href="https://medium.com/tuanhdotnet/tips-for-sending-mail-from-a-spring-boot-application-using-google-as-mail-server-fcf5ab042594">使用 Google 作为邮件服务器从 Spring Boot 应用程序发送邮件的技巧</a></li></ol>]]></content>
       
       
+      <categories>
+          
+          <category> 后端 </category>
+          
+      </categories>
+      
+      
+        <tags>
+            
+            <tag> spring </tag>
+            
+            <tag> email </tag>
+            
+        </tags>
       
     </entry>
     
@@ -426,6 +469,20 @@
         <content type="html"><![CDATA[<h1 id="rust中如何配置字节源"><a href="#rust中如何配置字节源" class="headerlink" title="rust中如何配置字节源"></a>rust中如何配置字节源</h1><h2 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h2><p>本文的目的是在windows上安装或更新rust的时候通过配置字节的国内源来提高安装&#x2F;更新速度。非windows系统就可以直接参考<a href="https://rsproxy.cn/">rsproxy</a></p><h2 id="配置说明"><a href="#配置说明" class="headerlink" title="配置说明"></a>配置说明</h2><p>在powershell中设置 Rustup 镜像</p><figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="variable">$ENV:RUSTUP_DIST_SERVER</span>=<span class="string">&#x27;https://rsproxy.cn&#x27;</span></span><br><span class="line"><span class="variable">$ENV:RUSTUP_UPDATE_ROOT</span>=<span class="string">&#x27;https://rsproxy.cn/rustup&#x27;</span></span><br></pre></td></tr></table></figure><p>安装或者更新Rust</p><p>如果是安装rust，直接点击<code>rust-init.exe</code></p><p>如果是更新rust，直接运行rustup update命令</p><figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">rustup update</span><br></pre></td></tr></table></figure><h2 id="设置-crates-io-镜像"><a href="#设置-crates-io-镜像" class="headerlink" title="设置 crates.io 镜像"></a>设置 crates.io 镜像</h2><p>在当前用户的主目录（以我本地为例：D:\Users\daming）下的<code>.cargo</code>文件夹中创建<code>config</code>文件。</p><figure class="highlight toml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="section">[source.crates-io]</span></span><br><span class="line"><span class="attr">replace-with</span> = <span class="string">&#x27;rsproxy-sparse&#x27;</span></span><br><span class="line"><span class="section">[source.rsproxy]</span></span><br><span class="line"><span class="attr">registry</span> = <span class="string">&quot;https://rsproxy.cn/crates.io-index&quot;</span></span><br><span class="line"><span class="section">[source.rsproxy-sparse]</span></span><br><span class="line"><span class="attr">registry</span> = <span class="string">&quot;sparse+https://rsproxy.cn/index/&quot;</span></span><br><span class="line"><span class="section">[registries.rsproxy]</span></span><br><span class="line"><span class="attr">index</span> = <span class="string">&quot;https://rsproxy.cn/crates.io-index&quot;</span></span><br><span class="line"><span class="section">[net]</span></span><br><span class="line"><span class="attr">git-fetch-with-cli</span> = <span class="literal">true</span></span><br></pre></td></tr></table></figure><h2 id="参考资料"><a href="#参考资料" class="headerlink" title="参考资料"></a>参考资料</h2><ol><li><a href="https://rsproxy.cn/">rsproxy</a></li><li><a href="https://www.sunzhongwei.com/windows-11-install-rust-with-china-mirror">Windows 11 上通过国内源安装 Rust</a></li><li><a href="https://www.cnblogs.com/manqing321/p/17026725.html">rustup-init.exe 安装失败及其解决方案</a></li></ol>]]></content>
       
       
+      <categories>
+          
+          <category> 后端 </category>
+          
+      </categories>
+      
+      
+        <tags>
+            
+            <tag> windows </tag>
+            
+            <tag> rustl </tag>
+            
+        </tags>
       
     </entry>
     
@@ -908,9 +965,9 @@
             
             <tag> docker </tag>
             
-            <tag> Docker Desktop </tag>
-            
             <tag> kubernetes </tag>
+            
+            <tag> Docker Desktop </tag>
             
         </tags>
       
@@ -1298,9 +1355,9 @@
             
             <tag> minikube </tag>
             
-            <tag> kubernetes </tag>
-            
             <tag> Mac </tag>
+            
+            <tag> kubernetes </tag>
             
         </tags>
       
@@ -1614,9 +1671,9 @@
             
             <tag> docker </tag>
             
-            <tag> Docker Desktop </tag>
-            
             <tag> kubernetes </tag>
+            
+            <tag> Docker Desktop </tag>
             
         </tags>
       
