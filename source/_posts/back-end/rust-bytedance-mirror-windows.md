@@ -1,7 +1,8 @@
 ---
 title: 在windows系统中如何给rust如何配置字节源
 date: 2025-04-30 16:57:06
-tags:
+tags: [windows, rustl]
+categories: [后端]
 ---
 
 # rust中如何配置字节源

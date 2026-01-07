@@ -1,7 +1,8 @@
 ---
 title: 在spring中使用gmail发送邮件
 date: 2025-06-22 17:16:53
-tags:
+tags: [spring, email]
+categories: [后端]
 ---
 
 # 申请gmail的应用专用密码
