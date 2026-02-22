@@ -1,0 +1,215 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="dark"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1.0,viewport-fit=cover"><title>Grafana UI 部署与技术复盘报告 | Damingerdai's Blog</title><meta name="author" content="Arthur Ming"><meta name="copyright" content="Arthur Ming"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#0d0d0d"><meta name="description" content="Grafana UI 部署与技术复盘报告1. 基础环境 集群环境: K3s (192.168.0.113) 监控套件: kube-prometheus-stack (Helm 部署) 目标: 通过正式域名 grafana.damingerdaint.com 暴露 Grafana UI 页面。   2. 成功方案：Ingress 部署实践由于 K3s 内置的 Traefik 默认已占用 80 端口，">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Grafana UI 部署与技术复盘报告">
+<meta property="og:url" content="http://blog.damingerdai.com/2026/02/22/software/how-to-deploy-grafana-on-k3s-with-ingress/index.html">
+<meta property="og:site_name" content="Damingerdai&#39;s Blog">
+<meta property="og:description" content="Grafana UI 部署与技术复盘报告1. 基础环境 集群环境: K3s (192.168.0.113) 监控套件: kube-prometheus-stack (Helm 部署) 目标: 通过正式域名 grafana.damingerdaint.com 暴露 Grafana UI 页面。   2. 成功方案：Ingress 部署实践由于 K3s 内置的 Traefik 默认已占用 80 端口，">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg">
+<meta property="article:published_time" content="2026-02-22T13:17:43.000Z">
+<meta property="article:modified_time" content="2026-02-22T13:32:04.702Z">
+<meta property="article:author" content="Arthur Ming">
+<meta property="article:tag" content="k8s">
+<meta property="article:tag" content="k3s">
+<meta property="article:tag" content="Kubernetes">
+<meta property="article:tag" content="Grafana">
+<meta property="article:tag" content="Ingress">
+<meta property="article:tag" content="Gateway Api">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg"><link rel="shortcut icon" href="/img/avatar.png"><link rel="canonical" href="http://blog.damingerdai.com/2026/02/22/software/how-to-deploy-grafana-on-k3s-with-ingress/index.html"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><link rel="stylesheet" href="/css/index.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free/css/all.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/ui/dist/fancybox/fancybox.min.css" media="print" onload="this.media='all'"><script>const GLOBAL_CONFIG = {
+  root: '/',
+  algolia: undefined,
+  localSearch: {"path":"/search.xml","preload":false,"top_n_per_article":1,"unescape":false,"languages":{"hits_empty":"找不到您查询的内容：${query}","hits_stats":"共找到 ${hits} 篇文章"}},
+  translate: undefined,
+  noticeOutdate: undefined,
+  highlight: {"plugin":"highlight.js","highlightCopy":true,"highlightLang":true,"highlightHeightLimit":false},
+  copy: {
+    success: '复制成功',
+    error: '复制错误',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '',
+  dateSuffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: undefined,
+  lightbox: 'fancybox',
+  Snackbar: undefined,
+  infinitegrid: {
+    js: 'https://cdn.jsdelivr.net/npm/@egjs/infinitegrid/dist/infinitegrid.min.js',
+    buttonText: '加载更多'
+  },
+  isPhotoFigcaption: false,
+  islazyload: false,
+  isAnchor: false,
+  percent: {
+    toc: true,
+    rightside: false,
+  },
+  autoDarkmode: true
+}</script><script id="config-diff">var GLOBAL_CONFIG_SITE = {
+  title: 'Grafana UI 部署与技术复盘报告',
+  isPost: true,
+  isHome: false,
+  isHighlightShrink: false,
+  isToc: true,
+  postUpdate: '2026-02-22 21:32:04'
+}</script><script>(win=>{
+      win.saveToLocal = {
+        set: (key, value, ttl) => {
+          if (ttl === 0) return
+          const now = Date.now()
+          const expiry = now + ttl * 86400000
+          const item = {
+            value,
+            expiry
+          }
+          localStorage.setItem(key, JSON.stringify(item))
+        },
+      
+        get: key => {
+          const itemStr = localStorage.getItem(key)
+      
+          if (!itemStr) {
+            return undefined
+          }
+          const item = JSON.parse(itemStr)
+          const now = Date.now()
+      
+          if (now > item.expiry) {
+            localStorage.removeItem(key)
+            return undefined
+          }
+          return item.value
+        }
+      }
+    
+      win.getScript = (url, attr = {}) => new Promise((resolve, reject) => {
+        const script = document.createElement('script')
+        script.src = url
+        script.async = true
+        script.onerror = reject
+        script.onload = script.onreadystatechange = function() {
+          const loadState = this.readyState
+          if (loadState && loadState !== 'loaded' && loadState !== 'complete') return
+          script.onload = script.onreadystatechange = null
+          resolve()
+        }
+
+        Object.keys(attr).forEach(key => {
+          script.setAttribute(key, attr[key])
+        })
+
+        document.head.appendChild(script)
+      })
+    
+      win.getCSS = (url, id = false) => new Promise((resolve, reject) => {
+        const link = document.createElement('link')
+        link.rel = 'stylesheet'
+        link.href = url
+        if (id) link.id = id
+        link.onerror = reject
+        link.onload = link.onreadystatechange = function() {
+          const loadState = this.readyState
+          if (loadState && loadState !== 'loaded' && loadState !== 'complete') return
+          link.onload = link.onreadystatechange = null
+          resolve()
+        }
+        document.head.appendChild(link)
+      })
+    
+      win.activateDarkMode = () => {
+        document.documentElement.setAttribute('data-theme', 'dark')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+        }
+      }
+      win.activateLightMode = () => {
+        document.documentElement.setAttribute('data-theme', 'light')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#ffffff')
+        }
+      }
+      const t = saveToLocal.get('theme')
+    
+          const isDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches
+          const isLightMode = window.matchMedia('(prefers-color-scheme: light)').matches
+          const isNotSpecified = window.matchMedia('(prefers-color-scheme: no-preference)').matches
+          const hasNoSupport = !isDarkMode && !isLightMode && !isNotSpecified
+
+          if (t === undefined) {
+            if (isLightMode) activateLightMode()
+            else if (isDarkMode) activateDarkMode()
+            else if (isNotSpecified || hasNoSupport) {
+              const now = new Date()
+              const hour = now.getHours()
+              const isNight = hour <= 6 || hour >= 18
+              isNight ? activateDarkMode() : activateLightMode()
+            }
+            window.matchMedia('(prefers-color-scheme: dark)').addListener(e => {
+              if (saveToLocal.get('theme') === undefined) {
+                e.matches ? activateDarkMode() : activateLightMode()
+              }
+            })
+          } else if (t === 'light') activateLightMode()
+          else activateDarkMode()
+        
+      const asideStatus = saveToLocal.get('aside-status')
+      if (asideStatus !== undefined) {
+        if (asideStatus === 'hide') {
+          document.documentElement.classList.add('hide-aside')
+        } else {
+          document.documentElement.classList.remove('hide-aside')
+        }
+      }
+    
+      const detectApple = () => {
+        if(/iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent)){
+          document.documentElement.classList.add('apple')
+        }
+      }
+      detectApple()
+    })(window)</script><link rel="stylesheet" href="/css/styles.css"><meta name="generator" content="Hexo 7.3.0"></head><body><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="avatar-img is-center"><img src="/img/avatar.png" onerror="onerror=null;src='/img/friend_404.gif'" alt="avatar"/></div><div class="sidebar-site-data site-data is-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">71</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">95</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">8</div></a></div><hr class="custom-hr"/><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归类</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page group" href="javascript:void(0);"><i class="fa-fw fas fa-list"></i><span> 其他</span><i class="fas fa-chevron-down"></i></a><ul class="menus_item_child"><li><a class="site-page child" href="/others/learning"><i class="fa-fw fas fa-graduation-cap"></i><span> 学习课程</span></a></li><li><a class="site-page child" href="/others/link/"><i class="fa-fw fas fa-link"></i><span> 链接</span></a></li><li><a class="site-page child" href="/others/interview/"><i class="fa-fw fas fa-glide"></i><span> 面试</span></a></li></ul></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于</span></a></div></div></div></div><div class="post" id="body-wrap"><header class="post-bg" id="page-header" style="background-image: url('https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg')"><nav id="nav"><span id="blog-info"><a href="/" title="Damingerdai's Blog"><span class="site-name">Damingerdai's Blog</span></a></span><div id="menus"><div id="search-button"><a class="site-page social-icon search" href="javascript:void(0);"><i class="fas fa-search fa-fw"></i><span> 搜索</span></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归类</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page group" href="javascript:void(0);"><i class="fa-fw fas fa-list"></i><span> 其他</span><i class="fas fa-chevron-down"></i></a><ul class="menus_item_child"><li><a class="site-page child" href="/others/learning"><i class="fa-fw fas fa-graduation-cap"></i><span> 学习课程</span></a></li><li><a class="site-page child" href="/others/link/"><i class="fa-fw fas fa-link"></i><span> 链接</span></a></li><li><a class="site-page child" href="/others/interview/"><i class="fa-fw fas fa-glide"></i><span> 面试</span></a></li></ul></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于</span></a></div></div><div id="toggle-menu"><a class="site-page" href="javascript:void(0);"><i class="fas fa-bars fa-fw"></i></a></div></div></nav><div id="post-info"><h1 class="post-title">Grafana UI 部署与技术复盘报告</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2026-02-22T13:17:43.000Z" title="发表于 2026-02-22 21:17:43">2026-02-22</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2026-02-22T13:32:04.702Z" title="更新于 2026-02-22 21:32:04">2026-02-22</time></span><span class="post-meta-categories"><span class="post-meta-separator">|</span><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/%E8%BD%AF%E4%BB%B6/">软件</a></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-pv-cv" id="" data-flag-title="Grafana UI 部署与技术复盘报告"><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">阅读量:</span><span id="busuanzi_value_page_pv"><i class="fa-solid fa-spinner fa-spin"></i></span></span></div></div></div></header><main class="layout" id="content-inner"><div id="post"><article class="post-content" id="article-container"><h1 id="Grafana-UI-部署与技术复盘报告"><a href="#Grafana-UI-部署与技术复盘报告" class="headerlink" title="Grafana UI 部署与技术复盘报告"></a>Grafana UI 部署与技术复盘报告</h1><h2 id="1-基础环境"><a href="#1-基础环境" class="headerlink" title="1. 基础环境"></a>1. 基础环境</h2><ul>
+<li><strong>集群环境</strong>: K3s (192.168.0.113)</li>
+<li><strong>监控套件</strong>: <code>kube-prometheus-stack</code> (Helm 部署)</li>
+<li><strong>目标</strong>: 通过正式域名 <code>grafana.damingerdaint.com</code> 暴露 Grafana UI 页面。</li>
+</ul>
+<hr>
+<h2 id="2-成功方案：Ingress-部署实践"><a href="#2-成功方案：Ingress-部署实践" class="headerlink" title="2. 成功方案：Ingress 部署实践"></a>2. 成功方案：Ingress 部署实践</h2><p>由于 K3s 内置的 Traefik 默认已占用 80 端口，采用 Ingress 方案避开了端口冲突，实现了快速上线。</p>
+<h3 id="配置实现-v1-标准写法"><a href="#配置实现-v1-标准写法" class="headerlink" title="配置实现 (v1 标准写法)"></a>配置实现 (v1 标准写法)</h3><figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">apiVersion:</span> <span class="string">networking.k8s.io/v1</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">Ingress</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">grafana-ui-ingress</span></span><br><span class="line">  <span class="attr">namespace:</span> <span class="string">monitoring</span></span><br><span class="line">  <span class="attr">annotations:</span></span><br><span class="line">    <span class="attr">traefik.ingress.kubernetes.io/router.entrypoints:</span> <span class="string">web</span></span><br><span class="line"><span class="attr">spec:</span></span><br><span class="line">  <span class="attr">ingressClassName:</span> <span class="string">traefik</span>  <span class="comment"># 修复 Deprecated 警告的现代写法</span></span><br><span class="line">  <span class="attr">rules:</span></span><br><span class="line">  <span class="bullet">-</span> <span class="attr">host:</span> <span class="string">&quot;grafana.damingerdaint.com&quot;</span></span><br><span class="line">    <span class="attr">http:</span></span><br><span class="line">      <span class="attr">paths:</span></span><br><span class="line">      <span class="bullet">-</span> <span class="attr">path:</span> <span class="string">/</span></span><br><span class="line">        <span class="attr">pathType:</span> <span class="string">Prefix</span></span><br><span class="line">        <span class="attr">backend:</span></span><br><span class="line">          <span class="attr">service:</span></span><br><span class="line">            <span class="attr">name:</span> <span class="string">prometheus-grafana</span></span><br><span class="line">            <span class="attr">port:</span></span><br><span class="line">              <span class="attr">number:</span> <span class="number">80</span></span><br><span class="line"></span><br></pre></td></tr></table></figure>
+
+<h3 id="运维操作指南"><a href="#运维操作指南" class="headerlink" title="运维操作指南"></a>运维操作指南</h3><ul>
+<li><strong>获取初始密码</strong>:</li>
+</ul>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">kubectl get secret -n monitoring prometheus-grafana -o jsonpath=<span class="string">&quot;&#123;.data.admin-password&#125;&quot;</span> | <span class="built_in">base64</span> --decode ; <span class="built_in">echo</span></span><br><span class="line"></span><br></pre></td></tr></table></figure>
+
+
+<ul>
+<li><strong>密码修改途径</strong>:</li>
+<li><strong>UI 方式</strong>: 登录后进入 <code>User Profile</code> -&gt; <code>Change Password</code> 修改。</li>
+</ul>
+<h2 id="3-失败复盘：Gateway-API-尝试记录"><a href="#3-失败复盘：Gateway-API-尝试记录" class="headerlink" title="3. 失败复盘：Gateway API 尝试记录"></a>3. 失败复盘：Gateway API 尝试记录</h2><h3 id="环境初始化-K3s-开启支持"><a href="#环境初始化-K3s-开启支持" class="headerlink" title="环境初始化 (K3s 开启支持)"></a>环境初始化 (K3s 开启支持)</h3><p>在 K3s 上，我通过以下命令手动安装了标准 CRD 并配置了 Traefik 实验性开关：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 1. 安装 Gateway API CRDs</span></span><br><span class="line">kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.0.0/standard-install.yaml</span><br><span class="line"></span><br><span class="line"><span class="comment"># 2. 修改 Traefik 配置开启支持</span></span><br><span class="line"><span class="comment"># 编辑或创建 /var/lib/rancher/k3s/server/manifests/traefik-config.yaml</span></span><br><span class="line">apiVersion: helm.cattle.io/v1</span><br><span class="line">kind: HelmChartConfig</span><br><span class="line">metadata:</span><br><span class="line">  name: traefik</span><br><span class="line">  namespace: kube-system</span><br><span class="line">spec:</span><br><span class="line">  valuesContent: |-</span><br><span class="line">    providers:</span><br><span class="line">      kubernetesGateway:</span><br><span class="line">        enabled: <span class="literal">true</span></span><br><span class="line"></span><br></pre></td></tr></table></figure>
+
+<h3 id="尝试部署的-Bash-命令"><a href="#尝试部署的-Bash-命令" class="headerlink" title="尝试部署的 Bash 命令"></a>尝试部署的 Bash 命令</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 1. 创建 GatewayClass</span></span><br><span class="line"><span class="built_in">cat</span> &lt;&lt;<span class="string">EOF | kubectl apply -f -</span></span><br><span class="line"><span class="string">apiVersion: gateway.networking.k8s.io/v1</span></span><br><span class="line"><span class="string">kind: GatewayClass</span></span><br><span class="line"><span class="string">metadata:</span></span><br><span class="line"><span class="string">  name: traefik</span></span><br><span class="line"><span class="string">spec:</span></span><br><span class="line"><span class="string">  controllerName: traefik.io/gateway-controller</span></span><br><span class="line"><span class="string">EOF</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 2. 创建 Gateway (监听 80 端口)</span></span><br><span class="line"><span class="built_in">cat</span> &lt;&lt;<span class="string">EOF | kubectl apply -f -</span></span><br><span class="line"><span class="string">apiVersion: gateway.networking.k8s.io/v1</span></span><br><span class="line"><span class="string">kind: Gateway</span></span><br><span class="line"><span class="string">metadata:</span></span><br><span class="line"><span class="string">  name: monitoring-gateway</span></span><br><span class="line"><span class="string">  namespace: monitoring</span></span><br><span class="line"><span class="string">spec:</span></span><br><span class="line"><span class="string">  gatewayClassName: traefik</span></span><br><span class="line"><span class="string">  listeners:</span></span><br><span class="line"><span class="string">  - name: web</span></span><br><span class="line"><span class="string">    protocol: HTTP</span></span><br><span class="line"><span class="string">    port: 80</span></span><br><span class="line"><span class="string">    hostname: &quot;grafana.damingerdaint.com&quot; #可能是不需要的</span></span><br><span class="line"><span class="string">    allowedRoutes:</span></span><br><span class="line"><span class="string">      namespaces:</span></span><br><span class="line"><span class="string">        from: Same</span></span><br><span class="line"><span class="string">EOF</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 3. 创建 HTTPRoute 尝试绑定</span></span><br><span class="line"><span class="built_in">cat</span> &lt;&lt;<span class="string">EOF | kubectl apply -f -</span></span><br><span class="line"><span class="string">apiVersion: gateway.networking.k8s.io/v1</span></span><br><span class="line"><span class="string">kind: HTTPRoute</span></span><br><span class="line"><span class="string">metadata:</span></span><br><span class="line"><span class="string">  name: grafana-route</span></span><br><span class="line"><span class="string">  namespace: monitoring</span></span><br><span class="line"><span class="string">spec:</span></span><br><span class="line"><span class="string">  parentRefs: [&#123;name: monitoring-gateway&#125;]</span></span><br><span class="line"><span class="string">  hostnames: [&quot;grafana.damingerdaint.com&quot;]</span></span><br><span class="line"><span class="string">  rules:</span></span><br><span class="line"><span class="string">  - matches: [&#123;path: &#123;type: PathPrefix, value: /&#125;&#125;]</span></span><br><span class="line"><span class="string">    backendRefs: [&#123;name: prometheus-grafana, port: 80&#125;]</span></span><br><span class="line"><span class="string">EOF</span></span><br><span class="line"></span><br></pre></td></tr></table></figure>
+
+<h3 id="核心报错分析"><a href="#核心报错分析" class="headerlink" title="核心报错分析"></a>核心报错分析</h3><ul>
+<li><strong>错误状态</strong>: <code>Status: False</code>, <code>Reason: NotAllowedByListeners</code>, <code>Message: PortUnavailable</code>。</li>
+<li><strong>原因排查</strong>:</li>
+<li><strong>端口独占</strong>: K3s 默认的 Traefik 服务在启动时已经通过其内部的 <code>entryPoint</code> 锁定了主机的 80 端口。</li>
+<li><strong>资源竞争</strong>: Gateway API 作为一个新的控制平面，在没有特殊配置的情况下，无法与已有的 Ingress 共享同一个 <code>entryPoint</code>。</li>
+</ul>
+<h2 id="4-后续研究课题-New-K3s-Node-Plan"><a href="#4-后续研究课题-New-K3s-Node-Plan" class="headerlink" title="4. 后续研究课题 (New K3s Node Plan)"></a>4. 后续研究课题 (New K3s Node Plan)</h2><p>在下一步全新部署的 K3s 环境中，重点研究方向：</p>
+<ol>
+<li><strong>解耦 Traefik</strong>: 安装 K3s 时通过 <code>--disable traefik</code> 彻底解放 80&#x2F;443 端口。</li>
+<li><strong>共享 Entrypoints</strong>: 探索如何通过 <code>HelmChartConfig</code> 映射 Gateway 到现有的 Traefik 端口。</li>
+</ol>
+</article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta"><i class="fas fa-circle-user fa-fw"></i>文章作者: </span><span class="post-copyright-info"><a href="http://blog.damingerdai.com">Arthur Ming</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta"><i class="fas fa-square-arrow-up-right fa-fw"></i>文章链接: </span><span class="post-copyright-info"><a href="http://blog.damingerdai.com/2026/02/22/software/how-to-deploy-grafana-on-k3s-with-ingress/">http://blog.damingerdai.com/2026/02/22/software/how-to-deploy-grafana-on-k3s-with-ingress/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta"><i class="fas fa-circle-exclamation fa-fw"></i>版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来自 <a href="http://blog.damingerdai.com" target="_blank">Damingerdai's Blog</a>！</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/k8s/">k8s</a><a class="post-meta__tags" href="/tags/k3s/">k3s</a><a class="post-meta__tags" href="/tags/Kubernetes/">Kubernetes</a><a class="post-meta__tags" href="/tags/Grafana/">Grafana</a><a class="post-meta__tags" href="/tags/Ingress/">Ingress</a><a class="post-meta__tags" href="/tags/Gateway-Api/">Gateway Api</a></div><div class="post_share"><div class="social-share" data-image="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" data-sites="facebook,twitter,wechat,weibo,qq"></div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/butterfly-extsrc/sharejs/dist/css/share.min.css" media="print" onload="this.media='all'"><script src="https://cdn.jsdelivr.net/npm/butterfly-extsrc/sharejs/dist/js/social-share.min.js" defer></script></div></div><nav class="pagination-post" id="pagination"><div class="next-post pull-full"><a href="/2026/02/21/software/lightweight-oci-registry-zot-deployment-guide/" title="轻量级私有镜像仓库选型——Zot 部署与多工具兼容性实测"><img class="cover" src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" onerror="onerror=null;src='/img/404.jpg'" alt="cover of next post"><div class="pagination-info"><div class="label">下一篇</div><div class="next_info">轻量级私有镜像仓库选型——Zot 部署与多工具兼容性实测</div></div></a></div></nav><div class="relatedPosts"><div class="headline"><i class="fas fa-thumbs-up fa-fw"></i><span>相关推荐</span></div><div class="relatedPosts-list"><div><a href="/2022/09/03/back-end/k3s-uses-letsencrypt-and-traefik-to-deploy-the-https/" title="k3s使用Let‘s Encrypt配置https入口部署"><img class="cover" src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2022-09-03</div><div class="title">k3s使用Let‘s Encrypt配置https入口部署</div></div></a></div><div><a href="/2025/02/13/back-end/how-to-forcefully-delete-a-namespace-that-is-stuck-in-the-Terminating-state/" title="在k8s中如何强制删除处于Terminating状态的namesapce"><img class="cover" src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2025-02-13</div><div class="title">在k8s中如何强制删除处于Terminating状态的namesapce</div></div></a></div><div><a href="/2026/01/08/software/k8s/deploy-skooner-on-k3s/" title="轻量化 K8s 管理方案：在 k3s 中部署 Skooner 可视化面板"><img class="cover" src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2026-01-08</div><div class="title">轻量化 K8s 管理方案：在 k3s 中部署 Skooner 可视化面板</div></div></a></div><div><a href="/2022/05/15/software/k8s/k3s-install-with-docker/" title="K3S安装的时候默认使用docker"><img class="cover" src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2022-05-15</div><div class="title">K3S安装的时候默认使用docker</div></div></a></div><div><a href="/2022/06/18/back-end/add-ssl-for-ingress/" title="给Ingress上配置ssl证书"><img class="cover" src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2022-06-18</div><div class="title">给Ingress上配置ssl证书</div></div></a></div><div><a href="/2023/04/14/back-end/how-to-user-k3s-deploy-postgresql-for-dev/" title="用k3s部署PostgreSQL用于开发"><img class="cover" src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2023-04-14</div><div class="title">用k3s部署PostgreSQL用于开发</div></div></a></div></div></div></div><div class="aside-content" id="aside-content"><div class="card-widget card-info"><div class="is-center"><div class="avatar-img"><img src="/img/avatar.png" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="author-info__name">Arthur Ming</div><div class="author-info__description">大明二代的博客</div></div><div class="card-info-data site-data is-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">71</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">95</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">8</div></a></div><a id="card-info-btn" target="_blank" rel="noopener" href="https://github.com/damingerdai"><i class="fab fa-github"></i><span>Follow Me</span></a><div class="card-info-social-icons is-center"><a class="social-icon" href="https://github.com/damingerdai" target="_blank" title="Github"><i class="fab fa-github" style="color: #24292e;"></i></a><a class="social-icon" href="mailto:mingguobin@live.com" target="_blank" title="Email"><i class="fas fa-envelope" style="color: #4a7dbe;"></i></a></div></div><div class="card-widget card-announcement"><div class="item-headline"><i class="fas fa-bullhorn fa-shake"></i><span>公告</span></div><div class="announcement_content">大家好，我是大明二代</div></div><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="item-headline"><i class="fas fa-stream"></i><span>目录</span><span class="toc-percentage"></span></div><div class="toc-content"><ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#Grafana-UI-%E9%83%A8%E7%BD%B2%E4%B8%8E%E6%8A%80%E6%9C%AF%E5%A4%8D%E7%9B%98%E6%8A%A5%E5%91%8A"><span class="toc-number">1.</span> <span class="toc-text">Grafana UI 部署与技术复盘报告</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#1-%E5%9F%BA%E7%A1%80%E7%8E%AF%E5%A2%83"><span class="toc-number">1.1.</span> <span class="toc-text">1. 基础环境</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#2-%E6%88%90%E5%8A%9F%E6%96%B9%E6%A1%88%EF%BC%9AIngress-%E9%83%A8%E7%BD%B2%E5%AE%9E%E8%B7%B5"><span class="toc-number">1.2.</span> <span class="toc-text">2. 成功方案：Ingress 部署实践</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E9%85%8D%E7%BD%AE%E5%AE%9E%E7%8E%B0-v1-%E6%A0%87%E5%87%86%E5%86%99%E6%B3%95"><span class="toc-number">1.2.1.</span> <span class="toc-text">配置实现 (v1 标准写法)</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E8%BF%90%E7%BB%B4%E6%93%8D%E4%BD%9C%E6%8C%87%E5%8D%97"><span class="toc-number">1.2.2.</span> <span class="toc-text">运维操作指南</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#3-%E5%A4%B1%E8%B4%A5%E5%A4%8D%E7%9B%98%EF%BC%9AGateway-API-%E5%B0%9D%E8%AF%95%E8%AE%B0%E5%BD%95"><span class="toc-number">1.3.</span> <span class="toc-text">3. 失败复盘：Gateway API 尝试记录</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E7%8E%AF%E5%A2%83%E5%88%9D%E5%A7%8B%E5%8C%96-K3s-%E5%BC%80%E5%90%AF%E6%94%AF%E6%8C%81"><span class="toc-number">1.3.1.</span> <span class="toc-text">环境初始化 (K3s 开启支持)</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%B0%9D%E8%AF%95%E9%83%A8%E7%BD%B2%E7%9A%84-Bash-%E5%91%BD%E4%BB%A4"><span class="toc-number">1.3.2.</span> <span class="toc-text">尝试部署的 Bash 命令</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E6%A0%B8%E5%BF%83%E6%8A%A5%E9%94%99%E5%88%86%E6%9E%90"><span class="toc-number">1.3.3.</span> <span class="toc-text">核心报错分析</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#4-%E5%90%8E%E7%BB%AD%E7%A0%94%E7%A9%B6%E8%AF%BE%E9%A2%98-New-K3s-Node-Plan"><span class="toc-number">1.4.</span> <span class="toc-text">4. 后续研究课题 (New K3s Node Plan)</span></a></li></ol></li></ol></div></div><div class="card-widget card-recent-post"><div class="item-headline"><i class="fas fa-history"></i><span>最新文章</span></div><div class="aside-list"><div class="aside-list-item"><a class="thumbnail" href="/2026/02/22/software/how-to-deploy-grafana-on-k3s-with-ingress/" title="Grafana UI 部署与技术复盘报告"><img src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="Grafana UI 部署与技术复盘报告"/></a><div class="content"><a class="title" href="/2026/02/22/software/how-to-deploy-grafana-on-k3s-with-ingress/" title="Grafana UI 部署与技术复盘报告">Grafana UI 部署与技术复盘报告</a><time datetime="2026-02-22T13:17:43.000Z" title="发表于 2026-02-22 21:17:43">2026-02-22</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2026/02/21/software/lightweight-oci-registry-zot-deployment-guide/" title="轻量级私有镜像仓库选型——Zot 部署与多工具兼容性实测"><img src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="轻量级私有镜像仓库选型——Zot 部署与多工具兼容性实测"/></a><div class="content"><a class="title" href="/2026/02/21/software/lightweight-oci-registry-zot-deployment-guide/" title="轻量级私有镜像仓库选型——Zot 部署与多工具兼容性实测">轻量级私有镜像仓库选型——Zot 部署与多工具兼容性实测</a><time datetime="2026-02-21T15:08:53.000Z" title="发表于 2026-02-21 23:08:53">2026-02-21</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2026/02/08/back-end/go-secure-password-reset-atomic-transaction/" title="实践分享：在 Go 项目中实现一个安全的密码重置流程"><img src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="实践分享：在 Go 项目中实现一个安全的密码重置流程"/></a><div class="content"><a class="title" href="/2026/02/08/back-end/go-secure-password-reset-atomic-transaction/" title="实践分享：在 Go 项目中实现一个安全的密码重置流程">实践分享：在 Go 项目中实现一个安全的密码重置流程</a><time datetime="2026-02-08T14:39:45.000Z" title="发表于 2026-02-08 22:39:45">2026-02-08</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2026/01/25/software/setup-kite-with-prometheus-on-k3s/" title="玩转 K8s 面板：轻量级 Kite 安装全记录 (K3s 篇)"><img src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="玩转 K8s 面板：轻量级 Kite 安装全记录 (K3s 篇)"/></a><div class="content"><a class="title" href="/2026/01/25/software/setup-kite-with-prometheus-on-k3s/" title="玩转 K8s 面板：轻量级 Kite 安装全记录 (K3s 篇)">玩转 K8s 面板：轻量级 Kite 安装全记录 (K3s 篇)</a><time datetime="2026-01-25T13:49:06.000Z" title="发表于 2026-01-25 21:49:06">2026-01-25</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2026/01/20/software/deploy-rancher-on-minikube-guide/" title="在 Minikube 上部署 Rancher：避坑指南与实战教程"><img src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="在 Minikube 上部署 Rancher：避坑指南与实战教程"/></a><div class="content"><a class="title" href="/2026/01/20/software/deploy-rancher-on-minikube-guide/" title="在 Minikube 上部署 Rancher：避坑指南与实战教程">在 Minikube 上部署 Rancher：避坑指南与实战教程</a><time datetime="2026-01-20T12:34:37.000Z" title="发表于 2026-01-20 20:34:37">2026-01-20</time></div></div></div></div></div></div></main><footer id="footer"><div id="footer-wrap"><div class="copyright">&copy;2020 - 2026 By Arthur Ming</div><div class="framework-info"><span>框架 </span><a target="_blank" rel="noopener" href="https://hexo.io">Hexo</a><span class="footer-separator">|</span><span>主题 </span><a target="_blank" rel="noopener" href="https://github.com/jerryc127/hexo-theme-butterfly">Butterfly</a></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="浅色和深色模式转换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside-config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><button id="go-up" type="button" title="回到顶部"><span class="scroll-percent"></span><i class="fas fa-arrow-up"></i></button></div></div><div><script src="/js/utils.js"></script><script src="/js/main.js"></script><script src="https://cdn.jsdelivr.net/npm/@fancyapps/ui/dist/fancybox/fancybox.umd.min.js"></script><div class="js-pjax"></div><script defer="defer" id="ribbon" src="https://cdn.jsdelivr.net/npm/butterfly-extsrc/dist/canvas-ribbon.min.js" size="150" alpha="0.6" zIndex="-1" mobile="false" data-click="true"></script><script async data-pjax src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script><div id="local-search"><div class="search-dialog"><nav class="search-nav"><span class="search-dialog-title">搜索</span><span id="loading-status"></span><button class="search-close-button"><i class="fas fa-times"></i></button></nav><div class="is-center" id="loading-database"><i class="fas fa-spinner fa-pulse"></i><span>  数据库加载中</span></div><div class="search-wrap"><div id="local-search-input"><div class="local-search-box"><input class="local-search-box--input" placeholder="搜索文章" type="text"/></div></div><hr/><div id="local-search-results"></div><div id="local-search-stats-wrap"></div></div></div><div id="search-mask"></div><script src="/js/search/local-search.js"></script></div></div></body></html>
