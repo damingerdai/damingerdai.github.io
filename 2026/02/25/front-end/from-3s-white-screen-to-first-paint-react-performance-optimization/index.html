@@ -1,0 +1,382 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="dark"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1.0,viewport-fit=cover"><title>从 3 秒白屏到首屏可见 —— 一次基于 Chrome Performance Call Tree 的深度优化复盘 | Damingerdai's Blog</title><meta name="author" content="Arthur Ming"><meta name="copyright" content="Arthur Ming"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#0d0d0d"><meta name="description" content="🎯 从 3 秒白屏到首屏可见 —— 一次基于 Chrome Performance Call Tree 的深度优化复盘 一、问题现象 页面首次进入白屏约 3 秒 300 个 Card 同步渲染 每个 Card 内嵌流程图组件 数据量 &lt; 1000  现象不是掉帧，而是：  页面完全不可见，直到 JS 执行完成。   二、使用 Chrome DevTools Performance 分析1️">
+<meta property="og:type" content="article">
+<meta property="og:title" content="从 3 秒白屏到首屏可见 —— 一次基于 Chrome Performance Call Tree 的深度优化复盘">
+<meta property="og:url" content="http://blog.damingerdai.com/2026/02/25/front-end/from-3s-white-screen-to-first-paint-react-performance-optimization/index.html">
+<meta property="og:site_name" content="Damingerdai&#39;s Blog">
+<meta property="og:description" content="🎯 从 3 秒白屏到首屏可见 —— 一次基于 Chrome Performance Call Tree 的深度优化复盘 一、问题现象 页面首次进入白屏约 3 秒 300 个 Card 同步渲染 每个 Card 内嵌流程图组件 数据量 &lt; 1000  现象不是掉帧，而是：  页面完全不可见，直到 JS 执行完成。   二、使用 Chrome DevTools Performance 分析1️">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg">
+<meta property="article:published_time" content="2026-02-25T23:11:56.000Z">
+<meta property="article:modified_time" content="2026-02-25T23:18:27.696Z">
+<meta property="article:author" content="Arthur Ming">
+<meta property="article:tag" content="Chrome Performance Call Tree">
+<meta property="article:tag" content="React">
+<meta property="article:tag" content="Chrome">
+<meta property="article:tag" content="Performance">
+<meta property="article:tag" content="首屏可见">
+<meta property="article:tag" content="首屏">
+<meta property="article:tag" content="白屏">
+<meta property="article:tag" content="优化">
+<meta property="article:tag" content="复盘">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg"><link rel="shortcut icon" href="/img/avatar.png"><link rel="canonical" href="http://blog.damingerdai.com/2026/02/25/front-end/from-3s-white-screen-to-first-paint-react-performance-optimization/index.html"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><link rel="stylesheet" href="/css/index.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free/css/all.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/ui/dist/fancybox/fancybox.min.css" media="print" onload="this.media='all'"><script>const GLOBAL_CONFIG = {
+  root: '/',
+  algolia: undefined,
+  localSearch: {"path":"/search.xml","preload":false,"top_n_per_article":1,"unescape":false,"languages":{"hits_empty":"找不到您查询的内容：${query}","hits_stats":"共找到 ${hits} 篇文章"}},
+  translate: undefined,
+  noticeOutdate: undefined,
+  highlight: {"plugin":"highlight.js","highlightCopy":true,"highlightLang":true,"highlightHeightLimit":false},
+  copy: {
+    success: '复制成功',
+    error: '复制错误',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '',
+  dateSuffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: undefined,
+  lightbox: 'fancybox',
+  Snackbar: undefined,
+  infinitegrid: {
+    js: 'https://cdn.jsdelivr.net/npm/@egjs/infinitegrid/dist/infinitegrid.min.js',
+    buttonText: '加载更多'
+  },
+  isPhotoFigcaption: false,
+  islazyload: false,
+  isAnchor: false,
+  percent: {
+    toc: true,
+    rightside: false,
+  },
+  autoDarkmode: true
+}</script><script id="config-diff">var GLOBAL_CONFIG_SITE = {
+  title: '从 3 秒白屏到首屏可见 —— 一次基于 Chrome Performance Call Tree 的深度优化复盘',
+  isPost: true,
+  isHome: false,
+  isHighlightShrink: false,
+  isToc: true,
+  postUpdate: '2026-02-26 07:18:27'
+}</script><script>(win=>{
+      win.saveToLocal = {
+        set: (key, value, ttl) => {
+          if (ttl === 0) return
+          const now = Date.now()
+          const expiry = now + ttl * 86400000
+          const item = {
+            value,
+            expiry
+          }
+          localStorage.setItem(key, JSON.stringify(item))
+        },
+      
+        get: key => {
+          const itemStr = localStorage.getItem(key)
+      
+          if (!itemStr) {
+            return undefined
+          }
+          const item = JSON.parse(itemStr)
+          const now = Date.now()
+      
+          if (now > item.expiry) {
+            localStorage.removeItem(key)
+            return undefined
+          }
+          return item.value
+        }
+      }
+    
+      win.getScript = (url, attr = {}) => new Promise((resolve, reject) => {
+        const script = document.createElement('script')
+        script.src = url
+        script.async = true
+        script.onerror = reject
+        script.onload = script.onreadystatechange = function() {
+          const loadState = this.readyState
+          if (loadState && loadState !== 'loaded' && loadState !== 'complete') return
+          script.onload = script.onreadystatechange = null
+          resolve()
+        }
+
+        Object.keys(attr).forEach(key => {
+          script.setAttribute(key, attr[key])
+        })
+
+        document.head.appendChild(script)
+      })
+    
+      win.getCSS = (url, id = false) => new Promise((resolve, reject) => {
+        const link = document.createElement('link')
+        link.rel = 'stylesheet'
+        link.href = url
+        if (id) link.id = id
+        link.onerror = reject
+        link.onload = link.onreadystatechange = function() {
+          const loadState = this.readyState
+          if (loadState && loadState !== 'loaded' && loadState !== 'complete') return
+          link.onload = link.onreadystatechange = null
+          resolve()
+        }
+        document.head.appendChild(link)
+      })
+    
+      win.activateDarkMode = () => {
+        document.documentElement.setAttribute('data-theme', 'dark')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+        }
+      }
+      win.activateLightMode = () => {
+        document.documentElement.setAttribute('data-theme', 'light')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#ffffff')
+        }
+      }
+      const t = saveToLocal.get('theme')
+    
+          const isDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches
+          const isLightMode = window.matchMedia('(prefers-color-scheme: light)').matches
+          const isNotSpecified = window.matchMedia('(prefers-color-scheme: no-preference)').matches
+          const hasNoSupport = !isDarkMode && !isLightMode && !isNotSpecified
+
+          if (t === undefined) {
+            if (isLightMode) activateLightMode()
+            else if (isDarkMode) activateDarkMode()
+            else if (isNotSpecified || hasNoSupport) {
+              const now = new Date()
+              const hour = now.getHours()
+              const isNight = hour <= 6 || hour >= 18
+              isNight ? activateDarkMode() : activateLightMode()
+            }
+            window.matchMedia('(prefers-color-scheme: dark)').addListener(e => {
+              if (saveToLocal.get('theme') === undefined) {
+                e.matches ? activateDarkMode() : activateLightMode()
+              }
+            })
+          } else if (t === 'light') activateLightMode()
+          else activateDarkMode()
+        
+      const asideStatus = saveToLocal.get('aside-status')
+      if (asideStatus !== undefined) {
+        if (asideStatus === 'hide') {
+          document.documentElement.classList.add('hide-aside')
+        } else {
+          document.documentElement.classList.remove('hide-aside')
+        }
+      }
+    
+      const detectApple = () => {
+        if(/iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent)){
+          document.documentElement.classList.add('apple')
+        }
+      }
+      detectApple()
+    })(window)</script><link rel="stylesheet" href="/css/styles.css"><meta name="generator" content="Hexo 7.3.0"></head><body><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="avatar-img is-center"><img src="/img/avatar.png" onerror="onerror=null;src='/img/friend_404.gif'" alt="avatar"/></div><div class="sidebar-site-data site-data is-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">73</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">104</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">8</div></a></div><hr class="custom-hr"/><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归类</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page group" href="javascript:void(0);"><i class="fa-fw fas fa-list"></i><span> 其他</span><i class="fas fa-chevron-down"></i></a><ul class="menus_item_child"><li><a class="site-page child" href="/others/learning"><i class="fa-fw fas fa-graduation-cap"></i><span> 学习课程</span></a></li><li><a class="site-page child" href="/others/link/"><i class="fa-fw fas fa-link"></i><span> 链接</span></a></li><li><a class="site-page child" href="/others/interview/"><i class="fa-fw fas fa-glide"></i><span> 面试</span></a></li></ul></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于</span></a></div></div></div></div><div class="post" id="body-wrap"><header class="post-bg" id="page-header" style="background-image: url('https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg')"><nav id="nav"><span id="blog-info"><a href="/" title="Damingerdai's Blog"><span class="site-name">Damingerdai's Blog</span></a></span><div id="menus"><div id="search-button"><a class="site-page social-icon search" href="javascript:void(0);"><i class="fas fa-search fa-fw"></i><span> 搜索</span></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归类</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page group" href="javascript:void(0);"><i class="fa-fw fas fa-list"></i><span> 其他</span><i class="fas fa-chevron-down"></i></a><ul class="menus_item_child"><li><a class="site-page child" href="/others/learning"><i class="fa-fw fas fa-graduation-cap"></i><span> 学习课程</span></a></li><li><a class="site-page child" href="/others/link/"><i class="fa-fw fas fa-link"></i><span> 链接</span></a></li><li><a class="site-page child" href="/others/interview/"><i class="fa-fw fas fa-glide"></i><span> 面试</span></a></li></ul></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于</span></a></div></div><div id="toggle-menu"><a class="site-page" href="javascript:void(0);"><i class="fas fa-bars fa-fw"></i></a></div></div></nav><div id="post-info"><h1 class="post-title">从 3 秒白屏到首屏可见 —— 一次基于 Chrome Performance Call Tree 的深度优化复盘</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2026-02-25T23:11:56.000Z" title="发表于 2026-02-26 07:11:56">2026-02-26</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2026-02-25T23:18:27.696Z" title="更新于 2026-02-26 07:18:27">2026-02-26</time></span><span class="post-meta-categories"><span class="post-meta-separator">|</span><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/%E5%89%8D%E7%AB%AF/">前端</a></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-pv-cv" id="" data-flag-title="从 3 秒白屏到首屏可见 —— 一次基于 Chrome Performance Call Tree 的深度优化复盘"><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">阅读量:</span><span id="busuanzi_value_page_pv"><i class="fa-solid fa-spinner fa-spin"></i></span></span></div></div></div></header><main class="layout" id="content-inner"><div id="post"><article class="post-content" id="article-container"><h1 id="🎯-从-3-秒白屏到首屏可见-——-一次基于-Chrome-Performance-Call-Tree-的深度优化复盘"><a href="#🎯-从-3-秒白屏到首屏可见-——-一次基于-Chrome-Performance-Call-Tree-的深度优化复盘" class="headerlink" title="🎯 从 3 秒白屏到首屏可见 —— 一次基于 Chrome Performance Call Tree 的深度优化复盘"></a>🎯 从 3 秒白屏到首屏可见 —— 一次基于 Chrome Performance Call Tree 的深度优化复盘</h1><hr>
+<h2 id="一、问题现象"><a href="#一、问题现象" class="headerlink" title="一、问题现象"></a>一、问题现象</h2><ul>
+<li>页面首次进入白屏约 3 秒</li>
+<li>300 个 Card 同步渲染</li>
+<li>每个 Card 内嵌流程图组件</li>
+<li>数据量 &lt; 1000</li>
+</ul>
+<p>现象不是掉帧，而是：</p>
+<blockquote>
+<p>页面完全不可见，直到 JS 执行完成。</p>
+</blockquote>
+<hr>
+<h2 id="二、使用-Chrome-DevTools-Performance-分析"><a href="#二、使用-Chrome-DevTools-Performance-分析" class="headerlink" title="二、使用 Chrome DevTools Performance 分析"></a>二、使用 Chrome DevTools Performance 分析</h2><h3 id="1️⃣-录制方式"><a href="#1️⃣-录制方式" class="headerlink" title="1️⃣ 录制方式"></a>1️⃣ 录制方式</h3><ul>
+<li>打开 Performance 面板</li>
+<li>录制页面加载过程</li>
+<li>停止录制</li>
+<li>切换到 <strong>Call Tree 视图</strong></li>
+</ul>
+<hr>
+<h2 id="三、关键截图分析（Call-Tree）"><a href="#三、关键截图分析（Call-Tree）" class="headerlink" title="三、关键截图分析（Call Tree）"></a>三、关键截图分析（Call Tree）</h2><p><img src="/.com//02/25/front-end/from-3s-white-screen-to-first-paint-react-performance-optimization/chrome-devtool-performance.png" alt="call tree"></p>
+<p>从 Call Tree 中可以看到几个关键点：</p>
+<h3 id="🔴-1-主线程长时间被占用"><a href="#🔴-1-主线程长时间被占用" class="headerlink" title="🔴 1. 主线程长时间被占用"></a>🔴 1. 主线程长时间被占用</h3><p>顶部可以看到：</p>
+<ul>
+<li><code>Function call</code></li>
+<li><code>performWorkUntilDeadline</code></li>
+<li><code>Run console task</code></li>
+<li><code>beginWork</code></li>
+</ul>
+<p>说明：</p>
+<blockquote>
+<p>这是一次 React 同步渲染过程。</p>
+</blockquote>
+<hr>
+<h3 id="🔴-2-React-渲染链路非常清晰"><a href="#🔴-2-React-渲染链路非常清晰" class="headerlink" title="🔴 2. React 渲染链路非常清晰"></a>🔴 2. React 渲染链路非常清晰</h3><p>调用栈结构大致如下：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line">performWorkUntilDeadline</span><br><span class="line">└── beginWork</span><br><span class="line">└── customNode.tsx</span><br><span class="line">├── useRequiredChecker</span><br><span class="line">├── useModuleHandle</span><br><span class="line">├── useSelector</span><br><span class="line">├── useFormikContext</span><br><span class="line">└── ...</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+
+<p>这说明：</p>
+<ul>
+<li>大量时间消耗在 React Fiber 的 beginWork 阶段</li>
+<li>组件内部 hook 执行次数非常多</li>
+<li>每个节点渲染都触发多个 hook</li>
+</ul>
+<hr>
+<h3 id="🔴-3-重组件被重复执行"><a href="#🔴-3-重组件被重复执行" class="headerlink" title="🔴 3. 重组件被重复执行"></a>🔴 3. 重组件被重复执行</h3><p>从截图中可以看到：</p>
+<ul>
+<li>customNode.tsx</li>
+<li>useRequiredChecker.ts</li>
+<li>useModuleHandle.tsx</li>
+<li>useSelector2</li>
+<li>useFormikContext</li>
+<li>ReactFlow</li>
+</ul>
+<p>这说明：</p>
+<blockquote>
+<p>每个流程图节点本身就非常重。</p>
+</blockquote>
+<p>而现在：</p>
+<ul>
+<li>300 个 Card</li>
+<li>每个 Card 一个 ReactFlow</li>
+<li>每个 ReactFlow 多个 node</li>
+<li>每个 node 多个 hook</li>
+</ul>
+<p>这是一个典型的：</p>
+<blockquote>
+<p>同步重渲染风暴</p>
+</blockquote>
+<hr>
+<h2 id="四、浏览器角度的本质分析"><a href="#四、浏览器角度的本质分析" class="headerlink" title="四、浏览器角度的本质分析"></a>四、浏览器角度的本质分析</h2><p>从 Performance 时间轴可以推断：</p>
+<ul>
+<li>Main Thread 出现长达 ~1000ms+ 的连续执行</li>
+<li>期间没有明显 idle</li>
+<li>浏览器无法执行 Paint</li>
+</ul>
+<p>浏览器渲染流程：</p>
+<ol>
+<li>JS 执行</li>
+<li>Style</li>
+<li>Layout</li>
+<li>Paint</li>
+</ol>
+<p>问题是：</p>
+<blockquote>
+<p>JS 执行阶段持续时间过长<br>浏览器无法进入 Paint 阶段</p>
+</blockquote>
+<p>所以出现：</p>
+<ul>
+<li>页面白屏</li>
+<li>直到所有组件 render + commit 完成</li>
+</ul>
+<hr>
+<h2 id="五、React-调度机制的角度"><a href="#五、React-调度机制的角度" class="headerlink" title="五、React 调度机制的角度"></a>五、React 调度机制的角度</h2><p>截图中出现：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line">performWorkUntilDeadline</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+
+<p>这是 React Scheduler 的调度函数。</p>
+<p>说明：</p>
+<ul>
+<li>React 正在同步执行任务</li>
+<li>当前更新优先级较高</li>
+<li>未被打断</li>
+</ul>
+<p>在同步模式下：</p>
+<ul>
+<li>beginWork 会遍历 Fiber 树</li>
+<li>计算所有子组件</li>
+<li>commit 阶段不可中断</li>
+</ul>
+<p>当组件数量 × 单组件复杂度 同时偏大时：</p>
+<blockquote>
+<p>很容易形成长任务</p>
+</blockquote>
+<hr>
+<h2 id="六、关键结论"><a href="#六、关键结论" class="headerlink" title="六、关键结论"></a>六、关键结论</h2><p>这次问题不是：</p>
+<ul>
+<li>数据量大</li>
+<li>列表太多</li>
+<li>算法问题</li>
+</ul>
+<p>而是：</p>
+<blockquote>
+<p>同步渲染了大量 CPU 密集型 UI 组件</p>
+</blockquote>
+<p>这是一个：</p>
+<blockquote>
+<p>主线程调度问题</p>
+</blockquote>
+<p>而不是：</p>
+<blockquote>
+<p>数据结构问题</p>
+</blockquote>
+<hr>
+<h2 id="七、方案对比回顾"><a href="#七、方案对比回顾" class="headerlink" title="七、方案对比回顾"></a>七、方案对比回顾</h2><h3 id="❌-虚拟列表"><a href="#❌-虚拟列表" class="headerlink" title="❌ 虚拟列表"></a>❌ 虚拟列表</h3><ul>
+<li>可以减少数量</li>
+<li>但改造成本高</li>
+<li>未必击中根因</li>
+</ul>
+<hr>
+<h3 id="⚠️-分片渲染"><a href="#⚠️-分片渲染" class="headerlink" title="⚠️ 分片渲染"></a>⚠️ 分片渲染</h3><ul>
+<li>可缓解长任务</li>
+<li>但每片仍包含重组件</li>
+</ul>
+<hr>
+<h3 id="✅-延迟重组件渲染（最终方案）"><a href="#✅-延迟重组件渲染（最终方案）" class="headerlink" title="✅ 延迟重组件渲染（最终方案）"></a>✅ 延迟重组件渲染（最终方案）</h3><p>核心思想：</p>
+<ol>
+<li>让轻内容先完成渲染</li>
+<li>重组件延迟到下一帧</li>
+<li>使用 Skeleton 占位</li>
+<li>打破长任务链路</li>
+</ol>
+<p>本质：</p>
+<blockquote>
+<p>把 3000ms 的连续长任务拆成多个小任务</p>
+</blockquote>
+<p>让浏览器获得 Paint 机会。</p>
+<hr>
+<h2 id="八、优化后的变化"><a href="#八、优化后的变化" class="headerlink" title="八、优化后的变化"></a>八、优化后的变化</h2><p>优化前：</p>
+<ul>
+<li>Main Thread 长时间连续执行</li>
+<li>无法 Paint</li>
+<li>白屏 3 秒</li>
+</ul>
+<p>优化后：</p>
+<ul>
+<li>主线程任务被拆散</li>
+<li>首屏快速可见</li>
+<li>重组件分布到后续帧</li>
+<li>用户感知明显改善</li>
+</ul>
+<p>注意：</p>
+<blockquote>
+<p>总计算量变化不大<br>但渲染节奏改变了</p>
+</blockquote>
+<hr>
+<h2 id="九、架构层升维总结"><a href="#九、架构层升维总结" class="headerlink" title="九、架构层升维总结"></a>九、架构层升维总结</h2><p>这次优化的本质是：</p>
+<blockquote>
+<p>控制 UI 渲染节奏<br>而不是减少数据量</p>
+</blockquote>
+<p>真正重要的是理解：</p>
+<ul>
+<li>浏览器渲染模型</li>
+<li>主线程竞争</li>
+<li>React Fiber 调度</li>
+<li>长任务对 Paint 的阻塞机制</li>
+</ul>
+<hr>
+<h1 id="🔚-终极总结"><a href="#🔚-终极总结" class="headerlink" title="🔚 终极总结"></a>🔚 终极总结</h1><p>性能优化的成熟思维是：</p>
+<ol>
+<li>不凭直觉选方案</li>
+<li>不迷信虚拟列表</li>
+<li>不盲目上并发特性</li>
+<li>先看 Call Tree</li>
+<li>找到真正的长任务</li>
+<li>从调度层面解决问题</li>
+</ol>
+<p>当你开始关注：</p>
+<blockquote>
+<p>主线程时间片<br>而不是组件数量  </p>
+</blockquote>
+<p>你就进入了更高维度的性能优化阶段。</p>
+</article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta"><i class="fas fa-circle-user fa-fw"></i>文章作者: </span><span class="post-copyright-info"><a href="http://blog.damingerdai.com">Arthur Ming</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta"><i class="fas fa-square-arrow-up-right fa-fw"></i>文章链接: </span><span class="post-copyright-info"><a href="http://blog.damingerdai.com/2026/02/25/front-end/from-3s-white-screen-to-first-paint-react-performance-optimization/">http://blog.damingerdai.com/2026/02/25/front-end/from-3s-white-screen-to-first-paint-react-performance-optimization/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta"><i class="fas fa-circle-exclamation fa-fw"></i>版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来自 <a href="http://blog.damingerdai.com" target="_blank">Damingerdai's Blog</a>！</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/Chrome-Performance-Call-Tree/">Chrome Performance Call Tree</a><a class="post-meta__tags" href="/tags/React/">React</a><a class="post-meta__tags" href="/tags/Chrome/">Chrome</a><a class="post-meta__tags" href="/tags/Performance/">Performance</a><a class="post-meta__tags" href="/tags/%E9%A6%96%E5%B1%8F%E5%8F%AF%E8%A7%81/">首屏可见</a><a class="post-meta__tags" href="/tags/%E9%A6%96%E5%B1%8F/">首屏</a><a class="post-meta__tags" href="/tags/%E7%99%BD%E5%B1%8F/">白屏</a><a class="post-meta__tags" href="/tags/%E4%BC%98%E5%8C%96/">优化</a><a class="post-meta__tags" href="/tags/%E5%A4%8D%E7%9B%98/">复盘</a></div><div class="post_share"><div class="social-share" data-image="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" data-sites="facebook,twitter,wechat,weibo,qq"></div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/butterfly-extsrc/sharejs/dist/css/share.min.css" media="print" onload="this.media='all'"><script src="https://cdn.jsdelivr.net/npm/butterfly-extsrc/sharejs/dist/js/social-share.min.js" defer></script></div></div><nav class="pagination-post" id="pagination"><div class="next-post pull-full"><a href="/2026/02/24/summary/2025/" title="2025年度总结"><img class="cover" src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" onerror="onerror=null;src='/img/404.jpg'" alt="cover of next post"><div class="pagination-info"><div class="label">下一篇</div><div class="next_info">2025年度总结</div></div></a></div></nav></div><div class="aside-content" id="aside-content"><div class="card-widget card-info"><div class="is-center"><div class="avatar-img"><img src="/img/avatar.png" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="author-info__name">Arthur Ming</div><div class="author-info__description">大明二代的博客</div></div><div class="card-info-data site-data is-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">73</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">104</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">8</div></a></div><a id="card-info-btn" target="_blank" rel="noopener" href="https://github.com/damingerdai"><i class="fab fa-github"></i><span>Follow Me</span></a><div class="card-info-social-icons is-center"><a class="social-icon" href="https://github.com/damingerdai" target="_blank" title="Github"><i class="fab fa-github" style="color: #24292e;"></i></a><a class="social-icon" href="mailto:mingguobin@live.com" target="_blank" title="Email"><i class="fas fa-envelope" style="color: #4a7dbe;"></i></a></div></div><div class="card-widget card-announcement"><div class="item-headline"><i class="fas fa-bullhorn fa-shake"></i><span>公告</span></div><div class="announcement_content">大家好，我是大明二代</div></div><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="item-headline"><i class="fas fa-stream"></i><span>目录</span><span class="toc-percentage"></span></div><div class="toc-content"><ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#%F0%9F%8E%AF-%E4%BB%8E-3-%E7%A7%92%E7%99%BD%E5%B1%8F%E5%88%B0%E9%A6%96%E5%B1%8F%E5%8F%AF%E8%A7%81-%E2%80%94%E2%80%94-%E4%B8%80%E6%AC%A1%E5%9F%BA%E4%BA%8E-Chrome-Performance-Call-Tree-%E7%9A%84%E6%B7%B1%E5%BA%A6%E4%BC%98%E5%8C%96%E5%A4%8D%E7%9B%98"><span class="toc-number">1.</span> <span class="toc-text">🎯 从 3 秒白屏到首屏可见 —— 一次基于 Chrome Performance Call Tree 的深度优化复盘</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%B8%80%E3%80%81%E9%97%AE%E9%A2%98%E7%8E%B0%E8%B1%A1"><span class="toc-number">1.1.</span> <span class="toc-text">一、问题现象</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%BA%8C%E3%80%81%E4%BD%BF%E7%94%A8-Chrome-DevTools-Performance-%E5%88%86%E6%9E%90"><span class="toc-number">1.2.</span> <span class="toc-text">二、使用 Chrome DevTools Performance 分析</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#1%EF%B8%8F%E2%83%A3-%E5%BD%95%E5%88%B6%E6%96%B9%E5%BC%8F"><span class="toc-number">1.2.1.</span> <span class="toc-text">1️⃣ 录制方式</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%B8%89%E3%80%81%E5%85%B3%E9%94%AE%E6%88%AA%E5%9B%BE%E5%88%86%E6%9E%90%EF%BC%88Call-Tree%EF%BC%89"><span class="toc-number">1.3.</span> <span class="toc-text">三、关键截图分析（Call Tree）</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%F0%9F%94%B4-1-%E4%B8%BB%E7%BA%BF%E7%A8%8B%E9%95%BF%E6%97%B6%E9%97%B4%E8%A2%AB%E5%8D%A0%E7%94%A8"><span class="toc-number">1.3.1.</span> <span class="toc-text">🔴 1. 主线程长时间被占用</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%F0%9F%94%B4-2-React-%E6%B8%B2%E6%9F%93%E9%93%BE%E8%B7%AF%E9%9D%9E%E5%B8%B8%E6%B8%85%E6%99%B0"><span class="toc-number">1.3.2.</span> <span class="toc-text">🔴 2. React 渲染链路非常清晰</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%F0%9F%94%B4-3-%E9%87%8D%E7%BB%84%E4%BB%B6%E8%A2%AB%E9%87%8D%E5%A4%8D%E6%89%A7%E8%A1%8C"><span class="toc-number">1.3.3.</span> <span class="toc-text">🔴 3. 重组件被重复执行</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%9B%9B%E3%80%81%E6%B5%8F%E8%A7%88%E5%99%A8%E8%A7%92%E5%BA%A6%E7%9A%84%E6%9C%AC%E8%B4%A8%E5%88%86%E6%9E%90"><span class="toc-number">1.4.</span> <span class="toc-text">四、浏览器角度的本质分析</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%BA%94%E3%80%81React-%E8%B0%83%E5%BA%A6%E6%9C%BA%E5%88%B6%E7%9A%84%E8%A7%92%E5%BA%A6"><span class="toc-number">1.5.</span> <span class="toc-text">五、React 调度机制的角度</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%85%AD%E3%80%81%E5%85%B3%E9%94%AE%E7%BB%93%E8%AE%BA"><span class="toc-number">1.6.</span> <span class="toc-text">六、关键结论</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%B8%83%E3%80%81%E6%96%B9%E6%A1%88%E5%AF%B9%E6%AF%94%E5%9B%9E%E9%A1%BE"><span class="toc-number">1.7.</span> <span class="toc-text">七、方案对比回顾</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E2%9D%8C-%E8%99%9A%E6%8B%9F%E5%88%97%E8%A1%A8"><span class="toc-number">1.7.1.</span> <span class="toc-text">❌ 虚拟列表</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E2%9A%A0%EF%B8%8F-%E5%88%86%E7%89%87%E6%B8%B2%E6%9F%93"><span class="toc-number">1.7.2.</span> <span class="toc-text">⚠️ 分片渲染</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E2%9C%85-%E5%BB%B6%E8%BF%9F%E9%87%8D%E7%BB%84%E4%BB%B6%E6%B8%B2%E6%9F%93%EF%BC%88%E6%9C%80%E7%BB%88%E6%96%B9%E6%A1%88%EF%BC%89"><span class="toc-number">1.7.3.</span> <span class="toc-text">✅ 延迟重组件渲染（最终方案）</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%85%AB%E3%80%81%E4%BC%98%E5%8C%96%E5%90%8E%E7%9A%84%E5%8F%98%E5%8C%96"><span class="toc-number">1.8.</span> <span class="toc-text">八、优化后的变化</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%B9%9D%E3%80%81%E6%9E%B6%E6%9E%84%E5%B1%82%E5%8D%87%E7%BB%B4%E6%80%BB%E7%BB%93"><span class="toc-number">1.9.</span> <span class="toc-text">九、架构层升维总结</span></a></li></ol></li><li class="toc-item toc-level-1"><a class="toc-link" href="#%F0%9F%94%9A-%E7%BB%88%E6%9E%81%E6%80%BB%E7%BB%93"><span class="toc-number">2.</span> <span class="toc-text">🔚 终极总结</span></a></li></ol></div></div><div class="card-widget card-recent-post"><div class="item-headline"><i class="fas fa-history"></i><span>最新文章</span></div><div class="aside-list"><div class="aside-list-item"><a class="thumbnail" href="/2026/02/25/front-end/from-3s-white-screen-to-first-paint-react-performance-optimization/" title="从 3 秒白屏到首屏可见 —— 一次基于 Chrome Performance Call Tree 的深度优化复盘"><img src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="从 3 秒白屏到首屏可见 —— 一次基于 Chrome Performance Call Tree 的深度优化复盘"/></a><div class="content"><a class="title" href="/2026/02/25/front-end/from-3s-white-screen-to-first-paint-react-performance-optimization/" title="从 3 秒白屏到首屏可见 —— 一次基于 Chrome Performance Call Tree 的深度优化复盘">从 3 秒白屏到首屏可见 —— 一次基于 Chrome Performance Call Tree 的深度优化复盘</a><time datetime="2026-02-25T23:11:56.000Z" title="发表于 2026-02-26 07:11:56">2026-02-26</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2026/02/24/summary/2025/" title="2025年度总结"><img src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="2025年度总结"/></a><div class="content"><a class="title" href="/2026/02/24/summary/2025/" title="2025年度总结">2025年度总结</a><time datetime="2026-02-24T13:57:59.000Z" title="发表于 2026-02-24 21:57:59">2026-02-24</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2026/02/22/software/how-to-deploy-grafana-on-k3s-with-ingress/" title="Grafana UI 部署与技术复盘报告"><img src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="Grafana UI 部署与技术复盘报告"/></a><div class="content"><a class="title" href="/2026/02/22/software/how-to-deploy-grafana-on-k3s-with-ingress/" title="Grafana UI 部署与技术复盘报告">Grafana UI 部署与技术复盘报告</a><time datetime="2026-02-22T13:17:43.000Z" title="发表于 2026-02-22 21:17:43">2026-02-22</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2026/02/21/software/lightweight-oci-registry-zot-deployment-guide/" title="轻量级私有镜像仓库选型——Zot 部署与多工具兼容性实测"><img src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="轻量级私有镜像仓库选型——Zot 部署与多工具兼容性实测"/></a><div class="content"><a class="title" href="/2026/02/21/software/lightweight-oci-registry-zot-deployment-guide/" title="轻量级私有镜像仓库选型——Zot 部署与多工具兼容性实测">轻量级私有镜像仓库选型——Zot 部署与多工具兼容性实测</a><time datetime="2026-02-21T15:08:53.000Z" title="发表于 2026-02-21 23:08:53">2026-02-21</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2026/02/08/back-end/go-secure-password-reset-atomic-transaction/" title="实践分享：在 Go 项目中实现一个安全的密码重置流程"><img src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="实践分享：在 Go 项目中实现一个安全的密码重置流程"/></a><div class="content"><a class="title" href="/2026/02/08/back-end/go-secure-password-reset-atomic-transaction/" title="实践分享：在 Go 项目中实现一个安全的密码重置流程">实践分享：在 Go 项目中实现一个安全的密码重置流程</a><time datetime="2026-02-08T14:39:45.000Z" title="发表于 2026-02-08 22:39:45">2026-02-08</time></div></div></div></div></div></div></main><footer id="footer"><div id="footer-wrap"><div class="copyright">&copy;2020 - 2026 By Arthur Ming</div><div class="framework-info"><span>框架 </span><a target="_blank" rel="noopener" href="https://hexo.io">Hexo</a><span class="footer-separator">|</span><span>主题 </span><a target="_blank" rel="noopener" href="https://github.com/jerryc127/hexo-theme-butterfly">Butterfly</a></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="浅色和深色模式转换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside-config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><button id="go-up" type="button" title="回到顶部"><span class="scroll-percent"></span><i class="fas fa-arrow-up"></i></button></div></div><div><script src="/js/utils.js"></script><script src="/js/main.js"></script><script src="https://cdn.jsdelivr.net/npm/@fancyapps/ui/dist/fancybox/fancybox.umd.min.js"></script><div class="js-pjax"></div><script defer="defer" id="ribbon" src="https://cdn.jsdelivr.net/npm/butterfly-extsrc/dist/canvas-ribbon.min.js" size="150" alpha="0.6" zIndex="-1" mobile="false" data-click="true"></script><script async data-pjax src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script><div id="local-search"><div class="search-dialog"><nav class="search-nav"><span class="search-dialog-title">搜索</span><span id="loading-status"></span><button class="search-close-button"><i class="fas fa-times"></i></button></nav><div class="is-center" id="loading-database"><i class="fas fa-spinner fa-pulse"></i><span>  数据库加载中</span></div><div class="search-wrap"><div id="local-search-input"><div class="local-search-box"><input class="local-search-box--input" placeholder="搜索文章" type="text"/></div></div><hr/><div id="local-search-results"></div><div id="local-search-stats-wrap"></div></div></div><div id="search-mask"></div><script src="/js/search/local-search.js"></script></div></div></body></html>
