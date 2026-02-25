@@ -8,7 +8,7 @@
       <link href="/2026/02/25/front-end/from-3s-white-screen-to-first-paint-react-performance-optimization/"/>
       <url>/2026/02/25/front-end/from-3s-white-screen-to-first-paint-react-performance-optimization/</url>
       
-        <content type="html"><![CDATA[<h1 id="🎯-从-3-秒白屏到首屏可见-——-一次基于-Chrome-Performance-Call-Tree-的深度优化复盘"><a href="#🎯-从-3-秒白屏到首屏可见-——-一次基于-Chrome-Performance-Call-Tree-的深度优化复盘" class="headerlink" title="🎯 从 3 秒白屏到首屏可见 —— 一次基于 Chrome Performance Call Tree 的深度优化复盘"></a>🎯 从 3 秒白屏到首屏可见 —— 一次基于 Chrome Performance Call Tree 的深度优化复盘</h1><hr><h2 id="一、问题现象"><a href="#一、问题现象" class="headerlink" title="一、问题现象"></a>一、问题现象</h2><ul><li>页面首次进入白屏约 3 秒</li><li>300 个 Card 同步渲染</li><li>每个 Card 内嵌流程图组件</li><li>数据量 &lt; 1000</li></ul><p>现象不是掉帧，而是：</p><blockquote><p>页面完全不可见，直到 JS 执行完成。</p></blockquote><hr><h2 id="二、使用-Chrome-DevTools-Performance-分析"><a href="#二、使用-Chrome-DevTools-Performance-分析" class="headerlink" title="二、使用 Chrome DevTools Performance 分析"></a>二、使用 Chrome DevTools Performance 分析</h2><h3 id="1️⃣-录制方式"><a href="#1️⃣-录制方式" class="headerlink" title="1️⃣ 录制方式"></a>1️⃣ 录制方式</h3><ul><li>打开 Performance 面板</li><li>录制页面加载过程</li><li>停止录制</li><li>切换到 <strong>Call Tree 视图</strong></li></ul><hr><h2 id="三、关键截图分析（Call-Tree）"><a href="#三、关键截图分析（Call-Tree）" class="headerlink" title="三、关键截图分析（Call Tree）"></a>三、关键截图分析（Call Tree）</h2><p><img src="/.com//02/25/front-end/from-3s-white-screen-to-first-paint-react-performance-optimization/chrome-devtool-performance.png" alt="call tree"></p><p>从 Call Tree 中可以看到几个关键点：</p><h3 id="🔴-1-主线程长时间被占用"><a href="#🔴-1-主线程长时间被占用" class="headerlink" title="🔴 1. 主线程长时间被占用"></a>🔴 1. 主线程长时间被占用</h3><p>顶部可以看到：</p><ul><li><code>Function call</code></li><li><code>performWorkUntilDeadline</code></li><li><code>Run console task</code></li><li><code>beginWork</code></li></ul><p>说明：</p><blockquote><p>这是一次 React 同步渲染过程。</p></blockquote><hr><h3 id="🔴-2-React-渲染链路非常清晰"><a href="#🔴-2-React-渲染链路非常清晰" class="headerlink" title="🔴 2. React 渲染链路非常清晰"></a>🔴 2. React 渲染链路非常清晰</h3><p>调用栈结构大致如下：</p><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line">performWorkUntilDeadline</span><br><span class="line">└── beginWork</span><br><span class="line">└── customNode.tsx</span><br><span class="line">├── useRequiredChecker</span><br><span class="line">├── useModuleHandle</span><br><span class="line">├── useSelector</span><br><span class="line">├── useFormikContext</span><br><span class="line">└── ...</span><br><span class="line"></span><br></pre></td></tr></table></figure><p>这说明：</p><ul><li>大量时间消耗在 React Fiber 的 beginWork 阶段</li><li>组件内部 hook 执行次数非常多</li><li>每个节点渲染都触发多个 hook</li></ul><hr><h3 id="🔴-3-重组件被重复执行"><a href="#🔴-3-重组件被重复执行" class="headerlink" title="🔴 3. 重组件被重复执行"></a>🔴 3. 重组件被重复执行</h3><p>从截图中可以看到：</p><ul><li>customNode.tsx</li><li>useRequiredChecker.ts</li><li>useModuleHandle.tsx</li><li>useSelector2</li><li>useFormikContext</li><li>ReactFlow</li></ul><p>这说明：</p><blockquote><p>每个流程图节点本身就非常重。</p></blockquote><p>而现在：</p><ul><li>300 个 Card</li><li>每个 Card 一个 ReactFlow</li><li>每个 ReactFlow 多个 node</li><li>每个 node 多个 hook</li></ul><p>这是一个典型的：</p><blockquote><p>同步重渲染风暴</p></blockquote><hr><h2 id="四、浏览器角度的本质分析"><a href="#四、浏览器角度的本质分析" class="headerlink" title="四、浏览器角度的本质分析"></a>四、浏览器角度的本质分析</h2><p>从 Performance 时间轴可以推断：</p><ul><li>Main Thread 出现长达 ~1000ms+ 的连续执行</li><li>期间没有明显 idle</li><li>浏览器无法执行 Paint</li></ul><p>浏览器渲染流程：</p><ol><li>JS 执行</li><li>Style</li><li>Layout</li><li>Paint</li></ol><p>问题是：</p><blockquote><p>JS 执行阶段持续时间过长<br>浏览器无法进入 Paint 阶段</p></blockquote><p>所以出现：</p><ul><li>页面白屏</li><li>直到所有组件 render + commit 完成</li></ul><hr><h2 id="五、React-调度机制的角度"><a href="#五、React-调度机制的角度" class="headerlink" title="五、React 调度机制的角度"></a>五、React 调度机制的角度</h2><p>截图中出现：</p><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line">performWorkUntilDeadline</span><br><span class="line"></span><br></pre></td></tr></table></figure><p>这是 React Scheduler 的调度函数。</p><p>说明：</p><ul><li>React 正在同步执行任务</li><li>当前更新优先级较高</li><li>未被打断</li></ul><p>在同步模式下：</p><ul><li>beginWork 会遍历 Fiber 树</li><li>计算所有子组件</li><li>commit 阶段不可中断</li></ul><p>当组件数量 × 单组件复杂度 同时偏大时：</p><blockquote><p>很容易形成长任务</p></blockquote><hr><h2 id="六、关键结论"><a href="#六、关键结论" class="headerlink" title="六、关键结论"></a>六、关键结论</h2><p>这次问题不是：</p><ul><li>数据量大</li><li>列表太多</li><li>算法问题</li></ul><p>而是：</p><blockquote><p>同步渲染了大量 CPU 密集型 UI 组件</p></blockquote><p>这是一个：</p><blockquote><p>主线程调度问题</p></blockquote><p>而不是：</p><blockquote><p>数据结构问题</p></blockquote><hr><h2 id="七、方案对比回顾"><a href="#七、方案对比回顾" class="headerlink" title="七、方案对比回顾"></a>七、方案对比回顾</h2><h3 id="❌-虚拟列表"><a href="#❌-虚拟列表" class="headerlink" title="❌ 虚拟列表"></a>❌ 虚拟列表</h3><ul><li>可以减少数量</li><li>但改造成本高</li><li>未必击中根因</li></ul><hr><h3 id="⚠️-分片渲染"><a href="#⚠️-分片渲染" class="headerlink" title="⚠️ 分片渲染"></a>⚠️ 分片渲染</h3><ul><li>可缓解长任务</li><li>但每片仍包含重组件</li></ul><hr><h3 id="✅-延迟重组件渲染（最终方案）"><a href="#✅-延迟重组件渲染（最终方案）" class="headerlink" title="✅ 延迟重组件渲染（最终方案）"></a>✅ 延迟重组件渲染（最终方案）</h3><p>核心思想：</p><ol><li>让轻内容先完成渲染</li><li>重组件延迟到下一帧</li><li>使用 Skeleton 占位</li><li>打破长任务链路</li></ol><p>本质：</p><blockquote><p>把 3000ms 的连续长任务拆成多个小任务</p></blockquote><p>让浏览器获得 Paint 机会。</p><hr><h2 id="八、优化后的变化"><a href="#八、优化后的变化" class="headerlink" title="八、优化后的变化"></a>八、优化后的变化</h2><p>优化前：</p><ul><li>Main Thread 长时间连续执行</li><li>无法 Paint</li><li>白屏 3 秒</li></ul><p>优化后：</p><ul><li>主线程任务被拆散</li><li>首屏快速可见</li><li>重组件分布到后续帧</li><li>用户感知明显改善</li></ul><p>注意：</p><blockquote><p>总计算量变化不大<br>但渲染节奏改变了</p></blockquote><hr><h2 id="九、架构层升维总结"><a href="#九、架构层升维总结" class="headerlink" title="九、架构层升维总结"></a>九、架构层升维总结</h2><p>这次优化的本质是：</p><blockquote><p>控制 UI 渲染节奏<br>而不是减少数据量</p></blockquote><p>真正重要的是理解：</p><ul><li>浏览器渲染模型</li><li>主线程竞争</li><li>React Fiber 调度</li><li>长任务对 Paint 的阻塞机制</li></ul><hr><h1 id="🔚-终极总结"><a href="#🔚-终极总结" class="headerlink" title="🔚 终极总结"></a>🔚 终极总结</h1><p>性能优化的成熟思维是：</p><ol><li>不凭直觉选方案</li><li>不迷信虚拟列表</li><li>不盲目上并发特性</li><li>先看 Call Tree</li><li>找到真正的长任务</li><li>从调度层面解决问题</li></ol><p>当你开始关注：</p><blockquote><p>主线程时间片<br>而不是组件数量  </p></blockquote><p>你就进入了更高维度的性能优化阶段。</p>]]></content>
+        <content type="html"><![CDATA[<h1 id="🎯-从-3-秒白屏到首屏可见-——-一次基于-Chrome-Performance-Call-Tree-的深度优化复盘"><a href="#🎯-从-3-秒白屏到首屏可见-——-一次基于-Chrome-Performance-Call-Tree-的深度优化复盘" class="headerlink" title="🎯 从 3 秒白屏到首屏可见 —— 一次基于 Chrome Performance Call Tree 的深度优化复盘"></a>🎯 从 3 秒白屏到首屏可见 —— 一次基于 Chrome Performance Call Tree 的深度优化复盘</h1><hr><h2 id="一、问题现象"><a href="#一、问题现象" class="headerlink" title="一、问题现象"></a>一、问题现象</h2><ul><li>页面首次进入白屏约 3 秒</li><li>300 个 Card 同步渲染</li><li>每个 Card 内嵌流程图组件</li><li>数据量 &lt; 1000</li></ul><p>现象不是掉帧，而是：</p><blockquote><p>页面完全不可见，直到 JS 执行完成。</p></blockquote><hr><h2 id="二、使用-Chrome-DevTools-Performance-分析"><a href="#二、使用-Chrome-DevTools-Performance-分析" class="headerlink" title="二、使用 Chrome DevTools Performance 分析"></a>二、使用 Chrome DevTools Performance 分析</h2><h3 id="1️⃣-录制方式"><a href="#1️⃣-录制方式" class="headerlink" title="1️⃣ 录制方式"></a>1️⃣ 录制方式</h3><ul><li>打开 Performance 面板</li><li>录制页面加载过程</li><li>停止录制</li><li>切换到 <strong>Call Tree 视图</strong></li></ul><hr><h2 id="三、关键截图分析（Call-Tree）"><a href="#三、关键截图分析（Call-Tree）" class="headerlink" title="三、关键截图分析（Call Tree）"></a>三、关键截图分析（Call Tree）</h2><p><img src="/images/from-3s-white-screen-to-first-paint-react-performance-optimization/chrome-devtool-performance.png" alt="call tree"></p><p>从 Call Tree 中可以看到几个关键点：</p><h3 id="🔴-1-主线程长时间被占用"><a href="#🔴-1-主线程长时间被占用" class="headerlink" title="🔴 1. 主线程长时间被占用"></a>🔴 1. 主线程长时间被占用</h3><p>顶部可以看到：</p><ul><li><code>Function call</code></li><li><code>performWorkUntilDeadline</code></li><li><code>Run console task</code></li><li><code>beginWork</code></li></ul><p>说明：</p><blockquote><p>这是一次 React 同步渲染过程。</p></blockquote><hr><h3 id="🔴-2-React-渲染链路非常清晰"><a href="#🔴-2-React-渲染链路非常清晰" class="headerlink" title="🔴 2. React 渲染链路非常清晰"></a>🔴 2. React 渲染链路非常清晰</h3><p>调用栈结构大致如下：</p><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line">performWorkUntilDeadline</span><br><span class="line">└── beginWork</span><br><span class="line">└── customNode.tsx</span><br><span class="line">├── useRequiredChecker</span><br><span class="line">├── useModuleHandle</span><br><span class="line">├── useSelector</span><br><span class="line">├── useFormikContext</span><br><span class="line">└── ...</span><br><span class="line"></span><br></pre></td></tr></table></figure><p>这说明：</p><ul><li>大量时间消耗在 React Fiber 的 beginWork 阶段</li><li>组件内部 hook 执行次数非常多</li><li>每个节点渲染都触发多个 hook</li></ul><hr><h3 id="🔴-3-重组件被重复执行"><a href="#🔴-3-重组件被重复执行" class="headerlink" title="🔴 3. 重组件被重复执行"></a>🔴 3. 重组件被重复执行</h3><p>从截图中可以看到：</p><ul><li>customNode.tsx</li><li>useRequiredChecker.ts</li><li>useModuleHandle.tsx</li><li>useSelector2</li><li>useFormikContext</li><li>ReactFlow</li></ul><p>这说明：</p><blockquote><p>每个流程图节点本身就非常重。</p></blockquote><p>而现在：</p><ul><li>300 个 Card</li><li>每个 Card 一个 ReactFlow</li><li>每个 ReactFlow 多个 node</li><li>每个 node 多个 hook</li></ul><p>这是一个典型的：</p><blockquote><p>同步重渲染风暴</p></blockquote><hr><h2 id="四、浏览器角度的本质分析"><a href="#四、浏览器角度的本质分析" class="headerlink" title="四、浏览器角度的本质分析"></a>四、浏览器角度的本质分析</h2><p>从 Performance 时间轴可以推断：</p><ul><li>Main Thread 出现长达 ~1000ms+ 的连续执行</li><li>期间没有明显 idle</li><li>浏览器无法执行 Paint</li></ul><p>浏览器渲染流程：</p><ol><li>JS 执行</li><li>Style</li><li>Layout</li><li>Paint</li></ol><p>问题是：</p><blockquote><p>JS 执行阶段持续时间过长<br>浏览器无法进入 Paint 阶段</p></blockquote><p>所以出现：</p><ul><li>页面白屏</li><li>直到所有组件 render + commit 完成</li></ul><hr><h2 id="五、React-调度机制的角度"><a href="#五、React-调度机制的角度" class="headerlink" title="五、React 调度机制的角度"></a>五、React 调度机制的角度</h2><p>截图中出现：</p><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line">performWorkUntilDeadline</span><br><span class="line"></span><br></pre></td></tr></table></figure><p>这是 React Scheduler 的调度函数。</p><p>说明：</p><ul><li>React 正在同步执行任务</li><li>当前更新优先级较高</li><li>未被打断</li></ul><p>在同步模式下：</p><ul><li>beginWork 会遍历 Fiber 树</li><li>计算所有子组件</li><li>commit 阶段不可中断</li></ul><p>当组件数量 × 单组件复杂度 同时偏大时：</p><blockquote><p>很容易形成长任务</p></blockquote><hr><h2 id="六、关键结论"><a href="#六、关键结论" class="headerlink" title="六、关键结论"></a>六、关键结论</h2><p>这次问题不是：</p><ul><li>数据量大</li><li>列表太多</li><li>算法问题</li></ul><p>而是：</p><blockquote><p>同步渲染了大量 CPU 密集型 UI 组件</p></blockquote><p>这是一个：</p><blockquote><p>主线程调度问题</p></blockquote><p>而不是：</p><blockquote><p>数据结构问题</p></blockquote><hr><h2 id="七、方案对比回顾"><a href="#七、方案对比回顾" class="headerlink" title="七、方案对比回顾"></a>七、方案对比回顾</h2><h3 id="❌-虚拟列表"><a href="#❌-虚拟列表" class="headerlink" title="❌ 虚拟列表"></a>❌ 虚拟列表</h3><ul><li>可以减少数量</li><li>但改造成本高</li><li>未必击中根因</li></ul><hr><h3 id="⚠️-分片渲染"><a href="#⚠️-分片渲染" class="headerlink" title="⚠️ 分片渲染"></a>⚠️ 分片渲染</h3><ul><li>可缓解长任务</li><li>但每片仍包含重组件</li></ul><hr><h3 id="✅-延迟重组件渲染（最终方案）"><a href="#✅-延迟重组件渲染（最终方案）" class="headerlink" title="✅ 延迟重组件渲染（最终方案）"></a>✅ 延迟重组件渲染（最终方案）</h3><p>核心思想：</p><ol><li>让轻内容先完成渲染</li><li>重组件延迟到下一帧</li><li>使用 Skeleton 占位</li><li>打破长任务链路</li></ol><p>本质：</p><blockquote><p>把 3000ms 的连续长任务拆成多个小任务</p></blockquote><p>让浏览器获得 Paint 机会。</p><hr><h2 id="八、优化后的变化"><a href="#八、优化后的变化" class="headerlink" title="八、优化后的变化"></a>八、优化后的变化</h2><p>优化前：</p><ul><li>Main Thread 长时间连续执行</li><li>无法 Paint</li><li>白屏 3 秒</li></ul><p>优化后：</p><ul><li>主线程任务被拆散</li><li>首屏快速可见</li><li>重组件分布到后续帧</li><li>用户感知明显改善</li></ul><p>注意：</p><blockquote><p>总计算量变化不大<br>但渲染节奏改变了</p></blockquote><hr><h2 id="九、架构层升维总结"><a href="#九、架构层升维总结" class="headerlink" title="九、架构层升维总结"></a>九、架构层升维总结</h2><p>这次优化的本质是：</p><blockquote><p>控制 UI 渲染节奏<br>而不是减少数据量</p></blockquote><p>真正重要的是理解：</p><ul><li>浏览器渲染模型</li><li>主线程竞争</li><li>React Fiber 调度</li><li>长任务对 Paint 的阻塞机制</li></ul><hr><h1 id="🔚-终极总结"><a href="#🔚-终极总结" class="headerlink" title="🔚 终极总结"></a>🔚 终极总结</h1><p>性能优化的成熟思维是：</p><ol><li>不凭直觉选方案</li><li>不迷信虚拟列表</li><li>不盲目上并发特性</li><li>先看 Call Tree</li><li>找到真正的长任务</li><li>从调度层面解决问题</li></ol><p>当你开始关注：</p><blockquote><p>主线程时间片<br>而不是组件数量  </p></blockquote><p>你就进入了更高维度的性能优化阶段。</p>]]></content>
       
       
       <categories>
@@ -914,9 +914,9 @@
       
         <tags>
             
-            <tag> javascript </tag>
-            
             <tag> 前端 </tag>
+            
+            <tag> javascript </tag>
             
         </tags>
       
@@ -1030,9 +1030,9 @@
       
         <tags>
             
-            <tag> javascript </tag>
-            
             <tag> 前端 </tag>
+            
+            <tag> javascript </tag>
             
         </tags>
       
@@ -1955,31 +1955,6 @@
     
     
     <entry>
-      <title>Android Studio安装笔记</title>
-      <link href="/2021/01/01/software/install/how-to-install-android-studio/"/>
-      <url>/2021/01/01/software/install/how-to-install-android-studio/</url>
-      
-        <content type="html"><![CDATA[<h1 id="Android-Studio安装笔记"><a href="#Android-Studio安装笔记" class="headerlink" title="Android Studio安装笔记"></a>Android Studio安装笔记</h1><p>简单记录一下Android Studio安装</p><h2 id="下载"><a href="#下载" class="headerlink" title="下载"></a>下载</h2><p>从<a href="https://developer.android.google.cn/studio">官网</a>安装Android Studio,</p><p>然后点击安装。</p><h3 id="Android-SDK"><a href="#Android-SDK" class="headerlink" title="Android SDK"></a>Android SDK</h3><p>使用<a href="http://ping.chinaz.com/">http://ping.chinaz.com</a>获取<em>dl.google.com</em>的大陆响应时间最短的IP地址。</p><p>以我为例：180.163.151.161</p><p>将其写入hosts文件(C:\WINDOWS\System32\drivers\etc\hosts)</p><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">180.163.151.161 dl.google.com</span><br></pre></td></tr></table></figure><h2 id="参考资料"><a href="#参考资料" class="headerlink" title="参考资料"></a>参考资料</h2><p><a href="https://www.cnblogs.com/senior-engineer/p/11130757.html">在Android Studio中下载Android SDK的两种方式（Android Studio3.0、windows</a></p>]]></content>
-      
-      
-      <categories>
-          
-          <category> 软件 </category>
-          
-      </categories>
-      
-      
-        <tags>
-            
-            <tag> Android Studio </tag>
-            
-        </tags>
-      
-    </entry>
-    
-    
-    
-    <entry>
       <title>在Ubuntu 18.04.5 LTS上安装minkube</title>
       <link href="/2021/01/01/software/k8s/how-to-install-minkube/"/>
       <url>/2021/01/01/software/k8s/how-to-install-minkube/</url>
@@ -2003,6 +1978,31 @@
             <tag> kubernetes </tag>
             
             <tag> Ubuntu </tag>
+            
+        </tags>
+      
+    </entry>
+    
+    
+    
+    <entry>
+      <title>Android Studio安装笔记</title>
+      <link href="/2021/01/01/software/install/how-to-install-android-studio/"/>
+      <url>/2021/01/01/software/install/how-to-install-android-studio/</url>
+      
+        <content type="html"><![CDATA[<h1 id="Android-Studio安装笔记"><a href="#Android-Studio安装笔记" class="headerlink" title="Android Studio安装笔记"></a>Android Studio安装笔记</h1><p>简单记录一下Android Studio安装</p><h2 id="下载"><a href="#下载" class="headerlink" title="下载"></a>下载</h2><p>从<a href="https://developer.android.google.cn/studio">官网</a>安装Android Studio,</p><p>然后点击安装。</p><h3 id="Android-SDK"><a href="#Android-SDK" class="headerlink" title="Android SDK"></a>Android SDK</h3><p>使用<a href="http://ping.chinaz.com/">http://ping.chinaz.com</a>获取<em>dl.google.com</em>的大陆响应时间最短的IP地址。</p><p>以我为例：180.163.151.161</p><p>将其写入hosts文件(C:\WINDOWS\System32\drivers\etc\hosts)</p><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">180.163.151.161 dl.google.com</span><br></pre></td></tr></table></figure><h2 id="参考资料"><a href="#参考资料" class="headerlink" title="参考资料"></a>参考资料</h2><p><a href="https://www.cnblogs.com/senior-engineer/p/11130757.html">在Android Studio中下载Android SDK的两种方式（Android Studio3.0、windows</a></p>]]></content>
+      
+      
+      <categories>
+          
+          <category> 软件 </category>
+          
+      </categories>
+      
+      
+        <tags>
+            
+            <tag> Android Studio </tag>
             
         </tags>
       
