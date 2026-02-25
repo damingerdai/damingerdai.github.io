@@ -35,7 +35,7 @@ categories: [前端]
 
 ## 三、关键截图分析（Call Tree）
 
-![call tree](from-3s-white-screen-to-first-paint-react-performance-optimization/chrome-devtool-performance.png)
+![call tree](/images/from-3s-white-screen-to-first-paint-react-performance-optimization/chrome-devtool-performance.png)
 
 从 Call Tree 中可以看到几个关键点：
 
