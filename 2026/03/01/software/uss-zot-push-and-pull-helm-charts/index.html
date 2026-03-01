@@ -1,0 +1,231 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="dark"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1.0,viewport-fit=cover"><title>内网环境 K3s 部署实战：从 Zot OCI 托管到 HTTPS 域名解析全记录 | Damingerdai's Blog</title><meta name="author" content="Arthur Ming"><meta name="copyright" content="Arthur Ming"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#0d0d0d"><meta name="description" content="前言在内网环境下搭建云原生基础设施时，镜像仓库的认证、OCI 协议的适配以及 Ingress 的路由转发通常是最容易卡壳的地方。本文记录了将应用部署至 K3s 集群，并通过自定义域名实现 HTTPS 访问的全过程。 环境信息 Zot 仓库 (OCI): 192.168.31.220:5000 K3s 节点: 192.168.31.222 服务域名: health-master-dev.daming">
+<meta property="og:type" content="article">
+<meta property="og:title" content="内网环境 K3s 部署实战：从 Zot OCI 托管到 HTTPS 域名解析全记录">
+<meta property="og:url" content="http://blog.damingerdai.com/2026/03/01/software/uss-zot-push-and-pull-helm-charts/index.html">
+<meta property="og:site_name" content="Damingerdai&#39;s Blog">
+<meta property="og:description" content="前言在内网环境下搭建云原生基础设施时，镜像仓库的认证、OCI 协议的适配以及 Ingress 的路由转发通常是最容易卡壳的地方。本文记录了将应用部署至 K3s 集群，并通过自定义域名实现 HTTPS 访问的全过程。 环境信息 Zot 仓库 (OCI): 192.168.31.220:5000 K3s 节点: 192.168.31.222 服务域名: health-master-dev.daming">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg">
+<meta property="article:published_time" content="2026-03-01T00:35:27.000Z">
+<meta property="article:modified_time" content="2026-03-01T11:40:20.142Z">
+<meta property="article:author" content="Arthur Ming">
+<meta property="article:tag" content="ingress">
+<meta property="article:tag" content="k3s">
+<meta property="article:tag" content="kubernetes">
+<meta property="article:tag" content="kite">
+<meta property="article:tag" content="helm">
+<meta property="article:tag" content="traefik">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg"><link rel="shortcut icon" href="/img/avatar.png"><link rel="canonical" href="http://blog.damingerdai.com/2026/03/01/software/uss-zot-push-and-pull-helm-charts/index.html"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><link rel="stylesheet" href="/css/index.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free/css/all.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/ui/dist/fancybox/fancybox.min.css" media="print" onload="this.media='all'"><script>const GLOBAL_CONFIG = {
+  root: '/',
+  algolia: undefined,
+  localSearch: {"path":"/search.xml","preload":false,"top_n_per_article":1,"unescape":false,"languages":{"hits_empty":"找不到您查询的内容：${query}","hits_stats":"共找到 ${hits} 篇文章"}},
+  translate: undefined,
+  noticeOutdate: undefined,
+  highlight: {"plugin":"highlight.js","highlightCopy":true,"highlightLang":true,"highlightHeightLimit":false},
+  copy: {
+    success: '复制成功',
+    error: '复制错误',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '',
+  dateSuffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: undefined,
+  lightbox: 'fancybox',
+  Snackbar: undefined,
+  infinitegrid: {
+    js: 'https://cdn.jsdelivr.net/npm/@egjs/infinitegrid/dist/infinitegrid.min.js',
+    buttonText: '加载更多'
+  },
+  isPhotoFigcaption: false,
+  islazyload: false,
+  isAnchor: false,
+  percent: {
+    toc: true,
+    rightside: false,
+  },
+  autoDarkmode: true
+}</script><script id="config-diff">var GLOBAL_CONFIG_SITE = {
+  title: '内网环境 K3s 部署实战：从 Zot OCI 托管到 HTTPS 域名解析全记录',
+  isPost: true,
+  isHome: false,
+  isHighlightShrink: false,
+  isToc: true,
+  postUpdate: '2026-03-01 19:40:20'
+}</script><script>(win=>{
+      win.saveToLocal = {
+        set: (key, value, ttl) => {
+          if (ttl === 0) return
+          const now = Date.now()
+          const expiry = now + ttl * 86400000
+          const item = {
+            value,
+            expiry
+          }
+          localStorage.setItem(key, JSON.stringify(item))
+        },
+      
+        get: key => {
+          const itemStr = localStorage.getItem(key)
+      
+          if (!itemStr) {
+            return undefined
+          }
+          const item = JSON.parse(itemStr)
+          const now = Date.now()
+      
+          if (now > item.expiry) {
+            localStorage.removeItem(key)
+            return undefined
+          }
+          return item.value
+        }
+      }
+    
+      win.getScript = (url, attr = {}) => new Promise((resolve, reject) => {
+        const script = document.createElement('script')
+        script.src = url
+        script.async = true
+        script.onerror = reject
+        script.onload = script.onreadystatechange = function() {
+          const loadState = this.readyState
+          if (loadState && loadState !== 'loaded' && loadState !== 'complete') return
+          script.onload = script.onreadystatechange = null
+          resolve()
+        }
+
+        Object.keys(attr).forEach(key => {
+          script.setAttribute(key, attr[key])
+        })
+
+        document.head.appendChild(script)
+      })
+    
+      win.getCSS = (url, id = false) => new Promise((resolve, reject) => {
+        const link = document.createElement('link')
+        link.rel = 'stylesheet'
+        link.href = url
+        if (id) link.id = id
+        link.onerror = reject
+        link.onload = link.onreadystatechange = function() {
+          const loadState = this.readyState
+          if (loadState && loadState !== 'loaded' && loadState !== 'complete') return
+          link.onload = link.onreadystatechange = null
+          resolve()
+        }
+        document.head.appendChild(link)
+      })
+    
+      win.activateDarkMode = () => {
+        document.documentElement.setAttribute('data-theme', 'dark')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+        }
+      }
+      win.activateLightMode = () => {
+        document.documentElement.setAttribute('data-theme', 'light')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#ffffff')
+        }
+      }
+      const t = saveToLocal.get('theme')
+    
+          const isDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches
+          const isLightMode = window.matchMedia('(prefers-color-scheme: light)').matches
+          const isNotSpecified = window.matchMedia('(prefers-color-scheme: no-preference)').matches
+          const hasNoSupport = !isDarkMode && !isLightMode && !isNotSpecified
+
+          if (t === undefined) {
+            if (isLightMode) activateLightMode()
+            else if (isDarkMode) activateDarkMode()
+            else if (isNotSpecified || hasNoSupport) {
+              const now = new Date()
+              const hour = now.getHours()
+              const isNight = hour <= 6 || hour >= 18
+              isNight ? activateDarkMode() : activateLightMode()
+            }
+            window.matchMedia('(prefers-color-scheme: dark)').addListener(e => {
+              if (saveToLocal.get('theme') === undefined) {
+                e.matches ? activateDarkMode() : activateLightMode()
+              }
+            })
+          } else if (t === 'light') activateLightMode()
+          else activateDarkMode()
+        
+      const asideStatus = saveToLocal.get('aside-status')
+      if (asideStatus !== undefined) {
+        if (asideStatus === 'hide') {
+          document.documentElement.classList.add('hide-aside')
+        } else {
+          document.documentElement.classList.remove('hide-aside')
+        }
+      }
+    
+      const detectApple = () => {
+        if(/iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent)){
+          document.documentElement.classList.add('apple')
+        }
+      }
+      detectApple()
+    })(window)</script><link rel="stylesheet" href="/css/styles.css"><meta name="generator" content="Hexo 7.3.0"></head><body><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="avatar-img is-center"><img src="/img/avatar.png" onerror="onerror=null;src='/img/friend_404.gif'" alt="avatar"/></div><div class="sidebar-site-data site-data is-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">74</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">106</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">8</div></a></div><hr class="custom-hr"/><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归类</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page group" href="javascript:void(0);"><i class="fa-fw fas fa-list"></i><span> 其他</span><i class="fas fa-chevron-down"></i></a><ul class="menus_item_child"><li><a class="site-page child" href="/others/learning"><i class="fa-fw fas fa-graduation-cap"></i><span> 学习课程</span></a></li><li><a class="site-page child" href="/others/link/"><i class="fa-fw fas fa-link"></i><span> 链接</span></a></li><li><a class="site-page child" href="/others/interview/"><i class="fa-fw fas fa-glide"></i><span> 面试</span></a></li></ul></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于</span></a></div></div></div></div><div class="post" id="body-wrap"><header class="post-bg" id="page-header" style="background-image: url('https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg')"><nav id="nav"><span id="blog-info"><a href="/" title="Damingerdai's Blog"><span class="site-name">Damingerdai's Blog</span></a></span><div id="menus"><div id="search-button"><a class="site-page social-icon search" href="javascript:void(0);"><i class="fas fa-search fa-fw"></i><span> 搜索</span></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归类</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page group" href="javascript:void(0);"><i class="fa-fw fas fa-list"></i><span> 其他</span><i class="fas fa-chevron-down"></i></a><ul class="menus_item_child"><li><a class="site-page child" href="/others/learning"><i class="fa-fw fas fa-graduation-cap"></i><span> 学习课程</span></a></li><li><a class="site-page child" href="/others/link/"><i class="fa-fw fas fa-link"></i><span> 链接</span></a></li><li><a class="site-page child" href="/others/interview/"><i class="fa-fw fas fa-glide"></i><span> 面试</span></a></li></ul></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于</span></a></div></div><div id="toggle-menu"><a class="site-page" href="javascript:void(0);"><i class="fas fa-bars fa-fw"></i></a></div></div></nav><div id="post-info"><h1 class="post-title">内网环境 K3s 部署实战：从 Zot OCI 托管到 HTTPS 域名解析全记录</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2026-03-01T00:35:27.000Z" title="发表于 2026-03-01 08:35:27">2026-03-01</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2026-03-01T11:40:20.142Z" title="更新于 2026-03-01 19:40:20">2026-03-01</time></span><span class="post-meta-categories"><span class="post-meta-separator">|</span><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/%E8%BD%AF%E4%BB%B6/">软件</a></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-pv-cv" id="" data-flag-title="内网环境 K3s 部署实战：从 Zot OCI 托管到 HTTPS 域名解析全记录"><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">阅读量:</span><span id="busuanzi_value_page_pv"><i class="fa-solid fa-spinner fa-spin"></i></span></span></div></div></div></header><main class="layout" id="content-inner"><div id="post"><article class="post-content" id="article-container"><h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><p>在内网环境下搭建云原生基础设施时，镜像仓库的认证、OCI 协议的适配以及 Ingress 的路由转发通常是最容易卡壳的地方。本文记录了将应用部署至 K3s 集群，并通过自定义域名实现 HTTPS 访问的全过程。</p>
+<h1 id="环境信息"><a href="#环境信息" class="headerlink" title="环境信息"></a>环境信息</h1><ol>
+<li>Zot 仓库 (OCI): 192.168.31.220:5000</li>
+<li>K3s 节点: 192.168.31.222</li>
+<li>服务域名: health-master-dev.damingerdaiinternal.com</li>
+</ol>
+<h1 id="标准部署流程"><a href="#标准部署流程" class="headerlink" title="标准部署流程"></a>标准部署流程</h1><h2 id="镜像仓库与-Helm-认证"><a href="#镜像仓库与-Helm-认证" class="headerlink" title="镜像仓库与 Helm 认证"></a>镜像仓库与 Helm 认证</h2><p>由于 Zot 采用 OCI 标准存储 Helm Chart，部署前需先在本地终端完成登录：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 登录 OCI 注册表</span></span><br><span class="line"><span class="built_in">echo</span> <span class="string">&quot;YOUR_PASSWORD&quot;</span> | helm registry login 192.168.31.220:5000 -u admin --password-stdin --insecure</span><br></pre></td></tr></table></figure>
+
+<h2 id="配置-K3s-节点免密拉取"><a href="#配置-K3s-节点免密拉取" class="headerlink" title="配置 K3s 节点免密拉取"></a>配置 K3s 节点免密拉取</h2><p>为了让 K3s 能够拉取私有仓库的镜像，需在 192.168.31.222 节点上配置<code>/etc/rancher/k3s/registries.yaml</code>：</p>
+<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">mirrors:</span></span><br><span class="line">  <span class="attr">&quot;192.168.31.220:5000&quot;:</span></span><br><span class="line">    <span class="attr">endpoint:</span></span><br><span class="line">      <span class="bullet">-</span> <span class="string">&quot;http://192.168.31.220:5000&quot;</span></span><br><span class="line"><span class="attr">configs:</span></span><br><span class="line">  <span class="attr">&quot;192.168.31.220:5000&quot;:</span></span><br><span class="line">    <span class="attr">auth:</span></span><br><span class="line">      <span class="attr">username:</span> <span class="string">admin</span></span><br><span class="line">      <span class="attr">password:</span> <span class="string">YOUR_PASSWORD</span></span><br></pre></td></tr></table></figure>
+
+<p>配置完成后重启服务：sudo systemctl restart k3s。</p>
+<h2 id="Chart-的打包与推送（OCI-原始起点）"><a href="#Chart-的打包与推送（OCI-原始起点）" class="headerlink" title="Chart 的打包与推送（OCI 原始起点）"></a>Chart 的打包与推送（OCI 原始起点）</h2><p>在执行安装之前，我们需要将本地的 Chart 目录打包并推送到 Zot 仓库。OCI 模式下的推送与传统的 chartmuseum 不同，它直接利用了容器镜像的存储逻辑。</p>
+<h3 id="打包-Chart"><a href="#打包-Chart" class="headerlink" title="打包 Chart"></a>打包 Chart</h3><p>首先，进入你的 Chart 目录（包含 <code>Chart.yaml</code> 的地方），执行打包命令： </p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">helm package health-master</span><br></pre></td></tr></table></figure>
+
+<p>执行后会生成一个 <code>health-master-1.0.0.tgz</code> 文件。</p>
+<h3 id="推送至-Zot-仓库"><a href="#推送至-Zot-仓库" class="headerlink" title="推送至 Zot 仓库"></a>推送至 Zot 仓库</h3><p>使用 helm push 命令。注意，这里的协议头必须是 <code>oci://</code>：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 格式：helm push [文件名] oci://[仓库地址]/[项目名]</span></span><br><span class="line">helm push health-master-1.0.0.tgz oci://192.168.31.220:5000/health-master \</span><br><span class="line">  --plain-http</span><br></pre></td></tr></table></figure>
+
+<h3 id="验证推送（避坑点）"><a href="#验证推送（避坑点）" class="headerlink" title="验证推送（避坑点）"></a>验证推送（避坑点）</h3><p>推送成功后，你会看到类似下方的输出：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">Pushed: 192.168.31.220:5000/health-master/health-master:1.0.0</span><br><span class="line">Digest: sha256:c2859e4f82d5248c59b2716762acc8929abe07694576d13636da1eabc114145d</span><br></pre></td></tr></table></figure>
+
+<p>特别注意:</p>
+<blockquote>
+<p>在 Zot 或其他支持 OCI 的仓库中，你会发现 Chart 和 Docker 镜像并排存在。如果你使用的是 Zot 的 UI，你会看到该 Artifact 的媒体类型（Media Type）为 application&#x2F;vnd.cncf.helm.config.v1+json</p>
+</blockquote>
+<p><img src="/images/software/zot-health-master-charts.png" alt="health master charts in zot registery"></p>
+<h2 id="执行-Helm-安装"><a href="#执行-Helm-安装" class="headerlink" title="执行 Helm 安装"></a>执行 Helm 安装</h2><p>使用 OCI 协议安装时，针对内网 HTTP 环境，必须携带 –plain-http 参数：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">helm install health-master-dev oci://192.168.31.220:5000/health-master/health-master \</span><br><span class="line">  --version 1.0.0 \</span><br><span class="line">  -f values.yaml \</span><br><span class="line">  --plain-http \</span><br><span class="line">  --namespace health-master-namespace-dev --create-namespace</span><br></pre></td></tr></table></figure>
+
+<h2 id="暴露-HTTPS-服务"><a href="#暴露-HTTPS-服务" class="headerlink" title="暴露 HTTPS 服务"></a>暴露 HTTPS 服务</h2><p>创建 Middleware 资源处理 HTTP 到 HTTPS 的强制跳转，并在 Ingress 中引用：</p>
+<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 1. 定义跳转中间件 (API 版本需根据 kubectl api-resources 确定)</span></span><br><span class="line"><span class="attr">apiVersion:</span> <span class="string">traefik.io/v1alpha1</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">Middleware</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">force-https</span></span><br><span class="line">  <span class="attr">namespace:</span> <span class="string">health-master-namespace-dev</span></span><br><span class="line"><span class="attr">spec:</span></span><br><span class="line">  <span class="attr">redirectScheme:</span></span><br><span class="line">    <span class="attr">scheme:</span> <span class="string">https</span></span><br><span class="line">    <span class="attr">permanent:</span> <span class="literal">true</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 2. 配置 Ingress</span></span><br><span class="line"><span class="attr">apiVersion:</span> <span class="string">networking.k8s.io/v1</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">Ingress</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">health-master-ingress</span></span><br><span class="line">  <span class="attr">annotations:</span></span><br><span class="line">    <span class="attr">traefik.ingress.kubernetes.io/router.entrypoints:</span> <span class="string">web,</span> <span class="string">websecure</span></span><br><span class="line">    <span class="attr">traefik.ingress.kubernetes.io/router.tls:</span> <span class="string">&quot;true&quot;</span></span><br><span class="line">    <span class="attr">traefik.ingress.kubernetes.io/router.middlewares:</span> <span class="string">health-master-namespace-dev-force-https@kubernetescrd</span></span><br><span class="line"><span class="attr">spec:</span></span><br><span class="line">  <span class="attr">tls:</span></span><br><span class="line">    <span class="bullet">-</span> <span class="attr">hosts:</span> [<span class="string">&quot;health-master-dev.damingerdaiinternal.com&quot;</span>]</span><br><span class="line">      <span class="attr">secretName:</span> <span class="string">health-master-tls</span></span><br><span class="line">  <span class="attr">rules:</span></span><br><span class="line">    <span class="bullet">-</span> <span class="attr">host:</span> <span class="string">health-master-dev.damingerdaiinternal.com</span></span><br><span class="line">      <span class="attr">http:</span></span><br><span class="line">        <span class="attr">paths:</span></span><br><span class="line">          <span class="bullet">-</span> <span class="attr">path:</span> <span class="string">/</span></span><br><span class="line">            <span class="attr">pathType:</span> <span class="string">ImplementationSpecific</span></span><br><span class="line">            <span class="attr">backend:</span></span><br><span class="line">              <span class="attr">service:</span></span><br><span class="line">                <span class="attr">name:</span> <span class="string">health-master-dev-web</span></span><br><span class="line">                <span class="attr">port:</span></span><br><span class="line">                  <span class="attr">number:</span> <span class="number">3000</span></span><br></pre></td></tr></table></figure>
+
+<h1 id="部署过程中的“血泪史”（踩坑排查）"><a href="#部署过程中的“血泪史”（踩坑排查）" class="headerlink" title="部署过程中的“血泪史”（踩坑排查）"></a>部署过程中的“血泪史”（踩坑排查）</h1><p>在实际操作中，我们并没有上述流程那么顺利，先后经历了四次重大“卡壳”：</p>
+<h2 id="Helm-参数的“名不对题”"><a href="#Helm-参数的“名不对题”" class="headerlink" title="Helm 参数的“名不对题”"></a>Helm 参数的“名不对题”</h2><p>坑位：在尝试解决认证问题时，习惯性给 helm install 加了 –insecure。</p>
+<p>真相：Helm 的命令行设计中，–insecure 仅用于 login；在 install&#x2F;push&#x2F;pull OCI 仓库时，如果是非 HTTPS 环境，必须使用 –plain-http。否则会报“协议不支持”或“认证找不到”的错误。</p>
+<h2 id="僵死的-Namespace-Terminating"><a href="#僵死的-Namespace-Terminating" class="headerlink" title="僵死的 Namespace (Terminating)"></a>僵死的 Namespace (Terminating)</h2><p>坑位：删除旧部署后，Namespace 状态卡在 Terminating 几十分钟不消失，导致无法重新部署。</p>
+<p>对策：这是由于 finalizers 机制拦截了资源释放。通过 kubectl edit ns <code>&lt;namespace&gt;</code> 强制手动删除 finalizers 数组内容，Namespace 会瞬间被强制销毁，从而解除锁定。</p>
+<h2 id="关于推送时的常见报错："><a href="#关于推送时的常见报错：" class="headerlink" title="关于推送时的常见报错："></a>关于推送时的常见报错：</h2><p>报错：401 Unauthorized：如果在 push 时遇到这个错误，请检查是否执行了 helm registry login。</p>
+<p>报错：server responded with status 405 Method Not Allowed：这通常是因为你没有使用 oci:&#x2F;&#x2F; 前缀，或者仓库没有开启 OCI 支持。</p>
+<h2 id="K3s-节点的-401-Unauthorized"><a href="#K3s-节点的-401-Unauthorized" class="headerlink" title="K3s 节点的 401 Unauthorized"></a>K3s 节点的 401 Unauthorized</h2><p>坑位：本地 helm login 成功了，应用也部署上去了，但 Pod 状态一直是 ImagePullBackOff。</p>
+<p>定位：这是一个经典误区——“我登了不代表 K8s 登了”。Helm 客户端的认证信息存在用户家目录，而节点拉取镜像是由 Containerd 负责的。</p>
+<p>解决：必须在 K3s 的全局配置文件 registries.yaml 中显式声明私有仓库的账号密码</p>
+<h2 id="Ingress-的-404-谜团与中间件失效"><a href="#Ingress-的-404-谜团与中间件失效" class="headerlink" title="Ingress 的 404 谜团与中间件失效"></a>Ingress 的 404 谜团与中间件失效</h2><p>坑位：Ingress 状态正常，ADDRESS 也有 IP，但访问域名总是返回 404 page not found。</p>
+<h3 id="深度排查："><a href="#深度排查：" class="headerlink" title="深度排查："></a>深度排查：</h3><p>通过 kubectl logs -n kube-system -l app.kubernetes.io&#x2F;name&#x3D;traefik 查看实时日志。</p>
+<p>关键发现：日志报错 middleware does not exist。</p>
+<p>原因：引用了不存在的内置中间件，导致 Traefik 拒绝加载整个路由规则。</p>
+<p>API 陷阱：旧版教程常用 traefik.containo.us&#x2F;v1alpha1，新版 K3s 需改为 traefik.io&#x2F;v1alpha1。只有 Middleware 成功创建并正确引用，路由才会生效。</p>
+<h1 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h1><p>内网环境的“纯手工”部署是对运维基本功的最好打磨。每一个 404 背后，可能都是 API 版本不匹配或认证链路断裂的体现。理解了 OCI 协议规范、K8s 资源回收机制 以及 Traefik 路由匹配逻辑，这些坑就不再是阻碍，而是经验</p>
+</article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta"><i class="fas fa-circle-user fa-fw"></i>文章作者: </span><span class="post-copyright-info"><a href="http://blog.damingerdai.com">Arthur Ming</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta"><i class="fas fa-square-arrow-up-right fa-fw"></i>文章链接: </span><span class="post-copyright-info"><a href="http://blog.damingerdai.com/2026/03/01/software/uss-zot-push-and-pull-helm-charts/">http://blog.damingerdai.com/2026/03/01/software/uss-zot-push-and-pull-helm-charts/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta"><i class="fas fa-circle-exclamation fa-fw"></i>版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来自 <a href="http://blog.damingerdai.com" target="_blank">Damingerdai's Blog</a>！</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/ingress/">ingress</a><a class="post-meta__tags" href="/tags/k3s/">k3s</a><a class="post-meta__tags" href="/tags/kubernetes/">kubernetes</a><a class="post-meta__tags" href="/tags/kite/">kite</a><a class="post-meta__tags" href="/tags/helm/">helm</a><a class="post-meta__tags" href="/tags/traefik/">traefik</a></div><div class="post_share"><div class="social-share" data-image="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" data-sites="facebook,twitter,wechat,weibo,qq"></div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/butterfly-extsrc/sharejs/dist/css/share.min.css" media="print" onload="this.media='all'"><script src="https://cdn.jsdelivr.net/npm/butterfly-extsrc/sharejs/dist/js/social-share.min.js" defer></script></div></div><nav class="pagination-post" id="pagination"><div class="next-post pull-full"><a href="/2026/02/25/front-end/from-3s-white-screen-to-first-paint-react-performance-optimization/" title="从 3 秒白屏到首屏可见 —— 一次基于 Chrome Performance Call Tree 的深度优化复盘"><img class="cover" src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" onerror="onerror=null;src='/img/404.jpg'" alt="cover of next post"><div class="pagination-info"><div class="label">下一篇</div><div class="next_info">从 3 秒白屏到首屏可见 —— 一次基于 Chrome Performance Call Tree 的深度优化复盘</div></div></a></div></nav><div class="relatedPosts"><div class="headline"><i class="fas fa-thumbs-up fa-fw"></i><span>相关推荐</span></div><div class="relatedPosts-list"><div><a href="/2026/01/25/software/setup-kite-with-prometheus-on-k3s/" title="玩转 K8s 面板：轻量级 Kite 安装全记录 (K3s 篇)"><img class="cover" src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2026-01-25</div><div class="title">玩转 K8s 面板：轻量级 Kite 安装全记录 (K3s 篇)</div></div></a></div><div><a href="/2026/01/08/software/k8s/deploy-skooner-on-k3s/" title="轻量化 K8s 管理方案：在 k3s 中部署 Skooner 可视化面板"><img class="cover" src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2026-01-08</div><div class="title">轻量化 K8s 管理方案：在 k3s 中部署 Skooner 可视化面板</div></div></a></div><div><a href="/2022/05/15/software/k8s/k3s-install-with-docker/" title="K3S安装的时候默认使用docker"><img class="cover" src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2022-05-15</div><div class="title">K3S安装的时候默认使用docker</div></div></a></div><div><a href="/2022/06/18/back-end/add-ssl-for-ingress/" title="给Ingress上配置ssl证书"><img class="cover" src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2022-06-18</div><div class="title">给Ingress上配置ssl证书</div></div></a></div><div><a href="/2025/02/13/back-end/how-to-forcefully-delete-a-namespace-that-is-stuck-in-the-Terminating-state/" title="在k8s中如何强制删除处于Terminating状态的namesapce"><img class="cover" src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2025-02-13</div><div class="title">在k8s中如何强制删除处于Terminating状态的namesapce</div></div></a></div><div><a href="/2022/09/03/back-end/k3s-uses-letsencrypt-and-traefik-to-deploy-the-https/" title="k3s使用Let‘s Encrypt配置https入口部署"><img class="cover" src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2022-09-03</div><div class="title">k3s使用Let‘s Encrypt配置https入口部署</div></div></a></div></div></div></div><div class="aside-content" id="aside-content"><div class="card-widget card-info"><div class="is-center"><div class="avatar-img"><img src="/img/avatar.png" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="author-info__name">Arthur Ming</div><div class="author-info__description">大明二代的博客</div></div><div class="card-info-data site-data is-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">74</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">106</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">8</div></a></div><a id="card-info-btn" target="_blank" rel="noopener" href="https://github.com/damingerdai"><i class="fab fa-github"></i><span>Follow Me</span></a><div class="card-info-social-icons is-center"><a class="social-icon" href="https://github.com/damingerdai" target="_blank" title="Github"><i class="fab fa-github" style="color: #24292e;"></i></a><a class="social-icon" href="mailto:mingguobin@live.com" target="_blank" title="Email"><i class="fas fa-envelope" style="color: #4a7dbe;"></i></a></div></div><div class="card-widget card-announcement"><div class="item-headline"><i class="fas fa-bullhorn fa-shake"></i><span>公告</span></div><div class="announcement_content">大家好，我是大明二代</div></div><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="item-headline"><i class="fas fa-stream"></i><span>目录</span><span class="toc-percentage"></span></div><div class="toc-content"><ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#%E5%89%8D%E8%A8%80"><span class="toc-number">1.</span> <span class="toc-text">前言</span></a></li><li class="toc-item toc-level-1"><a class="toc-link" href="#%E7%8E%AF%E5%A2%83%E4%BF%A1%E6%81%AF"><span class="toc-number">2.</span> <span class="toc-text">环境信息</span></a></li><li class="toc-item toc-level-1"><a class="toc-link" href="#%E6%A0%87%E5%87%86%E9%83%A8%E7%BD%B2%E6%B5%81%E7%A8%8B"><span class="toc-number">3.</span> <span class="toc-text">标准部署流程</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E9%95%9C%E5%83%8F%E4%BB%93%E5%BA%93%E4%B8%8E-Helm-%E8%AE%A4%E8%AF%81"><span class="toc-number">3.1.</span> <span class="toc-text">镜像仓库与 Helm 认证</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E9%85%8D%E7%BD%AE-K3s-%E8%8A%82%E7%82%B9%E5%85%8D%E5%AF%86%E6%8B%89%E5%8F%96"><span class="toc-number">3.2.</span> <span class="toc-text">配置 K3s 节点免密拉取</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Chart-%E7%9A%84%E6%89%93%E5%8C%85%E4%B8%8E%E6%8E%A8%E9%80%81%EF%BC%88OCI-%E5%8E%9F%E5%A7%8B%E8%B5%B7%E7%82%B9%EF%BC%89"><span class="toc-number">3.3.</span> <span class="toc-text">Chart 的打包与推送（OCI 原始起点）</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E6%89%93%E5%8C%85-Chart"><span class="toc-number">3.3.1.</span> <span class="toc-text">打包 Chart</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E6%8E%A8%E9%80%81%E8%87%B3-Zot-%E4%BB%93%E5%BA%93"><span class="toc-number">3.3.2.</span> <span class="toc-text">推送至 Zot 仓库</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E9%AA%8C%E8%AF%81%E6%8E%A8%E9%80%81%EF%BC%88%E9%81%BF%E5%9D%91%E7%82%B9%EF%BC%89"><span class="toc-number">3.3.3.</span> <span class="toc-text">验证推送（避坑点）</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E6%89%A7%E8%A1%8C-Helm-%E5%AE%89%E8%A3%85"><span class="toc-number">3.4.</span> <span class="toc-text">执行 Helm 安装</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E6%9A%B4%E9%9C%B2-HTTPS-%E6%9C%8D%E5%8A%A1"><span class="toc-number">3.5.</span> <span class="toc-text">暴露 HTTPS 服务</span></a></li></ol></li><li class="toc-item toc-level-1"><a class="toc-link" href="#%E9%83%A8%E7%BD%B2%E8%BF%87%E7%A8%8B%E4%B8%AD%E7%9A%84%E2%80%9C%E8%A1%80%E6%B3%AA%E5%8F%B2%E2%80%9D%EF%BC%88%E8%B8%A9%E5%9D%91%E6%8E%92%E6%9F%A5%EF%BC%89"><span class="toc-number">4.</span> <span class="toc-text">部署过程中的“血泪史”（踩坑排查）</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#Helm-%E5%8F%82%E6%95%B0%E7%9A%84%E2%80%9C%E5%90%8D%E4%B8%8D%E5%AF%B9%E9%A2%98%E2%80%9D"><span class="toc-number">4.1.</span> <span class="toc-text">Helm 参数的“名不对题”</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%83%B5%E6%AD%BB%E7%9A%84-Namespace-Terminating"><span class="toc-number">4.2.</span> <span class="toc-text">僵死的 Namespace (Terminating)</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%85%B3%E4%BA%8E%E6%8E%A8%E9%80%81%E6%97%B6%E7%9A%84%E5%B8%B8%E8%A7%81%E6%8A%A5%E9%94%99%EF%BC%9A"><span class="toc-number">4.3.</span> <span class="toc-text">关于推送时的常见报错：</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#K3s-%E8%8A%82%E7%82%B9%E7%9A%84-401-Unauthorized"><span class="toc-number">4.4.</span> <span class="toc-text">K3s 节点的 401 Unauthorized</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Ingress-%E7%9A%84-404-%E8%B0%9C%E5%9B%A2%E4%B8%8E%E4%B8%AD%E9%97%B4%E4%BB%B6%E5%A4%B1%E6%95%88"><span class="toc-number">4.5.</span> <span class="toc-text">Ingress 的 404 谜团与中间件失效</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E6%B7%B1%E5%BA%A6%E6%8E%92%E6%9F%A5%EF%BC%9A"><span class="toc-number">4.5.1.</span> <span class="toc-text">深度排查：</span></a></li></ol></li></ol></li><li class="toc-item toc-level-1"><a class="toc-link" href="#%E6%80%BB%E7%BB%93"><span class="toc-number">5.</span> <span class="toc-text">总结</span></a></li></ol></div></div><div class="card-widget card-recent-post"><div class="item-headline"><i class="fas fa-history"></i><span>最新文章</span></div><div class="aside-list"><div class="aside-list-item"><a class="thumbnail" href="/2026/03/01/software/uss-zot-push-and-pull-helm-charts/" title="内网环境 K3s 部署实战：从 Zot OCI 托管到 HTTPS 域名解析全记录"><img src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="内网环境 K3s 部署实战：从 Zot OCI 托管到 HTTPS 域名解析全记录"/></a><div class="content"><a class="title" href="/2026/03/01/software/uss-zot-push-and-pull-helm-charts/" title="内网环境 K3s 部署实战：从 Zot OCI 托管到 HTTPS 域名解析全记录">内网环境 K3s 部署实战：从 Zot OCI 托管到 HTTPS 域名解析全记录</a><time datetime="2026-03-01T00:35:27.000Z" title="发表于 2026-03-01 08:35:27">2026-03-01</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2026/02/25/front-end/from-3s-white-screen-to-first-paint-react-performance-optimization/" title="从 3 秒白屏到首屏可见 —— 一次基于 Chrome Performance Call Tree 的深度优化复盘"><img src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="从 3 秒白屏到首屏可见 —— 一次基于 Chrome Performance Call Tree 的深度优化复盘"/></a><div class="content"><a class="title" href="/2026/02/25/front-end/from-3s-white-screen-to-first-paint-react-performance-optimization/" title="从 3 秒白屏到首屏可见 —— 一次基于 Chrome Performance Call Tree 的深度优化复盘">从 3 秒白屏到首屏可见 —— 一次基于 Chrome Performance Call Tree 的深度优化复盘</a><time datetime="2026-02-25T23:11:56.000Z" title="发表于 2026-02-26 07:11:56">2026-02-26</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2026/02/24/summary/2025/" title="2025年度总结"><img src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="2025年度总结"/></a><div class="content"><a class="title" href="/2026/02/24/summary/2025/" title="2025年度总结">2025年度总结</a><time datetime="2026-02-24T13:57:59.000Z" title="发表于 2026-02-24 21:57:59">2026-02-24</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2026/02/22/software/how-to-deploy-grafana-on-k3s-with-ingress/" title="Grafana UI 部署与技术复盘报告"><img src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="Grafana UI 部署与技术复盘报告"/></a><div class="content"><a class="title" href="/2026/02/22/software/how-to-deploy-grafana-on-k3s-with-ingress/" title="Grafana UI 部署与技术复盘报告">Grafana UI 部署与技术复盘报告</a><time datetime="2026-02-22T13:17:43.000Z" title="发表于 2026-02-22 21:17:43">2026-02-22</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2026/02/21/software/lightweight-oci-registry-zot-deployment-guide/" title="轻量级私有镜像仓库选型——Zot 部署与多工具兼容性实测"><img src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="轻量级私有镜像仓库选型——Zot 部署与多工具兼容性实测"/></a><div class="content"><a class="title" href="/2026/02/21/software/lightweight-oci-registry-zot-deployment-guide/" title="轻量级私有镜像仓库选型——Zot 部署与多工具兼容性实测">轻量级私有镜像仓库选型——Zot 部署与多工具兼容性实测</a><time datetime="2026-02-21T15:08:53.000Z" title="发表于 2026-02-21 23:08:53">2026-02-21</time></div></div></div></div></div></div></main><footer id="footer"><div id="footer-wrap"><div class="copyright">&copy;2020 - 2026 By Arthur Ming</div><div class="framework-info"><span>框架 </span><a target="_blank" rel="noopener" href="https://hexo.io">Hexo</a><span class="footer-separator">|</span><span>主题 </span><a target="_blank" rel="noopener" href="https://github.com/jerryc127/hexo-theme-butterfly">Butterfly</a></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="浅色和深色模式转换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside-config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><button id="go-up" type="button" title="回到顶部"><span class="scroll-percent"></span><i class="fas fa-arrow-up"></i></button></div></div><div><script src="/js/utils.js"></script><script src="/js/main.js"></script><script src="https://cdn.jsdelivr.net/npm/@fancyapps/ui/dist/fancybox/fancybox.umd.min.js"></script><div class="js-pjax"></div><script defer="defer" id="ribbon" src="https://cdn.jsdelivr.net/npm/butterfly-extsrc/dist/canvas-ribbon.min.js" size="150" alpha="0.6" zIndex="-1" mobile="false" data-click="true"></script><script async data-pjax src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script><div id="local-search"><div class="search-dialog"><nav class="search-nav"><span class="search-dialog-title">搜索</span><span id="loading-status"></span><button class="search-close-button"><i class="fas fa-times"></i></button></nav><div class="is-center" id="loading-database"><i class="fas fa-spinner fa-pulse"></i><span>  数据库加载中</span></div><div class="search-wrap"><div id="local-search-input"><div class="local-search-box"><input class="local-search-box--input" placeholder="搜索文章" type="text"/></div></div><hr/><div id="local-search-results"></div><div id="local-search-stats-wrap"></div></div></div><div id="search-mask"></div><script src="/js/search/local-search.js"></script></div></div></body></html>
