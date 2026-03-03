@@ -79,7 +79,7 @@ Digest: sha256:c2859e4f82d5248c59b2716762acc8929abe07694576d13636da1eabc114145d
 特别注意:
 > 在 Zot 或其他支持 OCI 的仓库中，你会发现 Chart 和 Docker 镜像并排存在。如果你使用的是 Zot 的 UI，你会看到该 Artifact 的媒体类型（Media Type）为 application/vnd.cncf.helm.config.v1+json
 
-![health master charts in zot registery](/images/software/zot-health-master-charts.png)
+![health master charts in zot registery](/images/uss-zot-push-and-pull-helm-charts/health-master-charts-in-zot-registery.png)
 
 ## 执行 Helm 安装
 
