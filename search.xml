@@ -4,6 +4,37 @@
   
     
     <entry>
+      <title>技术复盘：基于 OAuth 2.0 规范的 Spring Boot 鉴权标准化改造</title>
+      <link href="/2026/04/02/back-end/spring-boot-oauth2-swagger-standardization/"/>
+      <url>/2026/04/02/back-end/spring-boot-oauth2-swagger-standardization/</url>
+      
+        <content type="html"><![CDATA[<h1 id="现状与需求"><a href="#现状与需求" class="headerlink" title="现状与需求"></a>现状与需求</h1><p>在 Hoteler 项目的开发测试阶段，由于原有的登录接口 &#x2F;token 采用非标设计（自定义 JSON 结构、Header 传参），导致 Swagger UI (SpringDoc) 无法识别认证状态，必须手动复制 Token 并粘贴至 Authorize 框中，测试效率低。</p><h2 id="目标："><a href="#目标：" class="headerlink" title="目标："></a>目标：</h2><p>实现符合 OAuth 2.0 Password Grant 规范的接口，对接 Swagger UI 自动鉴权流。</p><h1 id="协议参考"><a href="#协议参考" class="headerlink" title="协议参考"></a>协议参考</h1><p>本次改造主要参考了以下关于 OAuth 2.0 协议实现的标准逻辑：</p><ol><li><a href="https://www.ruanyifeng.com/blog/2014/05/oauth_2_0.html">理解OAuth 2.0</a></li><li><a href="https://www.ruanyifeng.com/blog/2019/04/oauth_design.html">OAuth 2.0 的一个简单解释</a></li><li><a href="https://www.ruanyifeng.com/blog/2019/04/oauth-grant-types.html">OAuth 2.0 的四种方式</a></li><li><a href="https://www.ruanyifeng.com/blog/2019/04/github-oauth.html">GitHub OAuth 第三方登录示例教程</a></li></ol><h1 id="技术实现方案"><a href="#技术实现方案" class="headerlink" title="技术实现方案"></a>技术实现方案</h1><h2 id="响应报文的标准化（Schema-Mapping）"><a href="#响应报文的标准化（Schema-Mapping）" class="headerlink" title="响应报文的标准化（Schema Mapping）"></a>响应报文的标准化（Schema Mapping）</h2><p>OAuth 2.0 规定 Access Token Response 的根路径必须包含 access_token。为兼容原有业务对象 UserToken，采用接口注入方式扩展响应体：</p><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">interface</span> <span class="title class_">OAuth2Compatible</span> &#123;</span><br><span class="line">    <span class="meta">@JsonProperty(&quot;access_token&quot;)</span></span><br><span class="line">    String <span class="title function_">getAccessToken</span><span class="params">()</span>; <span class="comment">// 映射至业务 Token 字段</span></span><br><span class="line"></span><br><span class="line">    <span class="meta">@JsonProperty(&quot;token_type&quot;)</span></span><br><span class="line">    <span class="keyword">default</span> String <span class="title function_">getTokenType</span><span class="params">()</span> &#123; <span class="keyword">return</span> <span class="string">&quot;bearer&quot;</span>; &#125;</span><br><span class="line">    </span><br><span class="line">    <span class="meta">@JsonProperty(&quot;expires_in&quot;)</span></span><br><span class="line">    <span class="keyword">default</span> <span class="type">long</span> <span class="title function_">getExpiresIn</span><span class="params">()</span> &#123; <span class="keyword">return</span> <span class="number">2592000</span>; &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure><p>通过 UserTokenResponse implements OAuth2Compatible，在不修改原有 userToken 嵌套对象的前提下，输出了符合 RFC 6749 要求的 JSON 字段</p><h2 id="登录接口参数兼容"><a href="#登录接口参数兼容" class="headerlink" title="登录接口参数兼容"></a>登录接口参数兼容</h2><p>修改 &#x2F;token 接口，支持 application&#x2F;x-www-form-urlencoded 消费类型，以接收 Swagger UI 默认发送的 username 和 password 表单参数。</p><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Operation(summary = &quot;创建token&quot;)</span></span><br><span class="line"><span class="meta">@PostMapping(value = &quot;token&quot;, consumes = &#123; MediaType.APPLICATION_FORM_URLENCODED_VALUE, MediaType.APPLICATION_JSON_VALUE &#125;)</span></span><br><span class="line"><span class="keyword">public</span> UserTokenResponse <span class="title function_">createToken</span><span class="params">(<span class="meta">@RequestParam(value = &quot;username&quot;, required = false)</span> String formUser,</span></span><br><span class="line"><span class="params">                                        <span class="meta">@RequestParam(value = &quot;password&quot;, required = false)</span> String formPass,</span></span><br><span class="line"><span class="params">                                        <span class="meta">@RequestHeader(value = &quot;username&quot;, required = false)</span> String headUser,</span></span><br><span class="line"><span class="params">                                        <span class="meta">@RequestHeader(value = &quot;password&quot;, required = false)</span> String headPass,</span></span><br><span class="line"><span class="params">                                        HttpSession session)</span> &#123;</span><br><span class="line">    <span class="type">var</span> <span class="variable">username</span> <span class="operator">=</span> (headUser != <span class="literal">null</span>) ? headUser : formUser;</span><br><span class="line">    <span class="type">var</span> <span class="variable">password</span> <span class="operator">=</span> (headPass != <span class="literal">null</span>) ? headPass : formPass;</span><br><span class="line">    <span class="keyword">try</span> &#123;</span><br><span class="line">        <span class="type">var</span> <span class="variable">unauthenticated</span> <span class="operator">=</span> UsernamePasswordAuthenticationToken.unauthenticated(username, password);</span><br><span class="line">        <span class="type">var</span> <span class="variable">authenticate</span> <span class="operator">=</span> authenticationManager.authenticate(unauthenticated);</span><br><span class="line">        <span class="type">var</span> <span class="variable">userToken</span> <span class="operator">=</span> tokenService.createToken(username, password);</span><br><span class="line">        SecurityContextHolder.getContext().setAuthentication(authenticate);</span><br><span class="line">        session.setAttribute(HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY, SecurityContextHolder.getContext());</span><br><span class="line">        <span class="type">var</span> <span class="variable">response</span> <span class="operator">=</span> <span class="keyword">new</span> <span class="title class_">UserTokenResponse</span>();</span><br><span class="line">        response.setUserToken(userToken);</span><br><span class="line">        <span class="keyword">return</span> response;</span><br><span class="line">    &#125; <span class="keyword">catch</span> (AuthenticationException ex) &#123;</span><br><span class="line">            LoggerManager.getApiLogger().error(<span class="string">&quot;AuthenticationException: &quot;</span> + ex.getMessage());</span><br><span class="line">            <span class="keyword">throw</span> ex;</span><br><span class="line">    &#125; <span class="keyword">catch</span> (HotelerException ex) &#123;</span><br><span class="line">        LoggerManager.getApiLogger().error(<span class="string">&quot;HotelerException: &quot;</span> + ex.getMessage());</span><br><span class="line">        <span class="keyword">throw</span> ex;</span><br><span class="line">    &#125; <span class="keyword">catch</span> (Exception ex) &#123;</span><br><span class="line">        LoggerManager.getApiLogger().error(<span class="string">&quot;Exception: &quot;</span> + ex.getMessage());</span><br><span class="line">        <span class="keyword">throw</span> ex;</span><br><span class="line">    &#125; <span class="keyword">finally</span> &#123;</span><br><span class="line">        <span class="comment">// TODO</span></span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure><h2 id="OpenAPI-SecurityScheme-配置"><a href="#OpenAPI-SecurityScheme-配置" class="headerlink" title="OpenAPI SecurityScheme 配置"></a>OpenAPI SecurityScheme 配置</h2><p>在 OpenApiConfig 中定义 SecurityScheme。关键点在于 type 声明为 OAUTH2，并正确指向 tokenUrl。</p><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">private</span> Components <span class="title function_">components</span><span class="params">()</span> &#123;</span><br><span class="line">    <span class="keyword">return</span> <span class="keyword">new</span> <span class="title class_">Components</span>()</span><br><span class="line">            .addSecuritySchemes(<span class="string">&quot;bearer-key&quot;</span>, <span class="keyword">new</span> <span class="title class_">SecurityScheme</span>().type(SecurityScheme.Type.HTTP).scheme(<span class="string">&quot;bearer&quot;</span>).bearerFormat(<span class="string">&quot;JWT&quot;</span>))</span><br><span class="line">            .addSecuritySchemes(<span class="string">&quot;OAuth2Password&quot;</span>, <span class="keyword">new</span> <span class="title class_">SecurityScheme</span>()</span><br><span class="line">                    .type(SecurityScheme.Type.OAUTH2)</span><br><span class="line">                    .description(<span class="string">&quot;输入用户名和密码登录以获取令牌&quot;</span>)</span><br><span class="line">                    .flows(<span class="keyword">new</span> <span class="title class_">OAuthFlows</span>()</span><br><span class="line">                            .password(<span class="keyword">new</span> <span class="title class_">OAuthFlow</span>()</span><br><span class="line">                                    <span class="comment">// 这里的 URL 必须对应你 Controller 里的 @PostMapping(&quot;token&quot;)</span></span><br><span class="line">                                    .tokenUrl(<span class="string">&quot;/api/v1/token&quot;</span>)</span><br><span class="line">                                    .scopes(<span class="keyword">new</span> <span class="title class_">Scopes</span>().addString(<span class="string">&quot;read&quot;</span>, <span class="string">&quot;读权限&quot;</span>))</span><br><span class="line">                            )</span><br><span class="line">                    ));</span><br><span class="line">    &#125;</span><br></pre></td></tr></table></figure><h1 id="调试记录"><a href="#调试记录" class="headerlink" title="调试记录"></a>调试记录</h1><h2 id="Header-填充失效问题"><a href="#Header-填充失效问题" class="headerlink" title="Header 填充失效问题"></a>Header 填充失效问题</h2><p>现象： 弹窗登录成功后，调用业务接口仍未自动携带 Authorization Header。<br>定位： 接口声明的 SecurityRequirement 名称与 SecurityScheme 的 Key 不一致。<br>解决： 统一使用 OAuth2Password 作为唯一标识符或者直接删除原有的SecurityScheme 的 Key。</p><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Operation(security = &#123; @SecurityRequirement(name = &quot;OAuth2Password&quot;) &#125;)</span></span><br></pre></td></tr></table></figure><h1 id="结论"><a href="#结论" class="headerlink" title="结论"></a>结论</h1><p>通过本次改造，后端认证模块具备了以下特性：</p><ol><li>协议对齐：完全兼容 OAuth 2.0 密码模式。</li><li>前端自动化：Swagger UI 可实现“登录-存储-填充”闭环。</li><li>零破坏升级：原有基于 Header 传参的旧客户端调用不受影响。</li></ol><p>项目仓库： <a href="https://github.com/damingerdai/hoteler">damingerdai&#x2F;hoteler</a></p>]]></content>
+      
+      
+      <categories>
+          
+          <category> 后端 </category>
+          
+      </categories>
+      
+      
+        <tags>
+            
+            <tag> spring boot </tag>
+            
+            <tag> swagger ui </tag>
+            
+            <tag> oauth2 </tag>
+            
+            <tag> spring doc </tag>
+            
+        </tags>
+      
+    </entry>
+    
+    
+    
+    <entry>
       <title>在 Spring WebFlux 项目中将 JDBC 迁移到 R2DBC</title>
       <link href="/2026/03/31/back-end/spring-webflux-jdbc-to-r2dbc-migration/"/>
       <url>/2026/03/31/back-end/spring-webflux-jdbc-to-r2dbc-migration/</url>
@@ -473,9 +504,9 @@
       
         <tags>
             
-            <tag> bazel </tag>
-            
             <tag> spring boot </tag>
+            
+            <tag> bazel </tag>
             
             <tag> bzlmod </tag>
             
@@ -1206,9 +1237,9 @@
       
         <tags>
             
-            <tag> bazel </tag>
-            
             <tag> spring boot </tag>
+            
+            <tag> bazel </tag>
             
             <tag> java </tag>
             
@@ -1300,9 +1331,9 @@
       
         <tags>
             
-            <tag> docker </tag>
-            
             <tag> k8s </tag>
+            
+            <tag> docker </tag>
             
             <tag> kubernetes </tag>
             
@@ -1601,9 +1632,9 @@
       
         <tags>
             
-            <tag> docker </tag>
-            
             <tag> k8s </tag>
+            
+            <tag> docker </tag>
             
             <tag> k3s </tag>
             
@@ -1661,9 +1692,9 @@
       
         <tags>
             
-            <tag> docker </tag>
-            
             <tag> k8s </tag>
+            
+            <tag> docker </tag>
             
             <tag> minikube </tag>
             
@@ -1819,9 +1850,9 @@
       
         <tags>
             
-            <tag> nodejs </tag>
-            
             <tag> docker </tag>
+            
+            <tag> nodejs </tag>
             
         </tags>
       
@@ -1925,9 +1956,9 @@
       
         <tags>
             
-            <tag> angular </tag>
-            
             <tag> bazel </tag>
+            
+            <tag> angular </tag>
             
         </tags>
       
@@ -1952,9 +1983,9 @@
       
         <tags>
             
-            <tag> angular </tag>
-            
             <tag> bazel </tag>
+            
+            <tag> angular </tag>
             
         </tags>
       
@@ -2006,9 +2037,9 @@
       
         <tags>
             
-            <tag> docker </tag>
-            
             <tag> k8s </tag>
+            
+            <tag> docker </tag>
             
             <tag> kubernetes </tag>
             
