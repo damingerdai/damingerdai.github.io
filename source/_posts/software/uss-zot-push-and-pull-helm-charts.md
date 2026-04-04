@@ -22,8 +22,10 @@ categories: [软件]
 
 ```bash
 # 登录 OCI 注册表
-echo "YOUR_PASSWORD" | helm registry login 192.168.31.220:5000 -u admin --password-stdin --insecure
+echo "YOUR_PASSWORD" | helm registry login 192.168.31.220:5000 -u admin --password-stdin --plain-http
 ```
+
+在 Helm 中，--insecure 的含义通常是“允许不验证 SSL 证书的合法性”（比如自签名证书），但它默认依然会尝试使用 HTTPS。对于较新版本的 Helm（3.7+），专门提供了一个参数(--plain-http)来强制使用 HTTP 而非 HTTPS。
 
 ## 配置 K3s 节点免密拉取
 
