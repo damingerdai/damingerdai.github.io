@@ -124,7 +124,7 @@ ingress:
 helm upgrade --install kite kite/kite --namespace kite-system --create-namespace -f values.yaml
 ```
 
-![kite效果图](./kite-production-setup-with-external-postgres-and-ingress/kite-production-setup-with-external-postgres-and-ingress-1.png)
+![kite效果图](/images/kite-production-setup-with-external-postgres-and-ingress/kite-production-setup-with-external-postgres-and-ingress-1.png)
 
 > 在 Helm 的设计中，upgrade --install 是生产环境最常用的命令, 如果 Kite 还没安装：它会执行 安装 (Install) 动作，创建一个新的 Release;如果 Kite 已经安装：它会对比 my-values.yaml 和当前的配置，执行 更新 (Upgrade) 动作。
 
