@@ -10,7 +10,7 @@ categories: [软件]
 
 ### 引言
 
-在之前的文章 [《在 K3s 上使用 Prometheus 配置 Kite》](https://blog.damingerdai.com/2026/01/25/software/setup-kite-with-prometheus-on-k3s/) 中，我们快速搭建了测试环境。但随着使用深入，原方案的局限性开始显现。今天我们将进行一次彻头彻尾的“生产级”改造。
+在之前的文章 [《玩转 K8s 面板：轻量级 Kite 安装全记录 (K3s 篇)》](https://blog.damingerdai.com/2026/01/25/software/setup-kite-with-prometheus-on-k3s/) 中，我们快速搭建了测试环境。但随着使用深入，原方案的局限性开始显现。今天我们将进行一次彻头彻尾的“生产级”改造。
 
 -----
 
