@@ -4,6 +4,35 @@
   
     
     <entry>
+      <title>无 Docker Desktop + Colima + Docker Compose v2 标准化方案</title>
+      <link href="/2026/04/27/software/colima-docker-compose-setup/"/>
+      <url>/2026/04/27/software/colima-docker-compose-setup/</url>
+      
+        <content type="html"><![CDATA[<h1 id="无-Docker-Desktop-纯-CLI-Colima-Docker-Compose-v2-标准化方案"><a href="#无-Docker-Desktop-纯-CLI-Colima-Docker-Compose-v2-标准化方案" class="headerlink" title="无 Docker Desktop + 纯 CLI + Colima + Docker Compose v2 标准化方案"></a>无 Docker Desktop + 纯 CLI + Colima + Docker Compose v2 标准化方案</h1><h2 id="一、背景"><a href="#一、背景" class="headerlink" title="一、背景"></a>一、背景</h2><p>在 macOS 环境中，Docker Desktop 虽然开箱即用，但存在以下问题：</p><ul><li>资源占用高（CPU &#x2F; 内存）</li><li>启动慢</li><li>商业使用存在许可限制</li><li>与开发环境（如 k8s &#x2F; 自定义 runtime）耦合较重</li></ul><p>因此，采用以下组合替代：</p><blockquote><p><strong>Colima + Docker CLI + Compose v2 Plugin</strong></p></blockquote><p>目标是实现：</p><ul><li>轻量级 Docker 运行环境</li><li>完整 CLI 操作体验</li><li>原生支持 <code>docker compose</code>（v2）</li></ul><hr><h2 id="二、整体架构"><a href="#二、整体架构" class="headerlink" title="二、整体架构"></a>二、整体架构</h2><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line">docker CLI</span><br><span class="line">   ↓</span><br><span class="line">docker context (colima)</span><br><span class="line">   ↓</span><br><span class="line">unix socket (~/.colima/default/docker.sock)</span><br><span class="line">   ↓</span><br><span class="line">Colima VM (container runtime)</span><br><span class="line">````</span><br><span class="line"></span><br><span class="line">---</span><br><span class="line"></span><br><span class="line"><span class="comment">## 三、环境安装</span></span><br><span class="line"></span><br><span class="line"><span class="comment">### 1. 安装基础工具</span></span><br><span class="line"></span><br><span class="line">```bash</span><br><span class="line">brew install docker colima docker-compose</span><br></pre></td></tr></table></figure><p>说明：</p><ul><li><code>docker</code>：CLI 工具</li><li><code>colima</code>：本地 container runtime（基于 Lima + containerd）</li><li><code>docker-compose</code>：Compose v2 实现（后续转换为 plugin）</li></ul><hr><h3 id="2-启动-Colima"><a href="#2-启动-Colima" class="headerlink" title="2. 启动 Colima"></a>2. 启动 Colima</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">colima start</span><br></pre></td></tr></table></figure><p>可选配置：</p><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">colima start --cpu 4 --memory 8</span><br></pre></td></tr></table></figure><hr><h3 id="3-设置-Docker-Context"><a href="#3-设置-Docker-Context" class="headerlink" title="3. 设置 Docker Context"></a>3. 设置 Docker Context</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">docker context use colima</span><br></pre></td></tr></table></figure><p>验证：</p><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">docker context <span class="built_in">ls</span></span><br></pre></td></tr></table></figure><hr><h2 id="四、启用-Docker-Compose-v2（核心步骤）"><a href="#四、启用-Docker-Compose-v2（核心步骤）" class="headerlink" title="四、启用 Docker Compose v2（核心步骤）"></a>四、启用 Docker Compose v2（核心步骤）</h2><p>Homebrew 不直接提供 <code>docker-compose-plugin</code>，需要手动转换：</p><h3 id="1-创建-plugin-目录"><a href="#1-创建-plugin-目录" class="headerlink" title="1. 创建 plugin 目录"></a>1. 创建 plugin 目录</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">mkdir</span> -p ~/.docker/cli-plugins</span><br></pre></td></tr></table></figure><hr><h3 id="2-软链接-compose"><a href="#2-软链接-compose" class="headerlink" title="2. 软链接 compose"></a>2. 软链接 compose</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">ln</span> -s $(<span class="built_in">which</span> docker-compose) ~/.docker/cli-plugins/docker-compose</span><br></pre></td></tr></table></figure><hr><h3 id="3-验证"><a href="#3-验证" class="headerlink" title="3. 验证"></a>3. 验证</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">docker compose version</span><br></pre></td></tr></table></figure><p>期望输出：</p><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">Docker Compose version 5.x.x</span><br></pre></td></tr></table></figure><hr><h2 id="五、最终使用方式"><a href="#五、最终使用方式" class="headerlink" title="五、最终使用方式"></a>五、最终使用方式</h2><p>统一使用：</p><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">docker compose up</span><br><span class="line">docker compose down</span><br><span class="line">docker compose ps</span><br></pre></td></tr></table></figure><p>不再使用：</p><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">docker-compose  <span class="comment"># deprecated</span></span><br></pre></td></tr></table></figure><hr><h2 id="六、环境验证"><a href="#六、环境验证" class="headerlink" title="六、环境验证"></a>六、环境验证</h2><h3 id="1-Docker"><a href="#1-Docker" class="headerlink" title="1. Docker"></a>1. Docker</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">docker ps</span><br></pre></td></tr></table></figure><hr><h3 id="2-Compose"><a href="#2-Compose" class="headerlink" title="2. Compose"></a>2. Compose</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">docker compose version</span><br></pre></td></tr></table></figure><hr><h3 id="3-Socket"><a href="#3-Socket" class="headerlink" title="3. Socket"></a>3. Socket</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">echo</span> <span class="variable">$DOCKER_HOST</span></span><br></pre></td></tr></table></figure><p>应为空或由 context 管理（推荐）</p><hr><h2 id="七、常见问题"><a href="#七、常见问题" class="headerlink" title="七、常见问题"></a>七、常见问题</h2><h3 id="1-docker-compose-不可用"><a href="#1-docker-compose-不可用" class="headerlink" title="1. docker compose 不可用"></a>1. <code>docker compose</code> 不可用</h3><p>原因：</p><ul><li>plugin 未配置</li></ul><p>解决：</p><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">ls</span> ~/.docker/cli-plugins</span><br></pre></td></tr></table></figure><p>确认存在：</p><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">docker-compose</span><br></pre></td></tr></table></figure><hr><h3 id="2-连接错误"><a href="#2-连接错误" class="headerlink" title="2. 连接错误"></a>2. 连接错误</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">Cannot connect to the Docker daemon</span><br></pre></td></tr></table></figure><p>排查：</p><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">docker context <span class="built_in">ls</span></span><br></pre></td></tr></table></figure><hr><h3 id="3-权限或路径问题"><a href="#3-权限或路径问题" class="headerlink" title="3. 权限或路径问题"></a>3. 权限或路径问题</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">which</span> docker</span><br><span class="line"><span class="built_in">which</span> docker-compose</span><br></pre></td></tr></table></figure><p>确保均来自 Homebrew：</p><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">/opt/homebrew/bin/</span><br></pre></td></tr></table></figure><hr><h2 id="八、最佳实践"><a href="#八、最佳实践" class="headerlink" title="八、最佳实践"></a>八、最佳实践</h2><h3 id="1-固定-context"><a href="#1-固定-context" class="headerlink" title="1. 固定 context"></a>1. 固定 context</h3><p>在 shell 配置中加入：</p><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">export</span> DOCKER_CONTEXT=colima</span><br></pre></td></tr></table></figure><hr><h3 id="2-避免-DOCKER-HOST-干扰"><a href="#2-避免-DOCKER-HOST-干扰" class="headerlink" title="2. 避免 DOCKER_HOST 干扰"></a>2. 避免 DOCKER_HOST 干扰</h3><p>不要手动设置：</p><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">export</span> DOCKER_HOST=...</span><br></pre></td></tr></table></figure><p>交由 context 管理</p><hr><h3 id="3-统一团队规范"><a href="#3-统一团队规范" class="headerlink" title="3. 统一团队规范"></a>3. 统一团队规范</h3><p>建议团队统一：</p><ul><li>使用 Colima</li><li>使用 <code>docker compose</code></li><li>禁止 <code>docker-compose</code></li></ul><hr><h2 id="九、优缺点分析"><a href="#九、优缺点分析" class="headerlink" title="九、优缺点分析"></a>九、优缺点分析</h2><h3 id="优点"><a href="#优点" class="headerlink" title="优点"></a>优点</h3><ul><li>轻量（相比 Docker Desktop）</li><li>无商业授权限制</li><li>启动速度快</li><li>与 k8s &#x2F; containerd 更贴近</li></ul><hr><h3 id="缺点"><a href="#缺点" class="headerlink" title="缺点"></a>缺点</h3><ul><li>需要手动配置 Compose plugin</li><li>初次上手成本略高</li><li>部分 GUI 工具不可用</li></ul><hr><h2 id="十、总结"><a href="#十、总结" class="headerlink" title="十、总结"></a>十、总结</h2><p>该方案的核心是：</p><blockquote><p><strong>用 Colima 替代 Docker Desktop，用 CLI + plugin 还原官方 Docker 体验</strong></p></blockquote><p>最终效果：</p><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">docker compose up</span><br></pre></td></tr></table></figure><p>与 Docker Desktop 环境保持一致，但更加轻量、可控。</p><hr><h2 id="十一、参考命令速查"><a href="#十一、参考命令速查" class="headerlink" title="十一、参考命令速查"></a>十一、参考命令速查</h2><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 启动环境</span></span><br><span class="line">colima start</span><br><span class="line"></span><br><span class="line"><span class="comment"># 查看 context</span></span><br><span class="line">docker context <span class="built_in">ls</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 切换 context</span></span><br><span class="line">docker context use colima</span><br><span class="line"></span><br><span class="line"><span class="comment"># Compose</span></span><br><span class="line">docker compose up</span><br><span class="line">docker compose down</span><br><span class="line"></span><br><span class="line"><span class="comment"># 查看 plugin</span></span><br><span class="line"><span class="built_in">ls</span> ~/.docker/cli-plugins</span><br></pre></td></tr></table></figure><hr><h2 id="十二、适用人群"><a href="#十二、适用人群" class="headerlink" title="十二、适用人群"></a>十二、适用人群</h2><ul><li>后端工程师（Node.js &#x2F; Go &#x2F; Java）</li><li>前端工程化开发（需要容器化）</li><li>使用 k8s &#x2F; 本地集群（k3s &#x2F; kind）</li><li>追求轻量开发环境的工程师&#96;</li></ul>]]></content>
+      
+      
+      <categories>
+          
+          <category> 软件 </category>
+          
+      </categories>
+      
+      
+        <tags>
+            
+            <tag> docker </tag>
+            
+            <tag> colima </tag>
+            
+            <tag> docker compose </tag>
+            
+        </tags>
+      
+    </entry>
+    
+    
+    
+    <entry>
       <title>优雅实现 Git 多账号切换：基于 SSH Config 与 includeIf 的环境隔离方案</title>
       <link href="/2026/04/18/software/git-multi-account-setup-with-includeif/"/>
       <url>/2026/04/18/software/git-multi-account-setup-with-includeif/</url>
@@ -270,9 +299,9 @@
             
             <tag> podman </tag>
             
-            <tag> docker registry </tag>
-            
             <tag> docker compose </tag>
+            
+            <tag> docker registry </tag>
             
             <tag> zot </tag>
             
@@ -560,9 +589,9 @@
       
         <tags>
             
-            <tag> spring boot </tag>
-            
             <tag> bazel </tag>
+            
+            <tag> spring boot </tag>
             
             <tag> bzlmod </tag>
             
@@ -1293,9 +1322,9 @@
       
         <tags>
             
-            <tag> spring boot </tag>
-            
             <tag> bazel </tag>
+            
+            <tag> spring boot </tag>
             
             <tag> java </tag>
             
@@ -1387,9 +1416,9 @@
       
         <tags>
             
-            <tag> k8s </tag>
-            
             <tag> docker </tag>
+            
+            <tag> k8s </tag>
             
             <tag> kubernetes </tag>
             
@@ -1688,9 +1717,9 @@
       
         <tags>
             
-            <tag> k8s </tag>
-            
             <tag> docker </tag>
+            
+            <tag> k8s </tag>
             
             <tag> k3s </tag>
             
@@ -1748,9 +1777,9 @@
       
         <tags>
             
-            <tag> k8s </tag>
-            
             <tag> docker </tag>
+            
+            <tag> k8s </tag>
             
             <tag> minikube </tag>
             
@@ -1906,9 +1935,9 @@
       
         <tags>
             
-            <tag> docker </tag>
-            
             <tag> nodejs </tag>
+            
+            <tag> docker </tag>
             
         </tags>
       
@@ -2012,9 +2041,9 @@
       
         <tags>
             
-            <tag> bazel </tag>
-            
             <tag> angular </tag>
+            
+            <tag> bazel </tag>
             
         </tags>
       
@@ -2039,9 +2068,9 @@
       
         <tags>
             
-            <tag> bazel </tag>
-            
             <tag> angular </tag>
+            
+            <tag> bazel </tag>
             
         </tags>
       
@@ -2093,9 +2122,9 @@
       
         <tags>
             
-            <tag> k8s </tag>
-            
             <tag> docker </tag>
+            
+            <tag> k8s </tag>
             
             <tag> kubernetes </tag>
             
