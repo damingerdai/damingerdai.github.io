@@ -8,16 +8,123 @@
 <meta property="og:image" content="http://blog.damingerdai.com/img/avatar.png">
 <meta property="article:author" content="Arthur Ming">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:image" content="http://blog.damingerdai.com/img/avatar.png"><link rel="shortcut icon" href="/img/avatar.png"><link rel="canonical" href="http://blog.damingerdai.com/page/4/index.html"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><link rel="stylesheet" href="/css/index.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free/css/all.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/ui/dist/fancybox/fancybox.min.css" media="print" onload="this.media='all'"><script>const GLOBAL_CONFIG = {
+<meta name="twitter:image" content="http://blog.damingerdai.com/img/avatar.png"><script type="application/ld+json"></script><link rel="shortcut icon" href="/img/avatar.png"><link rel="canonical" href="http://blog.damingerdai.com/page/4/index.html"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><link rel="stylesheet" href="/css/index.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free/css/all.min.css"><script>
+    (() => {
+      
+    const saveToLocal = {
+      set: (key, value, ttl) => {
+        if (!ttl) return
+        const expiry = Date.now() + ttl * 86400000
+        localStorage.setItem(key, JSON.stringify({ value, expiry }))
+      },
+      get: key => {
+        const itemStr = localStorage.getItem(key)
+        if (!itemStr) return undefined
+        const { value, expiry } = JSON.parse(itemStr)
+        if (Date.now() > expiry) {
+          localStorage.removeItem(key)
+          return undefined
+        }
+        return value
+      }
+    }
+
+    window.btf = {
+      saveToLocal,
+      getScript: (url, attr = {}) => new Promise((resolve, reject) => {
+        const script = document.createElement('script')
+        script.src = url
+        script.async = true
+        Object.entries(attr).forEach(([key, val]) => script.setAttribute(key, val))
+        script.onload = script.onreadystatechange = () => {
+          if (!script.readyState || /loaded|complete/.test(script.readyState)) resolve()
+        }
+        script.onerror = reject
+        document.head.appendChild(script)
+      }),
+      getCSS: (url, id) => new Promise((resolve, reject) => {
+        const link = document.createElement('link')
+        link.rel = 'stylesheet'
+        link.href = url
+        if (id) link.id = id
+        link.onload = link.onreadystatechange = () => {
+          if (!link.readyState || /loaded|complete/.test(link.readyState)) resolve()
+        }
+        link.onerror = reject
+        document.head.appendChild(link)
+      }),
+      addGlobalFn: (key, fn, name = false, parent = window) => {
+        if (!false && key.startsWith('pjax')) return
+        const globalFn = parent.globalFn || {}
+        globalFn[key] = globalFn[key] || {}
+        globalFn[key][name || Object.keys(globalFn[key]).length] = fn
+        parent.globalFn = globalFn
+      }
+    }
+  
+      
+      const activateDarkMode = () => {
+        document.documentElement.setAttribute('data-theme', 'dark')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+        }
+      }
+      const activateLightMode = () => {
+        document.documentElement.setAttribute('data-theme', 'light')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#ffffff')
+        }
+      }
+
+      btf.activateDarkMode = activateDarkMode
+      btf.activateLightMode = activateLightMode
+
+      const theme = saveToLocal.get('theme')
+    
+          const mediaQueryDark = window.matchMedia('(prefers-color-scheme: dark)')
+          const mediaQueryLight = window.matchMedia('(prefers-color-scheme: light)')
+
+          if (theme === undefined) {
+            if (mediaQueryLight.matches) activateLightMode()
+            else if (mediaQueryDark.matches) activateDarkMode()
+            else {
+              const hour = new Date().getHours()
+              const isNight = hour <= 6 || hour >= 18
+              isNight ? activateDarkMode() : activateLightMode()
+            }
+            mediaQueryDark.addEventListener('change', () => {
+              if (saveToLocal.get('theme') === undefined) {
+                e.matches ? activateDarkMode() : activateLightMode()
+              }
+            })
+          } else {
+            theme === 'light' ? activateLightMode() : activateDarkMode()
+          }
+        
+      
+      const asideStatus = saveToLocal.get('aside-status')
+      if (asideStatus !== undefined) {
+        document.documentElement.classList.toggle('hide-aside', asideStatus === 'hide')
+      }
+    
+      
+    const detectApple = () => {
+      if (/iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent)) {
+        document.documentElement.classList.add('apple')
+      }
+    }
+    detectApple()
+  
+    })()
+  </script><script>const GLOBAL_CONFIG = {
   root: '/',
   algolia: undefined,
-  localSearch: {"path":"/search.xml","preload":false,"top_n_per_article":1,"unescape":false,"languages":{"hits_empty":"找不到您查询的内容：${query}","hits_stats":"共找到 ${hits} 篇文章"}},
+  localSearch: undefined,
   translate: undefined,
-  noticeOutdate: undefined,
-  highlight: {"plugin":"highlight.js","highlightCopy":true,"highlightLang":true,"highlightHeightLimit":false},
+  highlight: {"plugin":"highlight.js","highlightCopy":true,"highlightLang":true,"highlightHeightLimit":false,"highlightFullpage":false,"highlightMacStyle":false},
   copy: {
     success: '复制成功',
-    error: '复制错误',
+    error: '复制失败',
     noSupport: '浏览器不支持'
   },
   relativeDate: {
@@ -33,14 +140,14 @@
     month: '个月前'
   },
   copyright: undefined,
-  lightbox: 'fancybox',
+  lightbox: 'null',
   Snackbar: undefined,
   infinitegrid: {
     js: 'https://cdn.jsdelivr.net/npm/@egjs/infinitegrid/dist/infinitegrid.min.js',
     buttonText: '加载更多'
   },
   isPhotoFigcaption: false,
-  islazyload: false,
+  islazyloadPlugin: false,
   isAnchor: false,
   percent: {
     toc: true,
@@ -49,221 +156,103 @@
   autoDarkmode: true
 }</script><script id="config-diff">var GLOBAL_CONFIG_SITE = {
   title: 'Damingerdai\'s Blog',
-  isPost: false,
-  isHome: true,
   isHighlightShrink: false,
   isToc: false,
-  postUpdate: '2026-04-27 14:22:57'
-}</script><script>(win=>{
-      win.saveToLocal = {
-        set: (key, value, ttl) => {
-          if (ttl === 0) return
-          const now = Date.now()
-          const expiry = now + ttl * 86400000
-          const item = {
-            value,
-            expiry
-          }
-          localStorage.setItem(key, JSON.stringify(item))
-        },
-      
-        get: key => {
-          const itemStr = localStorage.getItem(key)
-      
-          if (!itemStr) {
-            return undefined
-          }
-          const item = JSON.parse(itemStr)
-          const now = Date.now()
-      
-          if (now > item.expiry) {
-            localStorage.removeItem(key)
-            return undefined
-          }
-          return item.value
-        }
-      }
-    
-      win.getScript = (url, attr = {}) => new Promise((resolve, reject) => {
-        const script = document.createElement('script')
-        script.src = url
-        script.async = true
-        script.onerror = reject
-        script.onload = script.onreadystatechange = function() {
-          const loadState = this.readyState
-          if (loadState && loadState !== 'loaded' && loadState !== 'complete') return
-          script.onload = script.onreadystatechange = null
-          resolve()
-        }
-
-        Object.keys(attr).forEach(key => {
-          script.setAttribute(key, attr[key])
-        })
-
-        document.head.appendChild(script)
-      })
-    
-      win.getCSS = (url, id = false) => new Promise((resolve, reject) => {
-        const link = document.createElement('link')
-        link.rel = 'stylesheet'
-        link.href = url
-        if (id) link.id = id
-        link.onerror = reject
-        link.onload = link.onreadystatechange = function() {
-          const loadState = this.readyState
-          if (loadState && loadState !== 'loaded' && loadState !== 'complete') return
-          link.onload = link.onreadystatechange = null
-          resolve()
-        }
-        document.head.appendChild(link)
-      })
-    
-      win.activateDarkMode = () => {
-        document.documentElement.setAttribute('data-theme', 'dark')
-        if (document.querySelector('meta[name="theme-color"]') !== null) {
-          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
-        }
-      }
-      win.activateLightMode = () => {
-        document.documentElement.setAttribute('data-theme', 'light')
-        if (document.querySelector('meta[name="theme-color"]') !== null) {
-          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#ffffff')
-        }
-      }
-      const t = saveToLocal.get('theme')
-    
-          const isDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches
-          const isLightMode = window.matchMedia('(prefers-color-scheme: light)').matches
-          const isNotSpecified = window.matchMedia('(prefers-color-scheme: no-preference)').matches
-          const hasNoSupport = !isDarkMode && !isLightMode && !isNotSpecified
-
-          if (t === undefined) {
-            if (isLightMode) activateLightMode()
-            else if (isDarkMode) activateDarkMode()
-            else if (isNotSpecified || hasNoSupport) {
-              const now = new Date()
-              const hour = now.getHours()
-              const isNight = hour <= 6 || hour >= 18
-              isNight ? activateDarkMode() : activateLightMode()
-            }
-            window.matchMedia('(prefers-color-scheme: dark)').addListener(e => {
-              if (saveToLocal.get('theme') === undefined) {
-                e.matches ? activateDarkMode() : activateLightMode()
-              }
-            })
-          } else if (t === 'light') activateLightMode()
-          else activateDarkMode()
-        
-      const asideStatus = saveToLocal.get('aside-status')
-      if (asideStatus !== undefined) {
-        if (asideStatus === 'hide') {
-          document.documentElement.classList.add('hide-aside')
-        } else {
-          document.documentElement.classList.remove('hide-aside')
-        }
-      }
-    
-      const detectApple = () => {
-        if(/iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent)){
-          document.documentElement.classList.add('apple')
-        }
-      }
-      detectApple()
-    })(window)</script><link rel="stylesheet" href="/css/styles.css"><meta name="generator" content="Hexo 7.3.0"></head><body><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="avatar-img is-center"><img src="/img/avatar.png" onerror="onerror=null;src='/img/friend_404.gif'" alt="avatar"/></div><div class="sidebar-site-data site-data is-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">79</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">113</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">8</div></a></div><hr class="custom-hr"/><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归类</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page group" href="javascript:void(0);"><i class="fa-fw fas fa-list"></i><span> 其他</span><i class="fas fa-chevron-down"></i></a><ul class="menus_item_child"><li><a class="site-page child" href="/others/learning"><i class="fa-fw fas fa-graduation-cap"></i><span> 学习课程</span></a></li><li><a class="site-page child" href="/others/link/"><i class="fa-fw fas fa-link"></i><span> 链接</span></a></li><li><a class="site-page child" href="/others/interview/"><i class="fa-fw fas fa-glide"></i><span> 面试</span></a></li></ul></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于</span></a></div></div></div></div><div class="page" id="body-wrap"><header class="full_page" id="page-header" style="background-image: url('https://homepage.damingerdai.com/_next/image?url=%2Fdamingerdai.webp&amp;w=2048&amp;q=75')"><nav id="nav"><span id="blog-info"><a href="/" title="Damingerdai's Blog"><span class="site-name">Damingerdai's Blog</span></a></span><div id="menus"><div id="search-button"><a class="site-page social-icon search" href="javascript:void(0);"><i class="fas fa-search fa-fw"></i><span> 搜索</span></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归类</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page group" href="javascript:void(0);"><i class="fa-fw fas fa-list"></i><span> 其他</span><i class="fas fa-chevron-down"></i></a><ul class="menus_item_child"><li><a class="site-page child" href="/others/learning"><i class="fa-fw fas fa-graduation-cap"></i><span> 学习课程</span></a></li><li><a class="site-page child" href="/others/link/"><i class="fa-fw fas fa-link"></i><span> 链接</span></a></li><li><a class="site-page child" href="/others/interview/"><i class="fa-fw fas fa-glide"></i><span> 面试</span></a></li></ul></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于</span></a></div></div><div id="toggle-menu"><a class="site-page" href="javascript:void(0);"><i class="fas fa-bars fa-fw"></i></a></div></div></nav><div id="site-info"><h1 id="site-title">Damingerdai's Blog</h1><div id="site-subtitle"><span id="subtitle"></span></div><div id="site_social_icons"><a class="social-icon" href="https://github.com/damingerdai" target="_blank" title="Github"><i class="fab fa-github" style="color: #24292e;"></i></a><a class="social-icon" href="mailto:mingguobin@live.com" target="_blank" title="Email"><i class="fas fa-envelope" style="color: #4a7dbe;"></i></a></div></div><div id="scroll-down"><i class="fas fa-angle-down scroll-down-effects"></i></div></header><main class="layout" id="content-inner"><div class="recent-posts" id="recent-posts"><div class="recent-post-item"><div class="post_cover left"><a href="/2025/05/22/software/noice-nvim-cmdline-cursor-auto-scroll-to-front-bug/" title="noice.nvim在cmdline中的光标自动滚动到最前面的bug"><img class="post-bg" src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="noice.nvim在cmdline中的光标自动滚动到最前面的bug"></a></div><div class="recent-post-info"><a class="article-title" href="/2025/05/22/software/noice-nvim-cmdline-cursor-auto-scroll-to-front-bug/" title="noice.nvim在cmdline中的光标自动滚动到最前面的bug">noice.nvim在cmdline中的光标自动滚动到最前面的bug</a><div class="article-meta-wrap"><span class="post-meta-date"><i class="far fa-calendar-alt"></i><span class="article-meta-label">发表于</span><time datetime="2025-05-22T13:58:27.000Z" title="发表于 2025-05-22 21:58:27">2025-05-22</time></span><span class="article-meta"><span class="article-meta-separator">|</span><i class="fas fa-inbox"></i><a class="article-meta__categories" href="/categories/%E8%BD%AF%E4%BB%B6/">软件</a></span></div><div class="content">前言最新把 neovim 升级到最新版本0.11.1,lazyvim 升级到14.x。然后不出意外就挂了好几个 plugin。其中 noice.nvim 是影响比较小的但比较膈应人的。
-bug描述
-
-
-
-当在cmdline模式输入命令的时候光标总是会莫名其妙的滚动到最前面。我本来以为是noice.nvim的问题，但是经过测试，发现只有在itermn2的非全屏模式下才会出现，全屏模式或者其他终端模拟器则不会出现类似的问题。
-解决好在bug: Cursor jumps in cmdline - 4.5.0中有小哥也遇到过类似的问题，他在iTerm2中禁用”由会话触发的窗口调整大小”功能解决了这个问题（设置路径：Settings &gt; Profiles &gt; [我的配置文件] &gt; Terminal &gt; 勾选”Disable session-initiated window resizing”），然后就好了。
-其他在https://superuser.com/questions/113944/how-to-prevent-screen-from-resizing-my-te ...</div></div></div><div class="recent-post-item"><div class="post_cover right"><a href="/2025/04/30/back-end/rust-bytedance-mirror-windows/" title="在windows系统中如何给rust如何配置字节源"><img class="post-bg" src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="在windows系统中如何给rust如何配置字节源"></a></div><div class="recent-post-info"><a class="article-title" href="/2025/04/30/back-end/rust-bytedance-mirror-windows/" title="在windows系统中如何给rust如何配置字节源">在windows系统中如何给rust如何配置字节源</a><div class="article-meta-wrap"><span class="post-meta-date"><i class="far fa-calendar-alt"></i><span class="article-meta-label">发表于</span><time datetime="2025-04-30T08:57:06.000Z" title="发表于 2025-04-30 16:57:06">2025-04-30</time></span><span class="article-meta"><span class="article-meta-separator">|</span><i class="fas fa-inbox"></i><a class="article-meta__categories" href="/categories/%E5%90%8E%E7%AB%AF/">后端</a></span></div><div class="content">rust中如何配置字节源前言本文的目的是在windows上安装或更新rust的时候通过配置字节的国内源来提高安装&#x2F;更新速度。非windows系统就可以直接参考rsproxy
-配置说明在powershell中设置 Rustup 镜像
-12$ENV:RUSTUP_DIST_SERVER=&#x27;https://rsproxy.cn&#x27;$ENV:RUSTUP_UPDATE_ROOT=&#x27;https://rsproxy.cn/rustup&#x27;
-
-安装或者更新Rust
-如果是安装rust，直接点击rust-init.exe
-如果是更新rust，直接运行rustup update命令
-1rustup update
-
-设置 crates.io 镜像在当前用户的主目录（以我本地为例：D:\Users\daming）下的.cargo文件夹中创建config文件。
-12345678910[source.crates-io]replace-with = &#x27;rsproxy-sparse&#x27;[source.rsproxy]registry = &quot; ...</div></div></div><div class="recent-post-item"><div class="post_cover left"><a href="/2025/04/07/back-end/use-apache-commons-csv-read-write-files/" title="使用apache commons-csv读写csv文件"><img class="post-bg" src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="使用apache commons-csv读写csv文件"></a></div><div class="recent-post-info"><a class="article-title" href="/2025/04/07/back-end/use-apache-commons-csv-read-write-files/" title="使用apache commons-csv读写csv文件">使用apache commons-csv读写csv文件</a><div class="article-meta-wrap"><span class="post-meta-date"><i class="far fa-calendar-alt"></i><span class="article-meta-label">发表于</span><time datetime="2025-04-07T12:55:16.000Z" title="发表于 2025-04-07 20:55:16">2025-04-07</time></span></div><div class="content">使用apache commons-csv读写csv文件前言本文的目的是使用apache commons-csv读写csv文件。
-定义实体Worker是通过ai随机定义的一个java类型:
-12345678910111213141516171819202122232425262728public class Worker &#123;    private String id;    private String employeeNumber;    private int version;    private String lastName;    private String firstName;    private String gender;    private String department;    private String position;    private LocalDate hireDate;    private String email;    private String phoneNumber;    private String status ...</div></div></div><div class="recent-post-item"><div class="post_cover right"><a href="/2025/03/06/software/connect-to-private-docker-registry-in-k3s/" title="在k3s中配置私有镜像仓库"><img class="post-bg" src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="在k3s中配置私有镜像仓库"></a></div><div class="recent-post-info"><a class="article-title" href="/2025/03/06/software/connect-to-private-docker-registry-in-k3s/" title="在k3s中配置私有镜像仓库">在k3s中配置私有镜像仓库</a><div class="article-meta-wrap"><span class="post-meta-date"><i class="far fa-calendar-alt"></i><span class="article-meta-label">发表于</span><time datetime="2025-03-06T12:55:33.000Z" title="发表于 2025-03-06 20:55:33">2025-03-06</time></span><span class="article-meta"><span class="article-meta-separator">|</span><i class="fas fa-inbox"></i><a class="article-meta__categories" href="/categories/%E8%BD%AF%E4%BB%B6/">软件</a></span></div><div class="content">前言本文的目的是实现在k3s中可以访问使用docker部署registry。
-部署registry启动一个一次性容器用于创建账号密码.密码文件路径以&#x2F;root&#x2F;registry&#x2F;htpasswd为例,账号密码以admin和12345678为例.
-123docker run --rm --entrypoint \    htpasswd httpd:2 -Bbn \    admin 12345678 &gt; ./registry/htpasswd
-
-编写docker compose的yaml文件用于启动registry。
-123456789101112131415161718192021222324services:  registry:    image: registry:2    container_name: registry    volumes:      # - ./config.yml:/etc/docker/registry/config.yml      - ./htpasswd:/auth/htpasswd      - ./reg ...</div></div></div><div class="recent-post-item"><div class="post_cover left"><a href="/2025/02/14/software/install/use-snap-to-install-neovim-on-armbian/" title="在armbian上使用snap安装neovim"><img class="post-bg" src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="在armbian上使用snap安装neovim"></a></div><div class="recent-post-info"><a class="article-title" href="/2025/02/14/software/install/use-snap-to-install-neovim-on-armbian/" title="在armbian上使用snap安装neovim">在armbian上使用snap安装neovim</a><div class="article-meta-wrap"><span class="post-meta-date"><i class="far fa-calendar-alt"></i><span class="article-meta-label">发表于</span><time datetime="2025-02-14T13:40:00.000Z" title="发表于 2025-02-14 21:40:00">2025-02-14</time></span><span class="article-meta"><span class="article-meta-separator">|</span><i class="fas fa-inbox"></i><a class="article-meta__categories" href="/categories/%E8%BD%AF%E4%BB%B6/">软件</a></span></div><div class="content">概述最近搞了一台armbian的机子，想在上面安装neovim，但是发现apt上的nvim版本太低了，只有0.4.0好像。经过一番的搜索，发现Snaps可以满足我的要求。
-Snaps介绍Snaps是由Canonical提供的跨分发包管理系统的工具.Snaps 基本上是一个与其依赖项和库一起编译的应用程序——为应用程序运行提供了一个沙盒环境。它们安装起来更容易、更快捷，可以接收最新更新，并且不受操作系统和其他应用程序的限制。
-安装Snaps使用apt安装Snap；
-1sudo apt install snapd
-
-安装neovim使用snap安装neovim:
-1sudo snap install --classic nvim
-
-检查一下noevim的版本：
-1nvim --version
-
-输出如下：
-1234NVIM v0.10.4Build type: RelWithDebInfoLuaJIT 2.1.1713484068Run &quot;nvim -V1 -v&quot; for more info
-
-参考资料
-如何在各种 Linux 发行版中安装和使用 Snap
-
-</div></div></div><div class="recent-post-item"><div class="post_cover right"><a href="/2025/02/13/back-end/how-to-forcefully-delete-a-namespace-that-is-stuck-in-the-Terminating-state/" title="在k8s中如何强制删除处于Terminating状态的namesapce"><img class="post-bg" src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="在k8s中如何强制删除处于Terminating状态的namesapce"></a></div><div class="recent-post-info"><a class="article-title" href="/2025/02/13/back-end/how-to-forcefully-delete-a-namespace-that-is-stuck-in-the-Terminating-state/" title="在k8s中如何强制删除处于Terminating状态的namesapce">在k8s中如何强制删除处于Terminating状态的namesapce</a><div class="article-meta-wrap"><span class="post-meta-date"><i class="far fa-calendar-alt"></i><span class="article-meta-label">发表于</span><time datetime="2025-02-13T13:04:19.000Z" title="发表于 2025-02-13 21:04:19">2025-02-13</time></span><span class="article-meta"><span class="article-meta-separator">|</span><i class="fas fa-inbox"></i><a class="article-meta__categories" href="/categories/%E5%90%8E%E7%AB%AF/">后端</a></span></div><div class="content">概述在k3s中删除一个namespace十分简单，就是一个命令的事儿：
-1kubectl delete ns $&#123;namespace&#125;
-
-但是可能存在删除失败或者namespace一直处于Terminating状态的话，那么上面的命令可能行不通。这里介绍两种实用的解决方案去帮助我们解决。
-注意: 这两种方案可能存在错误删除的情况，请谨慎操作。
-强制删除kubectl提供force和grace-period&#x3D;0两个参数帮助我们强制删除namespace：
-1kubectl delete ns $&#123;namespace&#125; --force --grace-period=0
-
-说明：
-
-–force：强制删除资源，跳过正常的删除流程。
-
-–grace-period&#x3D;0：立即删除资源，不等待任何清理操作。
-
-
-使用Kubernetes API 删除获取处于Terminating状态的namespace：
-1kubectl get ns |grep Terminating |awk &#123;&#x27;print $1&#x27;&#1 ...</div></div></div><div class="recent-post-item"><div class="post_cover left"><a href="/2025/02/08/back-end/dynamic-password-encryption-based-on-user-information-in-spring-security/" title="Spring Security 中基于用户信息的动态密码加密"><img class="post-bg" src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="Spring Security 中基于用户信息的动态密码加密"></a></div><div class="recent-post-info"><a class="article-title" href="/2025/02/08/back-end/dynamic-password-encryption-based-on-user-information-in-spring-security/" title="Spring Security 中基于用户信息的动态密码加密">Spring Security 中基于用户信息的动态密码加密</a><div class="article-meta-wrap"><span class="post-meta-date"><i class="far fa-calendar-alt"></i><span class="article-meta-label">发表于</span><time datetime="2025-02-08T07:48:53.000Z" title="发表于 2025-02-08 15:48:53">2025-02-08</time></span></div><div class="content">Spring Security 中基于用户信息的动态密码加密前言通过自定义 Spring Security 的 DaoAuthenticationProvider，可以实现根据用户信息的不同，动态切换不同的密码加密方式。这种方法允许您根据用户的角色、组或其他属性，选择最合适的加密算法，从而提高安全性或满足特定的业务需求。
-DaoAuthenticationProviderDaoAuthenticationProvider是用于实现用户名密码的登陆AuthenticationProvider，通过自定义实现additionalAuthenticationChecks方法可以实现从UserDetails获取一个字段从而动态获取密码加密服务。
-实现自定义DaoAuthenticationProvider：
-1234567891011121314151617181920212223242526272829303132333435363738394041@Componentpublic class HotelerAuthenticationProvider extends DaoAuthenti ...</div></div></div><div class="recent-post-item"><div class="post_cover right"><a href="/2025/01/13/summary/2024/" title="2024年度总结"><img class="post-bg" src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="2024年度总结"></a></div><div class="recent-post-info"><a class="article-title" href="/2025/01/13/summary/2024/" title="2024年度总结">2024年度总结</a><div class="article-meta-wrap"><span class="post-meta-date"><i class="far fa-calendar-alt"></i><span class="article-meta-label">发表于</span><time datetime="2025-01-13T12:35:13.000Z" title="发表于 2025-01-13 20:35:13">2025-01-13</time></span></div><div class="content">2024年度总结对我来说，2024年是一个特别有意义的一年。8月24号，我美丽又可爱的宝宝出生了，体验到了初为人父的喜悦；10月7号，国庆节刚过，公司人事就开邮件通知我我的岗位被取消了。
-初为人父的喜悦孩子的出生时间其实挺意外的。由于老婆在9月初有一场很重要的考试，所以不能耽搁，所以原来计划在20号去医院打催产素的，结果因为报告晚了一天，然后就被通知不用打催产素，已经开始见红了。不过开宫口的速度很慢，过两天还是上催产素了。我记得那个时候我在家里呆着，医院我有丈母娘陪着，反正又不可能那么急着生出来，我就回家先好好休息，打算第二天过去。结果第二天我丈母娘就通知我让我赶紧过去签字给我老婆打催产素。一波三折，到最后这个催产素还是打上去了。在6号待产室，晚上6点06分，7斤2两，我可爱的儿子就这样子平平安安的出生了。说实话，我并没有在第一时间听到孩子的哭声，相反这个小家伙睡的死死的。我伸过去看看了他，第一感觉他好丑啊，头型怪怪的，有点拉长的样子。听医生说，刚出生的小宝宝通常产道的挤压，出来的时候头多多少少会有点拉长的样子，等长大点就好了。
-孩子的出生，对我来说是一个特殊的人生里程碑，从这一刻开始 ...</div></div></div><div class="recent-post-item"><div class="post_cover left"><a href="/2024/11/04/front-end/html-scripts-defer-async/" title="script标签中的defer和async"><img class="post-bg" src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="script标签中的defer和async"></a></div><div class="recent-post-info"><a class="article-title" href="/2024/11/04/front-end/html-scripts-defer-async/" title="script标签中的defer和async">script标签中的defer和async</a><div class="article-meta-wrap"><span class="post-meta-date"><i class="far fa-calendar-alt"></i><span class="article-meta-label">发表于</span><time datetime="2024-11-04T15:16:56.000Z" title="发表于 2024-11-04 23:16:56">2024-11-04</time></span><span class="article-meta"><span class="article-meta-separator">|</span><i class="fas fa-inbox"></i><a class="article-meta__categories" href="/categories/%E5%89%8D%E7%AB%AF/">前端</a></span></div><div class="content">浏览器中script标签中的defer和async有什么区别，优缺点是什么，应用场景是什么？在 HTML 中，&lt;script&gt; 标签的 defer 和 async 属性用于控制脚本的加载和执行方式，尤其是在处理 JavaScript 文件时。它们之间的主要区别和应用场景如下：
-1. defer
-功能：脚本在文档解析完成后执行，但在 DOMContentLoaded 事件之前执行。
-加载顺序：defer 脚本会按照它们在文档中的出现顺序加载并执行。
-应用场景：适用于依赖于 DOM 完全加载的脚本，或者需要按顺序执行多个脚本的情况。
-
-优点：
-确保 DOM 元素在脚本执行时已存在，避免了因元素未加载而导致的错误。
-不会阻塞 HTML 的解析，可以提高页面加载性能。
-
-示例：12&lt;script src=&quot;script1.js&quot; defer&gt;&lt;/script&gt;&lt;script src=&quot;script2.js&quot; defer&gt;&lt;/script&gt;
-
-2. async
-功能：脚本会在下载完成后立即执行，而 ...</div></div></div><div class="recent-post-item"><div class="post_cover right"><a href="/2024/10/30/front-end/css-mock-interview/" title="css的模拟面试"><img class="post-bg" src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="css的模拟面试"></a></div><div class="recent-post-info"><a class="article-title" href="/2024/10/30/front-end/css-mock-interview/" title="css的模拟面试">css的模拟面试</a><div class="article-meta-wrap"><span class="post-meta-date"><i class="far fa-calendar-alt"></i><span class="article-meta-label">发表于</span><time datetime="2024-10-30T04:30:58.000Z" title="发表于 2024-10-30 12:30:58">2024-10-30</time></span><span class="article-meta"><span class="article-meta-separator">|</span><i class="fas fa-inbox"></i><a class="article-meta__categories" href="/categories/%E5%89%8D%E7%AB%AF/">前端</a></span></div><div class="content">css变量是什么CSS 变量（也称为自定义属性）是 CSS 中用于定义可重用值的特性。它们使用 -- 前缀定义，可以在整个样式表中被引用和复用，从而提高代码的灵活性和可维护性。
-1. 定义 CSS 变量CSS 变量通常在 :root 选择器中定义，这样它们可以在整个文档中使用：
-12345:root &#123;  --primary-color: #3498db;  --font-size: 16px;  --spacing: 1rem;&#125;
-
-
-以上定义的 --primary-color、--font-size 和 --spacing 就是 CSS 变量。
-
-2. 使用 CSS 变量CSS 变量使用 var() 函数进行引用：
-12345button &#123;  background-color: var(--primary-color);  font-size: var(--font-size);  padding: var(--spacing);&#125;
-
-在这里，var(--primary-color) 引用了之前定义的变量 --primary-color 的 ...</div></div></div><nav id="pagination"><div class="pagination"><a class="extend prev" rel="prev" href="/page/3/#content-inner"><i class="fas fa-chevron-left fa-fw"></i></a><a class="page-number" href="/">1</a><span class="space">&hellip;</span><a class="page-number" href="/page/3/#content-inner">3</a><span class="page-number current">4</span><a class="page-number" href="/page/5/#content-inner">5</a><span class="space">&hellip;</span><a class="page-number" href="/page/8/#content-inner">8</a><a class="extend next" rel="next" href="/page/5/#content-inner"><i class="fas fa-chevron-right fa-fw"></i></a></div></nav></div><div class="aside-content" id="aside-content"><div class="card-widget card-info"><div class="is-center"><div class="avatar-img"><img src="/img/avatar.png" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="author-info__name">Arthur Ming</div><div class="author-info__description">大明二代的博客</div></div><div class="card-info-data site-data is-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">79</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">113</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">8</div></a></div><a id="card-info-btn" target="_blank" rel="noopener" href="https://github.com/damingerdai"><i class="fab fa-github"></i><span>Follow Me</span></a><div class="card-info-social-icons is-center"><a class="social-icon" href="https://github.com/damingerdai" target="_blank" title="Github"><i class="fab fa-github" style="color: #24292e;"></i></a><a class="social-icon" href="mailto:mingguobin@live.com" target="_blank" title="Email"><i class="fas fa-envelope" style="color: #4a7dbe;"></i></a></div></div><div class="card-widget card-announcement"><div class="item-headline"><i class="fas fa-bullhorn fa-shake"></i><span>公告</span></div><div class="announcement_content">大家好，我是大明二代</div></div><div class="sticky_layout"><div class="card-widget card-recent-post"><div class="item-headline"><i class="fas fa-history"></i><span>最新文章</span></div><div class="aside-list"><div class="aside-list-item"><a class="thumbnail" href="/2026/04/27/software/colima-docker-compose-setup/" title="无 Docker Desktop + Colima + Docker Compose v2 标准化方案"><img src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="无 Docker Desktop + Colima + Docker Compose v2 标准化方案"/></a><div class="content"><a class="title" href="/2026/04/27/software/colima-docker-compose-setup/" title="无 Docker Desktop + Colima + Docker Compose v2 标准化方案">无 Docker Desktop + Colima + Docker Compose v2 标准化方案</a><time datetime="2026-04-27T06:16:01.000Z" title="发表于 2026-04-27 14:16:01">2026-04-27</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2026/04/18/software/git-multi-account-setup-with-includeif/" title="优雅实现 Git 多账号切换：基于 SSH Config 与 includeIf 的环境隔离方案"><img src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="优雅实现 Git 多账号切换：基于 SSH Config 与 includeIf 的环境隔离方案"/></a><div class="content"><a class="title" href="/2026/04/18/software/git-multi-account-setup-with-includeif/" title="优雅实现 Git 多账号切换：基于 SSH Config 与 includeIf 的环境隔离方案">优雅实现 Git 多账号切换：基于 SSH Config 与 includeIf 的环境隔离方案</a><time datetime="2026-04-18T11:33:54.000Z" title="发表于 2026-04-18 19:33:54">2026-04-18</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2026/04/05/software/kite-production-setup-with-external-postgres-and-ingress/" title="从 Demo 到生产级：Kite 在 K3s 上的 PostgreSQL 与 Ingress 部署实战"><img src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="从 Demo 到生产级：Kite 在 K3s 上的 PostgreSQL 与 Ingress 部署实战"/></a><div class="content"><a class="title" href="/2026/04/05/software/kite-production-setup-with-external-postgres-and-ingress/" title="从 Demo 到生产级：Kite 在 K3s 上的 PostgreSQL 与 Ingress 部署实战">从 Demo 到生产级：Kite 在 K3s 上的 PostgreSQL 与 Ingress 部署实战</a><time datetime="2026-04-05T09:27:48.000Z" title="发表于 2026-04-05 17:27:48">2026-04-05</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2026/04/02/back-end/spring-boot-oauth2-swagger-standardization/" title="技术复盘：基于 OAuth 2.0 规范的 Spring Boot 鉴权标准化改造"><img src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="技术复盘：基于 OAuth 2.0 规范的 Spring Boot 鉴权标准化改造"/></a><div class="content"><a class="title" href="/2026/04/02/back-end/spring-boot-oauth2-swagger-standardization/" title="技术复盘：基于 OAuth 2.0 规范的 Spring Boot 鉴权标准化改造">技术复盘：基于 OAuth 2.0 规范的 Spring Boot 鉴权标准化改造</a><time datetime="2026-04-02T04:47:19.000Z" title="发表于 2026-04-02 12:47:19">2026-04-02</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2026/03/31/back-end/spring-webflux-jdbc-to-r2dbc-migration/" title="在 Spring WebFlux 项目中将 JDBC 迁移到 R2DBC"><img src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="在 Spring WebFlux 项目中将 JDBC 迁移到 R2DBC"/></a><div class="content"><a class="title" href="/2026/03/31/back-end/spring-webflux-jdbc-to-r2dbc-migration/" title="在 Spring WebFlux 项目中将 JDBC 迁移到 R2DBC">在 Spring WebFlux 项目中将 JDBC 迁移到 R2DBC</a><time datetime="2026-03-31T14:23:56.000Z" title="发表于 2026-03-31 22:23:56">2026-03-31</time></div></div></div></div><div class="card-widget card-categories"><div class="item-headline">
+  pageType: 'home'
+}</script><link rel="stylesheet" href="/css/styles.css"><meta name="generator" content="Hexo 7.3.0"></head><body><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="avatar-img text-center"><img src="/img/avatar.png" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="site-data text-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">79</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">113</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">8</div></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归类</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><span class="site-page group"><i class="fa-fw fas fa-list"></i><span> 其他</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><li><a class="site-page child" href="/others/learning"><i class="fa-fw fas fa-graduation-cap"></i><span> 学习课程</span></a></li><li><a class="site-page child" href="/others/link/"><i class="fa-fw fas fa-link"></i><span> 链接</span></a></li><li><a class="site-page child" href="/others/interview/"><i class="fa-fw fas fa-glide"></i><span> 面试</span></a></li></ul></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于</span></a></div></div></div></div><div class="page" id="body-wrap"><header class="full_page" id="page-header" style="background-image: url(https://homepage.damingerdai.com/_next/image?url=%2Fdamingerdai.webp&amp;w=2048&amp;q=75);"><nav id="nav"><span id="blog-info"><a class="nav-site-title" href="/"><span class="site-name">Damingerdai's Blog</span></a></span><div id="menus"><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归类</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><span class="site-page group"><i class="fa-fw fas fa-list"></i><span> 其他</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><li><a class="site-page child" href="/others/learning"><i class="fa-fw fas fa-graduation-cap"></i><span> 学习课程</span></a></li><li><a class="site-page child" href="/others/link/"><i class="fa-fw fas fa-link"></i><span> 链接</span></a></li><li><a class="site-page child" href="/others/interview/"><i class="fa-fw fas fa-glide"></i><span> 面试</span></a></li></ul></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于</span></a></div></div><div id="toggle-menu"><span class="site-page"><i class="fas fa-bars fa-fw"></i></span></div></div></nav><div id="site-info"><h1 id="site-title">Damingerdai's Blog</h1><div id="site-subtitle"><span id="subtitle"></span></div><div id="site_social_icons"><a class="social-icon" href="https://github.com/damingerdai" target="_blank" title="Github"><i class="fab fa-github" style="color: #24292e;"></i></a><a class="social-icon" href="mailto:mingguobin@live.com" target="_blank" title="Email"><i class="fas fa-envelope" style="color: #4a7dbe;"></i></a></div></div><div id="scroll-down"><i class="fas fa-angle-down scroll-down-effects"></i></div></header><main class="layout" id="content-inner"><div class="recent-posts nc" id="recent-posts"><div class="recent-post-items"><div class="recent-post-item"><div class="post_cover left"><a href="/2025/05/22/software/noice-nvim-cmdline-cursor-auto-scroll-to-front-bug/" title="noice.nvim在cmdline中的光标自动滚动到最前面的bug"><img class="post-bg" src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="noice.nvim在cmdline中的光标自动滚动到最前面的bug"></a></div><div class="recent-post-info"><a class="article-title" href="/2025/05/22/software/noice-nvim-cmdline-cursor-auto-scroll-to-front-bug/" title="noice.nvim在cmdline中的光标自动滚动到最前面的bug">noice.nvim在cmdline中的光标自动滚动到最前面的bug</a><div class="article-meta-wrap"><span class="post-meta-date"><i class="far fa-calendar-alt"></i><span class="article-meta-label">发表于</span><time datetime="2025-05-22T13:58:27.000Z" title="发表于 2025-05-22 21:58:27">2025-05-22</time></span><span class="article-meta"><span class="article-meta-separator">|</span><i class="fas fa-inbox"></i><a class="article-meta__categories" href="/categories/%E8%BD%AF%E4%BB%B6/">软件</a></span></div><div class="content">前言最新把 neovim 升级到最新版本0.11.1,lazyvim 升级到14.x。然后不出意外就挂了好几个 plugin。其中 noice.nvim 是影响比较小的但比较膈应人的。 bug描述    当在cmdline模式输入命令的时候光标总是会莫名其妙的滚动到最前面。我本来以为是noice.nvim的问题，但是经过测试，发现只有在itermn2的非全屏模式下才会出现，全屏模式或者其他终端模拟器则不会出现类似的问题。 解决好在bug: Cursor jumps in cmdline - 4.5.0中有小哥也遇到过类似的问题，他在iTerm2中禁用”由会话触发的窗口调整大小”功能解决了这个问题（设置路径：Settings &gt; Profiles &gt; [我的配置文件] &gt; Terminal &gt; 勾选”Disable session-initiated window resizing”），然后就好了。 其他在https://superuser.com/questions/113944/how-to-prevent-screen-from-resizing-my...</div></div></div><div class="recent-post-item"><div class="post_cover right"><a href="/2025/04/30/back-end/rust-bytedance-mirror-windows/" title="在windows系统中如何给rust如何配置字节源"><img class="post-bg" src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="在windows系统中如何给rust如何配置字节源"></a></div><div class="recent-post-info"><a class="article-title" href="/2025/04/30/back-end/rust-bytedance-mirror-windows/" title="在windows系统中如何给rust如何配置字节源">在windows系统中如何给rust如何配置字节源</a><div class="article-meta-wrap"><span class="post-meta-date"><i class="far fa-calendar-alt"></i><span class="article-meta-label">发表于</span><time datetime="2025-04-30T08:57:06.000Z" title="发表于 2025-04-30 16:57:06">2025-04-30</time></span><span class="article-meta"><span class="article-meta-separator">|</span><i class="fas fa-inbox"></i><a class="article-meta__categories" href="/categories/%E5%90%8E%E7%AB%AF/">后端</a></span></div><div class="content">rust中如何配置字节源前言本文的目的是在windows上安装或更新rust的时候通过配置字节的国内源来提高安装&#x2F;更新速度。非windows系统就可以直接参考rsproxy 配置说明在powershell中设置 Rustup 镜像 12$ENV:RUSTUP_DIST_SERVER=&#x27;https://rsproxy.cn&#x27;$ENV:RUSTUP_UPDATE_ROOT=&#x27;https://rsproxy.cn/rustup&#x27;  安装或者更新Rust 如果是安装rust，直接点击rust-init.exe 如果是更新rust，直接运行rustup update命令 1rustup update  设置 crates.io 镜像在当前用户的主目录（以我本地为例：D:\Users\daming）下的.cargo文件夹中创建config文件。 12345678910[source.crates-io]replace-with = &#x27;rsproxy-sparse&#x27;[source.rsproxy]registry = &qu...</div></div></div><div class="recent-post-item"><div class="post_cover left"><a href="/2025/04/07/back-end/use-apache-commons-csv-read-write-files/" title="使用apache commons-csv读写csv文件"><img class="post-bg" src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="使用apache commons-csv读写csv文件"></a></div><div class="recent-post-info"><a class="article-title" href="/2025/04/07/back-end/use-apache-commons-csv-read-write-files/" title="使用apache commons-csv读写csv文件">使用apache commons-csv读写csv文件</a><div class="article-meta-wrap"><span class="post-meta-date"><i class="far fa-calendar-alt"></i><span class="article-meta-label">发表于</span><time datetime="2025-04-07T12:55:16.000Z" title="发表于 2025-04-07 20:55:16">2025-04-07</time></span></div><div class="content">使用apache commons-csv读写csv文件前言本文的目的是使用apache commons-csv读写csv文件。 定义实体Worker是通过ai随机定义的一个java类型: 12345678910111213141516171819202122232425262728public class Worker &#123;    private String id;    private String employeeNumber;    private int version;    private String lastName;    private String firstName;    private String gender;    private String department;    private String position;    private LocalDate hireDate;    private String email;    private String phoneNumber;    private String sta...</div></div></div><div class="recent-post-item"><div class="post_cover right"><a href="/2025/03/06/software/connect-to-private-docker-registry-in-k3s/" title="在k3s中配置私有镜像仓库"><img class="post-bg" src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="在k3s中配置私有镜像仓库"></a></div><div class="recent-post-info"><a class="article-title" href="/2025/03/06/software/connect-to-private-docker-registry-in-k3s/" title="在k3s中配置私有镜像仓库">在k3s中配置私有镜像仓库</a><div class="article-meta-wrap"><span class="post-meta-date"><i class="far fa-calendar-alt"></i><span class="article-meta-label">发表于</span><time datetime="2025-03-06T12:55:33.000Z" title="发表于 2025-03-06 20:55:33">2025-03-06</time></span><span class="article-meta"><span class="article-meta-separator">|</span><i class="fas fa-inbox"></i><a class="article-meta__categories" href="/categories/%E8%BD%AF%E4%BB%B6/">软件</a></span></div><div class="content">前言本文的目的是实现在k3s中可以访问使用docker部署registry。 部署registry启动一个一次性容器用于创建账号密码.密码文件路径以&#x2F;root&#x2F;registry&#x2F;htpasswd为例,账号密码以admin和12345678为例. 123docker run --rm --entrypoint \    htpasswd httpd:2 -Bbn \    admin 12345678 &gt; ./registry/htpasswd  编写docker compose的yaml文件用于启动registry。 123456789101112131415161718192021222324services:  registry:    image: registry:2    container_name: registry    volumes:      # - ./config.yml:/etc/docker/registry/config.yml      - ./htpasswd:/auth/htpasswd      - ./...</div></div></div><div class="recent-post-item"><div class="post_cover left"><a href="/2025/02/14/software/install/use-snap-to-install-neovim-on-armbian/" title="在armbian上使用snap安装neovim"><img class="post-bg" src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="在armbian上使用snap安装neovim"></a></div><div class="recent-post-info"><a class="article-title" href="/2025/02/14/software/install/use-snap-to-install-neovim-on-armbian/" title="在armbian上使用snap安装neovim">在armbian上使用snap安装neovim</a><div class="article-meta-wrap"><span class="post-meta-date"><i class="far fa-calendar-alt"></i><span class="article-meta-label">发表于</span><time datetime="2025-02-14T13:40:00.000Z" title="发表于 2025-02-14 21:40:00">2025-02-14</time></span><span class="article-meta"><span class="article-meta-separator">|</span><i class="fas fa-inbox"></i><a class="article-meta__categories" href="/categories/%E8%BD%AF%E4%BB%B6/">软件</a></span></div><div class="content">概述最近搞了一台armbian的机子，想在上面安装neovim，但是发现apt上的nvim版本太低了，只有0.4.0好像。经过一番的搜索，发现Snaps可以满足我的要求。 Snaps介绍Snaps是由Canonical提供的跨分发包管理系统的工具.Snaps 基本上是一个与其依赖项和库一起编译的应用程序——为应用程序运行提供了一个沙盒环境。它们安装起来更容易、更快捷，可以接收最新更新，并且不受操作系统和其他应用程序的限制。 安装Snaps使用apt安装Snap； 1sudo apt install snapd  安装neovim使用snap安装neovim: 1sudo snap install --classic nvim  检查一下noevim的版本： 1nvim --version  输出如下： 1234NVIM v0.10.4Build type: RelWithDebInfoLuaJIT 2.1.1713484068Run &quot;nvim -V1 -v&quot; for more info  参考资料 如何在各种 Linux 发行版中安装和使用 Snap  </div></div></div><div class="recent-post-item"><div class="post_cover right"><a href="/2025/02/13/back-end/how-to-forcefully-delete-a-namespace-that-is-stuck-in-the-Terminating-state/" title="在k8s中如何强制删除处于Terminating状态的namesapce"><img class="post-bg" src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="在k8s中如何强制删除处于Terminating状态的namesapce"></a></div><div class="recent-post-info"><a class="article-title" href="/2025/02/13/back-end/how-to-forcefully-delete-a-namespace-that-is-stuck-in-the-Terminating-state/" title="在k8s中如何强制删除处于Terminating状态的namesapce">在k8s中如何强制删除处于Terminating状态的namesapce</a><div class="article-meta-wrap"><span class="post-meta-date"><i class="far fa-calendar-alt"></i><span class="article-meta-label">发表于</span><time datetime="2025-02-13T13:04:19.000Z" title="发表于 2025-02-13 21:04:19">2025-02-13</time></span><span class="article-meta"><span class="article-meta-separator">|</span><i class="fas fa-inbox"></i><a class="article-meta__categories" href="/categories/%E5%90%8E%E7%AB%AF/">后端</a></span></div><div class="content">概述在k3s中删除一个namespace十分简单，就是一个命令的事儿： 1kubectl delete ns $&#123;namespace&#125;  但是可能存在删除失败或者namespace一直处于Terminating状态的话，那么上面的命令可能行不通。这里介绍两种实用的解决方案去帮助我们解决。 注意: 这两种方案可能存在错误删除的情况，请谨慎操作。 强制删除kubectl提供force和grace-period&#x3D;0两个参数帮助我们强制删除namespace： 1kubectl delete ns $&#123;namespace&#125; --force --grace-period=0  说明：  –force：强制删除资源，跳过正常的删除流程。  –grace-period&#x3D;0：立即删除资源，不等待任何清理操作。   使用Kubernetes API 删除获取处于Terminating状态的namespace： 1kubectl get ns |grep Terminating |awk &#123;&#x27;print $1&#x27;...</div></div></div><div class="recent-post-item"><div class="post_cover left"><a href="/2025/02/08/back-end/dynamic-password-encryption-based-on-user-information-in-spring-security/" title="Spring Security 中基于用户信息的动态密码加密"><img class="post-bg" src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="Spring Security 中基于用户信息的动态密码加密"></a></div><div class="recent-post-info"><a class="article-title" href="/2025/02/08/back-end/dynamic-password-encryption-based-on-user-information-in-spring-security/" title="Spring Security 中基于用户信息的动态密码加密">Spring Security 中基于用户信息的动态密码加密</a><div class="article-meta-wrap"><span class="post-meta-date"><i class="far fa-calendar-alt"></i><span class="article-meta-label">发表于</span><time datetime="2025-02-08T07:48:53.000Z" title="发表于 2025-02-08 15:48:53">2025-02-08</time></span></div><div class="content">Spring Security 中基于用户信息的动态密码加密前言通过自定义 Spring Security 的 DaoAuthenticationProvider，可以实现根据用户信息的不同，动态切换不同的密码加密方式。这种方法允许您根据用户的角色、组或其他属性，选择最合适的加密算法，从而提高安全性或满足特定的业务需求。 DaoAuthenticationProviderDaoAuthenticationProvider是用于实现用户名密码的登陆AuthenticationProvider，通过自定义实现additionalAuthenticationChecks方法可以实现从UserDetails获取一个字段从而动态获取密码加密服务。 实现自定义DaoAuthenticationProvider： 1234567891011121314151617181920212223242526272829303132333435363738394041@Componentpublic class HotelerAuthenticationProvider extends DaoAuthe...</div></div></div><div class="recent-post-item"><div class="post_cover right"><a href="/2025/01/13/summary/2024/" title="2024年度总结"><img class="post-bg" src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="2024年度总结"></a></div><div class="recent-post-info"><a class="article-title" href="/2025/01/13/summary/2024/" title="2024年度总结">2024年度总结</a><div class="article-meta-wrap"><span class="post-meta-date"><i class="far fa-calendar-alt"></i><span class="article-meta-label">发表于</span><time datetime="2025-01-13T12:35:13.000Z" title="发表于 2025-01-13 20:35:13">2025-01-13</time></span></div><div class="content">2024年度总结对我来说，2024年是一个特别有意义的一年。8月24号，我美丽又可爱的宝宝出生了，体验到了初为人父的喜悦；10月7号，国庆节刚过，公司人事就开邮件通知我我的岗位被取消了。 初为人父的喜悦孩子的出生时间其实挺意外的。由于老婆在9月初有一场很重要的考试，所以不能耽搁，所以原来计划在20号去医院打催产素的，结果因为报告晚了一天，然后就被通知不用打催产素，已经开始见红了。不过开宫口的速度很慢，过两天还是上催产素了。我记得那个时候我在家里呆着，医院我有丈母娘陪着，反正又不可能那么急着生出来，我就回家先好好休息，打算第二天过去。结果第二天我丈母娘就通知我让我赶紧过去签字给我老婆打催产素。一波三折，到最后这个催产素还是打上去了。在6号待产室，晚上6点06分，7斤2两，我可爱的儿子就这样子平平安安的出生了。说实话，我并没有在第一时间听到孩子的哭声，相反这个小家伙睡的死死的。我伸过去看看了他，第一感觉他好丑啊，头型怪怪的，有点拉长的样子。听医生说，刚出生的小宝宝通常产道的挤压，出来的时候头多多少少会有点拉长的样子，等长大点就好了。 孩子的出生，对我来说是一个特殊的人生里程碑，从这一...</div></div></div><div class="recent-post-item"><div class="post_cover left"><a href="/2024/11/04/front-end/html-scripts-defer-async/" title="script标签中的defer和async"><img class="post-bg" src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="script标签中的defer和async"></a></div><div class="recent-post-info"><a class="article-title" href="/2024/11/04/front-end/html-scripts-defer-async/" title="script标签中的defer和async">script标签中的defer和async</a><div class="article-meta-wrap"><span class="post-meta-date"><i class="far fa-calendar-alt"></i><span class="article-meta-label">发表于</span><time datetime="2024-11-04T15:16:56.000Z" title="发表于 2024-11-04 23:16:56">2024-11-04</time></span><span class="article-meta"><span class="article-meta-separator">|</span><i class="fas fa-inbox"></i><a class="article-meta__categories" href="/categories/%E5%89%8D%E7%AB%AF/">前端</a></span></div><div class="content">浏览器中script标签中的defer和async有什么区别，优缺点是什么，应用场景是什么？在 HTML 中，&lt;script&gt; 标签的 defer 和 async 属性用于控制脚本的加载和执行方式，尤其是在处理 JavaScript 文件时。它们之间的主要区别和应用场景如下： 1. defer 功能：脚本在文档解析完成后执行，但在 DOMContentLoaded 事件之前执行。 加载顺序：defer 脚本会按照它们在文档中的出现顺序加载并执行。 应用场景：适用于依赖于 DOM 完全加载的脚本，或者需要按顺序执行多个脚本的情况。  优点： 确保 DOM 元素在脚本执行时已存在，避免了因元素未加载而导致的错误。 不会阻塞 HTML 的解析，可以提高页面加载性能。  示例：12&lt;script src=&quot;script1.js&quot; defer&gt;&lt;/script&gt;&lt;script src=&quot;script2.js&quot; defer&gt;&lt;/script&gt;  2. async 功能：脚本会在下载完成后立即执...</div></div></div><div class="recent-post-item"><div class="post_cover right"><a href="/2024/10/30/front-end/css-mock-interview/" title="css的模拟面试"><img class="post-bg" src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="css的模拟面试"></a></div><div class="recent-post-info"><a class="article-title" href="/2024/10/30/front-end/css-mock-interview/" title="css的模拟面试">css的模拟面试</a><div class="article-meta-wrap"><span class="post-meta-date"><i class="far fa-calendar-alt"></i><span class="article-meta-label">发表于</span><time datetime="2024-10-30T04:30:58.000Z" title="发表于 2024-10-30 12:30:58">2024-10-30</time></span><span class="article-meta"><span class="article-meta-separator">|</span><i class="fas fa-inbox"></i><a class="article-meta__categories" href="/categories/%E5%89%8D%E7%AB%AF/">前端</a></span></div><div class="content">css变量是什么CSS 变量（也称为自定义属性）是 CSS 中用于定义可重用值的特性。它们使用 -- 前缀定义，可以在整个样式表中被引用和复用，从而提高代码的灵活性和可维护性。 1. 定义 CSS 变量CSS 变量通常在 :root 选择器中定义，这样它们可以在整个文档中使用： 12345:root &#123;  --primary-color: #3498db;  --font-size: 16px;  --spacing: 1rem;&#125;   以上定义的 --primary-color、--font-size 和 --spacing 就是 CSS 变量。  2. 使用 CSS 变量CSS 变量使用 var() 函数进行引用： 12345button &#123;  background-color: var(--primary-color);  font-size: var(--font-size);  padding: var(--spacing);&#125;  在这里，var(--primary-color) 引用了之前定义的变量 --primary-colo...</div></div></div></div><nav id="pagination"><div class="pagination"><a class="extend prev" rel="prev" href="/page/3/#content-inner"><i class="fas fa-chevron-left fa-fw"></i></a><a class="page-number" href="/">1</a><span class="space">&hellip;</span><a class="page-number" href="/page/3/#content-inner">3</a><span class="page-number current">4</span><a class="page-number" href="/page/5/#content-inner">5</a><span class="space">&hellip;</span><a class="page-number" href="/page/8/#content-inner">8</a><a class="extend next" rel="next" href="/page/5/#content-inner"><i class="fas fa-chevron-right fa-fw"></i></a></div></nav></div><div class="aside-content" id="aside-content"><div class="card-widget card-info text-center"><div class="avatar-img"><img src="/img/avatar.png" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="author-info-name">Arthur Ming</div><div class="author-info-description">大明二代的博客</div><div class="site-data"><a href="/archives/"><div class="headline">文章</div><div class="length-num">79</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">113</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">8</div></a></div><a id="card-info-btn" target="_blank" rel="noopener" href="https://github.com/damingerdai"><i class="fab fa-github"></i><span>Follow Me</span></a><div class="card-info-social-icons"><a class="social-icon" href="https://github.com/damingerdai" target="_blank" title="Github"><i class="fab fa-github" style="color: #24292e;"></i></a><a class="social-icon" href="mailto:mingguobin@live.com" target="_blank" title="Email"><i class="fas fa-envelope" style="color: #4a7dbe;"></i></a></div></div><div class="card-widget card-announcement"><div class="item-headline"><i class="fas fa-bullhorn fa-shake"></i><span>公告</span></div><div class="announcement_content">大家好，我是大明二代</div></div><div class="sticky_layout"><div class="card-widget card-recent-post"><div class="item-headline"><i class="fas fa-history"></i><span>最新文章</span></div><div class="aside-list"><div class="aside-list-item"><a class="thumbnail" href="/2026/04/27/software/colima-docker-compose-setup/" title="无 Docker Desktop + Colima + Docker Compose v2 标准化方案"><img src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="无 Docker Desktop + Colima + Docker Compose v2 标准化方案"/></a><div class="content"><a class="title" href="/2026/04/27/software/colima-docker-compose-setup/" title="无 Docker Desktop + Colima + Docker Compose v2 标准化方案">无 Docker Desktop + Colima + Docker Compose v2 标准化方案</a><time datetime="2026-04-27T06:16:01.000Z" title="发表于 2026-04-27 14:16:01">2026-04-27</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2026/04/18/software/git-multi-account-setup-with-includeif/" title="优雅实现 Git 多账号切换：基于 SSH Config 与 includeIf 的环境隔离方案"><img src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="优雅实现 Git 多账号切换：基于 SSH Config 与 includeIf 的环境隔离方案"/></a><div class="content"><a class="title" href="/2026/04/18/software/git-multi-account-setup-with-includeif/" title="优雅实现 Git 多账号切换：基于 SSH Config 与 includeIf 的环境隔离方案">优雅实现 Git 多账号切换：基于 SSH Config 与 includeIf 的环境隔离方案</a><time datetime="2026-04-18T11:33:54.000Z" title="发表于 2026-04-18 19:33:54">2026-04-18</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2026/04/05/software/kite-production-setup-with-external-postgres-and-ingress/" title="从 Demo 到生产级：Kite 在 K3s 上的 PostgreSQL 与 Ingress 部署实战"><img src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="从 Demo 到生产级：Kite 在 K3s 上的 PostgreSQL 与 Ingress 部署实战"/></a><div class="content"><a class="title" href="/2026/04/05/software/kite-production-setup-with-external-postgres-and-ingress/" title="从 Demo 到生产级：Kite 在 K3s 上的 PostgreSQL 与 Ingress 部署实战">从 Demo 到生产级：Kite 在 K3s 上的 PostgreSQL 与 Ingress 部署实战</a><time datetime="2026-04-05T09:27:48.000Z" title="发表于 2026-04-05 17:27:48">2026-04-05</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2026/04/02/back-end/spring-boot-oauth2-swagger-standardization/" title="技术复盘：基于 OAuth 2.0 规范的 Spring Boot 鉴权标准化改造"><img src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="技术复盘：基于 OAuth 2.0 规范的 Spring Boot 鉴权标准化改造"/></a><div class="content"><a class="title" href="/2026/04/02/back-end/spring-boot-oauth2-swagger-standardization/" title="技术复盘：基于 OAuth 2.0 规范的 Spring Boot 鉴权标准化改造">技术复盘：基于 OAuth 2.0 规范的 Spring Boot 鉴权标准化改造</a><time datetime="2026-04-02T04:47:19.000Z" title="发表于 2026-04-02 12:47:19">2026-04-02</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2026/03/31/back-end/spring-webflux-jdbc-to-r2dbc-migration/" title="在 Spring WebFlux 项目中将 JDBC 迁移到 R2DBC"><img src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="在 Spring WebFlux 项目中将 JDBC 迁移到 R2DBC"/></a><div class="content"><a class="title" href="/2026/03/31/back-end/spring-webflux-jdbc-to-r2dbc-migration/" title="在 Spring WebFlux 项目中将 JDBC 迁移到 R2DBC">在 Spring WebFlux 项目中将 JDBC 迁移到 R2DBC</a><time datetime="2026-03-31T14:23:56.000Z" title="发表于 2026-03-31 22:23:56">2026-03-31</time></div></div></div></div><div class="card-widget card-categories"><div class="item-headline">
             <i class="fas fa-folder-open"></i>
             <span>分类</span>
             
-            </div>
-            <ul class="card-category-list" id="aside-cat-list">
+          </div>
+          <ul class="card-category-list" id="aside-cat-list">
             <li class="card-category-list-item "><a class="card-category-list-link" href="/categories/AI/"><span class="card-category-list-name">AI</span><span class="card-category-list-count">1</span></a></li><li class="card-category-list-item "><a class="card-category-list-link" href="/categories/web3/"><span class="card-category-list-name">web3</span><span class="card-category-list-count">1</span></a></li><li class="card-category-list-item "><a class="card-category-list-link" href="/categories/%E5%89%8D%E7%AB%AF/"><span class="card-category-list-name">前端</span><span class="card-category-list-count">21</span></a><ul class="card-category-list child"><li class="card-category-list-item "><a class="card-category-list-link" href="/categories/%E5%89%8D%E7%AB%AF/nodejs/"><span class="card-category-list-name">nodejs</span><span class="card-category-list-count">1</span></a><ul class="card-category-list child"><li class="card-category-list-item "><a class="card-category-list-link" href="/categories/%E5%89%8D%E7%AB%AF/nodejs/%E6%95%8F%E6%8D%B7%E5%BC%80%E5%8F%91/"><span class="card-category-list-name">敏捷开发</span><span class="card-category-list-count">1</span></a><ul class="card-category-list child"><li class="card-category-list-item "><a class="card-category-list-link" href="/categories/%E5%89%8D%E7%AB%AF/nodejs/%E6%95%8F%E6%8D%B7%E5%BC%80%E5%8F%91/%E9%9D%A2%E8%AF%95/"><span class="card-category-list-name">面试</span><span class="card-category-list-count">1</span></a></li></ul></li></ul></li></ul></li><li class="card-category-list-item "><a class="card-category-list-link" href="/categories/%E5%90%8E%E7%AB%AF/"><span class="card-category-list-name">后端</span><span class="card-category-list-count">24</span></a></li><li class="card-category-list-item "><a class="card-category-list-link" href="/categories/%E8%BD%AF%E4%BB%B6/"><span class="card-category-list-name">软件</span><span class="card-category-list-count">25</span></a></li>
-            </ul></div><div class="card-widget card-tags"><div class="item-headline"><i class="fas fa-tags"></i><span>标签</span></div><div class="card-tag-cloud"><a href="/tags/Chrome/" style="font-size: 1.1em; color: #999">Chrome</a> <a href="/tags/pg-dump/" style="font-size: 1.1em; color: #999">pg_dump</a> <a href="/tags/Rancher/" style="font-size: 1.1em; color: #999">Rancher</a> <a href="/tags/LangChain/" style="font-size: 1.1em; color: #999">LangChain</a> <a href="/tags/Android-Studio/" style="font-size: 1.1em; color: #999">Android Studio</a> <a href="/tags/commons-csv/" style="font-size: 1.1em; color: #999">commons-csv</a> <a href="/tags/bazel/" style="font-size: 1.37em; color: #99a4b2">bazel</a> <a href="/tags/systemd/" style="font-size: 1.1em; color: #999">systemd</a> <a href="/tags/nodejs/" style="font-size: 1.3em; color: #99a1ac">nodejs</a> <a href="/tags/traefik/" style="font-size: 1.1em; color: #999">traefik</a> <a href="/tags/bzlmod/" style="font-size: 1.1em; color: #999">bzlmod</a> <a href="/tags/minikube/" style="font-size: 1.3em; color: #99a1ac">minikube</a> <a href="/tags/Grafana/" style="font-size: 1.1em; color: #999">Grafana</a> <a href="/tags/spring/" style="font-size: 1.1em; color: #999">spring</a> <a href="/tags/email/" style="font-size: 1.1em; color: #999">email</a> <a href="/tags/%E9%9D%A2%E8%AF%95/" style="font-size: 1.23em; color: #999ea6">面试</a> <a href="/tags/react-email/" style="font-size: 1.1em; color: #999">react-email</a> <a href="/tags/%E5%A4%8D%E7%9B%98/" style="font-size: 1.1em; color: #999">复盘</a> <a href="/tags/github/" style="font-size: 1.1em; color: #999">github</a> <a href="/tags/docker-compose/" style="font-size: 1.23em; color: #999ea6">docker compose</a> <a href="/tags/colima/" style="font-size: 1.1em; color: #999">colima</a> <a href="/tags/nexjts/" style="font-size: 1.1em; color: #999">nexjts</a> <a href="/tags/oauth2/" style="font-size: 1.1em; color: #999">oauth2</a> <a href="/tags/multipass/" style="font-size: 1.1em; color: #999">multipass</a> <a href="/tags/SSH/" style="font-size: 1.1em; color: #999">SSH</a> <a href="/tags/java/" style="font-size: 1.17em; color: #999c9f">java</a> <a href="/tags/%E7%99%BD%E5%B1%8F/" style="font-size: 1.1em; color: #999">白屏</a> <a href="/tags/r2dbc/" style="font-size: 1.1em; color: #999">r2dbc</a> <a href="/tags/Performance/" style="font-size: 1.1em; color: #999">Performance</a> <a href="/tags/kubernetes/" style="font-size: 1.43em; color: #99a6b9">kubernetes</a> <a href="/tags/mac/" style="font-size: 1.1em; color: #999">mac</a> <a href="/tags/javascript/" style="font-size: 1.23em; color: #999ea6">javascript</a> <a href="/tags/letsencrypt/" style="font-size: 1.1em; color: #999">letsencrypt</a> <a href="/tags/%E9%A6%96%E5%B1%8F/" style="font-size: 1.1em; color: #999">首屏</a> <a href="/tags/%E6%96%87%E4%BB%B6%E4%B8%8A%E4%BC%A0/" style="font-size: 1.17em; color: #999c9f">文件上传</a> <a href="/tags/docker/" style="font-size: 1.5em; color: #99a9bf">docker</a> <a href="/tags/rancher/" style="font-size: 1.1em; color: #999">rancher</a> <a href="/tags/Ingress/" style="font-size: 1.1em; color: #999">Ingress</a> <a href="/tags/homebew/" style="font-size: 1.1em; color: #999">homebew</a> <a href="/tags/zot/" style="font-size: 1.1em; color: #999">zot</a></div></div><div class="card-widget card-archives"><div class="item-headline"><i class="fas fa-archive"></i><span>归档</span><a class="card-more-btn" href="/archives/" title="查看更多">
-    <i class="fas fa-angle-right"></i></a></div><ul class="card-archive-list"><li class="card-archive-list-item"><a class="card-archive-list-link" href="/archives/2026/04/"><span class="card-archive-list-date">四月 2026</span><span class="card-archive-list-count">4</span></a></li><li class="card-archive-list-item"><a class="card-archive-list-link" href="/archives/2026/03/"><span class="card-archive-list-date">三月 2026</span><span class="card-archive-list-count">2</span></a></li><li class="card-archive-list-item"><a class="card-archive-list-link" href="/archives/2026/02/"><span class="card-archive-list-date">二月 2026</span><span class="card-archive-list-count">5</span></a></li><li class="card-archive-list-item"><a class="card-archive-list-link" href="/archives/2026/01/"><span class="card-archive-list-date">一月 2026</span><span class="card-archive-list-count">5</span></a></li><li class="card-archive-list-item"><a class="card-archive-list-link" href="/archives/2025/12/"><span class="card-archive-list-date">十二月 2025</span><span class="card-archive-list-count">2</span></a></li><li class="card-archive-list-item"><a class="card-archive-list-link" href="/archives/2025/11/"><span class="card-archive-list-date">十一月 2025</span><span class="card-archive-list-count">2</span></a></li><li class="card-archive-list-item"><a class="card-archive-list-link" href="/archives/2025/10/"><span class="card-archive-list-date">十月 2025</span><span class="card-archive-list-count">1</span></a></li><li class="card-archive-list-item"><a class="card-archive-list-link" href="/archives/2025/09/"><span class="card-archive-list-date">九月 2025</span><span class="card-archive-list-count">4</span></a></li></ul></div><div class="card-widget card-webinfo"><div class="item-headline"><i class="fas fa-chart-line"></i><span>网站资讯</span></div><div class="webinfo"><div class="webinfo-item"><div class="item-name">文章数目 :</div><div class="item-count">79</div></div><div class="webinfo-item"><div class="item-name">本站访客数 :</div><div class="item-count" id="busuanzi_value_site_uv"><i class="fa-solid fa-spinner fa-spin"></i></div></div><div class="webinfo-item"><div class="item-name">本站总访问量 :</div><div class="item-count" id="busuanzi_value_site_pv"><i class="fa-solid fa-spinner fa-spin"></i></div></div><div class="webinfo-item"><div class="item-name">最后更新时间 :</div><div class="item-count" id="last-push-date" data-lastPushDate="2026-04-27T06:22:57.504Z"><i class="fa-solid fa-spinner fa-spin"></i></div></div></div></div></div></div></main><footer id="footer"><div id="footer-wrap"><div class="copyright">&copy;2020 - 2026 By Arthur Ming</div><div class="framework-info"><span>框架 </span><a target="_blank" rel="noopener" href="https://hexo.io">Hexo</a><span class="footer-separator">|</span><span>主题 </span><a target="_blank" rel="noopener" href="https://github.com/jerryc127/hexo-theme-butterfly">Butterfly</a></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="darkmode" type="button" title="浅色和深色模式转换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside-config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button id="go-up" type="button" title="回到顶部"><span class="scroll-percent"></span><i class="fas fa-arrow-up"></i></button></div></div><div><script src="/js/utils.js"></script><script src="/js/main.js"></script><script src="https://cdn.jsdelivr.net/npm/@fancyapps/ui/dist/fancybox/fancybox.umd.min.js"></script><div class="js-pjax"><script>window.typedJSFn = {
-  init: (str) => {
+          </ul></div><div class="card-widget card-tags"><div class="item-headline"><i class="fas fa-tags"></i><span>标签</span></div><div class="card-tag-cloud"><a href="/tags/open-api/" style="font-size: 1.1em; color: #999">open api</a> <a href="/tags/docker/" style="font-size: 1.5em; color: #99a9bf">docker</a> <a href="/tags/Goerli/" style="font-size: 1.1em; color: #999">Goerli</a> <a href="/tags/Ingress/" style="font-size: 1.1em; color: #999">Ingress</a> <a href="/tags/nodemailer/" style="font-size: 1.1em; color: #999">nodemailer</a> <a href="/tags/snap/" style="font-size: 1.1em; color: #999">snap</a> <a href="/tags/%E9%A6%96%E5%B1%8F/" style="font-size: 1.1em; color: #999">首屏</a> <a href="/tags/nexjts/" style="font-size: 1.1em; color: #999">nexjts</a> <a href="/tags/apollo/" style="font-size: 1.1em; color: #999">apollo</a> <a href="/tags/mailgun/" style="font-size: 1.1em; color: #999">mailgun</a> <a href="/tags/LangChain/" style="font-size: 1.1em; color: #999">LangChain</a> <a href="/tags/k8s/" style="font-size: 1.5em; color: #99a9bf">k8s</a> <a href="/tags/ingress/" style="font-size: 1.17em; color: #999c9f">ingress</a> <a href="/tags/bazel/" style="font-size: 1.3em; color: #99a1ac">bazel</a> <a href="/tags/docker-desktop/" style="font-size: 1.1em; color: #999">docker desktop</a> <a href="/tags/nodejs/" style="font-size: 1.23em; color: #999ea6">nodejs</a> <a href="/tags/Helm/" style="font-size: 1.1em; color: #999">Helm</a> <a href="/tags/github-action/" style="font-size: 1.1em; color: #999">github action</a> <a href="/tags/k3s/" style="font-size: 1.43em; color: #99a6b9">k3s</a> <a href="/tags/typescript/" style="font-size: 1.17em; color: #999c9f">typescript</a> <a href="/tags/angular/" style="font-size: 1.3em; color: #99a1ac">angular</a> <a href="/tags/spabase/" style="font-size: 1.1em; color: #999">spabase</a> <a href="/tags/Microsoft-Graph-API/" style="font-size: 1.1em; color: #999">Microsoft Graph API</a> <a href="/tags/react/" style="font-size: 1.23em; color: #999ea6">react</a> <a href="/tags/email/" style="font-size: 1.1em; color: #999">email</a> <a href="/tags/AI/" style="font-size: 1.1em; color: #999">AI</a> <a href="/tags/angular-material/" style="font-size: 1.1em; color: #999">angular material</a> <a href="/tags/graphql/" style="font-size: 1.1em; color: #999">graphql</a> <a href="/tags/Chrome/" style="font-size: 1.1em; color: #999">Chrome</a> <a href="/tags/Docker-Desktop/" style="font-size: 1.17em; color: #999c9f">Docker Desktop</a> <a href="/tags/Android-Studio/" style="font-size: 1.1em; color: #999">Android Studio</a> <a href="/tags/spring-boot/" style="font-size: 1.37em; color: #99a4b2">spring boot</a> <a href="/tags/neovim/" style="font-size: 1.17em; color: #999c9f">neovim</a> <a href="/tags/dark-mode/" style="font-size: 1.1em; color: #999">dark mode</a> <a href="/tags/letsencrypt/" style="font-size: 1.1em; color: #999">letsencrypt</a> <a href="/tags/postgres18/" style="font-size: 1.1em; color: #999">postgres18</a> <a href="/tags/Spring-Security/" style="font-size: 1.1em; color: #999">Spring Security</a> <a href="/tags/gogs/" style="font-size: 1.1em; color: #999">gogs</a> <a href="/tags/pg-dump/" style="font-size: 1.1em; color: #999">pg_dump</a> <a href="/tags/spring-doc/" style="font-size: 1.1em; color: #999">spring doc</a></div></div><div class="card-widget card-archives">
+    <div class="item-headline">
+      <i class="fas fa-archive"></i>
+      <span>归档</span>
+      <a class="card-more-btn" href="/archives/"
+            title="查看更多">
+            <i class="fas fa-angle-right"></i>
+          </a>
+    </div>
+  
+    <ul class="card-archive-list">
+      
+        <li class="card-archive-list-item">
+          <a class="card-archive-list-link" href="/archives/2026/04/">
+            <span class="card-archive-list-date">
+              四月 2026
+            </span>
+            <span class="card-archive-list-count">4</span>
+          </a>
+        </li>
+      
+        <li class="card-archive-list-item">
+          <a class="card-archive-list-link" href="/archives/2026/03/">
+            <span class="card-archive-list-date">
+              三月 2026
+            </span>
+            <span class="card-archive-list-count">2</span>
+          </a>
+        </li>
+      
+        <li class="card-archive-list-item">
+          <a class="card-archive-list-link" href="/archives/2026/02/">
+            <span class="card-archive-list-date">
+              二月 2026
+            </span>
+            <span class="card-archive-list-count">5</span>
+          </a>
+        </li>
+      
+        <li class="card-archive-list-item">
+          <a class="card-archive-list-link" href="/archives/2026/01/">
+            <span class="card-archive-list-date">
+              一月 2026
+            </span>
+            <span class="card-archive-list-count">5</span>
+          </a>
+        </li>
+      
+        <li class="card-archive-list-item">
+          <a class="card-archive-list-link" href="/archives/2025/12/">
+            <span class="card-archive-list-date">
+              十二月 2025
+            </span>
+            <span class="card-archive-list-count">2</span>
+          </a>
+        </li>
+      
+        <li class="card-archive-list-item">
+          <a class="card-archive-list-link" href="/archives/2025/11/">
+            <span class="card-archive-list-date">
+              十一月 2025
+            </span>
+            <span class="card-archive-list-count">2</span>
+          </a>
+        </li>
+      
+        <li class="card-archive-list-item">
+          <a class="card-archive-list-link" href="/archives/2025/10/">
+            <span class="card-archive-list-date">
+              十月 2025
+            </span>
+            <span class="card-archive-list-count">1</span>
+          </a>
+        </li>
+      
+        <li class="card-archive-list-item">
+          <a class="card-archive-list-link" href="/archives/2025/09/">
+            <span class="card-archive-list-date">
+              九月 2025
+            </span>
+            <span class="card-archive-list-count">4</span>
+          </a>
+        </li>
+      
+    </ul>
+  </div><div class="card-widget card-webinfo"><div class="item-headline"><i class="fas fa-chart-line"></i><span>网站信息</span></div><div class="webinfo"><div class="webinfo-item"><div class="item-name">文章数目 :</div><div class="item-count">79</div></div><div class="webinfo-item"><div class="item-name">本站访客数 :</div><div class="item-count" id="busuanzi_value_site_uv"><i class="fa-solid fa-spinner fa-spin"></i></div></div><div class="webinfo-item"><div class="item-name">本站总浏览量 :</div><div class="item-count" id="busuanzi_value_site_pv"><i class="fa-solid fa-spinner fa-spin"></i></div></div><div class="webinfo-item"><div class="item-name">最后更新时间 :</div><div class="item-count" id="last-push-date" data-lastPushDate="2026-04-27T06:25:35.695Z"><i class="fa-solid fa-spinner fa-spin"></i></div></div></div></div></div></div></main><footer id="footer"><div class="footer-other"><div class="footer-copyright"><span class="copyright">&copy;&nbsp;2020 - 2026 By Arthur Ming</span></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="darkmode" type="button" title="日间和夜间模式切换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside-config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button id="go-up" type="button" title="回到顶部"><span class="scroll-percent"></span><i class="fas fa-arrow-up"></i></button></div></div><div><script src="/js/utils.js"></script><script src="/js/main.js"></script><div class="js-pjax"><script>window.typedJSFn = {
+  init: str => {
     window.typed = new Typed('#subtitle', Object.assign({
       strings: str,
       startDelay: 300,
@@ -272,23 +261,40 @@ DaoAuthenticationProviderDaoAuthenticationProvider是用于实现用户名密码
       backSpeed: 50,
     }, null))
   },
-  run: (subtitleType) => {
+  run: subtitleType => {
     if (true) {
       if (typeof Typed === 'function') {
         subtitleType()
       } else {
-        getScript('https://cdn.jsdelivr.net/npm/typed.js/dist/typed.umd.min.js').then(subtitleType)
+        btf.getScript('https://cdn.jsdelivr.net/npm/typed.js/dist/typed.umd.min.js').then(subtitleType)
       }
     } else {
       subtitleType()
     }
+  },
+  processSubtitle: (content, extraContents = []) => {
+    if (true) {
+      const sub = ["Time flies over us, but leaves its shadow behind.","Time flies when you're having fun.","The sands of time have been kind to me."].slice()
+
+      if (extraContents.length > 0) {
+        sub.unshift(...extraContents)
+      }
+
+      if (typeof content === 'string') {
+        sub.unshift(content)
+      } else if (Array.isArray(content)) {
+        sub.unshift(...content)
+      }
+
+      sub.length > 0 && typedJSFn.init(sub)
+    } else {
+      document.getElementById('subtitle').textContent = typeof content === 'string' ? content :
+        (Array.isArray(content) && content.length > 0 ? content[0] : '')
+    }
   }
 }
+btf.addGlobalFn('pjaxSendOnce', () => { typed.destroy() }, 'typedDestroy')
 </script><script>function subtitleType () {
-  if (true) {
-    typedJSFn.init(["Time flies over us, but leaves its shadow behind.","Time flies when you're having fun.","The sands of time have been kind to me."])
-  } else {
-    document.getElementById("subtitle").textContent = "Time flies over us, but leaves its shadow behind."
-  }
+  typedJSFn.processSubtitle(["Time flies over us, but leaves its shadow behind.","Time flies when you're having fun.","The sands of time have been kind to me."])
 }
-typedJSFn.run(subtitleType)</script></div><script defer="defer" id="ribbon" src="https://cdn.jsdelivr.net/npm/butterfly-extsrc/dist/canvas-ribbon.min.js" size="150" alpha="0.6" zIndex="-1" mobile="false" data-click="true"></script><script async data-pjax src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script><div id="local-search"><div class="search-dialog"><nav class="search-nav"><span class="search-dialog-title">搜索</span><span id="loading-status"></span><button class="search-close-button"><i class="fas fa-times"></i></button></nav><div class="is-center" id="loading-database"><i class="fas fa-spinner fa-pulse"></i><span>  数据库加载中</span></div><div class="search-wrap"><div id="local-search-input"><div class="local-search-box"><input class="local-search-box--input" placeholder="搜索文章" type="text"/></div></div><hr/><div id="local-search-results"></div><div id="local-search-stats-wrap"></div></div></div><div id="search-mask"></div><script src="/js/search/local-search.js"></script></div></div></body></html>
+typedJSFn.run(subtitleType)</script></div><script defer="defer" id="ribbon" src="https://cdn.jsdelivr.net/npm/butterfly-extsrc/dist/canvas-ribbon.min.js" size="150" alpha="0.6" zIndex="-1" mobile="false" data-click="true"></script><script async data-pjax src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script></div></body></html>

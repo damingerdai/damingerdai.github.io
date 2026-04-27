@@ -589,9 +589,9 @@
       
         <tags>
             
-            <tag> bazel </tag>
-            
             <tag> spring boot </tag>
+            
+            <tag> bazel </tag>
             
             <tag> bzlmod </tag>
             
@@ -1322,9 +1322,9 @@
       
         <tags>
             
-            <tag> bazel </tag>
-            
             <tag> spring boot </tag>
+            
+            <tag> bazel </tag>
             
             <tag> java </tag>
             
@@ -1416,9 +1416,9 @@
       
         <tags>
             
-            <tag> docker </tag>
-            
             <tag> k8s </tag>
+            
+            <tag> docker </tag>
             
             <tag> kubernetes </tag>
             
@@ -1717,9 +1717,9 @@
       
         <tags>
             
-            <tag> docker </tag>
-            
             <tag> k8s </tag>
+            
+            <tag> docker </tag>
             
             <tag> k3s </tag>
             
@@ -1777,9 +1777,9 @@
       
         <tags>
             
-            <tag> docker </tag>
-            
             <tag> k8s </tag>
+            
+            <tag> docker </tag>
             
             <tag> minikube </tag>
             
@@ -1935,9 +1935,9 @@
       
         <tags>
             
-            <tag> nodejs </tag>
-            
             <tag> docker </tag>
+            
+            <tag> nodejs </tag>
             
         </tags>
       
@@ -2041,9 +2041,9 @@
       
         <tags>
             
-            <tag> angular </tag>
-            
             <tag> bazel </tag>
+            
+            <tag> angular </tag>
             
         </tags>
       
@@ -2068,9 +2068,9 @@
       
         <tags>
             
-            <tag> angular </tag>
-            
             <tag> bazel </tag>
+            
+            <tag> angular </tag>
             
         </tags>
       
@@ -2122,38 +2122,13 @@
       
         <tags>
             
-            <tag> docker </tag>
-            
             <tag> k8s </tag>
+            
+            <tag> docker </tag>
             
             <tag> kubernetes </tag>
             
             <tag> Docker Desktop </tag>
-            
-        </tags>
-      
-    </entry>
-    
-    
-    
-    <entry>
-      <title>Android Studio安装笔记</title>
-      <link href="/2021/01/01/software/install/how-to-install-android-studio/"/>
-      <url>/2021/01/01/software/install/how-to-install-android-studio/</url>
-      
-        <content type="html"><![CDATA[<h1 id="Android-Studio安装笔记"><a href="#Android-Studio安装笔记" class="headerlink" title="Android Studio安装笔记"></a>Android Studio安装笔记</h1><p>简单记录一下Android Studio安装</p><h2 id="下载"><a href="#下载" class="headerlink" title="下载"></a>下载</h2><p>从<a href="https://developer.android.google.cn/studio">官网</a>安装Android Studio,</p><p>然后点击安装。</p><h3 id="Android-SDK"><a href="#Android-SDK" class="headerlink" title="Android SDK"></a>Android SDK</h3><p>使用<a href="http://ping.chinaz.com/">http://ping.chinaz.com</a>获取<em>dl.google.com</em>的大陆响应时间最短的IP地址。</p><p>以我为例：180.163.151.161</p><p>将其写入hosts文件(C:\WINDOWS\System32\drivers\etc\hosts)</p><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">180.163.151.161 dl.google.com</span><br></pre></td></tr></table></figure><h2 id="参考资料"><a href="#参考资料" class="headerlink" title="参考资料"></a>参考资料</h2><p><a href="https://www.cnblogs.com/senior-engineer/p/11130757.html">在Android Studio中下载Android SDK的两种方式（Android Studio3.0、windows</a></p>]]></content>
-      
-      
-      <categories>
-          
-          <category> 软件 </category>
-          
-      </categories>
-      
-      
-        <tags>
-            
-            <tag> Android Studio </tag>
             
         </tags>
       
@@ -2185,6 +2160,31 @@
             <tag> kubernetes </tag>
             
             <tag> Ubuntu </tag>
+            
+        </tags>
+      
+    </entry>
+    
+    
+    
+    <entry>
+      <title>Android Studio安装笔记</title>
+      <link href="/2021/01/01/software/install/how-to-install-android-studio/"/>
+      <url>/2021/01/01/software/install/how-to-install-android-studio/</url>
+      
+        <content type="html"><![CDATA[<h1 id="Android-Studio安装笔记"><a href="#Android-Studio安装笔记" class="headerlink" title="Android Studio安装笔记"></a>Android Studio安装笔记</h1><p>简单记录一下Android Studio安装</p><h2 id="下载"><a href="#下载" class="headerlink" title="下载"></a>下载</h2><p>从<a href="https://developer.android.google.cn/studio">官网</a>安装Android Studio,</p><p>然后点击安装。</p><h3 id="Android-SDK"><a href="#Android-SDK" class="headerlink" title="Android SDK"></a>Android SDK</h3><p>使用<a href="http://ping.chinaz.com/">http://ping.chinaz.com</a>获取<em>dl.google.com</em>的大陆响应时间最短的IP地址。</p><p>以我为例：180.163.151.161</p><p>将其写入hosts文件(C:\WINDOWS\System32\drivers\etc\hosts)</p><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">180.163.151.161 dl.google.com</span><br></pre></td></tr></table></figure><h2 id="参考资料"><a href="#参考资料" class="headerlink" title="参考资料"></a>参考资料</h2><p><a href="https://www.cnblogs.com/senior-engineer/p/11130757.html">在Android Studio中下载Android SDK的两种方式（Android Studio3.0、windows</a></p>]]></content>
+      
+      
+      <categories>
+          
+          <category> 软件 </category>
+          
+      </categories>
+      
+      
+        <tags>
+            
+            <tag> Android Studio </tag>
             
         </tags>
       
