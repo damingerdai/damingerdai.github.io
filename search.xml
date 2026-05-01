@@ -4,6 +4,33 @@
   
     
     <entry>
+      <title>使用 Resend + Golang 发送邮件的完整踩坑与解决方案</title>
+      <link href="/2026/05/01/back-end/resend-golang-email-pitfalls-and-solutions/"/>
+      <url>/2026/05/01/back-end/resend-golang-email-pitfalls-and-solutions/</url>
+      
+        <content type="html"><![CDATA[<h1 id="使用-Resend-Golang-发送邮件的完整踩坑与解决方案"><a href="#使用-Resend-Golang-发送邮件的完整踩坑与解决方案" class="headerlink" title="使用 Resend + Golang 发送邮件的完整踩坑与解决方案"></a>使用 Resend + Golang 发送邮件的完整踩坑与解决方案</h1><p>在实际开发中，我尝试使用 Resend 的 SMTP 服务结合 Golang 发送邮件（用于重置密码等场景），过程中踩了多个典型坑。本文从 <strong>错误现象 → 原因分析 → 最终正确方案</strong> 进行完整总结。</p><hr><h2 id="一、背景"><a href="#一、背景" class="headerlink" title="一、背景"></a>一、背景</h2><p>目标：</p><ul><li>使用 Golang 发送 HTML 邮件</li><li>接入 Resend SMTP</li><li>支持自定义域名发信（提升送达率）</li></ul><hr><h2 id="二、Resend-SMTP-基本认知（关键）"><a href="#二、Resend-SMTP-基本认知（关键）" class="headerlink" title="二、Resend SMTP 基本认知（关键）"></a>二、Resend SMTP 基本认知（关键）</h2><p>Resend 的 SMTP 和传统 SMTP 有一个重要区别：</p><table><thead><tr><th>类型</th><th>含义</th><th>示例</th></tr></thead><tbody><tr><td>SMTP Username</td><td>登录用户名</td><td><code>resend</code>（固定）</td></tr><tr><td>SMTP Password</td><td>API Key</td><td><code>re_xxx</code></td></tr><tr><td>From（发件人）</td><td>邮件发送地址</td><td><code>noreply@xxx.com</code></td></tr></tbody></table><p>👉 <strong>重点：Username ≠ From</strong></p><hr><h2 id="三、踩坑记录（按时间顺序）"><a href="#三、踩坑记录（按时间顺序）" class="headerlink" title="三、踩坑记录（按时间顺序）"></a>三、踩坑记录（按时间顺序）</h2><hr><h3 id="❌-问题-1：501-Bad-sender-address-syntax"><a href="#❌-问题-1：501-Bad-sender-address-syntax" class="headerlink" title="❌ 问题 1：501 Bad sender address syntax"></a>❌ 问题 1：501 Bad sender address syntax</h3><figure class="highlight txt"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">501 Error: Bad sender address syntax</span><br></pre></td></tr></table></figure><h4 id="原因"><a href="#原因" class="headerlink" title="原因"></a>原因</h4><figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">auth := smtp.PlainAuth(<span class="string">&quot;&quot;</span>, m.from, m.password, m.host)</span><br></pre></td></tr></table></figure><p>把 <code>from=resend</code> 当成邮箱使用。</p><h4 id="本质问题"><a href="#本质问题" class="headerlink" title="本质问题"></a>本质问题</h4><ul><li><code>resend</code> 不是合法邮箱地址</li><li>SMTP 要求符合 RFC 规范</li></ul><hr><h3 id="❌-问题-2：535-Invalid-username"><a href="#❌-问题-2：535-Invalid-username" class="headerlink" title="❌ 问题 2：535 Invalid username"></a>❌ 问题 2：535 Invalid username</h3><figure class="highlight txt"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">535 Invalid username</span><br></pre></td></tr></table></figure><h4 id="原因-1"><a href="#原因-1" class="headerlink" title="原因"></a>原因</h4><figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">auth := smtp.PlainAuth(<span class="string">&quot;&quot;</span>, from, m.password, m.host)</span><br></pre></td></tr></table></figure><p>把邮箱当成 SMTP username。</p><h4 id="正确规则"><a href="#正确规则" class="headerlink" title="正确规则"></a>正确规则</h4><figure class="highlight txt"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">username 必须是：resend</span><br></pre></td></tr></table></figure><hr><h3 id="❌-问题-3：550-Missing-or-invalid-“from”-field"><a href="#❌-问题-3：550-Missing-or-invalid-“from”-field" class="headerlink" title="❌ 问题 3：550 Missing or invalid “from” field"></a>❌ 问题 3：550 Missing or invalid “from” field</h3><figure class="highlight txt"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">550 Missing or invalid &quot;from&quot; field: undefined</span><br></pre></td></tr></table></figure><h4 id="原因-2"><a href="#原因-2" class="headerlink" title="原因"></a>原因</h4><p>手写 SMTP message 时，没有加 Header：</p><figure class="highlight txt"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">From: xxx</span><br></pre></td></tr></table></figure><h4 id="关键点"><a href="#关键点" class="headerlink" title="关键点"></a>关键点</h4><p>SMTP 有两个 from：</p><table><thead><tr><th>类型</th><th>说明</th></tr></thead><tbody><tr><td>envelope from</td><td>SMTP 参数</td></tr><tr><td>header from</td><td>邮件内容</td></tr></tbody></table><p>👉 两者必须同时存在</p><hr><h3 id="❌-问题-4：550-domain-is-not-verified"><a href="#❌-问题-4：550-domain-is-not-verified" class="headerlink" title="❌ 问题 4：550 domain is not verified"></a>❌ 问题 4：550 domain is not verified</h3><figure class="highlight txt"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">The damingerdai.com domain is not verified</span><br></pre></td></tr></table></figure><h4 id="原因-3"><a href="#原因-3" class="headerlink" title="原因"></a>原因</h4><p>使用了：</p><figure class="highlight txt"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">notifications@damingerdai.com</span><br></pre></td></tr></table></figure><p>但实际验证的是：</p><figure class="highlight txt"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">notifications.damingerdai.com</span><br></pre></td></tr></table></figure><p>👉 域名不匹配</p><hr><h2 id="四、关键认知（最重要）"><a href="#四、关键认知（最重要）" class="headerlink" title="四、关键认知（最重要）"></a>四、关键认知（最重要）</h2><h3 id="1️⃣-Resend-只认“已验证域”"><a href="#1️⃣-Resend-只认“已验证域”" class="headerlink" title="1️⃣ Resend 只认“已验证域”"></a>1️⃣ Resend 只认“已验证域”</h3><p>假设你验证了：</p><figure class="highlight txt"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">notifications.damingerdai.com</span><br></pre></td></tr></table></figure><p>那么合法发件人只能是：</p><figure class="highlight txt"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">anything@notifications.damingerdai.com ✅</span><br></pre></td></tr></table></figure><p>而不是：</p><figure class="highlight txt"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">anything@damingerdai.com ❌</span><br></pre></td></tr></table></figure><hr><h3 id="2️⃣-local-part-是自由的"><a href="#2️⃣-local-part-是自由的" class="headerlink" title="2️⃣ local-part 是自由的"></a>2️⃣ local-part 是自由的</h3><figure class="highlight txt"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">noreply@notifications.damingerdai.com</span><br><span class="line">support@notifications.damingerdai.com</span><br><span class="line">hello@notifications.damingerdai.com</span><br></pre></td></tr></table></figure><p>👉 前缀不需要真实邮箱存在</p><hr><h2 id="五、最终正确配置"><a href="#五、最终正确配置" class="headerlink" title="五、最终正确配置"></a>五、最终正确配置</h2><h3 id="环境变量"><a href="#环境变量" class="headerlink" title="环境变量"></a>环境变量</h3><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">SMTP_HOST=smtp.resend.com</span><br><span class="line">SMTP_PORT=587</span><br><span class="line"></span><br><span class="line">SMTP_USERNAME=resend</span><br><span class="line">SMTP_PASSWORD=your_api_key</span><br><span class="line"></span><br><span class="line">SMTP_FROM=noreply@notifications.damingerdai.com</span><br></pre></td></tr></table></figure><hr><h2 id="六、Golang-实现"><a href="#六、Golang-实现" class="headerlink" title="六、Golang 实现"></a>六、Golang 实现</h2><hr><h3 id="方案一：使用-net-smtp（低层）"><a href="#方案一：使用-net-smtp（低层）" class="headerlink" title="方案一：使用 net&#x2F;smtp（低层）"></a>方案一：使用 net&#x2F;smtp（低层）</h3><figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line">auth := smtp.PlainAuth(<span class="string">&quot;&quot;</span>, m.username, m.password, m.host)</span><br><span class="line"></span><br><span class="line">headers := <span class="string">&quot;&quot;</span></span><br><span class="line">headers += fmt.Sprintf(<span class="string">&quot;From: %s\r\n&quot;</span>, m.from)</span><br><span class="line">headers += fmt.Sprintf(<span class="string">&quot;To: %s\r\n&quot;</span>, toEmail)</span><br><span class="line">headers += <span class="string">&quot;Subject: Reset Password\r\n&quot;</span></span><br><span class="line">headers += <span class="string">&quot;MIME-Version: 1.0\r\n&quot;</span></span><br><span class="line">headers += <span class="string">&quot;Content-Type: text/html; charset=\&quot;UTF-8\&quot;\r\n&quot;</span></span><br><span class="line">headers += <span class="string">&quot;\r\n&quot;</span></span><br><span class="line"></span><br><span class="line">message := []<span class="type">byte</span>(headers + body)</span><br><span class="line"></span><br><span class="line">err := smtp.SendMail(</span><br><span class="line">addr,</span><br><span class="line">auth,</span><br><span class="line">m.from,</span><br><span class="line">[]<span class="type">string</span>&#123;toEmail&#125;,</span><br><span class="line">message,</span><br><span class="line">)</span><br></pre></td></tr></table></figure><hr><h3 id="方案二：使用-go-mail（推荐）"><a href="#方案二：使用-go-mail（推荐）" class="headerlink" title="方案二：使用 go-mail（推荐）"></a>方案二：使用 go-mail（推荐）</h3><figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">msg := mail.NewMessage()</span><br><span class="line">msg.SetHeader(<span class="string">&quot;From&quot;</span>, <span class="string">&quot;Health Master &lt;&quot;</span>+m.from+<span class="string">&quot;&gt;&quot;</span>)</span><br><span class="line">msg.SetHeader(<span class="string">&quot;To&quot;</span>, toEmail)</span><br><span class="line">msg.SetHeader(<span class="string">&quot;Subject&quot;</span>, <span class="string">&quot;Reset Password&quot;</span>)</span><br><span class="line">msg.SetBody(<span class="string">&quot;text/html&quot;</span>, body)</span><br><span class="line"></span><br><span class="line">d := mail.NewDialer(m.host, <span class="number">587</span>, m.username, m.password)</span><br><span class="line"></span><br><span class="line">err := d.DialAndSend(msg)</span><br></pre></td></tr></table></figure><hr><h2 id="七、最佳实践"><a href="#七、最佳实践" class="headerlink" title="七、最佳实践"></a>七、最佳实践</h2><hr><h3 id="✅-使用子域发信（强烈推荐）"><a href="#✅-使用子域发信（强烈推荐）" class="headerlink" title="✅ 使用子域发信（强烈推荐）"></a>✅ 使用子域发信（强烈推荐）</h3><figure class="highlight txt"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">notifications.damingerdai.com</span><br></pre></td></tr></table></figure><p>优势：</p><ul><li>不影响主域信誉</li><li>更专业（邮件服务隔离）</li></ul><hr><h3 id="✅-设置规范发件人"><a href="#✅-设置规范发件人" class="headerlink" title="✅ 设置规范发件人"></a>✅ 设置规范发件人</h3><figure class="highlight txt"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">noreply@notifications.damingerdai.com</span><br></pre></td></tr></table></figure><hr><h3 id="✅-Header-使用带名称格式"><a href="#✅-Header-使用带名称格式" class="headerlink" title="✅ Header 使用带名称格式"></a>✅ Header 使用带名称格式</h3><figure class="highlight txt"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">Health Master &lt;noreply@notifications.damingerdai.com&gt;</span><br></pre></td></tr></table></figure><hr><h2 id="八、总结"><a href="#八、总结" class="headerlink" title="八、总结"></a>八、总结</h2><p>整个过程可以总结为三点：</p><hr><h3 id="1️⃣-三个字段必须分清"><a href="#1️⃣-三个字段必须分清" class="headerlink" title="1️⃣ 三个字段必须分清"></a>1️⃣ 三个字段必须分清</h3><figure class="highlight txt"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">SMTP_USERNAME = resend</span><br><span class="line">SMTP_PASSWORD = API Key</span><br><span class="line">SMTP_FROM     = 你的邮箱</span><br></pre></td></tr></table></figure><hr><h3 id="2️⃣-域名必须完全匹配"><a href="#2️⃣-域名必须完全匹配" class="headerlink" title="2️⃣ 域名必须完全匹配"></a>2️⃣ 域名必须完全匹配</h3><figure class="highlight txt"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">验证的是 A，就不能用 B</span><br></pre></td></tr></table></figure><hr><h3 id="3️⃣-SMTP-是“严格协议”"><a href="#3️⃣-SMTP-是“严格协议”" class="headerlink" title="3️⃣ SMTP 是“严格协议”"></a>3️⃣ SMTP 是“严格协议”</h3><p>不会容错：</p><ul><li>少一个 Header ❌</li><li>格式不对 ❌</li><li>域名不对 ❌</li></ul><hr><h2 id="九、建议"><a href="#九、建议" class="headerlink" title="九、建议"></a>九、建议</h2><p>如果不是必须用 SMTP：</p><p>👉 优先考虑 Resend API（更简单、更少坑）</p><hr><h2 id="十、附录（调试建议）"><a href="#十、附录（调试建议）" class="headerlink" title="十、附录（调试建议）"></a>十、附录（调试建议）</h2><p>常见排查：</p><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">dig TXT yourdomain.com</span><br></pre></td></tr></table></figure><p>检查：</p><ul><li>SPF</li><li>DKIM</li></ul><hr><h2 id="结尾"><a href="#结尾" class="headerlink" title="结尾"></a>结尾</h2><p>这次接入的核心教训：</p><blockquote><p>SMTP 的问题，80% 不是代码问题，而是协议和配置问题。</p></blockquote><p>如果你也在用 Golang + 邮件服务，这一套坑基本可以帮你全部避开。</p>]]></content>
+      
+      
+      <categories>
+          
+          <category> 后端 </category>
+          
+      </categories>
+      
+      
+        <tags>
+            
+            <tag> golang </tag>
+            
+            <tag> resend </tag>
+            
+        </tags>
+      
+    </entry>
+    
+    
+    
+    <entry>
       <title>无 Docker Desktop + Colima + Docker Compose v2 标准化方案</title>
       <link href="/2026/04/27/software/colima-docker-compose-setup/"/>
       <url>/2026/04/27/software/colima-docker-compose-setup/</url>
@@ -167,6 +194,8 @@
       
         <tags>
             
+            <tag> ingress </tag>
+            
             <tag> k3s </tag>
             
             <tag> kubernetes </tag>
@@ -174,8 +203,6 @@
             <tag> kite </tag>
             
             <tag> helm </tag>
-            
-            <tag> ingress </tag>
             
             <tag> traefik </tag>
             
@@ -256,11 +283,11 @@
       
         <tags>
             
+            <tag> k8s </tag>
+            
             <tag> k3s </tag>
             
             <tag> Kubernetes </tag>
-            
-            <tag> k8s </tag>
             
             <tag> Grafana </tag>
             
@@ -293,15 +320,15 @@
             
             <tag> docker </tag>
             
-            <tag> docker compose </tag>
+            <tag> docker-compose </tag>
             
             <tag> k3s </tag>
             
+            <tag> podman </tag>
+            
             <tag> docker registry </tag>
             
-            <tag> docker-compose </tag>
-            
-            <tag> podman </tag>
+            <tag> docker compose </tag>
             
             <tag> zot </tag>
             
@@ -384,9 +411,9 @@
       
         <tags>
             
-            <tag> kubernetes </tag>
-            
             <tag> minikube </tag>
+            
+            <tag> kubernetes </tag>
             
             <tag> rancher </tag>
             
@@ -413,13 +440,13 @@
       
         <tags>
             
+            <tag> resend </tag>
+            
             <tag> nexjts </tag>
             
             <tag> spabase </tag>
             
             <tag> react email </tag>
-            
-            <tag> resend </tag>
             
         </tags>
       
@@ -444,11 +471,11 @@
       
         <tags>
             
+            <tag> k8s </tag>
+            
             <tag> k3s </tag>
             
             <tag> kubernetes </tag>
-            
-            <tag> k8s </tag>
             
             <tag> skooner </tag>
             
@@ -589,9 +616,9 @@
       
         <tags>
             
-            <tag> bazel </tag>
-            
             <tag> spring boot </tag>
+            
+            <tag> bazel </tag>
             
             <tag> bzlmod </tag>
             
@@ -620,11 +647,11 @@
             
             <tag> docker </tag>
             
-            <tag> docker compose </tag>
+            <tag> postgres </tag>
             
             <tag> 容器 </tag>
             
-            <tag> postgres </tag>
+            <tag> docker compose </tag>
             
             <tag> postgres18 </tag>
             
@@ -1037,9 +1064,9 @@
       
         <tags>
             
-            <tag> k3s </tag>
-            
             <tag> k8s </tag>
+            
+            <tag> k3s </tag>
             
         </tags>
       
@@ -1322,9 +1349,9 @@
       
         <tags>
             
-            <tag> bazel </tag>
-            
             <tag> spring boot </tag>
+            
+            <tag> bazel </tag>
             
             <tag> java </tag>
             
@@ -1416,11 +1443,11 @@
       
         <tags>
             
+            <tag> k8s </tag>
+            
             <tag> docker </tag>
             
             <tag> kubernetes </tag>
-            
-            <tag> k8s </tag>
             
             <tag> Docker Desktop </tag>
             
@@ -1603,11 +1630,11 @@
       
         <tags>
             
-            <tag> k3s </tag>
-            
             <tag> k8s </tag>
             
             <tag> ssl </tag>
+            
+            <tag> k3s </tag>
             
             <tag> letsencrypt </tag>
             
@@ -1717,13 +1744,13 @@
       
         <tags>
             
+            <tag> k8s </tag>
+            
             <tag> docker </tag>
             
             <tag> k3s </tag>
             
             <tag> kubernetes </tag>
-            
-            <tag> k8s </tag>
             
         </tags>
       
@@ -1777,11 +1804,11 @@
       
         <tags>
             
+            <tag> k8s </tag>
+            
             <tag> docker </tag>
             
             <tag> minikube </tag>
-            
-            <tag> k8s </tag>
             
         </tags>
       
@@ -1806,11 +1833,11 @@
       
         <tags>
             
-            <tag> kubernetes </tag>
+            <tag> k8s </tag>
             
             <tag> minikube </tag>
             
-            <tag> k8s </tag>
+            <tag> kubernetes </tag>
             
             <tag> Mac </tag>
             
@@ -1935,9 +1962,9 @@
       
         <tags>
             
-            <tag> nodejs </tag>
-            
             <tag> docker </tag>
+            
+            <tag> nodejs </tag>
             
         </tags>
       
@@ -2041,9 +2068,9 @@
       
         <tags>
             
-            <tag> angular </tag>
-            
             <tag> bazel </tag>
+            
+            <tag> angular </tag>
             
         </tags>
       
@@ -2068,9 +2095,9 @@
       
         <tags>
             
-            <tag> angular </tag>
-            
             <tag> bazel </tag>
+            
+            <tag> angular </tag>
             
         </tags>
       
@@ -2122,11 +2149,11 @@
       
         <tags>
             
+            <tag> k8s </tag>
+            
             <tag> docker </tag>
             
             <tag> kubernetes </tag>
-            
-            <tag> k8s </tag>
             
             <tag> Docker Desktop </tag>
             
@@ -2178,11 +2205,11 @@
       
         <tags>
             
-            <tag> kubernetes </tag>
+            <tag> k8s </tag>
             
             <tag> minikube </tag>
             
-            <tag> k8s </tag>
+            <tag> kubernetes </tag>
             
             <tag> Ubuntu </tag>
             
