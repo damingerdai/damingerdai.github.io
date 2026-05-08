@@ -4,6 +4,33 @@
   
     
     <entry>
+      <title>2026年5月8号面试总结</title>
+      <link href="/2026/05/08/front-end/2026-0508-interview/"/>
+      <url>/2026/05/08/front-end/2026-0508-interview/</url>
+      
+        <content type="html"><![CDATA[<h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><p>2026年5月8号有一场面试，是对方架构师来面试的我。总的来说，面试的效果不是很好。<br>面试的岗位是前端岗位，但是问的很多是后端架构的设计，我认为我的准备不是很好，我需要继续努力补全自己。</p><h1 id="问题"><a href="#问题" class="headerlink" title="问题"></a>问题</h1><h2 id="Java的虚拟线程"><a href="#Java的虚拟线程" class="headerlink" title="Java的虚拟线程"></a>Java的虚拟线程</h2><p>问题：Java的虚拟线程是什么，怎么创建？</p><p>回答如下：</p><p>在Java 21中，引入了虚拟线程（Virtual Threads）来简化和增强并发性，这使得在Java中编程并发程序更容易、更高效。</p><p>虚拟线程，也称为“用户模式线程（user-mode threads）”或“纤程（fibers）”。该功能旨在简化并发编程并提供更好的可扩展性。虚拟线程是轻量级的，这意味着它们可以比传统线程创建更多数量，并且开销要少得多。这使得在自己的线程中运行单独任务或请求变得更加实用，即使在高吞吐量的程序中也是如此。</p><p>在Java 21中创建和使用虚拟线程有多种方法：</p><h3 id="1-使用静态构建器方法"><a href="#1-使用静态构建器方法" class="headerlink" title="1. 使用静态构建器方法"></a>1. 使用静态构建器方法</h3><p>Thread.startVirtualThread方法将可运行对象作为参数来创建，并立即启动虚拟线程，具体如下代码：</p><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">Runnable</span> <span class="variable">runnable</span> <span class="operator">=</span> () -&gt; &#123;</span><br><span class="line">    System.out.println(<span class="string">&quot;Hello, www.didispace.com&quot;</span>);</span><br><span class="line">&#125;;</span><br><span class="line"></span><br><span class="line"><span class="comment">// 使用静态构建器方法</span></span><br><span class="line"><span class="type">Thread</span> <span class="variable">virtualThread</span> <span class="operator">=</span> Thread.startVirtualThread(runnable);</span><br></pre></td></tr></table></figure><p>也可以使用Thread.ofVirtual()来创建，这里还可以设置一些属性，比如：线程名称。具体如下代码：</p><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">Thread.ofVirtual()</span><br><span class="line">        .name(<span class="string">&quot;didispace-virtual-thread&quot;</span>)</span><br><span class="line">        .start(runnable);</span><br></pre></td></tr></table></figure><h3 id="2-与ExecutorService结合使用"><a href="#2-与ExecutorService结合使用" class="headerlink" title="2. 与ExecutorService结合使用"></a>2. 与ExecutorService结合使用</h3><p>从Java 5开始，就推荐开发人员使用ExecutorServices而不是直接使用Thread类了。现在，Java 21中引入了使用虚拟线程，所以也有了新的ExecutorService来适配，看看下面的例子：</p><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">Runnable</span> <span class="variable">runnable</span> <span class="operator">=</span> () -&gt; &#123;</span><br><span class="line">    System.out.println(<span class="string">&quot;Hello, www.didispace.com&quot;</span>);</span><br><span class="line">&#125;;</span><br><span class="line"></span><br><span class="line"><span class="keyword">try</span> (<span class="type">ExecutorService</span> <span class="variable">executorService</span> <span class="operator">=</span> Executors.newVirtualThreadPerTaskExecutor()) &#123;</span><br><span class="line">    <span class="keyword">for</span> (<span class="type">int</span> <span class="variable">i</span> <span class="operator">=</span> <span class="number">0</span>; i &lt; <span class="number">100</span>; i++) &#123;</span><br><span class="line">        executorService.submit(runnable);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure><h3 id="3-使用虚拟线程工厂"><a href="#3-使用虚拟线程工厂" class="headerlink" title="3. 使用虚拟线程工厂"></a>3. 使用虚拟线程工厂</h3><p>开发者还可以创建一个生成虚拟线程的工厂来管理，具体看下面的例子例子：</p><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">Runnable</span> <span class="variable">runnable</span> <span class="operator">=</span> () -&gt; &#123;</span><br><span class="line">    System.out.println(<span class="string">&quot;Hello, www.didispace.com&quot;</span>);</span><br><span class="line">&#125;;</span><br><span class="line"></span><br><span class="line"><span class="type">ThreadFactory</span> <span class="variable">virtualThreadFactory</span> <span class="operator">=</span> Thread.ofVirtual()</span><br><span class="line">        .name(<span class="string">&quot;didispace&quot;</span>, <span class="number">0</span>)</span><br><span class="line">        .factory();</span><br><span class="line"></span><br><span class="line"><span class="type">Thread</span> <span class="variable">factoryThread</span> <span class="operator">=</span> virtualThreadFactory.newThread(runnable);</span><br><span class="line">factoryThread.start;</span><br></pre></td></tr></table></figure><p>对于虚拟线程的概念，你只需要有一个基本的认识。</p><ul><li>虚拟线程是由JVM管理的轻量级线程。</li><li>虚拟线程不需要任何显式分配或调度。</li><li>虚拟线程非常适合I&#x2F;O密集型任务或需要大量并行性的任务。</li><li>虚拟线程也可以用来实现异步操作。</li></ul><h2 id="Golang的cmp模型"><a href="#Golang的cmp模型" class="headerlink" title="Golang的cmp模型"></a>Golang的cmp模型</h2><p>GMP 是 Go 运行时（Runtime）层面的调度模型，它实现了用户态线程（Goroutine）与内核态线程（M）之间的多对多复用，是 Go 能够支持高并发的核心原因</p><ul><li>G (Goroutine): 协程。它是待执行的任务，存储了协程的栈、状态及指向任务函数的指针。G 的体积很小（初始仅 2KB），由 Go 运行时管理。</li><li>M (Machine): 操作系统的物理线程。协程最终必须绑定到 M 上才能在 CPU 上运行。M 并不保存状态，它只是一个执行体。</li><li>P (Processor): 逻辑处理器。它是 G 和 M 之间的“中介”或“本地资源池”。P 维护着一个本地就绪队列（Local Runqueue）。M 必须获取到 P 才能执行 G。</li><li>在早期（Go 1.1 之前）只有 GM 模型，由于所有 M 都要抢夺全局队列的锁来获取 G，导致严重的锁竞争。引入 P 后，每个 P 都有本地队列，减少了锁竞争，并实现了 Work Stealing 和 Hand Off 机制，大大提升了效率</li></ul><blockquote><p>gemini帮我回答的</p></blockquote><h2 id="MySQL-事务隔离级别"><a href="#MySQL-事务隔离级别" class="headerlink" title="MySQL 事务隔离级别"></a>MySQL 事务隔离级别</h2><p>SQL:1992 标准定义了四种事务隔离级别，分别是读未提交（Read Uncommitted）、读已提交（Read Committed）、可重复读（Repeatable Read）和串行化（Serializable）。不同的隔离级别下会产生脏读、幻读、不可重复读等相关问题，因此在选择隔离级别的时候要根据应用场景来决定，使用合适的隔离级别。<br>MySQL 中的 InnoDB 存储引擎提供了 SQL 标准所描述的四种事务隔离级别，默认事务隔离级别是可重复读（Repeatable Read）。</p><ul><li>读未提交（Read Uncommitted）允许脏读，就是在该隔离级别下，可能读到其他会话未提交事务修改的数据，存在脏读、不可重读读、幻读的问题。</li><li>读已提交（Read Committed）只能查询到已提交的数据。这是 Oracle 数据库默认的事务隔离级别。存在不可重读读、幻读的问题。</li><li>可重复读（Repeatable Read）就是在一个事务里相同条件下，无论何时查到的数据都和第一次查到的数据一致。这是 MySQL 数据库 InnoDB 引擎默认的事务隔离级别。在范围查询时存在幻读的问题。</li><li>串行化（Serializable）是最高的事务隔离级别，它严格服从 ACID 特性的隔离级别。所有的事务依次逐个执行，事务之间互不干扰，该级别可以防止脏读、不可重复读以及幻读。但每个事务读数据时都需要获取表级的共享锁，导致读和写都会阻塞，性能极低。</li></ul><h1 id="参考资料"><a href="#参考资料" class="headerlink" title="参考资料"></a>参考资料</h1><ul><li><a href="https://www.cnblogs.com/didispace/p/17735173.html">Java 21 新特性：虚拟线程（Virtual Threads）</a></li><li><a href="https://juejin.cn/post/7136112451959848991">MySQL | 事务隔离级别详解</a></li></ul>]]></content>
+      
+      
+      <categories>
+          
+          <category> 前端 </category>
+          
+      </categories>
+      
+      
+        <tags>
+            
+            <tag> 高级前端工程师 </tag>
+            
+            <tag> 面试 </tag>
+            
+        </tags>
+      
+    </entry>
+    
+    
+    
+    <entry>
       <title>2026年5月7号面试总结</title>
       <link href="/2026/05/08/front-end/2026-0507-interview/"/>
       <url>/2026/05/08/front-end/2026-0507-interview/</url>
@@ -1150,9 +1177,9 @@
       
         <tags>
             
-            <tag> javascript </tag>
-            
             <tag> 前端 </tag>
+            
+            <tag> javascript </tag>
             
         </tags>
       
@@ -1266,9 +1293,9 @@
       
         <tags>
             
-            <tag> javascript </tag>
-            
             <tag> 前端 </tag>
+            
+            <tag> javascript </tag>
             
         </tags>
       
