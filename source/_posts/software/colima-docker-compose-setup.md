@@ -118,6 +118,21 @@ docker compose version
 Docker Compose version 5.x.x
 ```
 
+### 4. 补充
+
+Colima 默认只安装了底层的 Docker 守护进程，但在你的 Mac 宿主机上，缺少了 Docker 的 buildx 插件（也就是用来控制 BuildKit 的客户端组件）。
+
+```bash
+# 1. 安装 buildx 插件
+brew install docker-buildx
+
+# 2. 创建 Docker 插件目录（如果不存在的话）
+mkdir -p ~/.docker/cli-plugins
+
+# 3. 将刚刚安装的 buildx 软链接到 Docker 插件目录下
+ln -sfn $(brew --prefix)/opt/docker-buildx/bin/docker-buildx ~/.docker/cli-plugins/docker-buildx
+```
+
 ---
 
 ## 五、最终使用方式
