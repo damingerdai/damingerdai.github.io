@@ -147,7 +147,7 @@ postgres-ro   ClusterIP      10.43.95.111   <none>          5432/TCP         3h5
 postgres-rw   ClusterIP      10.43.29.10    <none>          5432/TCP         3h54m
 ```
 
-你会看到 postgres-rw 的 TYPE 变成了 LoadBalancer，并且它的 EXTERNAL-IP 在两秒钟内就会被 Klipper 自动刷成你的宿主机局域网 IP（192.168.0.103）。
+你会看到 postgres-lb 的  type是 LoadBalancer，并且它的 EXTERNAL-IP 在两秒钟内就会被 Klipper 自动刷成你的宿主机局域网 IP（192.168.0.103）。
 
 CloudNativePG 会默认把密码存放在一个名为 postgres-app 的 Secret 对象里。请直接在终端执行这行命令，它会帮你解密并显示在屏幕上：
 
