@@ -17,27 +17,47 @@ categories: [软件]
 
 ```mermaid
 flowchart TB
+    subgraph Client ["开发者环境 (Client)"]
+        Browser["浏览器 (HTTPS)"]
+        GitCli["Git 客户端 (SSH)"]
+    end
 
-    Client[Developer]
+    subgraph K3S ["K3s 集群边界 (K3s Cluster)"]
+        direction TB
+        
+        subgraph Net ["网络与路由 (Ingress & Network)"]
+            Traefik["Traefik Ingress Controller"]
+            Middleware["force-https (Middleware)"]
+            TLS["gitea-tls-secret (TLS Secret)"]
+        end
 
-    Client -->|HTTPS 443| DNS[gitea.yourdomain.local]
-    Client -->|SSH 22| SSHLB[LoadBalancer Service]
+        subgraph Core ["核心计算 (Core Pod)"]
+            Gitea["Gitea Pod (Rootless)"]
+            DBSecret["postgres-secret (DB Secret)"]
+        end
 
-    DNS --> Traefik[Traefik Ingress]
+        subgraph Outbound ["外部服务映射 (Egress)"]
+            PGSVC["external-pg (Service)"]
+            EPS["external-pg-slice (EndpointSlice)"]
+        end
+    end
 
-    Traefik --> Middleware[force-https Middleware]
+    subgraph External ["独立物理机/虚拟机"]
+        PG[("外部 PostgreSQL 数据库")]
+    end
 
-    Middleware --> TLS[TLS Secret]
+    %% 流量流向
+    Browser -->|443| Traefik
+    Traefik -.->|1. 检查跳转| Middleware
+    Traefik -.->|2. 解密证书| TLS
+    Traefik ==>|3. 转发有效流量| Gitea
 
-    Middleware --> Gitea[Gitea Pod]
-
-    SSHLB --> Gitea
-
-    Gitea --> PGSVC[external-pg Service]
-
-    PGSVC --> EPS[EndpointSlice]
-
-    EPS --> PG[(External PostgreSQL)]
+    GitCli ==>|22| Gitea
+    
+    Gitea -.->|读取密码| DBSecret
+    Gitea ==> PGSVC
+    PGSVC --> EPS
+    EPS ==>|跨网络访问| PG
 ```
 
 * 核心服务：Gitea（采用官方轻量化 Rootless 镜像）。
@@ -282,7 +302,7 @@ helm upgrade --install gitea gitea/gitea \
 解决办法：在访问网页的电脑上修改 hosts 文件，将域名指向你的 K3s 节点 IP（如 192.168.XX.XX）。
 
 # 🎉 总结
-当看到浏览器顶部的绿色小锁（或自签名证书的安全提示），并成功跳转到全加密的 Gitea 欢迎界面时 report，所有的折腾都是值得的！
+当看到浏览器顶部的绿色小锁（或自签名证书的安全提示），并成功跳转到全加密的 Gitea 欢迎界面时，所有的折腾都是值得的！
 
 通过这次实践，我们不仅学会了如何部署一个软件，更深刻理解了 K8s 命名空间隔离、网络路由（Ingress+Middleware）、以及外部资源映射（EndpointSlice） 的底层逻辑。
 
