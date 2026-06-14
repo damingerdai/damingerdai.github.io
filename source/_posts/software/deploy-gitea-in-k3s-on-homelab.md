@@ -1,11 +1,11 @@
 ---
-title: 🚀 玩转 Homelab：在 K8s/K3s 中搭建企业级全加密 Gitea 代码托管系统
+title: 🚀 玩转 Homelab：使用 Helm 在 K3s 中部署 Gitea，并接入外部 PostgreSQL
 date: 2026-06-14 10:26:06
 tags: [gitea, helm, k3s, Kubernetes]
 categories: [软件]
 ---
 
-# 🚀 玩转 Homelab：在 K8s/K3s 中搭建企业级全加密 Gitea 代码托管系统
+# 🚀 玩转 Homelab：使用 Helm 在 K3s 中部署 Gitea，并接入外部 PostgreSQL
 
 在自己的内网（Homelab）环境里，拥有一个轻量、好用、全加密（HTTPS）的代码托管系统是每个开发者的梦想。今天这篇博客就带大家复盘，如何利用 K3s、Traefik 网关以及外部自建的 PostgreSQL 数据库，一步步搭建属于自己的 Gitea。
 
@@ -14,6 +14,31 @@ categories: [软件]
 ## 🏗️ 整体架构一览
 
 为了让整个系统足够轻量且好维护，我们采用了以下设计方案：
+
+```mermaid
+flowchart TB
+
+    Client[Developer]
+
+    Client -->|HTTPS 443| DNS[gitea.yourdomain.local]
+    Client -->|SSH 22| SSHLB[LoadBalancer Service]
+
+    DNS --> Traefik[Traefik Ingress]
+
+    Traefik --> Middleware[force-https Middleware]
+
+    Middleware --> TLS[TLS Secret]
+
+    Middleware --> Gitea[Gitea Pod]
+
+    SSHLB --> Gitea
+
+    Gitea --> PGSVC[external-pg Service]
+
+    PGSVC --> EPS[EndpointSlice]
+
+    EPS --> PG[(External PostgreSQL)]
+```
 
 * 核心服务：Gitea（采用官方轻量化 Rootless 镜像）。
 
@@ -213,7 +238,8 @@ ingress:
 现在我们可以使用helm命令去部署gitea了：
 
 ```bash
-helm repo update gitea
+helm repo add gitea https://dl.gitea.com/charts/
+helm repo update
 helm upgrade --install gitea gitea/gitea -f gitea-values.yaml -n gitea
 ```
 
@@ -254,14 +280,6 @@ helm upgrade --install gitea gitea/gitea \
 #### NXDOMAIN 错误：因为是内网域名，公共 DNS 无法解析。
 
 解决办法：在访问网页的电脑上修改 hosts 文件，将域名指向你的 K3s 节点 IP（如 192.168.XX.XX）。
-
-### 404 page not found 错误：Traefik 刚加载证书和中间件时可能会有缓存死锁。
-
-解决办法：直接强制滚动重启 K3s 的 Traefik 容器，清空路由缓存：
-
-```bash
-kubectl rollout restart deployment traefik -n kube-system
-```
 
 # 🎉 总结
 当看到浏览器顶部的绿色小锁（或自签名证书的安全提示），并成功跳转到全加密的 Gitea 欢迎界面时 report，所有的折腾都是值得的！
