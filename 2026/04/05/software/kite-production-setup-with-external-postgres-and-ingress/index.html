@@ -7,7 +7,7 @@
 <meta property="og:locale" content="zh_CN">
 <meta property="og:image" content="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg">
 <meta property="article:published_time" content="2026-04-05T09:27:48.000Z">
-<meta property="article:modified_time" content="2026-06-16T13:03:29.443Z">
+<meta property="article:modified_time" content="2026-06-16T13:09:27.546Z">
 <meta property="article:author" content="Arthur Ming">
 <meta property="article:tag" content="k3s">
 <meta property="article:tag" content="kubernetes">
@@ -20,7 +20,7 @@
   "url": "http://blog.damingerdai.com/2026/04/05/software/kite-production-setup-with-external-postgres-and-ingress/",
   "image": "https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg",
   "datePublished": "2026-04-05T09:27:48.000Z",
-  "dateModified": "2026-06-16T13:03:29.443Z",
+  "dateModified": "2026-06-16T13:09:27.546Z",
   "author": [
     {
       "@type": "Person",
@@ -179,7 +179,7 @@
   isHighlightShrink: false,
   isToc: true,
   pageType: 'post'
-}</script><link rel="stylesheet" href="/css/styles.css"><meta name="generator" content="Hexo 7.3.0"></head><body><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="avatar-img text-center"><img src="/img/avatar.png" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="site-data text-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">86</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">120</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">8</div></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归类</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><span class="site-page group"><i class="fa-fw fas fa-list"></i><span> 其他</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><li><a class="site-page child" href="/others/learning"><i class="fa-fw fas fa-graduation-cap"></i><span> 学习课程</span></a></li><li><a class="site-page child" href="/others/link/"><i class="fa-fw fas fa-link"></i><span> 链接</span></a></li><li><a class="site-page child" href="/others/interview/"><i class="fa-fw fas fa-glide"></i><span> 面试</span></a></li></ul></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于</span></a></div></div></div></div><div class="post" id="body-wrap"><header class="post-bg" id="page-header" style="background-image: url(https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg);"><nav id="nav"><span id="blog-info"><a class="nav-site-title" href="/"><span class="site-name">Damingerdai's Blog</span></a><a class="nav-page-title" href="/"><span class="site-name">从 Demo 到生产级：Kite 在 K3s 上的 PostgreSQL 与 Ingress 部署实战</span><span class="site-name"><i class="fa-solid fa-circle-arrow-left"></i><span>  返回首页</span></span></a></span><div id="menus"><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归类</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><span class="site-page group"><i class="fa-fw fas fa-list"></i><span> 其他</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><li><a class="site-page child" href="/others/learning"><i class="fa-fw fas fa-graduation-cap"></i><span> 学习课程</span></a></li><li><a class="site-page child" href="/others/link/"><i class="fa-fw fas fa-link"></i><span> 链接</span></a></li><li><a class="site-page child" href="/others/interview/"><i class="fa-fw fas fa-glide"></i><span> 面试</span></a></li></ul></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于</span></a></div></div><div id="toggle-menu"><span class="site-page"><i class="fas fa-bars fa-fw"></i></span></div></div></nav><div id="post-info"><h1 class="post-title">从 Demo 到生产级：Kite 在 K3s 上的 PostgreSQL 与 Ingress 部署实战</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2026-04-05T09:27:48.000Z" title="发表于 2026-04-05 17:27:48">2026-04-05</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2026-06-16T13:03:29.443Z" title="更新于 2026-06-16 21:03:29">2026-06-16</time></span><span class="post-meta-categories"><span class="post-meta-separator">|</span><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/%E8%BD%AF%E4%BB%B6/">软件</a></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-pv-cv" id="" data-flag-title=""><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">浏览量:</span><span id="busuanzi_value_page_pv"><i class="fa-solid fa-spinner fa-spin"></i></span></span></div></div></div></header><main class="layout" id="content-inner"><div id="post"><article class="container post-content" id="article-container"><h1 id="从-Demo-到生产级：Kite-在-K3s-上的高可用数据库与-HTTPS-部署实践"><a href="#从-Demo-到生产级：Kite-在-K3s-上的高可用数据库与-HTTPS-部署实践" class="headerlink" title="从 Demo 到生产级：Kite 在 K3s 上的高可用数据库与 HTTPS 部署实践"></a>从 Demo 到生产级：Kite 在 K3s 上的高可用数据库与 HTTPS 部署实践</h1><h3 id="引言"><a href="#引言" class="headerlink" title="引言"></a>引言</h3><p>在之前的文章 <a href="https://blog.damingerdai.com/2026/01/25/software/setup-kite-with-prometheus-on-k3s/">《玩转 K8s 面板：轻量级 Kite 安装全记录 (K3s 篇)》</a> 中，我们快速搭建了测试环境。但随着使用深入，原方案的局限性开始显现。今天我们将进行一次彻头彻尾的“生产级”改造。</p>
+}</script><link rel="stylesheet" href="/css/styles.css"><meta name="generator" content="Hexo 7.3.0"></head><body><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="avatar-img text-center"><img src="/img/avatar.png" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="site-data text-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">86</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">120</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">8</div></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归类</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><span class="site-page group"><i class="fa-fw fas fa-list"></i><span> 其他</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><li><a class="site-page child" href="/others/learning"><i class="fa-fw fas fa-graduation-cap"></i><span> 学习课程</span></a></li><li><a class="site-page child" href="/others/link/"><i class="fa-fw fas fa-link"></i><span> 链接</span></a></li><li><a class="site-page child" href="/others/interview/"><i class="fa-fw fas fa-glide"></i><span> 面试</span></a></li></ul></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于</span></a></div></div></div></div><div class="post" id="body-wrap"><header class="post-bg" id="page-header" style="background-image: url(https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg);"><nav id="nav"><span id="blog-info"><a class="nav-site-title" href="/"><span class="site-name">Damingerdai's Blog</span></a><a class="nav-page-title" href="/"><span class="site-name">从 Demo 到生产级：Kite 在 K3s 上的 PostgreSQL 与 Ingress 部署实战</span><span class="site-name"><i class="fa-solid fa-circle-arrow-left"></i><span>  返回首页</span></span></a></span><div id="menus"><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归类</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><span class="site-page group"><i class="fa-fw fas fa-list"></i><span> 其他</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><li><a class="site-page child" href="/others/learning"><i class="fa-fw fas fa-graduation-cap"></i><span> 学习课程</span></a></li><li><a class="site-page child" href="/others/link/"><i class="fa-fw fas fa-link"></i><span> 链接</span></a></li><li><a class="site-page child" href="/others/interview/"><i class="fa-fw fas fa-glide"></i><span> 面试</span></a></li></ul></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于</span></a></div></div><div id="toggle-menu"><span class="site-page"><i class="fas fa-bars fa-fw"></i></span></div></div></nav><div id="post-info"><h1 class="post-title">从 Demo 到生产级：Kite 在 K3s 上的 PostgreSQL 与 Ingress 部署实战</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2026-04-05T09:27:48.000Z" title="发表于 2026-04-05 17:27:48">2026-04-05</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2026-06-16T13:09:27.546Z" title="更新于 2026-06-16 21:09:27">2026-06-16</time></span><span class="post-meta-categories"><span class="post-meta-separator">|</span><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/%E8%BD%AF%E4%BB%B6/">软件</a></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-pv-cv" id="" data-flag-title=""><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">浏览量:</span><span id="busuanzi_value_page_pv"><i class="fa-solid fa-spinner fa-spin"></i></span></span></div></div></div></header><main class="layout" id="content-inner"><div id="post"><article class="container post-content" id="article-container"><h1 id="从-Demo-到生产级：Kite-在-K3s-上的高可用数据库与-HTTPS-部署实践"><a href="#从-Demo-到生产级：Kite-在-K3s-上的高可用数据库与-HTTPS-部署实践" class="headerlink" title="从 Demo 到生产级：Kite 在 K3s 上的高可用数据库与 HTTPS 部署实践"></a>从 Demo 到生产级：Kite 在 K3s 上的高可用数据库与 HTTPS 部署实践</h1><h3 id="引言"><a href="#引言" class="headerlink" title="引言"></a>引言</h3><p>在之前的文章 <a href="https://blog.damingerdai.com/2026/01/25/software/setup-kite-with-prometheus-on-k3s/">《玩转 K8s 面板：轻量级 Kite 安装全记录 (K3s 篇)》</a> 中，我们快速搭建了测试环境。但随着使用深入，原方案的局限性开始显现。今天我们将进行一次彻头彻尾的“生产级”改造。</p>
 <hr>
 <h2 id="1-原方案的痛点：为什么不能用于生产？"><a href="#1-原方案的痛点：为什么不能用于生产？" class="headerlink" title="1. 原方案的痛点：为什么不能用于生产？"></a>1. 原方案的痛点：为什么不能用于生产？</h2><p>原方案最大的问题在于<strong>数据持久化</strong>。</p>
 <ul>
@@ -224,4 +224,325 @@
 <li><strong>外部访问阻碍</strong>：如果 <code>ping</code> 通了但 <code>curl</code> 不通，大概率是目标机器（192.168.31.220）的防火墙没放行 5432 端口。</li>
 </ul>
 <h3 id="结语"><a href="#结语" class="headerlink" title="结语"></a>结语</h3><p>通过这次改造，Kite 已经具备了应对生产环境的基础能力。数据有了保障，访问有了加密。</p>
-</article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta"><i class="fas fa-circle-user fa-fw"></i>文章作者: </span><span class="post-copyright-info"><a href="http://blog.damingerdai.com">Arthur Ming</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta"><i class="fas fa-square-arrow-up-right fa-fw"></i>文章链接: </span><span class="post-copyright-info"><a href="http://blog.damingerdai.com/2026/04/05/software/kite-production-setup-with-external-postgres-and-ingress/">http://blog.damingerdai.com/2026/04/05/software/kite-production-setup-with-external-postgres-and-ingress/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta"><i class="fas fa-circle-exclamation fa-fw"></i>版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来源 <a href="http://blog.damingerdai.com" target="_blank">Damingerdai's Blog</a>！</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/k3s/">k3s</a><a class="post-meta__tags" href="/tags/kubernetes/">kubernetes</a><a class="post-meta__tags" href="/tags/kite/">kite</a></div><div class="post-share"><div class="social-share" data-image="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" data-sites="facebook,x,wechat,weibo,qq"></div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/butterfly-extsrc/sharejs/dist/css/share.min.css" media="print" onload="this.media='all'"><script src="https://cdn.jsdelivr.net/npm/butterfly-extsrc/sharejs/dist/js/social-share.min.js" defer></script></div></div><nav class="pagination-post" id="pagination"><a class="pagination-related" href="/2026/04/18/software/git-multi-account-setup-with-includeif/" title="优雅实现 Git 多账号切换：基于 SSH Config 与 includeIf 的环境隔离方案"><img class="cover" src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" onerror="onerror=null;src='/img/404.jpg'" alt="cover of previous post"><div class="info"><div class="info-1"><div class="info-item-1">上一篇</div><div class="info-item-2">优雅实现 Git 多账号切换：基于 SSH Config 与 includeIf 的环境隔离方案</div></div><div class="info-2"><div class="info-item-1">优雅实现 Git 多账号切换：基于 SSH Config 与 includeIf 的环境隔离方案在日常开发中，我们经常需要在一台电脑上同时处理个人开源项目和公司业务项目。最核心的痛点有两个：  SSH Key 冲突：GitHub 默认只识别一对密钥，多账号如何无感切换？ 提交身份混淆：如何在公司项目中自动使用公司邮箱，在个人项目中自动使用个人邮箱？  本文分享一种“一次配置，永久生效”的自动化方案。 1. 目录结构规划首先，建议按用途将项目存放在不同的父目录下，这是自动化切换的前提。 123Workspaces/├── personal/  # 存放个人项目└── company/   # 存放公司项目  2. 生成独立的 SSH 密钥为每个账号生成专属的密钥对，不要覆盖默认的 id_ed25519。 12345# 生成个人账号密钥ssh-keygen -t ed25519 -C &quot;personal@email.com&quot; -f ~/.ssh/id_ed25519_personal# 生成公司账号密钥ssh-keygen -t ed25519 -C &quot;...</div></div></div></a><a class="pagination-related" href="/2026/04/02/back-end/spring-boot-oauth2-swagger-standardization/" title="技术复盘：基于 OAuth 2.0 规范的 Spring Boot 鉴权标准化改造"><img class="cover" src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" onerror="onerror=null;src='/img/404.jpg'" alt="cover of next post"><div class="info text-right"><div class="info-1"><div class="info-item-1">下一篇</div><div class="info-item-2">技术复盘：基于 OAuth 2.0 规范的 Spring Boot 鉴权标准化改造</div></div><div class="info-2"><div class="info-item-1">现状与需求在 Hoteler 项目的开发测试阶段，由于原有的登录接口 &#x2F;token 采用非标设计（自定义 JSON 结构、Header 传参），导致 Swagger UI (SpringDoc) 无法识别认证状态，必须手动复制 Token 并粘贴至 Authorize 框中，测试效率低。 目标：实现符合 OAuth 2.0 Password Grant 规范的接口，对接 Swagger UI 自动鉴权流。 协议参考本次改造主要参考了以下关于 OAuth 2.0 协议实现的标准逻辑：  理解OAuth 2.0 OAuth 2.0 的一个简单解释 OAuth 2.0 的四种方式 GitHub OAuth 第三方登录示例教程  技术实现方案响应报文的标准化（Schema Mapping）OAuth 2.0 规定 Access Token Response 的根路径必须包含 access_token。为兼容原有业务对象 UserToken，采用接口注入方式扩展响应体： 12345678910public interface OAuth2Compatible &#123;    ...</div></div></div></a></nav><div class="relatedPosts"><div class="headline"><i class="fas fa-thumbs-up fa-fw"></i><span>相关推荐</span></div><div class="relatedPosts-list"><a class="pagination-related" href="/2026/01/25/software/setup-kite-with-prometheus-on-k3s/" title="玩转 K8s 面板：轻量级 Kite 安装全记录 (K3s 篇)"><img class="cover" src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-01-25</div><div class="info-item-2">玩转 K8s 面板：轻量级 Kite 安装全记录 (K3s 篇)</div></div><div class="info-2"><div class="info-item-1">前言在 Kubernetes 运维中，官方的 Dashboard 虽然功能齐全但显得有些沉重。如果你正在寻找一款轻量、现代化、且安装简单的监控面板，Kite 绝对是一个惊喜。本文将详细记录如何在 K3s 环境下安装 Kite，并配置 Ingress 域名访问以及集成 Prometheus 历史监控。 一、 环境准备 集群环境：K3s (自带 Traefik Ingress Controller) 节点 IP：192.168.31.222 目标域名：kite.damingerdaiinternal.com  二、 部署 Kite 核心组件首先，我们直接使用官方提供的清单将 Kite 安装到 kube-system 命名空间下： 12kubectl apply -f https://raw.githubusercontent.com/zxh326/kite/refs/heads/main/deploy/install.yaml  1. 修改服务为 NodePort (可选)为了方便最初的调试，我们可以将 Service 类型修改为 NodePort 并指定端口 32008： 12ku...</div></div></div></a><a class="pagination-related" href="/2026/03/01/software/uss-zot-push-and-pull-helm-charts/" title="内网环境 K3s 部署实战：从 Zot OCI 托管到 HTTPS 域名解析全记录"><img class="cover" src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-03-01</div><div class="info-item-2">内网环境 K3s 部署实战：从 Zot OCI 托管到 HTTPS 域名解析全记录</div></div><div class="info-2"><div class="info-item-1">前言在内网环境下搭建云原生基础设施时，镜像仓库的认证、OCI 协议的适配以及 Ingress 的路由转发通常是最容易卡壳的地方。本文记录了将应用部署至 K3s 集群，并通过自定义域名实现 HTTPS 访问的全过程。 环境信息 Zot 仓库 (OCI): 192.168.31.220:5000 K3s 节点: 192.168.31.222 服务域名: health-master-dev.damingerdaiinternal.com  标准部署流程镜像仓库与 Helm 认证由于 Zot 采用 OCI 标准存储 Helm Chart，部署前需先在本地终端完成登录： 12# 登录 OCI 注册表echo &quot;YOUR_PASSWORD&quot; | helm registry login 192.168.31.220:5000 -u admin --password-stdin --plain-http  在 Helm 中，–insecure 的含义通常是“允许不验证 SSL 证书的合法性”（比如自签名证书），但它默认依然会尝试使用 HTTPS。对于较新版本的 Helm（3....</div></div></div></a><a class="pagination-related" href="/2026/01/08/software/k8s/deploy-skooner-on-k3s/" title="轻量化 K8s 管理方案：在 k3s 中部署 Skooner 可视化面板"><img class="cover" src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-01-08</div><div class="info-item-2">轻量化 K8s 管理方案：在 k3s 中部署 Skooner 可视化面板</div></div><div class="info-2"><div class="info-item-1">前言管理 Kubernetes 集群不应该以牺牲系统资源为代价。虽然官方 Dashboard 功能强大，但对于小型集群或单节点 k3s 环境来说，它往往显得过于臃肿。如果你正在寻找一个极致轻快、响应迅速的管理界面，Skooner 是一个完美的平衡点。 Skooner（原名 K8dash）是一款开源、超轻量级的实时仪表盘，它在不增加集群负担的前提下，提供了核心的资源观测能力。 为什么选择 Skooner？Skooner 的设计哲学与 k3s 的轻量化理念完美契合：  极低的资源占用：它的内存占用通常不到 50MB，在你的系统监控中几乎可以忽略不计。 实时状态感知：基于 WebSocket 技术，无需手动刷新页面即可实时查看 CPU、内存消耗以及 Pod 状态。 移动端自适应：UI 采用响应式设计，即使在手机或平板浏览器上也能轻松排查集群问题。  部署步骤在本指南中，我们将通过 NodePort (32007) 的方式部署并暴露 Skooner，以便你直接通过物理机 IP 访问。 1. 部署核心组件首先，一键安装 Skooner 的命名空间、服务和部署资源： 12kubectl ap...</div></div></div></a><a class="pagination-related" href="/2026/06/10/software/k3s-cloudnativepg-from-scratch-practical-guide/" title="从零开始：在 K3s 中部署 CloudNativePG 并成功实现外部直连（全流程实战）"><img class="cover" src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-06-10</div><div class="info-item-2">从零开始：在 K3s 中部署 CloudNativePG 并成功实现外部直连（全流程实战）</div></div><div class="info-2"><div class="info-item-1">前言本文是在我的Homelab 单节点 K3s（IP: 192.168.0.103）上部署 CloudNativePG (CNPG) 1.29 版本。 123kubectl get nodesNAME     STATUS   ROLES           AGE   VERSIONearzer   Ready    control-plane   53d   v1.35.4+k3s1  过程安装 kubectl-cnpg 插件（强烈推荐）CloudNativePG 提供了一个非常强大的 kubectl 插件，可以帮助你轻松查看数据库状态、进行主备切换、查看日志等。 在你的控制端（或 K3s 节点上）运行以下命令安装： 1curl -sSfL https://github.com/cloudnative-pg/cloudnative-pg/raw/main/hack/install-cnpg-plugin.sh | sudo sh -s -- -b /usr/local/bin  如果你是中国用户，你可以使用gh-proxy来加速 1curl -sSfL https://gh-...</div></div></div></a><a class="pagination-related" href="/2022/05/15/software/k8s/k3s-install-with-docker/" title="K3S安装的时候默认使用docker"><img class="cover" src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2022-05-15</div><div class="info-item-2">K3S安装的时候默认使用docker</div></div><div class="info-2"><div class="info-item-1">K3S安装的时候默认使用docker问题k8s在1.20之后就弃用docker的运行时了，所以k3s也开始默认使用containerd作为默认的运行时。这导致一个问题。那就是k3s无法访问本地docker镜像。 解决方案一种解决方案就是使用containerd的镜像，而不是docker。还有一种方式是在安装时就指定k3s使用docker作为运行环境。 12/usr/local/bin/k3s-uninstall.shcurl -sfL https://get.k3s.io | sh -s - server --docker  国内用户，可以使用以下方法加速安装： 1curl -sfL https://rancher-mirror.rancher.cn/k3s/k3s-install.sh | INSTALL_K3S_MIRROR=cn sh -s - server --docker </div></div></div></a><a class="pagination-related" href="/2021/01/01/software/k8s/how-to-install-minkube/" title="在Ubuntu 18.04.5 LTS上安装minkube"><img class="cover" src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2021-01-01</div><div class="info-item-2">在Ubuntu 18.04.5 LTS上安装minkube</div></div><div class="info-2"><div class="info-item-1">在Ubuntu 18.04.5 LTS上安装minkube要求 2 CPUs or more 2GB内存 20G空间 无线网络连接 容器或者虚拟机， 比如: Docker, Hyperkit, Hyper-V, KVM, Parallels, Podman, VirtualBox, or VMWare  下载1curl -LO https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64  启动1sudo minikube start --registry-mirror=https://registry.docker-cn.com --vm-driver=none --image-repository registry.cn-hangzhou.aliyuncs.com/google_containers  注意点none driver integration tests: k8s 1.18 needs conntrack installed解决方案 12sudo apt-get insta...</div></div></div></a></div></div></div><div class="aside-content" id="aside-content"><div class="card-widget card-info text-center"><div class="avatar-img"><img src="/img/avatar.png" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="author-info-name">Arthur Ming</div><div class="author-info-description">大明二代的博客</div><div class="site-data"><a href="/archives/"><div class="headline">文章</div><div class="length-num">86</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">120</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">8</div></a></div><a id="card-info-btn" target="_blank" rel="noopener" href="https://github.com/damingerdai"><i class="fab fa-github"></i><span>Follow Me</span></a><div class="card-info-social-icons"><a class="social-icon" href="https://github.com/damingerdai" target="_blank" title="Github"><i class="fab fa-github" style="color: #24292e;"></i></a><a class="social-icon" href="mailto:mingguobin@live.com" target="_blank" title="Email"><i class="fas fa-envelope" style="color: #4a7dbe;"></i></a></div></div><div class="card-widget card-announcement"><div class="item-headline"><i class="fas fa-bullhorn fa-shake"></i><span>公告</span></div><div class="announcement_content">大家好，我是大明二代</div></div><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="item-headline"><i class="fas fa-stream"></i><span>目录</span><span class="toc-percentage"></span></div><div class="toc-content"><ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#%E4%BB%8E-Demo-%E5%88%B0%E7%94%9F%E4%BA%A7%E7%BA%A7%EF%BC%9AKite-%E5%9C%A8-K3s-%E4%B8%8A%E7%9A%84%E9%AB%98%E5%8F%AF%E7%94%A8%E6%95%B0%E6%8D%AE%E5%BA%93%E4%B8%8E-HTTPS-%E9%83%A8%E7%BD%B2%E5%AE%9E%E8%B7%B5"><span class="toc-number">1.</span> <span class="toc-text">从 Demo 到生产级：Kite 在 K3s 上的高可用数据库与 HTTPS 部署实践</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%BC%95%E8%A8%80"><span class="toc-number">1.0.1.</span> <span class="toc-text">引言</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#1-%E5%8E%9F%E6%96%B9%E6%A1%88%E7%9A%84%E7%97%9B%E7%82%B9%EF%BC%9A%E4%B8%BA%E4%BB%80%E4%B9%88%E4%B8%8D%E8%83%BD%E7%94%A8%E4%BA%8E%E7%94%9F%E4%BA%A7%EF%BC%9F"><span class="toc-number">1.1.</span> <span class="toc-text">1. 原方案的痛点：为什么不能用于生产？</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#2-%E5%A4%96%E9%83%A8%E6%95%B0%E6%8D%AE%E5%BA%93%E9%9B%86%E6%88%90%EF%BC%9A%E8%AE%A1%E7%AE%97%E4%B8%8E%E5%AD%98%E5%82%A8%E5%88%86%E7%A6%BB"><span class="toc-number">1.2.</span> <span class="toc-text">2. 外部数据库集成：计算与存储分离</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#2-1-%E6%95%B0%E6%8D%AE%E5%BA%93%E5%88%9D%E5%A7%8B%E5%8C%96"><span class="toc-number">1.2.1.</span> <span class="toc-text">2.1 数据库初始化</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#2-2-%E7%A5%9E%E5%A5%87%E7%9A%84%E2%80%9C%E6%A1%A5%E6%A2%81%E2%80%9D%EF%BC%9AService-EndpointSlice"><span class="toc-number">1.2.2.</span> <span class="toc-text">2.2 神奇的“桥梁”：Service &amp; EndpointSlice</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#3-%E5%AE%89%E5%85%A8%E8%AE%BF%E9%97%AE%EF%BC%9AIngress-%E4%B8%8E-TLS-%E8%AF%81%E4%B9%A6"><span class="toc-number">1.3.</span> <span class="toc-text">3. 安全访问：Ingress 与 TLS 证书</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#3-1-%E5%88%9B%E5%BB%BA-TLS-Secret"><span class="toc-number">1.3.1.</span> <span class="toc-text">3.1 创建 TLS Secret</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-2-%E5%88%B7%E6%96%B0%E6%9C%AC%E5%9C%B0-DNS-macOS"><span class="toc-number">1.3.2.</span> <span class="toc-text">3.2 刷新本地 DNS (macOS)</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#4-%E7%BB%88%E6%9E%81%E9%83%A8%E7%BD%B2%EF%BC%9AHelm-%E4%B8%80%E9%94%AE%E7%82%B9%E7%81%AB"><span class="toc-number">1.4.</span> <span class="toc-text">4. 终极部署：Helm 一键点火</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#5-%E9%81%BF%E5%9D%91%E6%80%BB%E7%BB%93%E4%B8%8E%E7%BB%8F%E9%AA%8C%E8%B0%88"><span class="toc-number">1.5.</span> <span class="toc-text">5. 避坑总结与经验谈</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E7%BB%93%E8%AF%AD"><span class="toc-number">1.5.1.</span> <span class="toc-text">结语</span></a></li></ol></li></ol></li></ol></div></div><div class="card-widget card-recent-post"><div class="item-headline"><i class="fas fa-history"></i><span>最新文章</span></div><div class="aside-list"><div class="aside-list-item"><a class="thumbnail" href="/2026/06/16/front-end/nextjs16-rdkitjs-smiles/" title="在 Next.js 16 (Turbopack) 中集成 RDKit.js 渲染 SMILES 的工程实践与踩坑指南"><img src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="在 Next.js 16 (Turbopack) 中集成 RDKit.js 渲染 SMILES 的工程实践与踩坑指南"/></a><div class="content"><a class="title" href="/2026/06/16/front-end/nextjs16-rdkitjs-smiles/" title="在 Next.js 16 (Turbopack) 中集成 RDKit.js 渲染 SMILES 的工程实践与踩坑指南">在 Next.js 16 (Turbopack) 中集成 RDKit.js 渲染 SMILES 的工程实践与踩坑指南</a><time datetime="2026-06-16T12:54:34.000Z" title="发表于 2026-06-16 20:54:34">2026-06-16</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2026/06/14/software/deploy-gitea-in-k3s-on-homelab/" title="🚀 玩转 Homelab：使用 Helm 在 K3s 中部署 Gitea，并接入外部 PostgreSQL"><img src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="🚀 玩转 Homelab：使用 Helm 在 K3s 中部署 Gitea，并接入外部 PostgreSQL"/></a><div class="content"><a class="title" href="/2026/06/14/software/deploy-gitea-in-k3s-on-homelab/" title="🚀 玩转 Homelab：使用 Helm 在 K3s 中部署 Gitea，并接入外部 PostgreSQL">🚀 玩转 Homelab：使用 Helm 在 K3s 中部署 Gitea，并接入外部 PostgreSQL</a><time datetime="2026-06-14T02:26:06.000Z" title="发表于 2026-06-14 10:26:06">2026-06-14</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2026/06/10/software/k3s-cloudnativepg-from-scratch-practical-guide/" title="从零开始：在 K3s 中部署 CloudNativePG 并成功实现外部直连（全流程实战）"><img src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="从零开始：在 K3s 中部署 CloudNativePG 并成功实现外部直连（全流程实战）"/></a><div class="content"><a class="title" href="/2026/06/10/software/k3s-cloudnativepg-from-scratch-practical-guide/" title="从零开始：在 K3s 中部署 CloudNativePG 并成功实现外部直连（全流程实战）">从零开始：在 K3s 中部署 CloudNativePG 并成功实现外部直连（全流程实战）</a><time datetime="2026-06-10T07:27:59.000Z" title="发表于 2026-06-10 15:27:59">2026-06-10</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2026/06/02/software/gitea-upgrade-and-actions-integration/" title="🚀 记一次本地 Homelab 环境 Gitea 升级迁移与 Actions (CI/CD) 完美集成实战"><img src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="🚀 记一次本地 Homelab 环境 Gitea 升级迁移与 Actions (CI/CD) 完美集成实战"/></a><div class="content"><a class="title" href="/2026/06/02/software/gitea-upgrade-and-actions-integration/" title="🚀 记一次本地 Homelab 环境 Gitea 升级迁移与 Actions (CI/CD) 完美集成实战">🚀 记一次本地 Homelab 环境 Gitea 升级迁移与 Actions (CI/CD) 完美集成实战</a><time datetime="2026-06-02T13:46:09.000Z" title="发表于 2026-06-02 21:46:09">2026-06-02</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2026/05/08/front-end/2026-0508-interview/" title="2026年5月8号面试总结"><img src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="2026年5月8号面试总结"/></a><div class="content"><a class="title" href="/2026/05/08/front-end/2026-0508-interview/" title="2026年5月8号面试总结">2026年5月8号面试总结</a><time datetime="2026-05-08T11:56:55.000Z" title="发表于 2026-05-08 19:56:55">2026-05-08</time></div></div></div></div></div></div></main><footer id="footer"><div class="footer-other"><div class="footer-copyright"><span class="copyright">&copy;&nbsp;2020 - 2026 By Arthur Ming</span></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="日间和夜间模式切换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside-config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><button id="go-up" type="button" title="回到顶部"><span class="scroll-percent"></span><i class="fas fa-arrow-up"></i></button></div></div><div><script src="/js/utils.js"></script><script src="/js/main.js"></script><div class="js-pjax"></div><script defer="defer" id="ribbon" src="https://cdn.jsdelivr.net/npm/butterfly-extsrc/dist/canvas-ribbon.min.js" size="150" alpha="0.6" zIndex="-1" mobile="false" data-click="true"></script><script async data-pjax src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script></div></body></html>
+</article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta"><i class="fas fa-circle-user fa-fw"></i>文章作者: </span><span class="post-copyright-info"><a href="http://blog.damingerdai.com">Arthur Ming</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta"><i class="fas fa-square-arrow-up-right fa-fw"></i>文章链接: </span><span class="post-copyright-info"><a href="http://blog.damingerdai.com/2026/04/05/software/kite-production-setup-with-external-postgres-and-ingress/">http://blog.damingerdai.com/2026/04/05/software/kite-production-setup-with-external-postgres-and-ingress/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta"><i class="fas fa-circle-exclamation fa-fw"></i>版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来源 <a href="http://blog.damingerdai.com" target="_blank">Damingerdai's Blog</a>！</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/k3s/">k3s</a><a class="post-meta__tags" href="/tags/kubernetes/">kubernetes</a><a class="post-meta__tags" href="/tags/kite/">kite</a></div><div class="post-share"><div class="social-share" data-image="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" data-sites="facebook,x,wechat,weibo,qq"></div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/butterfly-extsrc/sharejs/dist/css/share.min.css" media="print" onload="this.media='all'"><script src="https://cdn.jsdelivr.net/npm/butterfly-extsrc/sharejs/dist/js/social-share.min.js" defer></script></div></div><nav class="pagination-post" id="pagination"><a class="pagination-related" href="/2026/04/18/software/git-multi-account-setup-with-includeif/" title="优雅实现 Git 多账号切换：基于 SSH Config 与 includeIf 的环境隔离方案"><img class="cover" src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" onerror="onerror=null;src='/img/404.jpg'" alt="cover of previous post"><div class="info"><div class="info-1"><div class="info-item-1">上一篇</div><div class="info-item-2">优雅实现 Git 多账号切换：基于 SSH Config 与 includeIf 的环境隔离方案</div></div><div class="info-2"><div class="info-item-1">优雅实现 Git 多账号切换：基于 SSH Config 与 includeIf 的环境隔离方案在日常开发中，我们经常需要在一台电脑上同时处理个人开源项目和公司业务项目。最核心的痛点有两个：  SSH Key 冲突：GitHub 默认只识别一对密钥，多账号如何无感切换？ 提交身份混淆：如何在公司项目中自动使用公司邮箱，在个人项目中自动使用个人邮箱？  本文分享一种“一次配置，永久生效”的自动化方案。 1. 目录结构规划首先，建议按用途将项目存放在不同的父目录下，这是自动化切换的前提。 123Workspaces/├── personal/  # 存放个人项目└── company/   # 存放公司项目  2. 生成独立的 SSH 密钥为每个账号生成专属的密钥对，不要覆盖默认的 id_ed25519。 12345# 生成个人账号密钥ssh-keygen -t ed25519 -C &quot;personal@email.com&quot; -f ~/.ssh/id_ed25519_personal# 生成公司账号密钥ssh-keygen -t ed25519 -C &quot;...</div></div></div></a><a class="pagination-related" href="/2026/04/02/back-end/spring-boot-oauth2-swagger-standardization/" title="技术复盘：基于 OAuth 2.0 规范的 Spring Boot 鉴权标准化改造"><img class="cover" src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" onerror="onerror=null;src='/img/404.jpg'" alt="cover of next post"><div class="info text-right"><div class="info-1"><div class="info-item-1">下一篇</div><div class="info-item-2">技术复盘：基于 OAuth 2.0 规范的 Spring Boot 鉴权标准化改造</div></div><div class="info-2"><div class="info-item-1">现状与需求在 Hoteler 项目的开发测试阶段，由于原有的登录接口 &#x2F;token 采用非标设计（自定义 JSON 结构、Header 传参），导致 Swagger UI (SpringDoc) 无法识别认证状态，必须手动复制 Token 并粘贴至 Authorize 框中，测试效率低。 目标：实现符合 OAuth 2.0 Password Grant 规范的接口，对接 Swagger UI 自动鉴权流。 协议参考本次改造主要参考了以下关于 OAuth 2.0 协议实现的标准逻辑：  理解OAuth 2.0 OAuth 2.0 的一个简单解释 OAuth 2.0 的四种方式 GitHub OAuth 第三方登录示例教程  技术实现方案响应报文的标准化（Schema Mapping）OAuth 2.0 规定 Access Token Response 的根路径必须包含 access_token。为兼容原有业务对象 UserToken，采用接口注入方式扩展响应体： 12345678910public interface OAuth2Compatible &#123;    ...</div></div></div></a></nav><div class="relatedPosts"><div class="headline"><i class="fas fa-thumbs-up fa-fw"></i><span>相关推荐</span></div><div class="relatedPosts-list"><a class="pagination-related" href="/2026/03/01/software/uss-zot-push-and-pull-helm-charts/" title="内网环境 K3s 部署实战：从 Zot OCI 托管到 HTTPS 域名解析全记录"><img class="cover" src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-03-01</div><div class="info-item-2">内网环境 K3s 部署实战：从 Zot OCI 托管到 HTTPS 域名解析全记录</div></div><div class="info-2"><div class="info-item-1">前言在内网环境下搭建云原生基础设施时，镜像仓库的认证、OCI 协议的适配以及 Ingress 的路由转发通常是最容易卡壳的地方。本文记录了将应用部署至 K3s 集群，并通过自定义域名实现 HTTPS 访问的全过程。 环境信息 Zot 仓库 (OCI): 192.168.31.220:5000 K3s 节点: 192.168.31.222 服务域名: health-master-dev.damingerdaiinternal.com  标准部署流程镜像仓库与 Helm 认证由于 Zot 采用 OCI 标准存储 Helm Chart，部署前需先在本地终端完成登录： 12# 登录 OCI 注册表echo &quot;YOUR_PASSWORD&quot; | helm registry login 192.168.31.220:5000 -u admin --password-stdin --plain-http  在 Helm 中，–insecure 的含义通常是“允许不验证 SSL 证书的合法性”（比如自签名证书），但它默认依然会尝试使用 HTTPS。对于较新版本的 Helm（3....</div></div></div></a><a class="pagination-related" href="/2026/01/25/software/setup-kite-with-prometheus-on-k3s/" title="玩转 K8s 面板：轻量级 Kite 安装全记录 (K3s 篇)"><img class="cover" src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-01-25</div><div class="info-item-2">玩转 K8s 面板：轻量级 Kite 安装全记录 (K3s 篇)</div></div><div class="info-2"><div class="info-item-1">前言在 Kubernetes 运维中，官方的 Dashboard 虽然功能齐全但显得有些沉重。如果你正在寻找一款轻量、现代化、且安装简单的监控面板，Kite 绝对是一个惊喜。本文将详细记录如何在 K3s 环境下安装 Kite，并配置 Ingress 域名访问以及集成 Prometheus 历史监控。 一、 环境准备 集群环境：K3s (自带 Traefik Ingress Controller) 节点 IP：192.168.31.222 目标域名：kite.damingerdaiinternal.com  二、 部署 Kite 核心组件首先，我们直接使用官方提供的清单将 Kite 安装到 kube-system 命名空间下： 12kubectl apply -f https://raw.githubusercontent.com/zxh326/kite/refs/heads/main/deploy/install.yaml  1. 修改服务为 NodePort (可选)为了方便最初的调试，我们可以将 Service 类型修改为 NodePort 并指定端口 32008： 12ku...</div></div></div></a><a class="pagination-related" href="/2026/01/08/software/k8s/deploy-skooner-on-k3s/" title="轻量化 K8s 管理方案：在 k3s 中部署 Skooner 可视化面板"><img class="cover" src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-01-08</div><div class="info-item-2">轻量化 K8s 管理方案：在 k3s 中部署 Skooner 可视化面板</div></div><div class="info-2"><div class="info-item-1">前言管理 Kubernetes 集群不应该以牺牲系统资源为代价。虽然官方 Dashboard 功能强大，但对于小型集群或单节点 k3s 环境来说，它往往显得过于臃肿。如果你正在寻找一个极致轻快、响应迅速的管理界面，Skooner 是一个完美的平衡点。 Skooner（原名 K8dash）是一款开源、超轻量级的实时仪表盘，它在不增加集群负担的前提下，提供了核心的资源观测能力。 为什么选择 Skooner？Skooner 的设计哲学与 k3s 的轻量化理念完美契合：  极低的资源占用：它的内存占用通常不到 50MB，在你的系统监控中几乎可以忽略不计。 实时状态感知：基于 WebSocket 技术，无需手动刷新页面即可实时查看 CPU、内存消耗以及 Pod 状态。 移动端自适应：UI 采用响应式设计，即使在手机或平板浏览器上也能轻松排查集群问题。  部署步骤在本指南中，我们将通过 NodePort (32007) 的方式部署并暴露 Skooner，以便你直接通过物理机 IP 访问。 1. 部署核心组件首先，一键安装 Skooner 的命名空间、服务和部署资源： 12kubectl ap...</div></div></div></a><a class="pagination-related" href="/2026/06/10/software/k3s-cloudnativepg-from-scratch-practical-guide/" title="从零开始：在 K3s 中部署 CloudNativePG 并成功实现外部直连（全流程实战）"><img class="cover" src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-06-10</div><div class="info-item-2">从零开始：在 K3s 中部署 CloudNativePG 并成功实现外部直连（全流程实战）</div></div><div class="info-2"><div class="info-item-1">前言本文是在我的Homelab 单节点 K3s（IP: 192.168.0.103）上部署 CloudNativePG (CNPG) 1.29 版本。 123kubectl get nodesNAME     STATUS   ROLES           AGE   VERSIONearzer   Ready    control-plane   53d   v1.35.4+k3s1  过程安装 kubectl-cnpg 插件（强烈推荐）CloudNativePG 提供了一个非常强大的 kubectl 插件，可以帮助你轻松查看数据库状态、进行主备切换、查看日志等。 在你的控制端（或 K3s 节点上）运行以下命令安装： 1curl -sSfL https://github.com/cloudnative-pg/cloudnative-pg/raw/main/hack/install-cnpg-plugin.sh | sudo sh -s -- -b /usr/local/bin  如果你是中国用户，你可以使用gh-proxy来加速 1curl -sSfL https://gh-...</div></div></div></a><a class="pagination-related" href="/2022/05/15/software/k8s/k3s-install-with-docker/" title="K3S安装的时候默认使用docker"><img class="cover" src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2022-05-15</div><div class="info-item-2">K3S安装的时候默认使用docker</div></div><div class="info-2"><div class="info-item-1">K3S安装的时候默认使用docker问题k8s在1.20之后就弃用docker的运行时了，所以k3s也开始默认使用containerd作为默认的运行时。这导致一个问题。那就是k3s无法访问本地docker镜像。 解决方案一种解决方案就是使用containerd的镜像，而不是docker。还有一种方式是在安装时就指定k3s使用docker作为运行环境。 12/usr/local/bin/k3s-uninstall.shcurl -sfL https://get.k3s.io | sh -s - server --docker  国内用户，可以使用以下方法加速安装： 1curl -sfL https://rancher-mirror.rancher.cn/k3s/k3s-install.sh | INSTALL_K3S_MIRROR=cn sh -s - server --docker </div></div></div></a><a class="pagination-related" href="/2022/09/03/back-end/k3s-uses-letsencrypt-and-traefik-to-deploy-the-https/" title="k3s使用Let‘s Encrypt配置https入口部署"><img class="cover" src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2022-09-03</div><div class="info-item-2">k3s使用Let‘s Encrypt配置https入口部署</div></div><div class="info-2"><div class="info-item-1">前言本文记录k3s使用letsencrypt配置ssl证书和续签。 本文使用的k3s版本为： v1.23.6+k3s1。 安装 cert-manager123# 使用官网提供的配置文件一键安装# 如果拉取 github 资源有困难，可以从网络通畅的位置下载好粘贴过去$ kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.9.1/cert-manager.yaml  如果一切正常，k3s 12345$ kubectl get pods -n cert-managerNAME                                       READY   STATUS    RESTARTS   AGEcert-manager-6544c44c6b-tlhw8              1/1     Running   0          51scert-manager-cainjector-5687864d5f-rldsg   1/1     Runni...</div></div></div></a></div></div></div><div class="aside-content" id="aside-content"><div class="card-widget card-info text-center"><div class="avatar-img"><img src="/img/avatar.png" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="author-info-name">Arthur Ming</div><div class="author-info-description">大明二代的博客</div><div class="site-data"><a href="/archives/"><div class="headline">文章</div><div class="length-num">86</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">120</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">8</div></a></div><a id="card-info-btn" target="_blank" rel="noopener" href="https://github.com/damingerdai"><i class="fab fa-github"></i><span>Follow Me</span></a><div class="card-info-social-icons"><a class="social-icon" href="https://github.com/damingerdai" target="_blank" title="Github"><i class="fab fa-github" style="color: #24292e;"></i></a><a class="social-icon" href="mailto:mingguobin@live.com" target="_blank" title="Email"><i class="fas fa-envelope" style="color: #4a7dbe;"></i></a></div></div><div class="card-widget card-announcement"><div class="item-headline"><i class="fas fa-bullhorn fa-shake"></i><span>公告</span></div><div class="announcement_content">大家好，我是大明二代</div></div><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="item-headline"><i class="fas fa-stream"></i><span>目录</span><span class="toc-percentage"></span></div><div class="toc-content"><ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#%E4%BB%8E-Demo-%E5%88%B0%E7%94%9F%E4%BA%A7%E7%BA%A7%EF%BC%9AKite-%E5%9C%A8-K3s-%E4%B8%8A%E7%9A%84%E9%AB%98%E5%8F%AF%E7%94%A8%E6%95%B0%E6%8D%AE%E5%BA%93%E4%B8%8E-HTTPS-%E9%83%A8%E7%BD%B2%E5%AE%9E%E8%B7%B5"><span class="toc-number">1.</span> <span class="toc-text">从 Demo 到生产级：Kite 在 K3s 上的高可用数据库与 HTTPS 部署实践</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%BC%95%E8%A8%80"><span class="toc-number">1.0.1.</span> <span class="toc-text">引言</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#1-%E5%8E%9F%E6%96%B9%E6%A1%88%E7%9A%84%E7%97%9B%E7%82%B9%EF%BC%9A%E4%B8%BA%E4%BB%80%E4%B9%88%E4%B8%8D%E8%83%BD%E7%94%A8%E4%BA%8E%E7%94%9F%E4%BA%A7%EF%BC%9F"><span class="toc-number">1.1.</span> <span class="toc-text">1. 原方案的痛点：为什么不能用于生产？</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#2-%E5%A4%96%E9%83%A8%E6%95%B0%E6%8D%AE%E5%BA%93%E9%9B%86%E6%88%90%EF%BC%9A%E8%AE%A1%E7%AE%97%E4%B8%8E%E5%AD%98%E5%82%A8%E5%88%86%E7%A6%BB"><span class="toc-number">1.2.</span> <span class="toc-text">2. 外部数据库集成：计算与存储分离</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#2-1-%E6%95%B0%E6%8D%AE%E5%BA%93%E5%88%9D%E5%A7%8B%E5%8C%96"><span class="toc-number">1.2.1.</span> <span class="toc-text">2.1 数据库初始化</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#2-2-%E7%A5%9E%E5%A5%87%E7%9A%84%E2%80%9C%E6%A1%A5%E6%A2%81%E2%80%9D%EF%BC%9AService-EndpointSlice"><span class="toc-number">1.2.2.</span> <span class="toc-text">2.2 神奇的“桥梁”：Service &amp; EndpointSlice</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#3-%E5%AE%89%E5%85%A8%E8%AE%BF%E9%97%AE%EF%BC%9AIngress-%E4%B8%8E-TLS-%E8%AF%81%E4%B9%A6"><span class="toc-number">1.3.</span> <span class="toc-text">3. 安全访问：Ingress 与 TLS 证书</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#3-1-%E5%88%9B%E5%BB%BA-TLS-Secret"><span class="toc-number">1.3.1.</span> <span class="toc-text">3.1 创建 TLS Secret</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-2-%E5%88%B7%E6%96%B0%E6%9C%AC%E5%9C%B0-DNS-macOS"><span class="toc-number">1.3.2.</span> <span class="toc-text">3.2 刷新本地 DNS (macOS)</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#4-%E7%BB%88%E6%9E%81%E9%83%A8%E7%BD%B2%EF%BC%9AHelm-%E4%B8%80%E9%94%AE%E7%82%B9%E7%81%AB"><span class="toc-number">1.4.</span> <span class="toc-text">4. 终极部署：Helm 一键点火</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#5-%E9%81%BF%E5%9D%91%E6%80%BB%E7%BB%93%E4%B8%8E%E7%BB%8F%E9%AA%8C%E8%B0%88"><span class="toc-number">1.5.</span> <span class="toc-text">5. 避坑总结与经验谈</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E7%BB%93%E8%AF%AD"><span class="toc-number">1.5.1.</span> <span class="toc-text">结语</span></a></li></ol></li></ol></li></ol></div></div><div class="card-widget card-recent-post"><div class="item-headline"><i class="fas fa-history"></i><span>最新文章</span></div><div class="aside-list"><div class="aside-list-item"><a class="thumbnail" href="/2026/06/16/front-end/nextjs16-rdkitjs-smiles/" title="在 Next.js 16 (Turbopack) 中集成 RDKit.js 渲染 SMILES 的工程实践与踩坑指南"><img src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="在 Next.js 16 (Turbopack) 中集成 RDKit.js 渲染 SMILES 的工程实践与踩坑指南"/></a><div class="content"><a class="title" href="/2026/06/16/front-end/nextjs16-rdkitjs-smiles/" title="在 Next.js 16 (Turbopack) 中集成 RDKit.js 渲染 SMILES 的工程实践与踩坑指南">在 Next.js 16 (Turbopack) 中集成 RDKit.js 渲染 SMILES 的工程实践与踩坑指南</a><time datetime="2026-06-16T12:54:34.000Z" title="发表于 2026-06-16 20:54:34">2026-06-16</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2026/06/14/software/deploy-gitea-in-k3s-on-homelab/" title="🚀 玩转 Homelab：使用 Helm 在 K3s 中部署 Gitea，并接入外部 PostgreSQL"><img src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="🚀 玩转 Homelab：使用 Helm 在 K3s 中部署 Gitea，并接入外部 PostgreSQL"/></a><div class="content"><a class="title" href="/2026/06/14/software/deploy-gitea-in-k3s-on-homelab/" title="🚀 玩转 Homelab：使用 Helm 在 K3s 中部署 Gitea，并接入外部 PostgreSQL">🚀 玩转 Homelab：使用 Helm 在 K3s 中部署 Gitea，并接入外部 PostgreSQL</a><time datetime="2026-06-14T02:26:06.000Z" title="发表于 2026-06-14 10:26:06">2026-06-14</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2026/06/10/software/k3s-cloudnativepg-from-scratch-practical-guide/" title="从零开始：在 K3s 中部署 CloudNativePG 并成功实现外部直连（全流程实战）"><img src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="从零开始：在 K3s 中部署 CloudNativePG 并成功实现外部直连（全流程实战）"/></a><div class="content"><a class="title" href="/2026/06/10/software/k3s-cloudnativepg-from-scratch-practical-guide/" title="从零开始：在 K3s 中部署 CloudNativePG 并成功实现外部直连（全流程实战）">从零开始：在 K3s 中部署 CloudNativePG 并成功实现外部直连（全流程实战）</a><time datetime="2026-06-10T07:27:59.000Z" title="发表于 2026-06-10 15:27:59">2026-06-10</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2026/06/02/software/gitea-upgrade-and-actions-integration/" title="🚀 记一次本地 Homelab 环境 Gitea 升级迁移与 Actions (CI/CD) 完美集成实战"><img src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="🚀 记一次本地 Homelab 环境 Gitea 升级迁移与 Actions (CI/CD) 完美集成实战"/></a><div class="content"><a class="title" href="/2026/06/02/software/gitea-upgrade-and-actions-integration/" title="🚀 记一次本地 Homelab 环境 Gitea 升级迁移与 Actions (CI/CD) 完美集成实战">🚀 记一次本地 Homelab 环境 Gitea 升级迁移与 Actions (CI/CD) 完美集成实战</a><time datetime="2026-06-02T13:46:09.000Z" title="发表于 2026-06-02 21:46:09">2026-06-02</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2026/05/08/front-end/2026-0508-interview/" title="2026年5月8号面试总结"><img src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="2026年5月8号面试总结"/></a><div class="content"><a class="title" href="/2026/05/08/front-end/2026-0508-interview/" title="2026年5月8号面试总结">2026年5月8号面试总结</a><time datetime="2026-05-08T11:56:55.000Z" title="发表于 2026-05-08 19:56:55">2026-05-08</time></div></div></div></div></div></div></main><footer id="footer"><div class="footer-other"><div class="footer-copyright"><span class="copyright">&copy;&nbsp;2020 - 2026 By Arthur Ming</span></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="日间和夜间模式切换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside-config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><button id="go-up" type="button" title="回到顶部"><span class="scroll-percent"></span><i class="fas fa-arrow-up"></i></button></div></div><div><script src="/js/utils.js"></script><script src="/js/main.js"></script><div class="js-pjax"><script>(() => {
+  const parseViewBox = viewBox => {
+    if (!viewBox) return null
+    const parts = viewBox.trim().split(/[\s,]+/).map(n => Number(n))
+    if (parts.length !== 4 || parts.some(n => Number.isNaN(n))) return null
+    return parts
+  }
+
+  const getSvgViewBox = svg => {
+    const attr = parseViewBox(svg.getAttribute('viewBox'))
+    if (attr) return attr
+
+    // Fallback: use bbox to build a viewBox
+    try {
+      const bbox = svg.getBBox()
+      if (bbox && bbox.width && bbox.height) return [bbox.x, bbox.y, bbox.width, bbox.height]
+    } catch (e) {
+      // getBBox may fail on some edge cases; ignore
+    }
+
+    const w = Number(svg.getAttribute('width')) || 0
+    const h = Number(svg.getAttribute('height')) || 0
+    if (w > 0 && h > 0) return [0, 0, w, h]
+    return [0, 0, 100, 100]
+  }
+
+  const setSvgViewBox = (svg, vb) => {
+    svg.setAttribute('viewBox', `${vb[0]} ${vb[1]} ${vb[2]} ${vb[3]}`)
+  }
+
+  const clamp = (v, min, max) => Math.max(min, Math.min(max, v))
+
+  const openSvgInNewTab = ({ source, initViewBox }) => {
+    const getClonedSvg = () => {
+      if (typeof source === 'string') {
+        const template = document.createElement('template')
+        template.innerHTML = source.trim()
+        const svg = template.content.querySelector('svg')
+        return svg ? svg.cloneNode(true) : null
+      }
+      if (source && typeof source.cloneNode === 'function') {
+        return source.cloneNode(true)
+      }
+      return null
+    }
+
+    const clone = getClonedSvg()
+    if (!clone) return
+    if (initViewBox && initViewBox.length === 4) {
+      clone.setAttribute('viewBox', initViewBox.join(' '))
+    }
+    if (!clone.getAttribute('xmlns')) clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg')
+    if (!clone.getAttribute('xmlns:xlink') && clone.outerHTML.includes('xlink:')) {
+      clone.setAttribute('xmlns:xlink', 'http://www.w3.org/1999/xlink')
+    }
+    // inject background to match current theme
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark'
+    const bg = getComputedStyle(document.body).backgroundColor || (isDark ? '#1e1e1e' : '#ffffff')
+    if (!clone.style.background) clone.style.background = bg
+
+    const serializer = new XMLSerializer()
+    const svgSource = serializer.serializeToString(clone)
+    const htmlSource = `<!doctype html><html><head><meta charset="utf-8" />
+      <style>
+        html, body { width: 100%; height: 100%; margin: 0; display: flex; align-items: center; justify-content: center; background: ${bg}; }
+        svg { max-width: 100%; max-height: 100%; height: auto; width: auto; }
+      </style>
+      </head><body>${svgSource}</body></html>`
+    const blob = new Blob([htmlSource], { type: 'text/html;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    window.open(url, '_blank', 'noopener')
+    setTimeout(() => URL.revokeObjectURL(url), 30000)
+  }
+
+  const attachMermaidViewerButton = wrap => {
+    let btn = wrap.querySelector('.mermaid-open-btn')
+    if (!btn) {
+      btn = document.createElement('button')
+      btn.type = 'button'
+      btn.className = 'mermaid-open-btn'
+      wrap.appendChild(btn)
+    }
+
+    btn.innerHTML = '<i class="fa fa-search fa-fw" aria-hidden="true"></i>'
+
+    if (!btn.__mermaidViewerBound) {
+      btn.addEventListener('click', e => {
+        e.preventDefault()
+        e.stopPropagation()
+        const svg = wrap.__mermaidOriginalSvg || wrap.querySelector('svg')
+        if (!svg) return
+        const initViewBox = wrap.__mermaidInitViewBox
+        if (typeof svg === 'string') {
+          openSvgInNewTab({ source: svg, initViewBox })
+          return
+        }
+        openSvgInNewTab({ source: svg, initViewBox })
+      })
+      btn.__mermaidViewerBound = true
+    }
+  }
+
+  // Zoom around a point (px, py) in the SVG viewport (in viewBox coordinates)
+  const zoomAtPoint = (vb, factor, px, py) => {
+    const w = vb[2] * factor
+    const h = vb[3] * factor
+    const nx = px - (px - vb[0]) * factor
+    const ny = py - (py - vb[1]) * factor
+    return [nx, ny, w, h]
+  }
+
+  const initMermaidGestures = wrap => {
+    const svg = wrap.querySelector('svg')
+    if (!svg) return
+
+    // Ensure viewBox exists so gestures always work
+    const initVb = getSvgViewBox(svg)
+    wrap.__mermaidInitViewBox = initVb
+    wrap.__mermaidCurViewBox = initVb.slice()
+    setSvgViewBox(svg, initVb)
+
+    // Avoid binding multiple times on themeChange/pjax
+    if (wrap.__mermaidGestureBound) return
+    wrap.__mermaidGestureBound = true
+
+    // Helper: map client (viewport) coordinate -> viewBox coordinate
+    const clientToViewBox = (clientX, clientY) => {
+      const rect = svg.getBoundingClientRect()
+      const vb = wrap.__mermaidCurViewBox || getSvgViewBox(svg)
+      const x = vb[0] + (clientX - rect.left) * (vb[2] / rect.width)
+      const y = vb[1] + (clientY - rect.top) * (vb[3] / rect.height)
+      return { x, y, rect, vb }
+    }
+
+    const state = {
+      pointers: new Map(),
+      startVb: null,
+      startDist: 0,
+      startCenter: null
+    }
+
+    const clampVb = vb => {
+      const init = wrap.__mermaidInitViewBox || vb
+      const minW = init[2] * 0.1
+      const maxW = init[2] * 10
+      const minH = init[3] * 0.1
+      const maxH = init[3] * 10
+      vb[2] = clamp(vb[2], minW, maxW)
+      vb[3] = clamp(vb[3], minH, maxH)
+      return vb
+    }
+
+    const setCurVb = vb => {
+      vb = clampVb(vb)
+      wrap.__mermaidCurViewBox = vb
+      setSvgViewBox(svg, vb)
+    }
+
+    const onPointerDown = e => {
+      // Allow only primary button for mouse
+      if (e.pointerType === 'mouse' && e.button !== 0) return
+      svg.setPointerCapture(e.pointerId)
+      state.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY })
+
+      if (state.pointers.size === 1) {
+        state.startVb = (wrap.__mermaidCurViewBox || getSvgViewBox(svg)).slice()
+      } else if (state.pointers.size === 2) {
+        const pts = [...state.pointers.values()]
+        const dx = pts[0].x - pts[1].x
+        const dy = pts[0].y - pts[1].y
+        state.startDist = Math.hypot(dx, dy)
+        state.startVb = (wrap.__mermaidCurViewBox || getSvgViewBox(svg)).slice()
+        state.startCenter = { x: (pts[0].x + pts[1].x) / 2, y: (pts[0].y + pts[1].y) / 2 }
+      }
+    }
+
+    const onPointerMove = e => {
+      if (!state.pointers.has(e.pointerId)) return
+      state.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY })
+
+      // Pan with 1 pointer
+      if (state.pointers.size === 1 && state.startVb) {
+        const p = [...state.pointers.values()][0]
+        const prev = { x: e.clientX - e.movementX, y: e.clientY - e.movementY }
+        // movementX/Y unreliable on touch, compute from stored last position
+        const last = wrap.__mermaidLastSinglePointer || p
+        const dxClient = p.x - last.x
+        const dyClient = p.y - last.y
+        wrap.__mermaidLastSinglePointer = p
+
+        const { rect } = clientToViewBox(p.x, p.y)
+        const vb = (wrap.__mermaidCurViewBox || getSvgViewBox(svg)).slice()
+        const dx = dxClient * (vb[2] / rect.width)
+        const dy = dyClient * (vb[3] / rect.height)
+        setCurVb([vb[0] - dx, vb[1] - dy, vb[2], vb[3]])
+        return
+      }
+
+      // Pinch zoom with 2 pointers
+      if (state.pointers.size === 2 && state.startVb && state.startDist > 0) {
+        const pts = [...state.pointers.values()]
+        const dx = pts[0].x - pts[1].x
+        const dy = pts[0].y - pts[1].y
+        const dist = Math.hypot(dx, dy)
+        if (!dist) return
+        const factor = state.startDist / dist // dist bigger => zoom in (viewBox smaller)
+
+        const cx = (pts[0].x + pts[1].x) / 2
+        const cy = (pts[0].y + pts[1].y) / 2
+        const centerClient = { x: cx, y: cy }
+
+        const pxy = clientToViewBox(centerClient.x, centerClient.y)
+        const cpx = pxy.x
+        const cpy = pxy.y
+
+        const vb = zoomAtPoint(state.startVb, factor, cpx, cpy)
+        setCurVb(vb)
+      }
+    }
+
+    const onPointerUpOrCancel = e => {
+      state.pointers.delete(e.pointerId)
+      if (state.pointers.size === 0) {
+        state.startVb = null
+        state.startDist = 0
+        state.startCenter = null
+        wrap.__mermaidLastSinglePointer = null
+      } else if (state.pointers.size === 1) {
+        // reset single pointer baseline to avoid jump
+        wrap.__mermaidLastSinglePointer = [...state.pointers.values()][0]
+      }
+    }
+
+    // Wheel zoom (mouse/trackpad)
+    const onWheel = e => {
+      // ctrlKey on mac trackpad pinch; we treat both as zoom
+      e.preventDefault()
+      const delta = e.deltaY
+      const zoomFactor = delta > 0 ? 1.1 : 0.9
+      const { x, y } = clientToViewBox(e.clientX, e.clientY)
+      const vb = (wrap.__mermaidCurViewBox || getSvgViewBox(svg)).slice()
+      setCurVb(zoomAtPoint(vb, zoomFactor, x, y))
+    }
+
+    const onDblClick = () => {
+      const init = wrap.__mermaidInitViewBox
+      if (!init) return
+      wrap.__mermaidCurViewBox = init.slice()
+      setSvgViewBox(svg, init)
+    }
+
+    svg.addEventListener('pointerdown', onPointerDown)
+    svg.addEventListener('pointermove', onPointerMove)
+    svg.addEventListener('pointerup', onPointerUpOrCancel)
+    svg.addEventListener('pointercancel', onPointerUpOrCancel)
+    svg.addEventListener('wheel', onWheel, { passive: false })
+    svg.addEventListener('dblclick', onDblClick)
+  }
+
+  const runMermaid = ele => {
+    window.loadMermaid = true
+    const theme = document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'default'
+
+    ele.forEach((item, index) => {
+      const mermaidSrc = item.firstElementChild
+
+      // Clear old render (themeChange/pjax will rerun)
+      const oldSvg = item.querySelector('svg')
+      if (oldSvg) oldSvg.remove()
+      item.__mermaidGestureBound = false
+
+      const config = mermaidSrc.dataset.config ? JSON.parse(mermaidSrc.dataset.config) : {}
+      if (!config.theme) {
+        config.theme = theme
+      }
+      const mermaidThemeConfig = `%%{init: ${JSON.stringify(config)}}%%\n`
+      const mermaidID = `mermaid-${index}`
+      const mermaidDefinition = mermaidThemeConfig + mermaidSrc.textContent
+
+      const renderFn = mermaid.render(mermaidID, mermaidDefinition)
+      const renderMermaid = svg => {
+        mermaidSrc.insertAdjacentHTML('afterend', svg)
+        if (true) initMermaidGestures(item)
+        item.__mermaidOriginalSvg = svg
+        if (true) attachMermaidViewerButton(item)
+      }
+
+
+      // mermaid v9 and v10 compatibility
+      typeof renderFn === 'string' ? renderMermaid(renderFn) : renderFn.then(({ svg }) => renderMermaid(svg))
+    })
+  }
+
+  const codeToMermaid = () => {
+    const codeMermaidEle = document.querySelectorAll('pre > code.mermaid')
+    if (codeMermaidEle.length === 0) return
+
+    codeMermaidEle.forEach(ele => {
+      const preEle = document.createElement('pre')
+      preEle.className = 'mermaid-src'
+      preEle.hidden = true
+      preEle.textContent = ele.textContent
+      const newEle = document.createElement('div')
+      newEle.className = 'mermaid-wrap'
+      newEle.appendChild(preEle)
+      ele.parentNode.replaceWith(newEle)
+    })
+  }
+
+  const loadMermaid = () => {
+    if (true) codeToMermaid()
+    const $mermaid = document.querySelectorAll('#article-container .mermaid-wrap')
+    if ($mermaid.length === 0) return
+
+    const runMermaidFn = () => runMermaid($mermaid)
+    btf.addGlobalFn('themeChange', runMermaidFn, 'mermaid')
+    window.loadMermaid ? runMermaidFn() : btf.getScript('https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js').then(runMermaidFn)
+  }
+
+  btf.addGlobalFn('encrypt', loadMermaid, 'mermaid')
+  window.pjax ? loadMermaid() : document.addEventListener('DOMContentLoaded', loadMermaid)
+})()</script></div><script defer="defer" id="ribbon" src="https://cdn.jsdelivr.net/npm/butterfly-extsrc/dist/canvas-ribbon.min.js" size="150" alpha="0.6" zIndex="-1" mobile="false" data-click="true"></script><script async data-pjax src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script></div></body></html>
