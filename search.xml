@@ -1,24 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <search>
   <entry>
-    <title>Hello World</title>
-    <url>/2023/07/03/hello-world/</url>
-    <content><![CDATA[Welcome to Hexo! This is your very first post. Check documentation for more info. If you get any problems when using Hexo, you can find the answer in troubleshooting or you can ask me on GitHub.
-Quick StartCreate a new post$ hexo new &quot;My New Post&quot;
-
-More info: Writing
-Run server$ hexo server
-
-More info: Server
-Generate static files$ hexo generate
-
-More info: Generating
-Deploy to remote sites$ hexo deploy
-
-More info: Deployment
-]]></content>
-  </entry>
-  <entry>
     <title>如何在10分钟内使用LangChain</title>
     <url>/2024/06/09/ai/how-to-use-langchain-in-10-minutes/</url>
     <content><![CDATA[如何在10分钟内使用LangChainLangChain是一个强大的Python和Javascript&#x2F;Typescript库，它可以让你快速地原型化大型语言模型应用。它允许你将LLM任务链在一起（因此得名），甚至可以让你快速轻松地运行自主代理(autonomous agents)。今天，我们将介绍chain的基础知识，这样你就可以立即开始你最新的LLM项目。
@@ -92,6 +74,24 @@ LangChain的力量在于其简单性和灵活性。无论你是经验丰富的�
         <tag>LangChain</tag>
         <tag>翻译</tag>
       </tags>
+  </entry>
+  <entry>
+    <title>Hello World</title>
+    <url>/2023/07/03/hello-world/</url>
+    <content><![CDATA[Welcome to Hexo! This is your very first post. Check documentation for more info. If you get any problems when using Hexo, you can find the answer in troubleshooting or you can ask me on GitHub.
+Quick StartCreate a new post$ hexo new &quot;My New Post&quot;
+
+More info: Writing
+Run server$ hexo server
+
+More info: Server
+Generate static files$ hexo generate
+
+More info: Generating
+Deploy to remote sites$ hexo deploy
+
+More info: Deployment
+]]></content>
   </entry>
   <entry>
     <title>给Ingress上配置ssl证书</title>
@@ -240,6 +240,70 @@ Hoteler
       </tags>
   </entry>
   <entry>
+    <title>Go + Next.js 实现 2FA (TOTP) 的踩坑记录与架构复盘</title>
+    <url>/2026/07/03/back-end/go-nextjs-2fa-totp-review/</url>
+    <content><![CDATA[Go + Next.js 实现 2FA (TOTP) 的踩坑记录与架构复盘最近给手头的项目加上了基于 TOTP（基于时间的一次性密码）的双因子认证（2FA）流程。整体思路是传统的双阶段认证（Two-Stage）：
+
+第一步先验密码，对上了且开启了 2FA，后端不发正式 Token，而是塞给前端一个只有 3 ~ 5 分钟寿命的 challengeToken。
+前端监听到这个状态，通过 Next.js 的 URL 参数（比如 /login?step=2fa）做深链接导航，直接切到 2FA 验证页，用 input-otp 组件让用户填 6 位动态码，最后去后端换取真正的登录凭证。
+
+本来以为一套流程跑下来挺顺畅，但利用AI对着提交的 Git Diff 仔细过了一遍安全性后，发现里面其实藏了不少逻辑漏洞和优化空间。趁着还没线上翻车，把这次的数据库改动和后续的重构 TODO 记录下来（感激AI的review）。
+数据库表结构变更这次 2FA 的底层支持直接做在了原有的 users 表上，通过变更 DDL 增加了三个字段：
+ALTER TABLE usersADD COLUMN two_factor_enabled BOOLEAN DEFAULT FALSE,ADD COLUMN two_factor_secret TEXT,ADD COLUMN two_factor_verified_at TIMESTAMPTZ;
+
+
+two_factor_enabled: 标记用户是否正式开启了 2FA。
+two_factor_secret: 存储经过加密（或明文，取决于后续优化）的 TOTP 密钥。
+two_factor_verified_at: 记录用户首次激活或最后一次成功验证的时间戳，用来做激活确认和状态审计。
+
+这个设计非常轻量，但也正是因为这种“一刀切”的单表字段设计，直接引发了后面要聊的第 6 个 TODO。
+Go的实现我使用的是github.com&#x2F;pquerna&#x2F;otp这个库。
+package servicetype TwoFactorService struct &#123;	Aes            *cryptox.AES	UserRepository *repository.UserRepository&#125;type Setup2FaResult struct &#123;	Secret string `json:&quot;secret&quot;`	QRCode string `json:&quot;qr_code&quot;`&#125;func (s *TwoFactorService) Generate(ctx context.Context, userID string, email string) (*model.Setup2FaResult, error) &#123;	if s.Aes == nil &#123;		return nil, errors.New(&quot;2fa is not configured&quot;)	&#125;	key, err := totp.Generate(totp.GenerateOpts&#123;		Issuer:      &quot;HealthMaster&quot;,		AccountName: email,	&#125;)	if err != nil &#123;		return nil, err	&#125;	secret := key.Secret()	aseSecret, err := s.Aes.Encrypt(secret)	if err != nil &#123;		return nil, err	&#125;	err = s.UserRepository.SaveTwoFactorSecret(ctx, userID, aseSecret)	if err != nil &#123;		return nil, err	&#125;	return &amp;model.Setup2FaResult&#123;		QRCode: key.URL(),		Secret: secret,	&#125;, nil&#125;func (s *TwoFactorService) Enable(ctx context.Context, userID string, code string) error &#123;	if s.Aes == nil &#123;		return errors.New(&quot;2fa is not configured&quot;)	&#125;	user, err := s.UserRepository.Find(ctx, userID)	if err != nil &#123;		return err	&#125;	if user == nil &#123;		return errors.New(&quot;user not found&quot;)	&#125;	if user == nil &#123;		return errors.New(&quot;user not found&quot;)	&#125;	if user.TwoFactorSecret == nil &#123;		return errors.New(&quot;2fa secret not found&quot;)	&#125;	twoFactorSecret, err := s.Aes.Decrypt(*user.TwoFactorSecret)	if err != nil &#123;		return err	&#125;	ok := totp.Validate(code, twoFactorSecret)	if !ok &#123;		return errors.New(&quot;invalid code&quot;)	&#125;	return s.UserRepository.EnableTwoFactor(ctx, userID)&#125;func (s *TwoFactorService) Disable(ctx context.Context, userID string, code string) error &#123;	/**        和Enable类似    **/	return s.UserRepository.DisableTwoFactor(ctx, userID)&#125;func (s *TwoFactorService) VerifyCode(ctx context.Context, userID string, code string) error &#123;	/**        和Enable类似    **/	if !totp.Validate(code, secret) &#123;		return errors.New(&quot;invalid verification code&quot;)	&#125;	return nil&#125;
+
+
+Code Review 后的重构 TODO 列表以下是目前首版代码里暴露出来的隐患，也是接下来的重构重点：
+⬜ TODO 1: 拦截 2FA 重放攻击（Replay Attack）
+现状：TOTP 的 6 位验证码在 30 秒的步长内是静态不变的。这意味着如果请求被截获，或者前端因为网络抖动在 30 秒内连发了两次请求，后端会连续验证通过两次。
+改法：引入 Redis 缓存。只要某个验证码在当前时间步长内被成功消费了一次，就往 Redis 里扔个带过期时间的标记。下次再进来相同的码，直接拒绝，确保一个验证码 30 秒内只能用一次。
+
+⬜ TODO 2: 绑定阶段的幂等与中间态保护
+现状：目前调用 GET /api/v1/settings/2fa 时，后端每次都会刷新并生成全新的 secret。如果用户扫完 QR 码后页面不小心刷新了，前端拿到了新 Secret，而用户输入旧 App 里的验证码去调用 PUT 激活，就会直接报错。
+改法：完善 Pending 状态。如果用户还没正式开启 2FA，GET 请求应该先看数据库里有没有未激活的 Secret，有就复用旧的，别盲目生成新的。只有在 PUT 验证成功后，才把 two_factor_enabled 改为 true。
+
+⬜ TODO 3: 限制单 TOTP 绑定，为未来扩展留出空间（Passkey &#x2F; 多设备）
+现状：因为这次直接在 users 表上硬编码了 two_factor_secret，导致一个用户只能绑定一个 TOTP 密钥，不支持绑定多个设备，更没法兼容像 Passkey（FIDO2）、WebAuthn、或者短信&#x2F;邮件等其他认证方式。
+改法：目前第一版先收拢业务口，明确“仅支持单个 TOTP 绑定”的限制。但后续如果业务需要支持多设备或者 Passkey，必须把这三个字段从 users 表里剥离出来，重构成一张独立的 user_credentials 或 two_factor_methods 表，用一对多的关系来承载不同的认证实体。
+
+⬜ TODO 4: 增加“恢复码 &#x2F; 救砖码”（Backup Codes）
+现状：目前要是用户手机丢了、误删了 Authenticator App，基本上就彻底死锁，只能找后台提工单删数据库字段。
+改法：在 PUT 激活 2FA 成功的那一刻，后端生成 8~10 个一次性的随机恢复码展示给用户。数据库再开一张表存储这些恢复码的哈希值（绝对不能存明文）。登录时，2FA 验证框同时兼容 6 位动态码和恢复码。
+
+⬜ TODO 5: 收紧 Challenge Token 的越权风险
+现状：第一阶段密码校验通过后发给前端的临时 Token，如果没有做好权限隔离，可能会被用来尝试请求其他受保护的业务接口。
+改法：在临时 Token 的 Payload 里塞进严格的 scope: &quot;2fa_challenge&quot;。后端的权限中间件必须拦截所有非 2FA 验证接口，只要看到带这个 Scope 的 Token 访问其他业务，一律拍回 403 Forbidden。
+
+⬜ TODO 6: 高危操作的二次验证（Double Check）
+现状：现在 2FA 只是把住了登录的关口。一旦登录进去，攻击者如果拿到 Session，可以直接调用接口把 2FA 关掉，或者去改密码。
+改法：在关闭 2FA（PUT /api/v1/settings/2fa 传 enabled: false）或者修改密码、改绑定邮箱等高危接口里，Request Body 必须强制要求再传入一次当前的 TOTP 动态码，验证通过才执行修改，做到纵深防御。
+
+
+碎碎念写业务逻辑确实快，但认证和安全这块，往往是“写代码半小时，补漏洞两天”。这次的 Diff 算是把骨架搭起来了，接下来几天得把上面这几个 TODO 逐一消掉。如果你也准备给自己的项目手写 2FA，建议在设计之初就把重放攻击和恢复码的逻辑考虑进去，免得后面重构数据库时抓耳挠腮。
+引用
+基于时间的一次性密码 TOTP 详解
+使用 Golang 实现基于时间的一次性密码 TOTP
+
+]]></content>
+      <categories>
+        <category>后端</category>
+      </categories>
+      <tags>
+        <tag>go</tag>
+        <tag>nextjs</tag>
+        <tag>2fa</tag>
+        <tag>totp</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>实践分享：在 Go 项目中实现一个安全的密码重置流程</title>
     <url>/2026/02/08/back-end/go-secure-password-reset-atomic-transaction/</url>
     <content><![CDATA[实践分享：在 Go 项目中实现一个安全的密码重置流程1. 业务场景在我们的 health-master 项目中，我们需要一个安全且用户体验良好的密码重置功能。用户流程如下：
@@ -284,25 +348,6 @@ PUT /password-resets/:token: 执行更新。
       <tags>
         <tag>postgres</tag>
         <tag>golang</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>Gradle配置阿里镜像</title>
-    <url>/2021/10/29/back-end/gradle-ali-mirror/</url>
-    <content><![CDATA[Gradle配置阿里镜像为了加快gradle的国内下载的速度，我们可以为gradle配置阿里仓库的镜像
-请在gradle的安装目录下的init.d的文件夹下添加init.gradle:
-gradle.projectsLoaded &#123;    rootProject.allprojects &#123;        buildscript &#123;            repositories &#123;                def JCENTER_URL = &#x27;https://maven.aliyun.com/repository/public&#x27;                def GOOGLE_URL = &#x27;https://maven.aliyun.com/repository/google&#x27;                def NEXUS_URL = &#x27;https://maven.aliyun.com/repository/central&#x27;                all &#123; ArtifactRepository repo -&gt;                    if (repo instanceof MavenArtifactRepository) &#123;                        def url = repo.url.toString()                        if (url.startsWith(&#x27;https://jcenter.bintray.com/&#x27;)) &#123;                            project.logger.lifecycle &quot;Repository $&#123;repo.url&#125; replaced by $JCENTER_URL.&quot;                            println(&quot;buildscript $&#123;repo.url&#125; replaced by $JCENTER_URL.&quot;)                            remove repo                        &#125;                        else if (url.startsWith(&#x27;https://dl.google.com/dl/android/maven2/&#x27;)) &#123;                            project.logger.lifecycle &quot;Repository $&#123;repo.url&#125; replaced by $GOOGLE_URL.&quot;                            println(&quot;buildscript $&#123;repo.url&#125; replaced by $GOOGLE_URL.&quot;)                            remove repo                        &#125;                        else if (url.startsWith(&#x27;https://repo1.maven.org/maven2&#x27;)) &#123;                            project.logger.lifecycle &quot;Repository $&#123;repo.url&#125; replaced by $REPOSITORY_URL.&quot;                            println(&quot;buildscript $&#123;repo.url&#125; replaced by $REPOSITORY_URL.&quot;)                            remove repo                        &#125;                    &#125;                &#125;                jcenter &#123;                    url JCENTER_URL                &#125;                google &#123;                    url GOOGLE_URL                &#125;                maven &#123;                    url NEXUS_URL                &#125;            &#125;        &#125;        repositories &#123;            def JCENTER_URL = &#x27;https://maven.aliyun.com/repository/public&#x27;            def GOOGLE_URL = &#x27;https://maven.aliyun.com/repository/google&#x27;            def NEXUS_URL = &#x27;https://maven.aliyun.com/repository/central&#x27;            all &#123; ArtifactRepository repo -&gt;                if (repo instanceof MavenArtifactRepository) &#123;                    def url = repo.url.toString()                    if (url.startsWith(&#x27;https://jcenter.bintray.com/&#x27;)) &#123;                        project.logger.lifecycle &quot;Repository $&#123;repo.url&#125; replaced by $JCENTER_URL.&quot;                        println(&quot;buildscript $&#123;repo.url&#125; replaced by $JCENTER_URL.&quot;)                        remove repo                    &#125;                    else if (url.startsWith(&#x27;https://dl.google.com/dl/android/maven2/&#x27;)) &#123;                        project.logger.lifecycle &quot;Repository $&#123;repo.url&#125; replaced by $GOOGLE_URL.&quot;                        println(&quot;buildscript $&#123;repo.url&#125; replaced by $GOOGLE_URL.&quot;)                        remove repo                    &#125;                    else if (url.startsWith(&#x27;https://repo1.maven.org/maven2&#x27;)) &#123;                        project.logger.lifecycle &quot;Repository $&#123;repo.url&#125; replaced by $REPOSITORY_URL.&quot;                        println(&quot;buildscript $&#123;repo.url&#125; replaced by $REPOSITORY_URL.&quot;)                        remove repo                    &#125;                &#125;            &#125;            jcenter &#123;                url JCENTER_URL            &#125;            google &#123;                url GOOGLE_URL            &#125;            maven &#123;                url NEXUS_URL            &#125;        &#125;    &#125;&#125;
-
-参考
-如何构建 Spring 源码环境？
-阿里云云效 Maven
-
-]]></content>
-      <categories>
-        <category>后端</category>
-      </categories>
-      <tags>
-        <tag>gradle</tag>
       </tags>
   </entry>
   <entry>
@@ -376,6 +421,25 @@ task checkDependencies &#123;    doLast &#123;        configurations.compileClas
       </categories>
       <tags>
         <tag>spring boot</tag>
+        <tag>gradle</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Gradle配置阿里镜像</title>
+    <url>/2021/10/29/back-end/gradle-ali-mirror/</url>
+    <content><![CDATA[Gradle配置阿里镜像为了加快gradle的国内下载的速度，我们可以为gradle配置阿里仓库的镜像
+请在gradle的安装目录下的init.d的文件夹下添加init.gradle:
+gradle.projectsLoaded &#123;    rootProject.allprojects &#123;        buildscript &#123;            repositories &#123;                def JCENTER_URL = &#x27;https://maven.aliyun.com/repository/public&#x27;                def GOOGLE_URL = &#x27;https://maven.aliyun.com/repository/google&#x27;                def NEXUS_URL = &#x27;https://maven.aliyun.com/repository/central&#x27;                all &#123; ArtifactRepository repo -&gt;                    if (repo instanceof MavenArtifactRepository) &#123;                        def url = repo.url.toString()                        if (url.startsWith(&#x27;https://jcenter.bintray.com/&#x27;)) &#123;                            project.logger.lifecycle &quot;Repository $&#123;repo.url&#125; replaced by $JCENTER_URL.&quot;                            println(&quot;buildscript $&#123;repo.url&#125; replaced by $JCENTER_URL.&quot;)                            remove repo                        &#125;                        else if (url.startsWith(&#x27;https://dl.google.com/dl/android/maven2/&#x27;)) &#123;                            project.logger.lifecycle &quot;Repository $&#123;repo.url&#125; replaced by $GOOGLE_URL.&quot;                            println(&quot;buildscript $&#123;repo.url&#125; replaced by $GOOGLE_URL.&quot;)                            remove repo                        &#125;                        else if (url.startsWith(&#x27;https://repo1.maven.org/maven2&#x27;)) &#123;                            project.logger.lifecycle &quot;Repository $&#123;repo.url&#125; replaced by $REPOSITORY_URL.&quot;                            println(&quot;buildscript $&#123;repo.url&#125; replaced by $REPOSITORY_URL.&quot;)                            remove repo                        &#125;                    &#125;                &#125;                jcenter &#123;                    url JCENTER_URL                &#125;                google &#123;                    url GOOGLE_URL                &#125;                maven &#123;                    url NEXUS_URL                &#125;            &#125;        &#125;        repositories &#123;            def JCENTER_URL = &#x27;https://maven.aliyun.com/repository/public&#x27;            def GOOGLE_URL = &#x27;https://maven.aliyun.com/repository/google&#x27;            def NEXUS_URL = &#x27;https://maven.aliyun.com/repository/central&#x27;            all &#123; ArtifactRepository repo -&gt;                if (repo instanceof MavenArtifactRepository) &#123;                    def url = repo.url.toString()                    if (url.startsWith(&#x27;https://jcenter.bintray.com/&#x27;)) &#123;                        project.logger.lifecycle &quot;Repository $&#123;repo.url&#125; replaced by $JCENTER_URL.&quot;                        println(&quot;buildscript $&#123;repo.url&#125; replaced by $JCENTER_URL.&quot;)                        remove repo                    &#125;                    else if (url.startsWith(&#x27;https://dl.google.com/dl/android/maven2/&#x27;)) &#123;                        project.logger.lifecycle &quot;Repository $&#123;repo.url&#125; replaced by $GOOGLE_URL.&quot;                        println(&quot;buildscript $&#123;repo.url&#125; replaced by $GOOGLE_URL.&quot;)                        remove repo                    &#125;                    else if (url.startsWith(&#x27;https://repo1.maven.org/maven2&#x27;)) &#123;                        project.logger.lifecycle &quot;Repository $&#123;repo.url&#125; replaced by $REPOSITORY_URL.&quot;                        println(&quot;buildscript $&#123;repo.url&#125; replaced by $REPOSITORY_URL.&quot;)                        remove repo                    &#125;                &#125;            &#125;            jcenter &#123;                url JCENTER_URL            &#125;            google &#123;                url GOOGLE_URL            &#125;            maven &#123;                url NEXUS_URL            &#125;        &#125;    &#125;&#125;
+
+参考
+如何构建 Spring 源码环境？
+阿里云云效 Maven
+
+]]></content>
+      <categories>
+        <category>后端</category>
+      </categories>
+      <tags>
         <tag>gradle</tag>
       </tags>
   </entry>
@@ -548,41 +612,6 @@ Documenting “context deadline exceeded” errors relating to the webhook
       </tags>
   </entry>
   <entry>
-    <title>记录使用pg_dump中遇到的ssl问题</title>
-    <url>/2023/02/25/back-end/pg_dump_ssl_issues/</url>
-    <content><![CDATA[记录使用pg_dump中遇到的ssl问题问题描述在使用pg_dump过程中遇到的两个问题：
-
-SSL connection is required. Please specify SSL options and retry.
-SSL error: unsafe legacy renegotiation disabled
-
-SSL option问题这是因为postgresql需要使用TLS&#x2F;SSL connections，我们可以设置一个环境变量PGSSLMODE为required就可以了。
-针对Linux或者Macos用户，使用:
-export PGSSLMODE=require
-针对Windows用户，使用:
-SET PGSSLMODE=require
-
-unsafe legacy renegotiation disabled这是因为ssl协议存在一个漏洞，后来升级的时候提供了一个开关默认关闭这个了漏洞，这个解决方法存在一定安全隐患，请谨慎使用。
-创建一个自定义的openssl.cnf,并写入：
-openssl_conf = openssl_init[openssl_init]ssl_conf = ssl_sect[ssl_sect]system_default = system_default_sect[system_default_sect]Options = UnsafeLegacyRenegotiation
-
-将该config文件的路径写入名为OPENSSL_CONF的环境变量：
-export OPENSSL_CONF=/path/to/custom/openssl.cnf
-
-参考资料
-Migrate your PostgreSQL database by using dump and restore
-SSL error unsafe legacy renegotiation disabled
-
-]]></content>
-      <categories>
-        <category>后端</category>
-      </categories>
-      <tags>
-        <tag>ssl</tag>
-        <tag>pg_dump</tag>
-        <tag>postgresql</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>从springfox迁移到springdoc</title>
     <url>/2021/11/29/back-end/migrate-springdoc-from-springfox/</url>
     <content><![CDATA[前言之所以考虑从springfox迁移到springdoc是因为我的开源项目hoteler在升级到spring boot 2.6之后，UT的CI&#x2F;CD挂了：
@@ -665,6 +694,41 @@ Githubfeat: 从springfox迁移到springdoc以及修复AuthenticationFilter过滤
       </tags>
   </entry>
   <entry>
+    <title>记录使用pg_dump中遇到的ssl问题</title>
+    <url>/2023/02/25/back-end/pg_dump_ssl_issues/</url>
+    <content><![CDATA[记录使用pg_dump中遇到的ssl问题问题描述在使用pg_dump过程中遇到的两个问题：
+
+SSL connection is required. Please specify SSL options and retry.
+SSL error: unsafe legacy renegotiation disabled
+
+SSL option问题这是因为postgresql需要使用TLS&#x2F;SSL connections，我们可以设置一个环境变量PGSSLMODE为required就可以了。
+针对Linux或者Macos用户，使用:
+export PGSSLMODE=require
+针对Windows用户，使用:
+SET PGSSLMODE=require
+
+unsafe legacy renegotiation disabled这是因为ssl协议存在一个漏洞，后来升级的时候提供了一个开关默认关闭这个了漏洞，这个解决方法存在一定安全隐患，请谨慎使用。
+创建一个自定义的openssl.cnf,并写入：
+openssl_conf = openssl_init[openssl_init]ssl_conf = ssl_sect[ssl_sect]system_default = system_default_sect[system_default_sect]Options = UnsafeLegacyRenegotiation
+
+将该config文件的路径写入名为OPENSSL_CONF的环境变量：
+export OPENSSL_CONF=/path/to/custom/openssl.cnf
+
+参考资料
+Migrate your PostgreSQL database by using dump and restore
+SSL error unsafe legacy renegotiation disabled
+
+]]></content>
+      <categories>
+        <category>后端</category>
+      </categories>
+      <tags>
+        <tag>ssl</tag>
+        <tag>pg_dump</tag>
+        <tag>postgresql</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>podman登录非https的私有仓库</title>
     <url>/2025/08/11/back-end/podman-login-nohttps-private-registery/</url>
     <content><![CDATA[前言本文的目的是为了解决podman登陆非https的私有仓库。这里使用192.168.31.220:5000威力
@@ -684,36 +748,6 @@ podman login --tls-verify=false 192.168.31.220:5000
       </categories>
       <tags>
         <tag>podman</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>在windows系统中如何给rust如何配置字节源</title>
-    <url>/2025/04/30/back-end/rust-bytedance-mirror-windows/</url>
-    <content><![CDATA[rust中如何配置字节源前言本文的目的是在windows上安装或更新rust的时候通过配置字节的国内源来提高安装&#x2F;更新速度。非windows系统就可以直接参考rsproxy
-配置说明在powershell中设置 Rustup 镜像
-$ENV:RUSTUP_DIST_SERVER=&#x27;https://rsproxy.cn&#x27;$ENV:RUSTUP_UPDATE_ROOT=&#x27;https://rsproxy.cn/rustup&#x27;
-
-安装或者更新Rust
-如果是安装rust，直接点击rust-init.exe
-如果是更新rust，直接运行rustup update命令
-rustup update
-
-设置 crates.io 镜像在当前用户的主目录（以我本地为例：D:\Users\daming）下的.cargo文件夹中创建config文件。
-[source.crates-io]replace-with = &#x27;rsproxy-sparse&#x27;[source.rsproxy]registry = &quot;https://rsproxy.cn/crates.io-index&quot;[source.rsproxy-sparse]registry = &quot;sparse+https://rsproxy.cn/index/&quot;[registries.rsproxy]index = &quot;https://rsproxy.cn/crates.io-index&quot;[net]git-fetch-with-cli = true
-
-
-参考资料
-rsproxy
-Windows 11 上通过国内源安装 Rust
-rustup-init.exe 安装失败及其解决方案
-
-]]></content>
-      <categories>
-        <category>后端</category>
-      </categories>
-      <tags>
-        <tag>windows</tag>
-        <tag>rustl</tag>
       </tags>
   </entry>
   <entry>
@@ -886,6 +920,36 @@ SMTP 的问题，80% 不是代码问题，而是协议和配置问题。
       <tags>
         <tag>golang</tag>
         <tag>resend</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>在windows系统中如何给rust如何配置字节源</title>
+    <url>/2025/04/30/back-end/rust-bytedance-mirror-windows/</url>
+    <content><![CDATA[rust中如何配置字节源前言本文的目的是在windows上安装或更新rust的时候通过配置字节的国内源来提高安装&#x2F;更新速度。非windows系统就可以直接参考rsproxy
+配置说明在powershell中设置 Rustup 镜像
+$ENV:RUSTUP_DIST_SERVER=&#x27;https://rsproxy.cn&#x27;$ENV:RUSTUP_UPDATE_ROOT=&#x27;https://rsproxy.cn/rustup&#x27;
+
+安装或者更新Rust
+如果是安装rust，直接点击rust-init.exe
+如果是更新rust，直接运行rustup update命令
+rustup update
+
+设置 crates.io 镜像在当前用户的主目录（以我本地为例：D:\Users\daming）下的.cargo文件夹中创建config文件。
+[source.crates-io]replace-with = &#x27;rsproxy-sparse&#x27;[source.rsproxy]registry = &quot;https://rsproxy.cn/crates.io-index&quot;[source.rsproxy-sparse]registry = &quot;sparse+https://rsproxy.cn/index/&quot;[registries.rsproxy]index = &quot;https://rsproxy.cn/crates.io-index&quot;[net]git-fetch-with-cli = true
+
+
+参考资料
+rsproxy
+Windows 11 上通过国内源安装 Rust
+rustup-init.exe 安装失败及其解决方案
+
+]]></content>
+      <categories>
+        <category>后端</category>
+      </categories>
+      <tags>
+        <tag>windows</tag>
+        <tag>rustl</tag>
       </tags>
   </entry>
   <entry>
@@ -1469,64 +1533,6 @@ How to replace the “podman generate systemd” command since its deprecated
       </tags>
   </entry>
   <entry>
-    <title>2026年5月8号面试总结</title>
-    <url>/2026/05/08/front-end/2026-0508-interview/</url>
-    <content><![CDATA[前言2026年5月8号有一场面试，是对方架构师来面试的我。总的来说，面试的效果不是很好。面试的岗位是前端岗位，但是问的很多是后端架构的设计，我认为我的准备不是很好，我需要继续努力补全自己。
-问题Java的虚拟线程问题：Java的虚拟线程是什么，怎么创建？
-回答如下：
-在Java 21中，引入了虚拟线程（Virtual Threads）来简化和增强并发性，这使得在Java中编程并发程序更容易、更高效。
-虚拟线程，也称为“用户模式线程（user-mode threads）”或“纤程（fibers）”。该功能旨在简化并发编程并提供更好的可扩展性。虚拟线程是轻量级的，这意味着它们可以比传统线程创建更多数量，并且开销要少得多。这使得在自己的线程中运行单独任务或请求变得更加实用，即使在高吞吐量的程序中也是如此。
-在Java 21中创建和使用虚拟线程有多种方法：
-1. 使用静态构建器方法Thread.startVirtualThread方法将可运行对象作为参数来创建，并立即启动虚拟线程，具体如下代码：
-Runnable runnable = () -&gt; &#123;    System.out.println(&quot;Hello, www.didispace.com&quot;);&#125;;// 使用静态构建器方法Thread virtualThread = Thread.startVirtualThread(runnable);
-
-也可以使用Thread.ofVirtual()来创建，这里还可以设置一些属性，比如：线程名称。具体如下代码：
-Thread.ofVirtual()        .name(&quot;didispace-virtual-thread&quot;)        .start(runnable);
-
-2. 与ExecutorService结合使用从Java 5开始，就推荐开发人员使用ExecutorServices而不是直接使用Thread类了。现在，Java 21中引入了使用虚拟线程，所以也有了新的ExecutorService来适配，看看下面的例子：
-Runnable runnable = () -&gt; &#123;    System.out.println(&quot;Hello, www.didispace.com&quot;);&#125;;try (ExecutorService executorService = Executors.newVirtualThreadPerTaskExecutor()) &#123;    for (int i = 0; i &lt; 100; i++) &#123;        executorService.submit(runnable);    &#125;&#125;
-
-3. 使用虚拟线程工厂开发者还可以创建一个生成虚拟线程的工厂来管理，具体看下面的例子例子：
-Runnable runnable = () -&gt; &#123;    System.out.println(&quot;Hello, www.didispace.com&quot;);&#125;;ThreadFactory virtualThreadFactory = Thread.ofVirtual()        .name(&quot;didispace&quot;, 0)        .factory();Thread factoryThread = virtualThreadFactory.newThread(runnable);factoryThread.start;
-
-对于虚拟线程的概念，你只需要有一个基本的认识。
-
-虚拟线程是由JVM管理的轻量级线程。
-虚拟线程不需要任何显式分配或调度。
-虚拟线程非常适合I&#x2F;O密集型任务或需要大量并行性的任务。
-虚拟线程也可以用来实现异步操作。
-
-Golang的cmp模型GMP 是 Go 运行时（Runtime）层面的调度模型，它实现了用户态线程（Goroutine）与内核态线程（M）之间的多对多复用，是 Go 能够支持高并发的核心原因
-
-G (Goroutine): 协程。它是待执行的任务，存储了协程的栈、状态及指向任务函数的指针。G 的体积很小（初始仅 2KB），由 Go 运行时管理。
-M (Machine): 操作系统的物理线程。协程最终必须绑定到 M 上才能在 CPU 上运行。M 并不保存状态，它只是一个执行体。
-P (Processor): 逻辑处理器。它是 G 和 M 之间的“中介”或“本地资源池”。P 维护着一个本地就绪队列（Local Runqueue）。M 必须获取到 P 才能执行 G。
-在早期（Go 1.1 之前）只有 GM 模型，由于所有 M 都要抢夺全局队列的锁来获取 G，导致严重的锁竞争。引入 P 后，每个 P 都有本地队列，减少了锁竞争，并实现了 Work Stealing 和 Hand Off 机制，大大提升了效率
-
-
-gemini帮我回答的
-
-MySQL 事务隔离级别SQL:1992 标准定义了四种事务隔离级别，分别是读未提交（Read Uncommitted）、读已提交（Read Committed）、可重复读（Repeatable Read）和串行化（Serializable）。不同的隔离级别下会产生脏读、幻读、不可重复读等相关问题，因此在选择隔离级别的时候要根据应用场景来决定，使用合适的隔离级别。MySQL 中的 InnoDB 存储引擎提供了 SQL 标准所描述的四种事务隔离级别，默认事务隔离级别是可重复读（Repeatable Read）。
-
-读未提交（Read Uncommitted）允许脏读，就是在该隔离级别下，可能读到其他会话未提交事务修改的数据，存在脏读、不可重读读、幻读的问题。
-读已提交（Read Committed）只能查询到已提交的数据。这是 Oracle 数据库默认的事务隔离级别。存在不可重读读、幻读的问题。
-可重复读（Repeatable Read）就是在一个事务里相同条件下，无论何时查到的数据都和第一次查到的数据一致。这是 MySQL 数据库 InnoDB 引擎默认的事务隔离级别。在范围查询时存在幻读的问题。
-串行化（Serializable）是最高的事务隔离级别，它严格服从 ACID 特性的隔离级别。所有的事务依次逐个执行，事务之间互不干扰，该级别可以防止脏读、不可重复读以及幻读。但每个事务读数据时都需要获取表级的共享锁，导致读和写都会阻塞，性能极低。
-
-参考资料
-Java 21 新特性：虚拟线程（Virtual Threads）
-MySQL | 事务隔离级别详解
-
-]]></content>
-      <categories>
-        <category>前端</category>
-      </categories>
-      <tags>
-        <tag>高级前端工程师</tag>
-        <tag>面试</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>2026年5月7号面试总结</title>
     <url>/2026/05/08/front-end/2026-0507-interview/</url>
     <content><![CDATA[前言2026年5月7号有两场面试，本文记录了自己预先准备面试题和面试中遇到的问题。
@@ -1714,6 +1720,64 @@ fix(ui): add dark mode
         <tag>angular</tag>
         <tag>angular material</tag>
         <tag>dark mode</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>2026年5月8号面试总结</title>
+    <url>/2026/05/08/front-end/2026-0508-interview/</url>
+    <content><![CDATA[前言2026年5月8号有一场面试，是对方架构师来面试的我。总的来说，面试的效果不是很好。面试的岗位是前端岗位，但是问的很多是后端架构的设计，我认为我的准备不是很好，我需要继续努力补全自己。
+问题Java的虚拟线程问题：Java的虚拟线程是什么，怎么创建？
+回答如下：
+在Java 21中，引入了虚拟线程（Virtual Threads）来简化和增强并发性，这使得在Java中编程并发程序更容易、更高效。
+虚拟线程，也称为“用户模式线程（user-mode threads）”或“纤程（fibers）”。该功能旨在简化并发编程并提供更好的可扩展性。虚拟线程是轻量级的，这意味着它们可以比传统线程创建更多数量，并且开销要少得多。这使得在自己的线程中运行单独任务或请求变得更加实用，即使在高吞吐量的程序中也是如此。
+在Java 21中创建和使用虚拟线程有多种方法：
+1. 使用静态构建器方法Thread.startVirtualThread方法将可运行对象作为参数来创建，并立即启动虚拟线程，具体如下代码：
+Runnable runnable = () -&gt; &#123;    System.out.println(&quot;Hello, www.didispace.com&quot;);&#125;;// 使用静态构建器方法Thread virtualThread = Thread.startVirtualThread(runnable);
+
+也可以使用Thread.ofVirtual()来创建，这里还可以设置一些属性，比如：线程名称。具体如下代码：
+Thread.ofVirtual()        .name(&quot;didispace-virtual-thread&quot;)        .start(runnable);
+
+2. 与ExecutorService结合使用从Java 5开始，就推荐开发人员使用ExecutorServices而不是直接使用Thread类了。现在，Java 21中引入了使用虚拟线程，所以也有了新的ExecutorService来适配，看看下面的例子：
+Runnable runnable = () -&gt; &#123;    System.out.println(&quot;Hello, www.didispace.com&quot;);&#125;;try (ExecutorService executorService = Executors.newVirtualThreadPerTaskExecutor()) &#123;    for (int i = 0; i &lt; 100; i++) &#123;        executorService.submit(runnable);    &#125;&#125;
+
+3. 使用虚拟线程工厂开发者还可以创建一个生成虚拟线程的工厂来管理，具体看下面的例子例子：
+Runnable runnable = () -&gt; &#123;    System.out.println(&quot;Hello, www.didispace.com&quot;);&#125;;ThreadFactory virtualThreadFactory = Thread.ofVirtual()        .name(&quot;didispace&quot;, 0)        .factory();Thread factoryThread = virtualThreadFactory.newThread(runnable);factoryThread.start;
+
+对于虚拟线程的概念，你只需要有一个基本的认识。
+
+虚拟线程是由JVM管理的轻量级线程。
+虚拟线程不需要任何显式分配或调度。
+虚拟线程非常适合I&#x2F;O密集型任务或需要大量并行性的任务。
+虚拟线程也可以用来实现异步操作。
+
+Golang的cmp模型GMP 是 Go 运行时（Runtime）层面的调度模型，它实现了用户态线程（Goroutine）与内核态线程（M）之间的多对多复用，是 Go 能够支持高并发的核心原因
+
+G (Goroutine): 协程。它是待执行的任务，存储了协程的栈、状态及指向任务函数的指针。G 的体积很小（初始仅 2KB），由 Go 运行时管理。
+M (Machine): 操作系统的物理线程。协程最终必须绑定到 M 上才能在 CPU 上运行。M 并不保存状态，它只是一个执行体。
+P (Processor): 逻辑处理器。它是 G 和 M 之间的“中介”或“本地资源池”。P 维护着一个本地就绪队列（Local Runqueue）。M 必须获取到 P 才能执行 G。
+在早期（Go 1.1 之前）只有 GM 模型，由于所有 M 都要抢夺全局队列的锁来获取 G，导致严重的锁竞争。引入 P 后，每个 P 都有本地队列，减少了锁竞争，并实现了 Work Stealing 和 Hand Off 机制，大大提升了效率
+
+
+gemini帮我回答的
+
+MySQL 事务隔离级别SQL:1992 标准定义了四种事务隔离级别，分别是读未提交（Read Uncommitted）、读已提交（Read Committed）、可重复读（Repeatable Read）和串行化（Serializable）。不同的隔离级别下会产生脏读、幻读、不可重复读等相关问题，因此在选择隔离级别的时候要根据应用场景来决定，使用合适的隔离级别。MySQL 中的 InnoDB 存储引擎提供了 SQL 标准所描述的四种事务隔离级别，默认事务隔离级别是可重复读（Repeatable Read）。
+
+读未提交（Read Uncommitted）允许脏读，就是在该隔离级别下，可能读到其他会话未提交事务修改的数据，存在脏读、不可重读读、幻读的问题。
+读已提交（Read Committed）只能查询到已提交的数据。这是 Oracle 数据库默认的事务隔离级别。存在不可重读读、幻读的问题。
+可重复读（Repeatable Read）就是在一个事务里相同条件下，无论何时查到的数据都和第一次查到的数据一致。这是 MySQL 数据库 InnoDB 引擎默认的事务隔离级别。在范围查询时存在幻读的问题。
+串行化（Serializable）是最高的事务隔离级别，它严格服从 ACID 特性的隔离级别。所有的事务依次逐个执行，事务之间互不干扰，该级别可以防止脏读、不可重复读以及幻读。但每个事务读数据时都需要获取表级的共享锁，导致读和写都会阻塞，性能极低。
+
+参考资料
+Java 21 新特性：虚拟线程（Virtual Threads）
+MySQL | 事务隔离级别详解
+
+]]></content>
+      <categories>
+        <category>前端</category>
+      </categories>
+      <tags>
+        <tag>高级前端工程师</tag>
+        <tag>面试</tag>
       </tags>
   </entry>
   <entry>
@@ -1909,46 +1973,6 @@ Sprint 周期：通常为 1 到 4 周，2 周为常见做法。
       </tags>
   </entry>
   <entry>
-    <title>在windows上构建angular项目(上)</title>
-    <url>/2021/05/13/front-end/build-angular-on-windows-01/</url>
-    <content><![CDATA[在windows上构建angular项目 (上)前端三大框架( angular, reac, vue )中，angular一直都是一个很独特的存在。首先，angular的概念很多，服务、依赖注入、模块，指令等，都是在前端圈不是很常用的，此外，angular使用了bazel作为构建工具，而react和vue都是使用了rollup，因此在本地编译构建angular将会远远超过react和vue，如果你是用的windows平台，那么一个个坑需要自己慢慢来填。。。
-Bazel是什么？根据官网的定义，Bazel是类似于Make，Maven和Gradle的开源构建和测试工具。它使用人类可读的高级构建语言Starlark(一种基于python的方言)。 Bazel支持多种语言的项目，并为多种平台构建输出。 
-从我个人角度来看，bazel是一个强大且复杂的构建系统，通过build rule的概念，支持多种语言、不同平台，支持构建C&#x2F;C++,Java,Android,IOS,Golang,Nodejs,Docker项目
-安装Bazel官方支持Windows，macOS, Ubuntu Linux三大平台，这也是开发人员比较常用的本地开发平台。
-在社区的支持下，bazel还支持其他平台，具体信息可以看一下官网。这里我仅仅介绍如何在windows上安装。
-安装要求在安装前，请确保你windows系统符合要求：
-
-推荐使用64位的windows10，版本号不能低于1703
-64位的Windows 7以上
-64位的Windows Server 2008 R2以上
-
-此外，请事先安装Visual C++ Redistributable for Visual Studio 2015
-下载安装Bazel我们需要在github选择下载bazel-&lt;version&gt;-windows-x86_64.exe，然后将该文件路径放在path环境变量中。
-在终端中执行
-$ bazel version
-
-显示类似效果就是可以了
-Build label: 4.0.0Build target: bazel-out/x64_windows-opt/bin/src/main/java/com/google/devtools/build/lib/bazel/BazelServer_deploy.jarBuild time: Thu Jan 21 07:39:16 2021 (1611214756)Build timestamp: 1611214756Build timestamp as int: 1611214756
-
-安装编译和语言运行时根据不同语言的编译需要，我们可能需要以下的工具：
-
-MSYS2 x86_64
-Build Tools for Visual Studio 2019
-Java SE Development Kit 11 (JDK) for Windows x64
-Python 3.6 for Windows x86-64
-
-如果你想在window平台编译构建angular，后三者必须的，JDK16和Python 3.9.5也能满足自己的需求。
-总结当完成以上步骤的时候，我们基本上就可以开始尝试在windows本地进行编译angular。
-]]></content>
-      <categories>
-        <category>前端</category>
-      </categories>
-      <tags>
-        <tag>bazel</tag>
-        <tag>angular</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>Angular独立组件简单体验</title>
     <url>/2022/06/09/front-end/angular-standalone-components-app/</url>
     <content><![CDATA[Angular独立组件简单体验前言Angular 14一项令人兴奋的特性就是Angular的独立组件终于来了。
@@ -2009,6 +2033,46 @@ Angular Material
         <category>前端</category>
       </categories>
       <tags>
+        <tag>angular</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>在windows上构建angular项目(上)</title>
+    <url>/2021/05/13/front-end/build-angular-on-windows-01/</url>
+    <content><![CDATA[在windows上构建angular项目 (上)前端三大框架( angular, reac, vue )中，angular一直都是一个很独特的存在。首先，angular的概念很多，服务、依赖注入、模块，指令等，都是在前端圈不是很常用的，此外，angular使用了bazel作为构建工具，而react和vue都是使用了rollup，因此在本地编译构建angular将会远远超过react和vue，如果你是用的windows平台，那么一个个坑需要自己慢慢来填。。。
+Bazel是什么？根据官网的定义，Bazel是类似于Make，Maven和Gradle的开源构建和测试工具。它使用人类可读的高级构建语言Starlark(一种基于python的方言)。 Bazel支持多种语言的项目，并为多种平台构建输出。 
+从我个人角度来看，bazel是一个强大且复杂的构建系统，通过build rule的概念，支持多种语言、不同平台，支持构建C&#x2F;C++,Java,Android,IOS,Golang,Nodejs,Docker项目
+安装Bazel官方支持Windows，macOS, Ubuntu Linux三大平台，这也是开发人员比较常用的本地开发平台。
+在社区的支持下，bazel还支持其他平台，具体信息可以看一下官网。这里我仅仅介绍如何在windows上安装。
+安装要求在安装前，请确保你windows系统符合要求：
+
+推荐使用64位的windows10，版本号不能低于1703
+64位的Windows 7以上
+64位的Windows Server 2008 R2以上
+
+此外，请事先安装Visual C++ Redistributable for Visual Studio 2015
+下载安装Bazel我们需要在github选择下载bazel-&lt;version&gt;-windows-x86_64.exe，然后将该文件路径放在path环境变量中。
+在终端中执行
+$ bazel version
+
+显示类似效果就是可以了
+Build label: 4.0.0Build target: bazel-out/x64_windows-opt/bin/src/main/java/com/google/devtools/build/lib/bazel/BazelServer_deploy.jarBuild time: Thu Jan 21 07:39:16 2021 (1611214756)Build timestamp: 1611214756Build timestamp as int: 1611214756
+
+安装编译和语言运行时根据不同语言的编译需要，我们可能需要以下的工具：
+
+MSYS2 x86_64
+Build Tools for Visual Studio 2019
+Java SE Development Kit 11 (JDK) for Windows x64
+Python 3.6 for Windows x86-64
+
+如果你想在window平台编译构建angular，后三者必须的，JDK16和Python 3.9.5也能满足自己的需求。
+总结当完成以上步骤的时候，我们基本上就可以开始尝试在windows本地进行编译angular。
+]]></content>
+      <categories>
+        <category>前端</category>
+      </categories>
+      <tags>
+        <tag>bazel</tag>
         <tag>angular</tag>
       </tags>
   </entry>
@@ -2164,6 +2228,85 @@ document.documentElement.style.setProperty(&#x27;--primary-color&#x27;, &#x27;#e
       <tags>
         <tag>面试</tag>
         <tag>css</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>如何使用bazel去构建基于express和typescript的nodejs项目</title>
+    <url>/2023/08/10/front-end/how-to-use-bazel-to-build-nodejs-typescript-expressjs/</url>
+    <content><![CDATA[前言Bazel 是一款类似于 Make、Maven 和 Gradle的开源构建和测试工具。它使用可读的高级构建语言，支持多种变成语言编写的项目，并且能够为多个平台进行构建。Bazel 支持构建包含多个仓库、大量开发人员的大型代码库。
+详细介绍可见Bazel官网。
+目的本文的目的是使用bazel5去构建一个完整的nodejs后端项目，并不负责bazel相关知识的介绍。
+配置首先在package.json文件中·devDependencies·部分添加：
+&quot;@bazel/bazelisk&quot;: &quot;^1.7.5&quot;,&quot;@bazel/buildifier&quot;: &quot;^6.0.0&quot;,&quot;@bazel/ibazel&quot;: &quot;^0.16.0&quot;,&quot;@bazel/typescript&quot;: &quot;^5.8.1&quot;,
+
+然后再执行安装依赖命令。
+创建.bazelignore文件并写入下面的内容:
+.gitnode_modulesdist
+
+创建.bazelrc文件并写入下面的内容:
+# Enable debugging tests with --config=debugtest:debug --test_arg=--node_options=--inspect-brk --test_output=streamed --test_strategy=exclusive --test_timeout=9999 --nocache_test_results# Do not attempt to de-flake locally.# On CI we might set this to `3` to run with deflaking.test --flaky_test_attempts=1################################ Filesystem interactions     ################################# Create symlinks in the project:# - dist/bin for outputs# - dist/testlogs, dist/genfiles# - bazel-out# NB: bazel-out should be excluded from the editor configuration.# The checked-in /.vscode/settings.json does this for VSCode.# Other editors may require manual config to ignore this directory.# In the past, we say a problem where VSCode traversed a massive tree, opening file handles and# eventually a surprising failure with auto-discovery of the C++ toolchain in# MacOS High Sierra.# See https://github.com/bazelbuild/bazel/issues/4603build --symlink_prefix=dist/# Turn off legacy external runfilesbuild --nolegacy_external_runfilesrun --nolegacy_external_runfilestest --nolegacy_external_runfiles# Turn on --incompatible_strict_action_env which was on by default# in Bazel 0.21.0 but turned off again in 0.22.0. Follow# https://github.com/bazelbuild/bazel/issues/7026 for more details.# This flag is needed to so that the bazel cache is not invalidated# when running bazel via `yarn bazel`.# See https://github.com/angular/angular/issues/27514.build --incompatible_strict_action_envrun --incompatible_strict_action_envtest --incompatible_strict_action_env# Do not build runfile trees by default. If an execution strategy relies on runfile# symlink teee, the tree is created on-demand. See: https://github.com/bazelbuild/bazel/issues/6627# and https://github.com/bazelbuild/bazel/commit/03246077f948f2790a83520e7dccc2625650e6dfbuild --nobuild_runfile_linksbuild --enable_runfiles################################ Release support             ## Turn on these settings with ##  --config=release           ################################# Releases should always be stamped with version control info# This command assumes node on the path and is a workaround for# https://github.com/bazelbuild/bazel/issues/4802build:release --workspace_status_command=&quot;yarn -s ng-dev release build-env-stamp --mode=release&quot;build:release --stamp# Building AIO against local Angular deps requires stamping# versions in Angular packages due to CLI version checks.build:aio_local_deps --stampbuild:aio_local_deps --workspace_status_command=&quot;yarn -s --cwd aio local-workspace-status&quot;# Snapshots should also be stamped with version control information.build:snapshot-build --workspace_status_command=&quot;yarn -s ng-dev release build-env-stamp --mode=snapshot&quot;build:snapshot-build --stamp########################################################### AIO architect build configuration                      ## See aio/angular.json for available configurations.     ## To build with a partiular configuration:               ##   bazel build //aio:build --aio_build_config=&lt;config&gt;  ## Default config is `stable``.                           ###########################################################build --flag_alias=aio_build_config=//aio:flag_aio_build_config##################################### AIO first party dep substitution ## Turn on with                     ##  --config=aio_local_deps         #####################################build:aio_local_deps --//aio:flag_aio_local_deps################################ Output                      ################################# A more useful default output mode for bazel query# Prints eg. &quot;ng_module rule //foo:bar&quot; rather than just &quot;//foo:bar&quot;query --output=label_kind# By default, failing tests don&#x27;t print any output, it goes to the log filetest --test_output=errors################################# Settings for CircleCI        ################################## Bazel flags for CircleCI are in /.circleci/bazel.linux.rc and /.circleci/bazel.windows.rc################################### Remote Build Execution support ## Turn on these settings with    ##  --config=remote               #################################### The following --define=EXECUTOR=remote will be able to be removed# once https://github.com/bazelbuild/bazel/issues/7254 is fixedbuild:remote --define=EXECUTOR=remote# Set a higher timeout value, just in case.build:remote --remote_timeout=600# Bazel detects maximum number of jobs based on host resources.# Since we run remotely, we can increase this number significantly.common:remote --jobs=200build:remote --google_default_credentials# Limit the number of test jobs for on an AIO local deps build. The example tests running# concurrently pushes the circleci executor RAM usage to its limits.test:aio_local_deps --jobs=24# Force remote exeuctions to consider the entire run as linuxbuild:remote --cpu=k8build:remote --host_cpu=k8# Toolchain and platform related flagsbuild:remote --crosstool_top=@npm//@angular/build-tooling/bazel/remote-execution/cpp:cc_toolchain_suitebuild:remote --extra_toolchains=@npm//@angular/build-tooling/bazel/remote-execution/cpp:cc_toolchainbuild:remote --extra_execution_platforms=@npm//@angular/build-tooling/bazel/remote-execution:platformbuild:remote --host_platform=@npm//@angular/build-tooling/bazel/remote-execution:platformbuild:remote --platforms=@npm//@angular/build-tooling/bazel/remote-execution:platform# Remote instance and cachingbuild:remote --remote_instance_name=projects/internal-200822/instances/primary_instancebuild:remote --project_id=internal-200822build:remote --remote_cache=remotebuildexecution.googleapis.combuild:remote --remote_executor=remotebuildexecution.googleapis.com# Use HTTP remote cachebuild:remote-cache --remote_cache=https://storage.googleapis.com/angular-team-cachebuild:remote-cache --remote_accept_cached=truebuild:remote-cache --remote_upload_local_results=truebuild:remote-cache --google_default_credentials# Ensure that tags like &quot;no-remote-exec&quot; get propagated to actions created by rules,# even if the rule implementation does not explicitly pass them to the execution requirements.# https://bazel.build/reference/command-line-reference#flag--experimental_allow_tags_propagationcommon --experimental_allow_tags_propagation# Disable network access in the sandbox by default. To enable network access# for a particular target, use:## load(&quot;@npm//@angular/build-tooling/bazel/remote-execution:index.bzl&quot;, &quot;ENABLE_NETWORK&quot;)# my_target(#   ...,#   exec_properties = ENABLE_NETWORK,   # Enables network in remote exec#   tags = [&quot;requires-network&quot;]         # Enables network in sandbox# )build --nosandbox_default_allow_network################################### Saucelabs tests settings       ## Turn on these settings with    ##  --config=saucelabs            #################################### For saucelabs tests we don&#x27;t want to enable flaky test attempts. Karma has its own integrated# retry mechanism and we do not want to retry unnecessarily if Karma already tried multiple times.test:saucelabs --flaky_test_attempts=1################# Flag Aliases ################## --ng_perf will ask the Ivy compiler to produce performance results for each build.build --flag_alias=ng_perf=//packages/compiler-cli:ng_perf##################################################### User bazel configuration# NOTE: This needs to be the *last* entry in the config.##################################################### Load any settings which are specific to the current user. Needs to be *last* statement# in this config, as the user configuration should be able to overwrite flags from this file.try-import %workspace%/.bazelrc.user
+
+创建.bazelversion用于指定bazel版本：
+5.0.0
+
+
+可以使用bazel5的任意版本，理论上都支持，但是不要使用bazel6的版本
+
+新建WORKSPACE用于定义bazel的工作区：
+workspace(   name = &quot;express-postgres-ts-starter&quot;,    managed_directories = &#123;        &quot;@npm&quot;: [&quot;node_modules&quot;],    &#125;,)
+
+导入http_archive用于获取bazel的库：
+load(&quot;@bazel_tools//tools/build_defs/repo:http.bzl&quot;, &quot;http_archive&quot;)
+
+如果使用了.yarn文件夹用于限制yarn的版本，可以通过创建yarn.bzl解决：
+YARN_PATH = &quot;.yarn/releases/yarn-1.22.19.cjs&quot;YARN_LABEL = &quot;//:&quot; + YARN_PATH
+
+然后在WORKSPACE导入：
+load(&quot;//:yarn.bzl&quot;, &quot;YARN_LABEL&quot;)
+
+引入bazel的nodesj依赖库：
+http_archive(    name = &quot;build_bazel_rules_nodejs&quot;,    sha256 = &quot;5dd1e5dea1322174c57d3ca7b899da381d516220793d0adef3ba03b9d23baa8e&quot;,    urls = [        &quot;https://github.com/bazelbuild/rules_nodejs/releases/download/5.8.3/rules_nodejs-5.8.3.tar.gz&quot;,        &quot;https://ghproxy.com/https://github.com/bazelbuild/rules_nodejs/releases/download/5.8.3/rules_nodejs-5.8.3.tar.gz&quot;    ],)load(&quot;@build_bazel_rules_nodejs//:repositories.bzl&quot;, &quot;build_bazel_rules_nodejs_dependencies&quot;)build_bazel_rules_nodejs_dependencies()http_archive(    name = &quot;rules_pkg&quot;,    sha256 = &quot;62eeb544ff1ef41d786e329e1536c1d541bb9bcad27ae984d57f18f314018e66&quot;,    urls = [        &quot;https://mirror.bazel.build/github.com/bazelbuild/rules_pkg/releases/download/0.6.0/rules_pkg-0.6.0.tar.gz&quot;,        &quot;https://github.com/bazelbuild/rules_pkg/releases/download/0.6.0/rules_pkg-0.6.0.tar.gz&quot;,        &quot;https://ghproxy.com/https://github.com/bazelbuild/rules_pkg/releases/download/0.6.0/rules_pkg-0.6.0.tar.gz&quot;,    ],)# Fetch Aspect lib for utilities like write_source_files# NOTE: We cannot move past version 1.23.2 of aspect_bazel_lib because it requires us to move to bazel 6.0.0 which#       breaks our usage of managed_directorieshttp_archive(    name = &quot;aspect_bazel_lib&quot;,    sha256 = &quot;4b2e774387bae6242879820086b7b738d49bf3d0659522ea5d9363be01a27582&quot;,    strip_prefix = &quot;bazel-lib-1.23.2&quot;,    urls = [        &quot;https://github.com/aspect-build/bazel-lib/archive/refs/tags/v1.23.2.tar.gz&quot;,        &quot;https://ghproxy.com/https://github.com/aspect-build/bazel-lib/archive/refs/tags/v1.23.2.tar.gz&quot;,    ])
+
+配置nodejs工具链：
+load(&quot;@rules_nodejs//nodejs:repositories.bzl&quot;, &quot;nodejs_register_toolchains&quot;)nodejs_register_toolchains(    name = &quot;nodejs&quot;,    node_version = &quot;18.10.0&quot;,)
+
+
+在arm mac上不支持nodejs20的版本，不确定其他平台时候是否支持nodejs20
+
+配置yarn_install下载依赖：
+load(&quot;@build_bazel_rules_nodejs//:index.bzl&quot;, &quot;yarn_install&quot;)yarn_install(    name = &quot;npm&quot;,		data = [        YARN_LABEL,        &quot;//:.yarnrc&quot;,				&quot;//:patches/trim-newlines+5.0.0.patch&quot;		],		exports_directories_only = False,		symlink_node_modules = True,    package_json = &quot;//:package.json&quot;,		yarn = YARN_LABEL,    yarn_lock = &quot;//:yarn.lock&quot;,)
+
+创建BUILD.bazel, 并定义为公开的:
+package(default_visibility = [&quot;//visibility:public&quot;])
+
+导入ts_project和nodejs_binary用于构建typescript和nodejs：
+load(&quot;@npm//@bazel/typescript:index.bzl&quot;, &quot;ts_project&quot;)load(&quot;@build_bazel_rules_nodejs//:index.bzl&quot;, &quot;nodejs_binary&quot;)
+
+定义SRCS变量用于声明所有需要参与编译的ts文件：
+SRCS = glob(	[		&quot;src/**/*.ts&quot;,	],	exclude = [		&quot;src/**/*.spec.ts&quot;	])
+
+使用ts_project将ts编译成js：
+ts_project(    name = &quot;server-ts&quot;,    srcs = [&quot;server.ts&quot; ] + SRCS,    resolve_json_module = True,    source_map = True,    tsconfig = &quot;//:tsconfig.json&quot;,    visibility = [&quot;//visibility:public&quot;],    deps = [        &quot;@npm//@apollo/server&quot;,        &quot;@npm//@graphql-tools/merge&quot;,        &quot;@npm//body-parser&quot;,        &quot;@npm//compression&quot;,        &quot;@npm//cookie-parser&quot;,        &quot;@npm//dotenv&quot;,        &quot;@npm//exceljs&quot;,        &quot;@npm//express&quot;,        &quot;@npm//express-fileupload&quot;,        &quot;@npm//express-joi-validation&quot;,        &quot;@npm//express-session&quot;,        &quot;@npm//graphql&quot;,        &quot;@npm//graphql-tag&quot;,        &quot;@npm//helmet&quot;,        &quot;@npm//joi&quot;,        &quot;@npm//jsonwebtoken&quot;,        &quot;@npm//knex&quot;,        &quot;@npm//lodash&quot;,        &quot;@npm//minio&quot;,        &quot;@npm//morgan&quot;,        &quot;@npm//pg&quot;,        &quot;@npm//pg-boss&quot;,        &quot;@npm//redis&quot;,        &quot;@npm//socket.io&quot;,        &quot;@npm//winston&quot;,        &quot;@npm//@types/express&quot;,        &quot;@npm//@types/express-fileupload&quot;,        &quot;@npm//@types/express-session&quot;,        &quot;@npm//@types/jest&quot;,        &quot;@npm//@types/node&quot;,    ])
+
+现在可以编译了：
+yarn bazel build //... 
+
+最后可以在dist/bin看到一个server.js, 我们可以通过执行node dist/bin/server.js运行我们的nodejs项目了。
+参考
+Bazel官网
+Bazel 学习笔记 (一) 快速开始
+使用Bazel编译TypeScript
+angular
+feat: add bazel support
+
+]]></content>
+      <categories>
+        <category>前端</category>
+      </categories>
+      <tags>
+        <tag>bazel</tag>
+        <tag>typescript</tag>
+        <tag>nodejs</tag>
       </tags>
   </entry>
   <entry>
@@ -2382,85 +2525,6 @@ React Fiber 调度
         <tag>白屏</tag>
         <tag>优化</tag>
         <tag>复盘</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>如何使用bazel去构建基于express和typescript的nodejs项目</title>
-    <url>/2023/08/10/front-end/how-to-use-bazel-to-build-nodejs-typescript-expressjs/</url>
-    <content><![CDATA[前言Bazel 是一款类似于 Make、Maven 和 Gradle的开源构建和测试工具。它使用可读的高级构建语言，支持多种变成语言编写的项目，并且能够为多个平台进行构建。Bazel 支持构建包含多个仓库、大量开发人员的大型代码库。
-详细介绍可见Bazel官网。
-目的本文的目的是使用bazel5去构建一个完整的nodejs后端项目，并不负责bazel相关知识的介绍。
-配置首先在package.json文件中·devDependencies·部分添加：
-&quot;@bazel/bazelisk&quot;: &quot;^1.7.5&quot;,&quot;@bazel/buildifier&quot;: &quot;^6.0.0&quot;,&quot;@bazel/ibazel&quot;: &quot;^0.16.0&quot;,&quot;@bazel/typescript&quot;: &quot;^5.8.1&quot;,
-
-然后再执行安装依赖命令。
-创建.bazelignore文件并写入下面的内容:
-.gitnode_modulesdist
-
-创建.bazelrc文件并写入下面的内容:
-# Enable debugging tests with --config=debugtest:debug --test_arg=--node_options=--inspect-brk --test_output=streamed --test_strategy=exclusive --test_timeout=9999 --nocache_test_results# Do not attempt to de-flake locally.# On CI we might set this to `3` to run with deflaking.test --flaky_test_attempts=1################################ Filesystem interactions     ################################# Create symlinks in the project:# - dist/bin for outputs# - dist/testlogs, dist/genfiles# - bazel-out# NB: bazel-out should be excluded from the editor configuration.# The checked-in /.vscode/settings.json does this for VSCode.# Other editors may require manual config to ignore this directory.# In the past, we say a problem where VSCode traversed a massive tree, opening file handles and# eventually a surprising failure with auto-discovery of the C++ toolchain in# MacOS High Sierra.# See https://github.com/bazelbuild/bazel/issues/4603build --symlink_prefix=dist/# Turn off legacy external runfilesbuild --nolegacy_external_runfilesrun --nolegacy_external_runfilestest --nolegacy_external_runfiles# Turn on --incompatible_strict_action_env which was on by default# in Bazel 0.21.0 but turned off again in 0.22.0. Follow# https://github.com/bazelbuild/bazel/issues/7026 for more details.# This flag is needed to so that the bazel cache is not invalidated# when running bazel via `yarn bazel`.# See https://github.com/angular/angular/issues/27514.build --incompatible_strict_action_envrun --incompatible_strict_action_envtest --incompatible_strict_action_env# Do not build runfile trees by default. If an execution strategy relies on runfile# symlink teee, the tree is created on-demand. See: https://github.com/bazelbuild/bazel/issues/6627# and https://github.com/bazelbuild/bazel/commit/03246077f948f2790a83520e7dccc2625650e6dfbuild --nobuild_runfile_linksbuild --enable_runfiles################################ Release support             ## Turn on these settings with ##  --config=release           ################################# Releases should always be stamped with version control info# This command assumes node on the path and is a workaround for# https://github.com/bazelbuild/bazel/issues/4802build:release --workspace_status_command=&quot;yarn -s ng-dev release build-env-stamp --mode=release&quot;build:release --stamp# Building AIO against local Angular deps requires stamping# versions in Angular packages due to CLI version checks.build:aio_local_deps --stampbuild:aio_local_deps --workspace_status_command=&quot;yarn -s --cwd aio local-workspace-status&quot;# Snapshots should also be stamped with version control information.build:snapshot-build --workspace_status_command=&quot;yarn -s ng-dev release build-env-stamp --mode=snapshot&quot;build:snapshot-build --stamp########################################################### AIO architect build configuration                      ## See aio/angular.json for available configurations.     ## To build with a partiular configuration:               ##   bazel build //aio:build --aio_build_config=&lt;config&gt;  ## Default config is `stable``.                           ###########################################################build --flag_alias=aio_build_config=//aio:flag_aio_build_config##################################### AIO first party dep substitution ## Turn on with                     ##  --config=aio_local_deps         #####################################build:aio_local_deps --//aio:flag_aio_local_deps################################ Output                      ################################# A more useful default output mode for bazel query# Prints eg. &quot;ng_module rule //foo:bar&quot; rather than just &quot;//foo:bar&quot;query --output=label_kind# By default, failing tests don&#x27;t print any output, it goes to the log filetest --test_output=errors################################# Settings for CircleCI        ################################## Bazel flags for CircleCI are in /.circleci/bazel.linux.rc and /.circleci/bazel.windows.rc################################### Remote Build Execution support ## Turn on these settings with    ##  --config=remote               #################################### The following --define=EXECUTOR=remote will be able to be removed# once https://github.com/bazelbuild/bazel/issues/7254 is fixedbuild:remote --define=EXECUTOR=remote# Set a higher timeout value, just in case.build:remote --remote_timeout=600# Bazel detects maximum number of jobs based on host resources.# Since we run remotely, we can increase this number significantly.common:remote --jobs=200build:remote --google_default_credentials# Limit the number of test jobs for on an AIO local deps build. The example tests running# concurrently pushes the circleci executor RAM usage to its limits.test:aio_local_deps --jobs=24# Force remote exeuctions to consider the entire run as linuxbuild:remote --cpu=k8build:remote --host_cpu=k8# Toolchain and platform related flagsbuild:remote --crosstool_top=@npm//@angular/build-tooling/bazel/remote-execution/cpp:cc_toolchain_suitebuild:remote --extra_toolchains=@npm//@angular/build-tooling/bazel/remote-execution/cpp:cc_toolchainbuild:remote --extra_execution_platforms=@npm//@angular/build-tooling/bazel/remote-execution:platformbuild:remote --host_platform=@npm//@angular/build-tooling/bazel/remote-execution:platformbuild:remote --platforms=@npm//@angular/build-tooling/bazel/remote-execution:platform# Remote instance and cachingbuild:remote --remote_instance_name=projects/internal-200822/instances/primary_instancebuild:remote --project_id=internal-200822build:remote --remote_cache=remotebuildexecution.googleapis.combuild:remote --remote_executor=remotebuildexecution.googleapis.com# Use HTTP remote cachebuild:remote-cache --remote_cache=https://storage.googleapis.com/angular-team-cachebuild:remote-cache --remote_accept_cached=truebuild:remote-cache --remote_upload_local_results=truebuild:remote-cache --google_default_credentials# Ensure that tags like &quot;no-remote-exec&quot; get propagated to actions created by rules,# even if the rule implementation does not explicitly pass them to the execution requirements.# https://bazel.build/reference/command-line-reference#flag--experimental_allow_tags_propagationcommon --experimental_allow_tags_propagation# Disable network access in the sandbox by default. To enable network access# for a particular target, use:## load(&quot;@npm//@angular/build-tooling/bazel/remote-execution:index.bzl&quot;, &quot;ENABLE_NETWORK&quot;)# my_target(#   ...,#   exec_properties = ENABLE_NETWORK,   # Enables network in remote exec#   tags = [&quot;requires-network&quot;]         # Enables network in sandbox# )build --nosandbox_default_allow_network################################### Saucelabs tests settings       ## Turn on these settings with    ##  --config=saucelabs            #################################### For saucelabs tests we don&#x27;t want to enable flaky test attempts. Karma has its own integrated# retry mechanism and we do not want to retry unnecessarily if Karma already tried multiple times.test:saucelabs --flaky_test_attempts=1################# Flag Aliases ################## --ng_perf will ask the Ivy compiler to produce performance results for each build.build --flag_alias=ng_perf=//packages/compiler-cli:ng_perf##################################################### User bazel configuration# NOTE: This needs to be the *last* entry in the config.##################################################### Load any settings which are specific to the current user. Needs to be *last* statement# in this config, as the user configuration should be able to overwrite flags from this file.try-import %workspace%/.bazelrc.user
-
-创建.bazelversion用于指定bazel版本：
-5.0.0
-
-
-可以使用bazel5的任意版本，理论上都支持，但是不要使用bazel6的版本
-
-新建WORKSPACE用于定义bazel的工作区：
-workspace(   name = &quot;express-postgres-ts-starter&quot;,    managed_directories = &#123;        &quot;@npm&quot;: [&quot;node_modules&quot;],    &#125;,)
-
-导入http_archive用于获取bazel的库：
-load(&quot;@bazel_tools//tools/build_defs/repo:http.bzl&quot;, &quot;http_archive&quot;)
-
-如果使用了.yarn文件夹用于限制yarn的版本，可以通过创建yarn.bzl解决：
-YARN_PATH = &quot;.yarn/releases/yarn-1.22.19.cjs&quot;YARN_LABEL = &quot;//:&quot; + YARN_PATH
-
-然后在WORKSPACE导入：
-load(&quot;//:yarn.bzl&quot;, &quot;YARN_LABEL&quot;)
-
-引入bazel的nodesj依赖库：
-http_archive(    name = &quot;build_bazel_rules_nodejs&quot;,    sha256 = &quot;5dd1e5dea1322174c57d3ca7b899da381d516220793d0adef3ba03b9d23baa8e&quot;,    urls = [        &quot;https://github.com/bazelbuild/rules_nodejs/releases/download/5.8.3/rules_nodejs-5.8.3.tar.gz&quot;,        &quot;https://ghproxy.com/https://github.com/bazelbuild/rules_nodejs/releases/download/5.8.3/rules_nodejs-5.8.3.tar.gz&quot;    ],)load(&quot;@build_bazel_rules_nodejs//:repositories.bzl&quot;, &quot;build_bazel_rules_nodejs_dependencies&quot;)build_bazel_rules_nodejs_dependencies()http_archive(    name = &quot;rules_pkg&quot;,    sha256 = &quot;62eeb544ff1ef41d786e329e1536c1d541bb9bcad27ae984d57f18f314018e66&quot;,    urls = [        &quot;https://mirror.bazel.build/github.com/bazelbuild/rules_pkg/releases/download/0.6.0/rules_pkg-0.6.0.tar.gz&quot;,        &quot;https://github.com/bazelbuild/rules_pkg/releases/download/0.6.0/rules_pkg-0.6.0.tar.gz&quot;,        &quot;https://ghproxy.com/https://github.com/bazelbuild/rules_pkg/releases/download/0.6.0/rules_pkg-0.6.0.tar.gz&quot;,    ],)# Fetch Aspect lib for utilities like write_source_files# NOTE: We cannot move past version 1.23.2 of aspect_bazel_lib because it requires us to move to bazel 6.0.0 which#       breaks our usage of managed_directorieshttp_archive(    name = &quot;aspect_bazel_lib&quot;,    sha256 = &quot;4b2e774387bae6242879820086b7b738d49bf3d0659522ea5d9363be01a27582&quot;,    strip_prefix = &quot;bazel-lib-1.23.2&quot;,    urls = [        &quot;https://github.com/aspect-build/bazel-lib/archive/refs/tags/v1.23.2.tar.gz&quot;,        &quot;https://ghproxy.com/https://github.com/aspect-build/bazel-lib/archive/refs/tags/v1.23.2.tar.gz&quot;,    ])
-
-配置nodejs工具链：
-load(&quot;@rules_nodejs//nodejs:repositories.bzl&quot;, &quot;nodejs_register_toolchains&quot;)nodejs_register_toolchains(    name = &quot;nodejs&quot;,    node_version = &quot;18.10.0&quot;,)
-
-
-在arm mac上不支持nodejs20的版本，不确定其他平台时候是否支持nodejs20
-
-配置yarn_install下载依赖：
-load(&quot;@build_bazel_rules_nodejs//:index.bzl&quot;, &quot;yarn_install&quot;)yarn_install(    name = &quot;npm&quot;,		data = [        YARN_LABEL,        &quot;//:.yarnrc&quot;,				&quot;//:patches/trim-newlines+5.0.0.patch&quot;		],		exports_directories_only = False,		symlink_node_modules = True,    package_json = &quot;//:package.json&quot;,		yarn = YARN_LABEL,    yarn_lock = &quot;//:yarn.lock&quot;,)
-
-创建BUILD.bazel, 并定义为公开的:
-package(default_visibility = [&quot;//visibility:public&quot;])
-
-导入ts_project和nodejs_binary用于构建typescript和nodejs：
-load(&quot;@npm//@bazel/typescript:index.bzl&quot;, &quot;ts_project&quot;)load(&quot;@build_bazel_rules_nodejs//:index.bzl&quot;, &quot;nodejs_binary&quot;)
-
-定义SRCS变量用于声明所有需要参与编译的ts文件：
-SRCS = glob(	[		&quot;src/**/*.ts&quot;,	],	exclude = [		&quot;src/**/*.spec.ts&quot;	])
-
-使用ts_project将ts编译成js：
-ts_project(    name = &quot;server-ts&quot;,    srcs = [&quot;server.ts&quot; ] + SRCS,    resolve_json_module = True,    source_map = True,    tsconfig = &quot;//:tsconfig.json&quot;,    visibility = [&quot;//visibility:public&quot;],    deps = [        &quot;@npm//@apollo/server&quot;,        &quot;@npm//@graphql-tools/merge&quot;,        &quot;@npm//body-parser&quot;,        &quot;@npm//compression&quot;,        &quot;@npm//cookie-parser&quot;,        &quot;@npm//dotenv&quot;,        &quot;@npm//exceljs&quot;,        &quot;@npm//express&quot;,        &quot;@npm//express-fileupload&quot;,        &quot;@npm//express-joi-validation&quot;,        &quot;@npm//express-session&quot;,        &quot;@npm//graphql&quot;,        &quot;@npm//graphql-tag&quot;,        &quot;@npm//helmet&quot;,        &quot;@npm//joi&quot;,        &quot;@npm//jsonwebtoken&quot;,        &quot;@npm//knex&quot;,        &quot;@npm//lodash&quot;,        &quot;@npm//minio&quot;,        &quot;@npm//morgan&quot;,        &quot;@npm//pg&quot;,        &quot;@npm//pg-boss&quot;,        &quot;@npm//redis&quot;,        &quot;@npm//socket.io&quot;,        &quot;@npm//winston&quot;,        &quot;@npm//@types/express&quot;,        &quot;@npm//@types/express-fileupload&quot;,        &quot;@npm//@types/express-session&quot;,        &quot;@npm//@types/jest&quot;,        &quot;@npm//@types/node&quot;,    ])
-
-现在可以编译了：
-yarn bazel build //... 
-
-最后可以在dist/bin看到一个server.js, 我们可以通过执行node dist/bin/server.js运行我们的nodejs项目了。
-参考
-Bazel官网
-Bazel 学习笔记 (一) 快速开始
-使用Bazel编译TypeScript
-angular
-feat: add bazel support
-
-]]></content>
-      <categories>
-        <category>前端</category>
-      </categories>
-      <tags>
-        <tag>bazel</tag>
-        <tag>typescript</tag>
-        <tag>nodejs</tag>
       </tags>
   </entry>
   <entry>
@@ -2928,32 +2992,6 @@ Module not found: Can&#x27;t resolve &#x27;fs&#x27;./node_modules/@rdkit/rdkit/d
       </tags>
   </entry>
   <entry>
-    <title>Performance Fix for Stripe.js Script Loading</title>
-    <url>/2025/11/16/front-end/performance-fix-for-stripejs-scripts-loading/</url>
-    <content><![CDATA[Technical SummaryThis summary details a refactoring effort aimed at preventing the premature loading of the Stripe payment script, a common cause of degraded initial page load performance in applications that integrate third-party libraries.
-The ObjectiveThe primary goal was to ensure that the core Stripe JavaScript file (e.g., https://m.stripe.com/6 or https://js.stripe.com/v3/) is only requested and downloaded when a user actually enters a payment-required context, facilitating true lazy loading.
-The Problem: Immediate Execution on Module ImportIn the original code structure, the Stripe initialization was handled in a shared service file as follows:
-// src/shared/service/stripe.ts (Old Code)import &#123; loadStripe &#125; from &#x27;@stripe/stripe-js&#x27;;// The issue lies here: loadStripe is executed immediately in the top-level scope.export const stripePromise = loadStripe(    import.meta.env.VITE_STRIPE_PRIVATE_API_KEY).then(stripe =&gt; &#123;    // ...    return stripe;&#125;);
-
-Because the expression loadStripe(...) was immediately executed and its resulting Promise was exported (export const stripePromise = ...), any component that imported this file—even if it was a component on a non-payment page—would trigger the synchronous execution of this module. This instantly called loadStripe(), initiating the network request for the Stripe script, regardless of the component’s render state.
-The Solution: Wrapping Initialization in an Exported FunctionThe fix involved decoupling the loadStripe call from the module’s initial execution flow by wrapping it inside an exported function, getStripePromise().
-1. Refactoring the Stripe Service FileThe stripe.ts file was changed to export a function instead of an eagerly evaluated Promise:
-// src/shared/service/stripe.ts (New Code)import &#123; loadStripe &#125; from &#x27;@stripe/stripe-js&#x27;;export const getStripePromise = () =&gt; &#123;    console.warn(&#x27;Stripe load function called.&#x27;);    return loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY).then(stripe =&gt; &#123;        console.warn(&#x27;Stripe script downloaded and loaded.&#x27;);        return stripe;    &#125;);&#125;;// The immediate export of the promise was removed:// //export const stripePromise = getStripePromise(); 
-
-2. Local Initialization in Consumer ComponentsThe components that utilize the Stripe context (e.g., paymentMethod/index.tsx, setupChecker/index.tsx) were updated to call this function locally within their own module scope:
-// src/components/stripe/paymentMethod/index.tsx (New Code)import &#123; getStripePromise &#125; from &#x27;@/shared/service/stripe&#x27;;// The promise is now initialized here, within the specific payment module.const stripePromise = getStripePromise(); // This module is expected to be loaded via React.lazy() in a parent component.
-
-ConclusionThis refactoring successfully shifts the responsibility for initiating the Stripe script download from the application’s core bundle to the specific, smaller JavaScript chunk of the payment module. By ensuring the loadStripe() function is only executed when the payment component is mounted and its module is finally loaded (typically via a React.lazy trigger), we eliminate unnecessary network requests on initial page loads, contributing to a better user experience and improved performance metrics.
-]]></content>
-      <categories>
-        <category>前端</category>
-      </categories>
-      <tags>
-        <tag>react</tag>
-        <tag>stripe</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>nodejs的模拟面试</title>
     <url>/2024/10/29/front-end/nodejs-mock-interview/</url>
     <content><![CDATA[CommonJS是什么CommonJS（简称CJS）是一种JavaScript模块化规范，最初为在服务端（如Node.js）实现模块化而设计。在CommonJS中，每个文件都被视为一个独立的模块，并通过module.exports导出和require引入其他模块，形成清晰的模块依赖结构。以下是CommonJS的几个关键点：
@@ -3137,55 +3175,29 @@ exports只是module.exports的引用，主要用于辅助导出属性或方法�
       </tags>
   </entry>
   <entry>
-    <title>React 路由跳转：从 a 标签到编程式导航</title>
-    <url>/2025/12/21/front-end/react-router-link-vs-anchor/</url>
-    <content><![CDATA[React 路由跳转：从 a 标签到编程式导航在 React 应用开发中，正确处理页面跳转是确保应用性能和用户体验的关键。本文将对比传统的 &lt;a&gt; 标签与 React Router 提供的导航方式。
-1. 为什么不推荐使用  标签？标准的 &lt;a&gt; 标签通过 href 属性进行跳转时，会触发浏览器的全页刷新。
+    <title>Performance Fix for Stripe.js Script Loading</title>
+    <url>/2025/11/16/front-end/performance-fix-for-stripejs-scripts-loading/</url>
+    <content><![CDATA[Technical SummaryThis summary details a refactoring effort aimed at preventing the premature loading of the Stripe payment script, a common cause of degraded initial page load performance in applications that integrate third-party libraries.
+The ObjectiveThe primary goal was to ensure that the core Stripe JavaScript file (e.g., https://m.stripe.com/6 or https://js.stripe.com/v3/) is only requested and downloaded when a user actually enters a payment-required context, facilitating true lazy loading.
+The Problem: Immediate Execution on Module ImportIn the original code structure, the Stripe initialization was handled in a shared service file as follows:
+// src/shared/service/stripe.ts (Old Code)import &#123; loadStripe &#125; from &#x27;@stripe/stripe-js&#x27;;// The issue lies here: loadStripe is executed immediately in the top-level scope.export const stripePromise = loadStripe(    import.meta.env.VITE_STRIPE_PRIVATE_API_KEY).then(stripe =&gt; &#123;    // ...    return stripe;&#125;);
 
-状态丢失：应用内存中的所有 State（如登录信息、表单输入）都会被重置。
-加载冗余：浏览器会重新请求所有资源（JS, CSS），失去了单页应用（SPA）的性能优势。
+Because the expression loadStripe(...) was immediately executed and its resulting Promise was exported (export const stripePromise = ...), any component that imported this file—even if it was a component on a non-payment page—would trigger the synchronous execution of this module. This instantly called loadStripe(), initiating the network request for the Stripe script, regardless of the component’s render state.
+The Solution: Wrapping Initialization in an Exported FunctionThe fix involved decoupling the loadStripe call from the module’s initial execution flow by wrapping it inside an exported function, getStripePromise().
+1. Refactoring the Stripe Service FileThe stripe.ts file was changed to export a function instead of an eagerly evaluated Promise:
+// src/shared/service/stripe.ts (New Code)import &#123; loadStripe &#125; from &#x27;@stripe/stripe-js&#x27;;export const getStripePromise = () =&gt; &#123;    console.warn(&#x27;Stripe load function called.&#x27;);    return loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY).then(stripe =&gt; &#123;        console.warn(&#x27;Stripe script downloaded and loaded.&#x27;);        return stripe;    &#125;);&#125;;// The immediate export of the promise was removed:// //export const stripePromise = getStripePromise(); 
 
-2. 声明式导航：Link 组件对于普通的导航链接，应当使用 react-router-dom 提供的 &lt;Link&gt; 组件。它通过拦截点击事件并使用 History API 来更新 URL，从而实现无刷新跳转。
-import &#123; Link &#125; from &#x27;react-router-dom&#x27;;// 基础用法&lt;Link to=&quot;/reset-password&quot;&gt;Forgot password?&lt;/Link&gt;
+2. Local Initialization in Consumer ComponentsThe components that utilize the Stripe context (e.g., paymentMethod/index.tsx, setupChecker/index.tsx) were updated to call this function locally within their own module scope:
+// src/components/stripe/paymentMethod/index.tsx (New Code)import &#123; getStripePromise &#125; from &#x27;@/shared/service/stripe&#x27;;// The promise is now initialized here, within the specific payment module.const stripePromise = getStripePromise(); // This module is expected to be loaded via React.lazy() in a parent component.
 
-结合 MUI (Material UI) 使用： 为了保持 MUI 的样式，可以通过 component 属性进行组合：
-import &#123; Link as RouterLink &#125; from &#x27;react-router-dom&#x27;;import &#123; Link &#125; from &#x27;@mui/material&#x27;;&lt;Link component=&#123;RouterLink&#125; to=&quot;/reset-password&quot;&gt;  Forgot password?&lt;/Link&gt;
-
-3. 编程式导航：useNavigate在某些场景下，我们需要在执行完特定逻辑（如：表单提交、权限验证）后再进行跳转，这时就需要使用 useNavigate 钩子。
-import &#123; useNavigate &#125; from &#x27;react-router-dom&#x27;;function LoginPage() &#123;  const navigate = useNavigate();  const handleLogin = async () =&gt; &#123;    // 假设这里有一段异步登录逻辑    const success = await loginApi();        if (success) &#123;      // 逻辑完成后跳转      navigate(&#x27;/dashboard&#x27;);    &#125;  &#125;;  return &lt;button onClick=&#123;handleLogin&#125;&gt;Login&lt;/button&gt;;&#125;
-
-总结
-
-
-使用场景
-推荐实现方式
-
-
-
-普通的文字链接
-&lt;Link to=&quot;...&quot;&gt;
-
-
-需要 UI 框架样式 (如 MUI)
-&lt;MuiLink component=&#123;RouterLink&#125; to=&quot;...&quot; /&gt;
-
-
-逻辑处理（如提交表单）后跳转
-const navigate = useNavigate(); navigate(...)
-
-
-跳转到外部网站（非本应用页面）
-&lt;a href=&quot;...&quot;&gt;
-
-
-通过合理使用这些工具，可以确保 React 应用在提供丝滑交互的同时，维持应用状态的连续性
+ConclusionThis refactoring successfully shifts the responsibility for initiating the Stripe script download from the application’s core bundle to the specific, smaller JavaScript chunk of the payment module. By ensuring the loadStripe() function is only executed when the payment component is mounted and its module is finally loaded (typically via a React.lazy trigger), we eliminate unnecessary network requests on initial page loads, contributing to a better user experience and improved performance metrics.
 ]]></content>
       <categories>
         <category>前端</category>
       </categories>
       <tags>
         <tag>react</tag>
-        <tag>react-router</tag>
+        <tag>stripe</tag>
       </tags>
   </entry>
   <entry>
@@ -3235,6 +3247,58 @@ Sending Emails via Outlook with Nodemailer and Microsoft Graph
         <tag>react-email</tag>
         <tag>Microsoft Graph API</tag>
         <tag>nodemailer</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>React 路由跳转：从 a 标签到编程式导航</title>
+    <url>/2025/12/21/front-end/react-router-link-vs-anchor/</url>
+    <content><![CDATA[React 路由跳转：从 a 标签到编程式导航在 React 应用开发中，正确处理页面跳转是确保应用性能和用户体验的关键。本文将对比传统的 &lt;a&gt; 标签与 React Router 提供的导航方式。
+1. 为什么不推荐使用  标签？标准的 &lt;a&gt; 标签通过 href 属性进行跳转时，会触发浏览器的全页刷新。
+
+状态丢失：应用内存中的所有 State（如登录信息、表单输入）都会被重置。
+加载冗余：浏览器会重新请求所有资源（JS, CSS），失去了单页应用（SPA）的性能优势。
+
+2. 声明式导航：Link 组件对于普通的导航链接，应当使用 react-router-dom 提供的 &lt;Link&gt; 组件。它通过拦截点击事件并使用 History API 来更新 URL，从而实现无刷新跳转。
+import &#123; Link &#125; from &#x27;react-router-dom&#x27;;// 基础用法&lt;Link to=&quot;/reset-password&quot;&gt;Forgot password?&lt;/Link&gt;
+
+结合 MUI (Material UI) 使用： 为了保持 MUI 的样式，可以通过 component 属性进行组合：
+import &#123; Link as RouterLink &#125; from &#x27;react-router-dom&#x27;;import &#123; Link &#125; from &#x27;@mui/material&#x27;;&lt;Link component=&#123;RouterLink&#125; to=&quot;/reset-password&quot;&gt;  Forgot password?&lt;/Link&gt;
+
+3. 编程式导航：useNavigate在某些场景下，我们需要在执行完特定逻辑（如：表单提交、权限验证）后再进行跳转，这时就需要使用 useNavigate 钩子。
+import &#123; useNavigate &#125; from &#x27;react-router-dom&#x27;;function LoginPage() &#123;  const navigate = useNavigate();  const handleLogin = async () =&gt; &#123;    // 假设这里有一段异步登录逻辑    const success = await loginApi();        if (success) &#123;      // 逻辑完成后跳转      navigate(&#x27;/dashboard&#x27;);    &#125;  &#125;;  return &lt;button onClick=&#123;handleLogin&#125;&gt;Login&lt;/button&gt;;&#125;
+
+总结
+
+
+使用场景
+推荐实现方式
+
+
+
+普通的文字链接
+&lt;Link to=&quot;...&quot;&gt;
+
+
+需要 UI 框架样式 (如 MUI)
+&lt;MuiLink component=&#123;RouterLink&#125; to=&quot;...&quot; /&gt;
+
+
+逻辑处理（如提交表单）后跳转
+const navigate = useNavigate(); navigate(...)
+
+
+跳转到外部网站（非本应用页面）
+&lt;a href=&quot;...&quot;&gt;
+
+
+通过合理使用这些工具，可以确保 React 应用在提供丝滑交互的同时，维持应用状态的连续性
+]]></content>
+      <categories>
+        <category>前端</category>
+      </categories>
+      <tags>
+        <tag>react</tag>
+        <tag>react-router</tag>
       </tags>
   </entry>
   <entry>
@@ -3381,6 +3445,20 @@ PWC线下年会我是19年加入PWC的。PWC的年会其实是财年的意思，
 ]]></content>
   </entry>
   <entry>
+    <title>2024年度总结</title>
+    <url>/2025/01/13/summary/2024/</url>
+    <content><![CDATA[2024年度总结对我来说，2024年是一个特别有意义的一年。8月24号，我美丽又可爱的宝宝出生了，体验到了初为人父的喜悦；10月7号，国庆节刚过，公司人事就开邮件通知我我的岗位被取消了。
+初为人父的喜悦孩子的出生时间其实挺意外的。由于老婆在9月初有一场很重要的考试，所以不能耽搁，所以原来计划在20号去医院打催产素的，结果因为报告晚了一天，然后就被通知不用打催产素，已经开始见红了。不过开宫口的速度很慢，过两天还是上催产素了。我记得那个时候我在家里呆着，医院我有丈母娘陪着，反正又不可能那么急着生出来，我就回家先好好休息，打算第二天过去。结果第二天我丈母娘就通知我让我赶紧过去签字给我老婆打催产素。一波三折，到最后这个催产素还是打上去了。在6号待产室，晚上6点06分，7斤2两，我可爱的儿子就这样子平平安安的出生了。说实话，我并没有在第一时间听到孩子的哭声，相反这个小家伙睡的死死的。我伸过去看看了他，第一感觉他好丑啊，头型怪怪的，有点拉长的样子。听医生说，刚出生的小宝宝通常产道的挤压，出来的时候头多多少少会有点拉长的样子，等长大点就好了。
+孩子的出生，对我来说是一个特殊的人生里程碑，从这一刻开始，我不仅仅是一个普通的牛马，更是一个上有老下有小的天选牛马。就这样一下子，感觉身上的责任明显重了很多。算了一下孩子的奶粉钱，尿不湿的钱，将来休学的钱，以后娶老婆的钱和彩礼，还有供养老婆大人吃喝玩乐的钱。处处都是钱，处处都是压力。我也不知道将来孩子会活成什么样子，但是我不奢望他能出人头地，只希望平平安安的长大；不期待他将来学业有成，事业非凡，只希望他能过的自在安心。
+裁员其实裁员是有点风声的，但是一直都是狼来的状态。在国庆节，部门领导就私下的就透露过每个leader都需要上交一份裁员名单，更上级的领导会根据这份名单裁员。对于我这种干活儿的小喽啰，大概率是可以保住饭碗的，毕竟我还是比较能干活儿的，最近做的项目也是比较有钱的其实。
+但是非常尴尬的是，确实是裁员了，但是不是上海发起的裁员，是美国发起的裁员。美国最高层决定全球裁员好几千人，预计涉及美国，墨西哥，印度和上海几个地方的office。
+这次裁员主要是我们P &amp; T部门，其他部门似乎还好好的。P &amp; T由Labs和Digital两个小部门，我们labs这边十分平静的接受了这次裁员，大家虽然都不太能接受，但是普遍选择认命，大家该吃吃该喝喝，好聚好散。但是隔壁部门是有人闹了下，但是很快就没下文了。后来我听说出头闹事的人第一个找到工作之后就不出头了，结果也就没人闹事了。
+找工作找工作挺难的，基本上都是外包。没做面试的记录，就随便回忆一下吧。面试PayPal外包, 二面和三面一起面的，挂了，感觉二面和三面都不是很好。面试VOA2(一家不错的法资小公司)，因为英语和岗位不合适挂。面试迪士尼外包，一面挂了，搞笑的是又一家外包来邀请我去面试，主要是迪士尼的技术栈是Angular+Graphql，比较小众，但是我都用过，我不太想去，但是对方劝了我好几次，最后还是在二面挂了（面试三次，挂了两次，挺好玩的经历）。面试花旗外包，二面挂了，其实本来是挺有机会的，但是二面就27分钟，还算上我问的问题，只能被挂了。面试华钦（华钦是外包公司，但是这个岗位不是外包），我明明面试的是前端，面试官是后端的，道不同。面试摩根士丹利外包，二面过了，感觉比较水，相对好近。
+摩根士丹利进入摩根士丹利之后其实有段时间是不太适应的，习惯了普华永道这种混合办公和不定时工作制，不太能接受摩根士丹利这种965的风格，不过还好，两周就适应了，发了工资就更加适应，没有必要和钱过不去。摩根士丹利里面什么情况我不方便多说，但是根据工作安排来看，坚持到2026年底问题不大，以后就再说吧。
+总结如果没有裁员这回事儿，那么2024年对我还是一个挺不错的年份。涨点工资（普华永道每年7月调薪），有个儿子，本来就可以这样子过去了。可惜没有如果，现在在摩根做外包也能接受，毕竟正式员工对我们算得上非常nice了。希望2025年可以平平安安，保住工作，少点个人消费，多点留给家人。技术也没有什么大的想法，保住工作就行，苟活到经济能够真的复苏吧。
+]]></content>
+  </entry>
+  <entry>
     <title>2025年度总结</title>
     <url>/2026/02/24/summary/2025/</url>
     <content><![CDATA[2025年度总结对我来说，2025年其实又是一个特别有意义的一年。3月初陪老婆去了一次她心心念念的日本，11月的最后一天，在中介第二次带看的情况，匆匆忙忙的买下上海一套二手房，圆了老婆又一个心愿。
@@ -3421,41 +3499,6 @@ PWC线下年会我是19年加入PWC的。PWC的年会其实是财年的意思，
 愿 2026，不是简单的“更忙”，而是“更好”。
 持续学习，持续创造，持续成为更清醒的自己。
 ]]></content>
-  </entry>
-  <entry>
-    <title>2024年度总结</title>
-    <url>/2025/01/13/summary/2024/</url>
-    <content><![CDATA[2024年度总结对我来说，2024年是一个特别有意义的一年。8月24号，我美丽又可爱的宝宝出生了，体验到了初为人父的喜悦；10月7号，国庆节刚过，公司人事就开邮件通知我我的岗位被取消了。
-初为人父的喜悦孩子的出生时间其实挺意外的。由于老婆在9月初有一场很重要的考试，所以不能耽搁，所以原来计划在20号去医院打催产素的，结果因为报告晚了一天，然后就被通知不用打催产素，已经开始见红了。不过开宫口的速度很慢，过两天还是上催产素了。我记得那个时候我在家里呆着，医院我有丈母娘陪着，反正又不可能那么急着生出来，我就回家先好好休息，打算第二天过去。结果第二天我丈母娘就通知我让我赶紧过去签字给我老婆打催产素。一波三折，到最后这个催产素还是打上去了。在6号待产室，晚上6点06分，7斤2两，我可爱的儿子就这样子平平安安的出生了。说实话，我并没有在第一时间听到孩子的哭声，相反这个小家伙睡的死死的。我伸过去看看了他，第一感觉他好丑啊，头型怪怪的，有点拉长的样子。听医生说，刚出生的小宝宝通常产道的挤压，出来的时候头多多少少会有点拉长的样子，等长大点就好了。
-孩子的出生，对我来说是一个特殊的人生里程碑，从这一刻开始，我不仅仅是一个普通的牛马，更是一个上有老下有小的天选牛马。就这样一下子，感觉身上的责任明显重了很多。算了一下孩子的奶粉钱，尿不湿的钱，将来休学的钱，以后娶老婆的钱和彩礼，还有供养老婆大人吃喝玩乐的钱。处处都是钱，处处都是压力。我也不知道将来孩子会活成什么样子，但是我不奢望他能出人头地，只希望平平安安的长大；不期待他将来学业有成，事业非凡，只希望他能过的自在安心。
-裁员其实裁员是有点风声的，但是一直都是狼来的状态。在国庆节，部门领导就私下的就透露过每个leader都需要上交一份裁员名单，更上级的领导会根据这份名单裁员。对于我这种干活儿的小喽啰，大概率是可以保住饭碗的，毕竟我还是比较能干活儿的，最近做的项目也是比较有钱的其实。
-但是非常尴尬的是，确实是裁员了，但是不是上海发起的裁员，是美国发起的裁员。美国最高层决定全球裁员好几千人，预计涉及美国，墨西哥，印度和上海几个地方的office。
-这次裁员主要是我们P &amp; T部门，其他部门似乎还好好的。P &amp; T由Labs和Digital两个小部门，我们labs这边十分平静的接受了这次裁员，大家虽然都不太能接受，但是普遍选择认命，大家该吃吃该喝喝，好聚好散。但是隔壁部门是有人闹了下，但是很快就没下文了。后来我听说出头闹事的人第一个找到工作之后就不出头了，结果也就没人闹事了。
-找工作找工作挺难的，基本上都是外包。没做面试的记录，就随便回忆一下吧。面试PayPal外包, 二面和三面一起面的，挂了，感觉二面和三面都不是很好。面试VOA2(一家不错的法资小公司)，因为英语和岗位不合适挂。面试迪士尼外包，一面挂了，搞笑的是又一家外包来邀请我去面试，主要是迪士尼的技术栈是Angular+Graphql，比较小众，但是我都用过，我不太想去，但是对方劝了我好几次，最后还是在二面挂了（面试三次，挂了两次，挺好玩的经历）。面试花旗外包，二面挂了，其实本来是挺有机会的，但是二面就27分钟，还算上我问的问题，只能被挂了。面试华钦（华钦是外包公司，但是这个岗位不是外包），我明明面试的是前端，面试官是后端的，道不同。面试摩根士丹利外包，二面过了，感觉比较水，相对好近。
-摩根士丹利进入摩根士丹利之后其实有段时间是不太适应的，习惯了普华永道这种混合办公和不定时工作制，不太能接受摩根士丹利这种965的风格，不过还好，两周就适应了，发了工资就更加适应，没有必要和钱过不去。摩根士丹利里面什么情况我不方便多说，但是根据工作安排来看，坚持到2026年底问题不大，以后就再说吧。
-总结如果没有裁员这回事儿，那么2024年对我还是一个挺不错的年份。涨点工资（普华永道每年7月调薪），有个儿子，本来就可以这样子过去了。可惜没有如果，现在在摩根做外包也能接受，毕竟正式员工对我们算得上非常nice了。希望2025年可以平平安安，保住工作，少点个人消费，多点留给家人。技术也没有什么大的想法，保住工作就行，苟活到经济能够真的复苏吧。
-]]></content>
-  </entry>
-  <entry>
-    <title>记录一些测试币的水龙头</title>
-    <url>/2023/01/07/web3/some-token-faucet/</url>
-    <content><![CDATA[记录一些测试币的水龙头记录一些常用的区块链水龙头，以防忘记
-GoerliGoerli Testnet Faucet: 不太记得当初是怎么知道了，但是似乎永远失败…
-GOERLI FAUCET, 每天可以获取0.1 ETH(以前是可以每天领取0.25ETH), 需要使用Alchemy账号.
-Mining Faucet, 使用cpu的算力去挖矿，问题不大，可以使用。
-polygonpolygon faucet, 支持多个测试网络，但是Goerli的ETH没拿到
-参考资料
-免費取得Goerli測試幣
-
-]]></content>
-      <categories>
-        <category>web3</category>
-      </categories>
-      <tags>
-        <tag>web3</tag>
-        <tag>Goerli</tag>
-        <tag>polygon</tag>
-      </tags>
   </entry>
   <entry>
     <title>无 Docker Desktop + Colima + Docker Compose v2 标准化方案</title>
@@ -4279,79 +4322,6 @@ docker logs -f zot-registry&#123;&quot;time&quot;:&quot;2026-02-21T14:52:57.5097
       </tags>
   </entry>
   <entry>
-    <title>noice.nvim在cmdline中的光标自动滚动到最前面的bug</title>
-    <url>/2025/05/22/software/noice-nvim-cmdline-cursor-auto-scroll-to-front-bug/</url>
-    <content><![CDATA[前言最新把 neovim 升级到最新版本0.11.1,lazyvim 升级到14.x。然后不出意外就挂了好几个 plugin。其中 noice.nvim 是影响比较小的但比较膈应人的。
-bug描述
-
-
-
-当在cmdline模式输入命令的时候光标总是会莫名其妙的滚动到最前面。我本来以为是noice.nvim的问题，但是经过测试，发现只有在itermn2的非全屏模式下才会出现，全屏模式或者其他终端模拟器则不会出现类似的问题。
-解决好在bug: Cursor jumps in cmdline - 4.5.0中有小哥也遇到过类似的问题，他在iTerm2中禁用”由会话触发的窗口调整大小”功能解决了这个问题（设置路径：Settings &gt; Profiles &gt; [我的配置文件] &gt; Terminal &gt; 勾选”Disable session-initiated window resizing”），然后就好了。
-其他在https://superuser.com/questions/113944/how-to-prevent-screen-from-resizing-my-terminal-in-mac-os-x, 看上去iterm2的这个bug存在挺久的了。
-]]></content>
-      <categories>
-        <category>软件</category>
-      </categories>
-      <tags>
-        <tag>neovim</tag>
-        <tag>iterm2</tag>
-        <tag>nocie.nvim</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>Podman的hello world入门</title>
-    <url>/2024/01/21/software/podman-hello-world/</url>
-    <content><![CDATA[前言Podnam是一个符合OCI，用于在 Linux® 系统上开发、提供了与 Docker 等类似的功能来管理容器。管理和运行容器开源工具。 Podman 最初由 Red Hat® 工程师与开源社区一起开发。Podman使用 libpod 库管理整个容器生态系统。
-安装如果你使用Macos, 可以使用homebrew安装：
-brew install podman
-
-安装之后就可以创建和启动Podnam虚拟机：
-podman machine initpodman machine start
-
-如果你使用Debian 或者 ubuntu， 可以使用apt-get命令安装：
-sudo apt-get install runc -ysudo apt-get -y install podman
-
- 其他系统可能参考podman安装页面
-
-注意：对于 Windows 和 Mac，podman 需要一个虚拟机来部署容器。
-
-配置默认情况下，Podman 配置有两个容器注册表。
-
-quay.io
-docker.io
-
-我们可以在·&#x2F;etc&#x2F;containers&#x2F;registries.conf·看到
-但是为了方便我们构建基于Dockerfile的景象，我们需要在没有明确容器注册表的时候默认拉取docer.io的注册表，我们可以在·&#x2F;etc&#x2F;containers&#x2F;registries.conf·或者·$HOME&#x2F;.config&#x2F;containers&#x2F;registries.conf·设置unqualified-search-registries
-unqualified-search-registries = [&quot;docker.io&quot;]
-
-存储每个系统用户都有自己的容器存储地址。这意味着，如果您尝试从不同的用户登录中提取镜像，它将从远程注册表而不是本地映像中提取镜像。
-容器管理拉取容器：
-podman pull docker.io/nginx
-
-运行容器：
-podman  run --name docker-nginx -p 8080:80 docker.io/nginx
-
-如果你绑定1024一下的端口，你需要使用root权限：
-sudo podman run --name docker-nginx -p 80:80 docker.io/nginx
-
-对于root用户，容器将会存储在·&#x2F;var&#x2F;lib&#x2F;containers&#x2F;storag·的文件夹中。对于非root用户，容器将会存储在·$HOME&#x2F;.local&#x2F;share&#x2F;containers&#x2F;storage·的文件夹中。
-参考资料
-What is Podman?
-Podman 初学者指南（上）
-Podman “Error: no registries found in registries.conf, a registry must be provided” while logging&#x2F;pulling from docker.io
-What is Podman?
-
-]]></content>
-      <categories>
-        <category>软件</category>
-      </categories>
-      <tags>
-        <tag>podman</tag>
-        <tag>容器</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>学习multipass笔记</title>
     <url>/2023/12/14/software/multipass-learning/</url>
     <content><![CDATA[前言Multipass 是一个轻量虚拟机管理器，是由 Ubuntu 运营公司 Canonical 所推出的开源项目。运行环境支持 Linux、Windows、macOS。在不同的操作系统上，使用的是不同的虚拟化技术。在 Linux 上使用的是 KVM、Window 上使用 Hyper-V、macOS 中使用 HyperKit 以最小开销运行 VM，支持在笔记本模拟小型云。
@@ -4381,6 +4351,27 @@ Multipass - 如 Docker 般的虛擬機
       </categories>
       <tags>
         <tag>multipass</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>noice.nvim在cmdline中的光标自动滚动到最前面的bug</title>
+    <url>/2025/05/22/software/noice-nvim-cmdline-cursor-auto-scroll-to-front-bug/</url>
+    <content><![CDATA[前言最新把 neovim 升级到最新版本0.11.1,lazyvim 升级到14.x。然后不出意外就挂了好几个 plugin。其中 noice.nvim 是影响比较小的但比较膈应人的。
+bug描述
+
+
+
+当在cmdline模式输入命令的时候光标总是会莫名其妙的滚动到最前面。我本来以为是noice.nvim的问题，但是经过测试，发现只有在itermn2的非全屏模式下才会出现，全屏模式或者其他终端模拟器则不会出现类似的问题。
+解决好在bug: Cursor jumps in cmdline - 4.5.0中有小哥也遇到过类似的问题，他在iTerm2中禁用”由会话触发的窗口调整大小”功能解决了这个问题（设置路径：Settings &gt; Profiles &gt; [我的配置文件] &gt; Terminal &gt; 勾选”Disable session-initiated window resizing”），然后就好了。
+其他在https://superuser.com/questions/113944/how-to-prevent-screen-from-resizing-my-terminal-in-mac-os-x, 看上去iterm2的这个bug存在挺久的了。
+]]></content>
+      <categories>
+        <category>软件</category>
+      </categories>
+      <tags>
+        <tag>neovim</tag>
+        <tag>iterm2</tag>
+        <tag>nocie.nvim</tag>
       </tags>
   </entry>
   <entry>
@@ -4437,6 +4428,58 @@ docker run -d \  -v my_postgres_data:/var/lib/postgresql/18/docker \  -e POSTGRE
         <tag>容器</tag>
         <tag>docker compose</tag>
         <tag>postgres18</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Podman的hello world入门</title>
+    <url>/2024/01/21/software/podman-hello-world/</url>
+    <content><![CDATA[前言Podnam是一个符合OCI，用于在 Linux® 系统上开发、提供了与 Docker 等类似的功能来管理容器。管理和运行容器开源工具。 Podman 最初由 Red Hat® 工程师与开源社区一起开发。Podman使用 libpod 库管理整个容器生态系统。
+安装如果你使用Macos, 可以使用homebrew安装：
+brew install podman
+
+安装之后就可以创建和启动Podnam虚拟机：
+podman machine initpodman machine start
+
+如果你使用Debian 或者 ubuntu， 可以使用apt-get命令安装：
+sudo apt-get install runc -ysudo apt-get -y install podman
+
+ 其他系统可能参考podman安装页面
+
+注意：对于 Windows 和 Mac，podman 需要一个虚拟机来部署容器。
+
+配置默认情况下，Podman 配置有两个容器注册表。
+
+quay.io
+docker.io
+
+我们可以在·&#x2F;etc&#x2F;containers&#x2F;registries.conf·看到
+但是为了方便我们构建基于Dockerfile的景象，我们需要在没有明确容器注册表的时候默认拉取docer.io的注册表，我们可以在·&#x2F;etc&#x2F;containers&#x2F;registries.conf·或者·$HOME&#x2F;.config&#x2F;containers&#x2F;registries.conf·设置unqualified-search-registries
+unqualified-search-registries = [&quot;docker.io&quot;]
+
+存储每个系统用户都有自己的容器存储地址。这意味着，如果您尝试从不同的用户登录中提取镜像，它将从远程注册表而不是本地映像中提取镜像。
+容器管理拉取容器：
+podman pull docker.io/nginx
+
+运行容器：
+podman  run --name docker-nginx -p 8080:80 docker.io/nginx
+
+如果你绑定1024一下的端口，你需要使用root权限：
+sudo podman run --name docker-nginx -p 80:80 docker.io/nginx
+
+对于root用户，容器将会存储在·&#x2F;var&#x2F;lib&#x2F;containers&#x2F;storag·的文件夹中。对于非root用户，容器将会存储在·$HOME&#x2F;.local&#x2F;share&#x2F;containers&#x2F;storage·的文件夹中。
+参考资料
+What is Podman?
+Podman 初学者指南（上）
+Podman “Error: no registries found in registries.conf, a registry must be provided” while logging&#x2F;pulling from docker.io
+What is Podman?
+
+]]></content>
+      <categories>
+        <category>软件</category>
+      </categories>
+      <tags>
+        <tag>podman</tag>
+        <tag>容器</tag>
       </tags>
   </entry>
   <entry>
@@ -4594,6 +4637,27 @@ sudo tailscale up --advertise-routes=192.168.31.0/24 --accept-dns=false
         <tag>内网穿透</tag>
         <tag>NAS</tag>
         <tag>异地组网</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>记录一些测试币的水龙头</title>
+    <url>/2023/01/07/web3/some-token-faucet/</url>
+    <content><![CDATA[记录一些测试币的水龙头记录一些常用的区块链水龙头，以防忘记
+GoerliGoerli Testnet Faucet: 不太记得当初是怎么知道了，但是似乎永远失败…
+GOERLI FAUCET, 每天可以获取0.1 ETH(以前是可以每天领取0.25ETH), 需要使用Alchemy账号.
+Mining Faucet, 使用cpu的算力去挖矿，问题不大，可以使用。
+polygonpolygon faucet, 支持多个测试网络，但是Goerli的ETH没拿到
+参考资料
+免費取得Goerli測試幣
+
+]]></content>
+      <categories>
+        <category>web3</category>
+      </categories>
+      <tags>
+        <tag>web3</tag>
+        <tag>Goerli</tag>
+        <tag>polygon</tag>
       </tags>
   </entry>
   <entry>
