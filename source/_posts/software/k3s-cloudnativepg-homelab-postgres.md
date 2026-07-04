@@ -191,7 +191,7 @@ helm install cnpg-operator cnpg/cloudnative-pg \
 
 # 创建 PostgreSQL 集群
 
-创建超级管理员密码：
+<!-- 创建超级管理员密码：
 
 ```yaml
 apiVersion: v1
@@ -202,7 +202,7 @@ type: kubernetes.io/basic-auth
 stringData:
   username: postgres
   password: StrongPassword123
-```
+``` -->
 
 创建 Cluster：
 
@@ -217,8 +217,8 @@ spec:
   storage:
     size: 20Gi
 
-  superuserSecret:
-    name: postgres-superuser
+  # superuserSecret: # 没什么用
+  #   name: postgres-superuser
 
   bootstrap:
     initdb:
@@ -246,6 +246,12 @@ spec:
 kubectl get secret postgres-superuser \
 -o jsonpath='{.data.password}' | base64 -d
 ```
+修改密码：
+
+```bash
+kubectl exec -it postgres-1 -c postgres -- psql -U postgres -d postgres -c "ALTER USER postgres WITH PASSWORD '123456';"
+```
+
 
 ---
 
