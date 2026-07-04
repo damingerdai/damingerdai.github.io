@@ -1,6 +1,24 @@
 <?xml version="1.0" encoding="utf-8"?>
 <search>
   <entry>
+    <title>Hello World</title>
+    <url>/2023/07/03/hello-world/</url>
+    <content><![CDATA[Welcome to Hexo! This is your very first post. Check documentation for more info. If you get any problems when using Hexo, you can find the answer in troubleshooting or you can ask me on GitHub.
+Quick StartCreate a new post$ hexo new &quot;My New Post&quot;
+
+More info: Writing
+Run server$ hexo server
+
+More info: Server
+Generate static files$ hexo generate
+
+More info: Generating
+Deploy to remote sites$ hexo deploy
+
+More info: Deployment
+]]></content>
+  </entry>
+  <entry>
     <title>如何在10分钟内使用LangChain</title>
     <url>/2024/06/09/ai/how-to-use-langchain-in-10-minutes/</url>
     <content><![CDATA[如何在10分钟内使用LangChainLangChain是一个强大的Python和Javascript&#x2F;Typescript库，它可以让你快速地原型化大型语言模型应用。它允许你将LLM任务链在一起（因此得名），甚至可以让你快速轻松地运行自主代理(autonomous agents)。今天，我们将介绍chain的基础知识，这样你就可以立即开始你最新的LLM项目。
@@ -76,24 +94,6 @@ LangChain的力量在于其简单性和灵活性。无论你是经验丰富的�
       </tags>
   </entry>
   <entry>
-    <title>Hello World</title>
-    <url>/2023/07/03/hello-world/</url>
-    <content><![CDATA[Welcome to Hexo! This is your very first post. Check documentation for more info. If you get any problems when using Hexo, you can find the answer in troubleshooting or you can ask me on GitHub.
-Quick StartCreate a new post$ hexo new &quot;My New Post&quot;
-
-More info: Writing
-Run server$ hexo server
-
-More info: Server
-Generate static files$ hexo generate
-
-More info: Generating
-Deploy to remote sites$ hexo deploy
-
-More info: Deployment
-]]></content>
-  </entry>
-  <entry>
     <title>给Ingress上配置ssl证书</title>
     <url>/2022/06/18/back-end/add-ssl-for-ingress/</url>
     <content><![CDATA[给Ingress上配置ssl证书创建secretkubectl create secret tls [secretName]  --cert=[pem文件路径] --key=[key文件路径] --namespace [namespace] -o yaml --dry-run=client &gt; ingress-default-cert.yamlkubectl apply -f ingress-default-cert.yaml
@@ -113,6 +113,39 @@ k3s配置ingress使用ssl证书
         <tag>k8s</tag>
         <tag>ingress</tag>
         <tag>ssl</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>使用docker-compose备份Postgres Docker容器的解决方案</title>
+    <url>/2024/07/10/back-end/back-end-how-to-backup-postgres-docker-container/</url>
+    <content><![CDATA[使用docker-compose备份Postgres Docker容器的解决方案备份使用pg_dumpall命令备份Postgres数据库。
+docker-compose exec &lt;postgres_service&gt; pg_dumpall -U postgres &gt; dump_`date +%Y-%m-%d&quot;_&quot;%H_%M_%S`.sql
+
+
+docker-compose exec &lt;postgres_service&gt; 在名为&lt;postgres_service&gt;的Postgres容器上执行命令。
+-U postgres 指定数据库的用户名。Docker的默认用户名是postgres，如果你使用不同的用户名，请进行修改。
+
+恢复将dump_date +%Y-%m-%d”“%H%M_%S.sql文件放置在backup文件夹中。
+然后使用Docker卷将backup文件夹绑定到Postgres容器上：
+volumes:    - ./backup:/backup
+
+删除现有的Postgres容器并创建一个新的容器：
+docker-compose down &amp;&amp; docker-compose up -d
+
+执行数据库导入命令：
+docker-compose exec postgres psql -f /backup/dump_xxx.sql postgres -U postgres
+
+参考资料
+使用docker-compose备份和恢复Postgres数据库
+
+]]></content>
+      <categories>
+        <category>后端</category>
+      </categories>
+      <tags>
+        <tag>docker</tag>
+        <tag>docker-compose</tag>
+        <tag>postgres</tag>
       </tags>
   </entry>
   <entry>
@@ -158,39 +191,6 @@ module(    name = &quot;hoteler&quot;,    compatibility_level = 1,)bazel_dep(   
         <tag>spring boot</tag>
         <tag>bazel</tag>
         <tag>bzlmod</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>使用docker-compose备份Postgres Docker容器的解决方案</title>
-    <url>/2024/07/10/back-end/back-end-how-to-backup-postgres-docker-container/</url>
-    <content><![CDATA[使用docker-compose备份Postgres Docker容器的解决方案备份使用pg_dumpall命令备份Postgres数据库。
-docker-compose exec &lt;postgres_service&gt; pg_dumpall -U postgres &gt; dump_`date +%Y-%m-%d&quot;_&quot;%H_%M_%S`.sql
-
-
-docker-compose exec &lt;postgres_service&gt; 在名为&lt;postgres_service&gt;的Postgres容器上执行命令。
--U postgres 指定数据库的用户名。Docker的默认用户名是postgres，如果你使用不同的用户名，请进行修改。
-
-恢复将dump_date +%Y-%m-%d”“%H%M_%S.sql文件放置在backup文件夹中。
-然后使用Docker卷将backup文件夹绑定到Postgres容器上：
-volumes:    - ./backup:/backup
-
-删除现有的Postgres容器并创建一个新的容器：
-docker-compose down &amp;&amp; docker-compose up -d
-
-执行数据库导入命令：
-docker-compose exec postgres psql -f /backup/dump_xxx.sql postgres -U postgres
-
-参考资料
-使用docker-compose备份和恢复Postgres数据库
-
-]]></content>
-      <categories>
-        <category>后端</category>
-      </categories>
-      <tags>
-        <tag>docker</tag>
-        <tag>docker-compose</tag>
-        <tag>postgres</tag>
       </tags>
   </entry>
   <entry>
@@ -351,6 +351,62 @@ PUT /password-resets/:token: 执行更新。
       </tags>
   </entry>
   <entry>
+    <title>Gradle配置阿里镜像</title>
+    <url>/2021/10/29/back-end/gradle-ali-mirror/</url>
+    <content><![CDATA[Gradle配置阿里镜像为了加快gradle的国内下载的速度，我们可以为gradle配置阿里仓库的镜像
+请在gradle的安装目录下的init.d的文件夹下添加init.gradle:
+gradle.projectsLoaded &#123;    rootProject.allprojects &#123;        buildscript &#123;            repositories &#123;                def JCENTER_URL = &#x27;https://maven.aliyun.com/repository/public&#x27;                def GOOGLE_URL = &#x27;https://maven.aliyun.com/repository/google&#x27;                def NEXUS_URL = &#x27;https://maven.aliyun.com/repository/central&#x27;                all &#123; ArtifactRepository repo -&gt;                    if (repo instanceof MavenArtifactRepository) &#123;                        def url = repo.url.toString()                        if (url.startsWith(&#x27;https://jcenter.bintray.com/&#x27;)) &#123;                            project.logger.lifecycle &quot;Repository $&#123;repo.url&#125; replaced by $JCENTER_URL.&quot;                            println(&quot;buildscript $&#123;repo.url&#125; replaced by $JCENTER_URL.&quot;)                            remove repo                        &#125;                        else if (url.startsWith(&#x27;https://dl.google.com/dl/android/maven2/&#x27;)) &#123;                            project.logger.lifecycle &quot;Repository $&#123;repo.url&#125; replaced by $GOOGLE_URL.&quot;                            println(&quot;buildscript $&#123;repo.url&#125; replaced by $GOOGLE_URL.&quot;)                            remove repo                        &#125;                        else if (url.startsWith(&#x27;https://repo1.maven.org/maven2&#x27;)) &#123;                            project.logger.lifecycle &quot;Repository $&#123;repo.url&#125; replaced by $REPOSITORY_URL.&quot;                            println(&quot;buildscript $&#123;repo.url&#125; replaced by $REPOSITORY_URL.&quot;)                            remove repo                        &#125;                    &#125;                &#125;                jcenter &#123;                    url JCENTER_URL                &#125;                google &#123;                    url GOOGLE_URL                &#125;                maven &#123;                    url NEXUS_URL                &#125;            &#125;        &#125;        repositories &#123;            def JCENTER_URL = &#x27;https://maven.aliyun.com/repository/public&#x27;            def GOOGLE_URL = &#x27;https://maven.aliyun.com/repository/google&#x27;            def NEXUS_URL = &#x27;https://maven.aliyun.com/repository/central&#x27;            all &#123; ArtifactRepository repo -&gt;                if (repo instanceof MavenArtifactRepository) &#123;                    def url = repo.url.toString()                    if (url.startsWith(&#x27;https://jcenter.bintray.com/&#x27;)) &#123;                        project.logger.lifecycle &quot;Repository $&#123;repo.url&#125; replaced by $JCENTER_URL.&quot;                        println(&quot;buildscript $&#123;repo.url&#125; replaced by $JCENTER_URL.&quot;)                        remove repo                    &#125;                    else if (url.startsWith(&#x27;https://dl.google.com/dl/android/maven2/&#x27;)) &#123;                        project.logger.lifecycle &quot;Repository $&#123;repo.url&#125; replaced by $GOOGLE_URL.&quot;                        println(&quot;buildscript $&#123;repo.url&#125; replaced by $GOOGLE_URL.&quot;)                        remove repo                    &#125;                    else if (url.startsWith(&#x27;https://repo1.maven.org/maven2&#x27;)) &#123;                        project.logger.lifecycle &quot;Repository $&#123;repo.url&#125; replaced by $REPOSITORY_URL.&quot;                        println(&quot;buildscript $&#123;repo.url&#125; replaced by $REPOSITORY_URL.&quot;)                        remove repo                    &#125;                &#125;            &#125;            jcenter &#123;                url JCENTER_URL            &#125;            google &#123;                url GOOGLE_URL            &#125;            maven &#123;                url NEXUS_URL            &#125;        &#125;    &#125;&#125;
+
+参考
+如何构建 Spring 源码环境？
+阿里云云效 Maven
+
+]]></content>
+      <categories>
+        <category>后端</category>
+      </categories>
+      <tags>
+        <tag>gradle</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>在k8s中如何强制删除处于Terminating状态的namesapce</title>
+    <url>/2025/02/13/back-end/how-to-forcefully-delete-a-namespace-that-is-stuck-in-the-Terminating-state/</url>
+    <content><![CDATA[概述在k3s中删除一个namespace十分简单，就是一个命令的事儿：
+kubectl delete ns $&#123;namespace&#125;
+
+但是可能存在删除失败或者namespace一直处于Terminating状态的话，那么上面的命令可能行不通。这里介绍两种实用的解决方案去帮助我们解决。
+注意: 这两种方案可能存在错误删除的情况，请谨慎操作。
+强制删除kubectl提供force和grace-period&#x3D;0两个参数帮助我们强制删除namespace：
+kubectl delete ns $&#123;namespace&#125; --force --grace-period=0
+
+说明：
+
+–force：强制删除资源，跳过正常的删除流程。
+
+–grace-period&#x3D;0：立即删除资源，不等待任何清理操作。
+
+
+使用Kubernetes API 删除获取处于Terminating状态的namespace：
+kubectl get ns |grep Terminating |awk &#123;&#x27;print $1&#x27;&#125;
+
+调用Kubernetes API 删除指定的namespace
+kubectl get ns $&#123;namespace&#125; -o json &gt;$&#123;namespace&#125;.jsonsed -i &#x27;/&quot;kubernetes&quot;/d&#x27; $&#123;namespace&#125;.jsonkubectl replace --raw &quot;/api/v1/namespaces/$&#123;namespace&#125;/finalize&quot; -f $&#123;namespace&#125;.json
+
+参考资料
+Kubernetes 的 NameSpace 无法删除应该怎么办
+kubernetes批量删除长期处于Terminating状态的namespace
+
+]]></content>
+      <categories>
+        <category>后端</category>
+      </categories>
+      <tags>
+        <tag>k8s</tag>
+        <tag>k3s</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>Gradle 强制使用指定版本的 Spring Web JAR</title>
     <url>/2025/09/01/back-end/gradle-force-specific-version-of-spring-web-jar/</url>
     <content><![CDATA[Gradle 强制使用指定版本的 Spring Web JAR场景说明由于公司Artifactory已禁止下载Spring Web 5.x相关依赖，必须通过本地JAR包spring-web-5.3.31.jar，强制让所有依赖Spring Web的其他库使用这个指定版本。
@@ -422,62 +478,6 @@ task checkDependencies &#123;    doLast &#123;        configurations.compileClas
       <tags>
         <tag>spring boot</tag>
         <tag>gradle</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>Gradle配置阿里镜像</title>
-    <url>/2021/10/29/back-end/gradle-ali-mirror/</url>
-    <content><![CDATA[Gradle配置阿里镜像为了加快gradle的国内下载的速度，我们可以为gradle配置阿里仓库的镜像
-请在gradle的安装目录下的init.d的文件夹下添加init.gradle:
-gradle.projectsLoaded &#123;    rootProject.allprojects &#123;        buildscript &#123;            repositories &#123;                def JCENTER_URL = &#x27;https://maven.aliyun.com/repository/public&#x27;                def GOOGLE_URL = &#x27;https://maven.aliyun.com/repository/google&#x27;                def NEXUS_URL = &#x27;https://maven.aliyun.com/repository/central&#x27;                all &#123; ArtifactRepository repo -&gt;                    if (repo instanceof MavenArtifactRepository) &#123;                        def url = repo.url.toString()                        if (url.startsWith(&#x27;https://jcenter.bintray.com/&#x27;)) &#123;                            project.logger.lifecycle &quot;Repository $&#123;repo.url&#125; replaced by $JCENTER_URL.&quot;                            println(&quot;buildscript $&#123;repo.url&#125; replaced by $JCENTER_URL.&quot;)                            remove repo                        &#125;                        else if (url.startsWith(&#x27;https://dl.google.com/dl/android/maven2/&#x27;)) &#123;                            project.logger.lifecycle &quot;Repository $&#123;repo.url&#125; replaced by $GOOGLE_URL.&quot;                            println(&quot;buildscript $&#123;repo.url&#125; replaced by $GOOGLE_URL.&quot;)                            remove repo                        &#125;                        else if (url.startsWith(&#x27;https://repo1.maven.org/maven2&#x27;)) &#123;                            project.logger.lifecycle &quot;Repository $&#123;repo.url&#125; replaced by $REPOSITORY_URL.&quot;                            println(&quot;buildscript $&#123;repo.url&#125; replaced by $REPOSITORY_URL.&quot;)                            remove repo                        &#125;                    &#125;                &#125;                jcenter &#123;                    url JCENTER_URL                &#125;                google &#123;                    url GOOGLE_URL                &#125;                maven &#123;                    url NEXUS_URL                &#125;            &#125;        &#125;        repositories &#123;            def JCENTER_URL = &#x27;https://maven.aliyun.com/repository/public&#x27;            def GOOGLE_URL = &#x27;https://maven.aliyun.com/repository/google&#x27;            def NEXUS_URL = &#x27;https://maven.aliyun.com/repository/central&#x27;            all &#123; ArtifactRepository repo -&gt;                if (repo instanceof MavenArtifactRepository) &#123;                    def url = repo.url.toString()                    if (url.startsWith(&#x27;https://jcenter.bintray.com/&#x27;)) &#123;                        project.logger.lifecycle &quot;Repository $&#123;repo.url&#125; replaced by $JCENTER_URL.&quot;                        println(&quot;buildscript $&#123;repo.url&#125; replaced by $JCENTER_URL.&quot;)                        remove repo                    &#125;                    else if (url.startsWith(&#x27;https://dl.google.com/dl/android/maven2/&#x27;)) &#123;                        project.logger.lifecycle &quot;Repository $&#123;repo.url&#125; replaced by $GOOGLE_URL.&quot;                        println(&quot;buildscript $&#123;repo.url&#125; replaced by $GOOGLE_URL.&quot;)                        remove repo                    &#125;                    else if (url.startsWith(&#x27;https://repo1.maven.org/maven2&#x27;)) &#123;                        project.logger.lifecycle &quot;Repository $&#123;repo.url&#125; replaced by $REPOSITORY_URL.&quot;                        println(&quot;buildscript $&#123;repo.url&#125; replaced by $REPOSITORY_URL.&quot;)                        remove repo                    &#125;                &#125;            &#125;            jcenter &#123;                url JCENTER_URL            &#125;            google &#123;                url GOOGLE_URL            &#125;            maven &#123;                url NEXUS_URL            &#125;        &#125;    &#125;&#125;
-
-参考
-如何构建 Spring 源码环境？
-阿里云云效 Maven
-
-]]></content>
-      <categories>
-        <category>后端</category>
-      </categories>
-      <tags>
-        <tag>gradle</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>在k8s中如何强制删除处于Terminating状态的namesapce</title>
-    <url>/2025/02/13/back-end/how-to-forcefully-delete-a-namespace-that-is-stuck-in-the-Terminating-state/</url>
-    <content><![CDATA[概述在k3s中删除一个namespace十分简单，就是一个命令的事儿：
-kubectl delete ns $&#123;namespace&#125;
-
-但是可能存在删除失败或者namespace一直处于Terminating状态的话，那么上面的命令可能行不通。这里介绍两种实用的解决方案去帮助我们解决。
-注意: 这两种方案可能存在错误删除的情况，请谨慎操作。
-强制删除kubectl提供force和grace-period&#x3D;0两个参数帮助我们强制删除namespace：
-kubectl delete ns $&#123;namespace&#125; --force --grace-period=0
-
-说明：
-
-–force：强制删除资源，跳过正常的删除流程。
-
-–grace-period&#x3D;0：立即删除资源，不等待任何清理操作。
-
-
-使用Kubernetes API 删除获取处于Terminating状态的namespace：
-kubectl get ns |grep Terminating |awk &#123;&#x27;print $1&#x27;&#125;
-
-调用Kubernetes API 删除指定的namespace
-kubectl get ns $&#123;namespace&#125; -o json &gt;$&#123;namespace&#125;.jsonsed -i &#x27;/&quot;kubernetes&quot;/d&#x27; $&#123;namespace&#125;.jsonkubectl replace --raw &quot;/api/v1/namespaces/$&#123;namespace&#125;/finalize&quot; -f $&#123;namespace&#125;.json
-
-参考资料
-Kubernetes 的 NameSpace 无法删除应该怎么办
-kubernetes批量删除长期处于Terminating状态的namespace
-
-]]></content>
-      <categories>
-        <category>后端</category>
-      </categories>
-      <tags>
-        <tag>k8s</tag>
-        <tag>k3s</tag>
       </tags>
   </entry>
   <entry>
@@ -612,6 +612,41 @@ Documenting “context deadline exceeded” errors relating to the webhook
       </tags>
   </entry>
   <entry>
+    <title>记录使用pg_dump中遇到的ssl问题</title>
+    <url>/2023/02/25/back-end/pg_dump_ssl_issues/</url>
+    <content><![CDATA[记录使用pg_dump中遇到的ssl问题问题描述在使用pg_dump过程中遇到的两个问题：
+
+SSL connection is required. Please specify SSL options and retry.
+SSL error: unsafe legacy renegotiation disabled
+
+SSL option问题这是因为postgresql需要使用TLS&#x2F;SSL connections，我们可以设置一个环境变量PGSSLMODE为required就可以了。
+针对Linux或者Macos用户，使用:
+export PGSSLMODE=require
+针对Windows用户，使用:
+SET PGSSLMODE=require
+
+unsafe legacy renegotiation disabled这是因为ssl协议存在一个漏洞，后来升级的时候提供了一个开关默认关闭这个了漏洞，这个解决方法存在一定安全隐患，请谨慎使用。
+创建一个自定义的openssl.cnf,并写入：
+openssl_conf = openssl_init[openssl_init]ssl_conf = ssl_sect[ssl_sect]system_default = system_default_sect[system_default_sect]Options = UnsafeLegacyRenegotiation
+
+将该config文件的路径写入名为OPENSSL_CONF的环境变量：
+export OPENSSL_CONF=/path/to/custom/openssl.cnf
+
+参考资料
+Migrate your PostgreSQL database by using dump and restore
+SSL error unsafe legacy renegotiation disabled
+
+]]></content>
+      <categories>
+        <category>后端</category>
+      </categories>
+      <tags>
+        <tag>ssl</tag>
+        <tag>pg_dump</tag>
+        <tag>postgresql</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>从springfox迁移到springdoc</title>
     <url>/2021/11/29/back-end/migrate-springdoc-from-springfox/</url>
     <content><![CDATA[前言之所以考虑从springfox迁移到springdoc是因为我的开源项目hoteler在升级到spring boot 2.6之后，UT的CI&#x2F;CD挂了：
@@ -691,41 +726,6 @@ Githubfeat: 从springfox迁移到springdoc以及修复AuthenticationFilter过滤
         <tag>springdoc</tag>
         <tag>swagger-ui</tag>
         <tag>oepn api</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>记录使用pg_dump中遇到的ssl问题</title>
-    <url>/2023/02/25/back-end/pg_dump_ssl_issues/</url>
-    <content><![CDATA[记录使用pg_dump中遇到的ssl问题问题描述在使用pg_dump过程中遇到的两个问题：
-
-SSL connection is required. Please specify SSL options and retry.
-SSL error: unsafe legacy renegotiation disabled
-
-SSL option问题这是因为postgresql需要使用TLS&#x2F;SSL connections，我们可以设置一个环境变量PGSSLMODE为required就可以了。
-针对Linux或者Macos用户，使用:
-export PGSSLMODE=require
-针对Windows用户，使用:
-SET PGSSLMODE=require
-
-unsafe legacy renegotiation disabled这是因为ssl协议存在一个漏洞，后来升级的时候提供了一个开关默认关闭这个了漏洞，这个解决方法存在一定安全隐患，请谨慎使用。
-创建一个自定义的openssl.cnf,并写入：
-openssl_conf = openssl_init[openssl_init]ssl_conf = ssl_sect[ssl_sect]system_default = system_default_sect[system_default_sect]Options = UnsafeLegacyRenegotiation
-
-将该config文件的路径写入名为OPENSSL_CONF的环境变量：
-export OPENSSL_CONF=/path/to/custom/openssl.cnf
-
-参考资料
-Migrate your PostgreSQL database by using dump and restore
-SSL error unsafe legacy renegotiation disabled
-
-]]></content>
-      <categories>
-        <category>后端</category>
-      </categories>
-      <tags>
-        <tag>ssl</tag>
-        <tag>pg_dump</tag>
-        <tag>postgresql</tag>
       </tags>
   </entry>
   <entry>
@@ -1185,67 +1185,6 @@ org.quartz.SchedulerConfigException: No local DataSource found for configuration
       </tags>
   </entry>
   <entry>
-    <title>在 Spring WebFlux 中实现文件上传到本地</title>
-    <url>/2025/09/08/back-end/upload-file-into-local-in-spring-webflux/</url>
-    <content><![CDATA[在 Spring WebFlux 中实现文件上传到本地引言本文旨在介绍如何在 Spring WebFlux 框架下，实现将文件上传至本地服务器的功能。虽然目前的代码示例侧重于本地存储，但其设计思路也为未来扩展至对象存储服务（如 MinIO）奠定了基础。通过本文的学习，您将掌握在响应式编程模型下处理文件上传的关键技术。
-
-具体实现过程1. 项目搭建与依赖引入首先，您需要一个基于 Spring Boot 3.5.0 的项目。如果您使用 Gradle 作为构建工具，可以在 build.gradle 文件中添加以下依赖：
-dependencies &#123;    // ... 其他 Spring Boot 依赖    implementation &#x27;org.springframework.boot:spring-boot-starter-webflux&#x27;    // Swagger UI 依赖    implementation &#x27;org.springdoc:springdoc-openapi-starter-webflux-ui:2.8.6&#x27; // 请检查最新版本    // ...&#125;
-
-spring-boot-starter-webflux 提供了构建响应式 Web 应用所需的核心功能，springdoc-openapi-starter-webfluxui 则是集成 Swagger UI 所需的依赖。
-2. 编写 Controller接下来，我们将编写 FileController 来处理文件上传请求。
-import org.springframework.core.io.buffer.DataBufferUtils;import org.springframework.http.codec.multipart.FilePart;import org.springframework.web.bind.annotation.PostMapping;import org.springframework.web.bind.annotation.RequestPart;import org.springframework.web.bind.annotation.RestController;import reactor.core.publisher.Mono;import java.nio.file.Files;import java.nio.file.Paths;import java.io.IOException;Controllerpublic class FileController &#123;    @PostMapping(&quot;/file&quot;)    public Mono&lt;String&gt; uploadFile(@RequestPart(&quot;file&quot;) Mono&lt;FilePart&gt; filePartMono) &#123;        return filePartMono.flatMap(filePart -&gt; &#123;            // 获取用户目录            var userDir = System.getProperty(&quot;user.dir&quot;);            // 构建文件保存路径，这里假设保存在项目根目录下的 nfs 文件夹中            // 您可以根据实际需求修改路径            var path = Paths.get(userDir, &quot;nfs&quot;, filePart.filename());            // 确保 nfs 目录存在，如果不存在则创建            try &#123;                Files.createDirectories(path.getParent());            &#125; catch (IOException e) &#123;                return Mono.error(new RuntimeException(&quot;Failed to create upload directory&quot;, e));            &#125;            // 使用 transferTo 将文件内容写入到指定路径            // transferTo 方法返回一个 Mono&lt;Void&gt;，表示操作的完成            return filePart.transferTo(path)                    // then 方法用于在前一个 Mono 完成后执行下一个操作                    // 这里我们返回一个包含成功消息的 Mono&lt;String&gt;                    .then(Mono.just(&quot;File uploaded successfully: &quot; + filePart.filename()));        &#125;);    &#125;&#125;
-
-关键点解析：
-
-@PostMapping(&quot;/file&quot;): 指定该方法处理 HTTP POST 请求到 /file 路径。
-@RequestPart(&quot;file&quot;) Mono&lt;FilePart&gt; filePartMono:
-@RequestPart 注解用于接收 multipart/form-data 请求中的部分。这里的 &quot;file&quot; 对应 HTML form 表单中 &lt;input type=&quot;file&quot; name=&quot;file&quot;&gt; 的 name 属性。
-Mono&lt;FilePart&gt; 表示这是一个异步的、最多包含一个元素的发布者，代表上传的文件。Spring WebFlux 使用 Reactor 库进行响应式编程，Mono 是其核心组件之一。
-
-
-filePart.transferTo(path):
-这是 Spring WebFlux 提供的用于将上传的文件内容 直接传输 到指定 Path 的方法。
-它返回一个 Mono&lt;Void&gt;，表示文件传输操作的完成，但不会返回任何数据。在响应式流中，Void 表示一个操作的完成信号。
-
-
-.then(...):
-then() 操作符用于在源 Mono（在这里是 filePart.transferTo(path)）完成（发出完成信号）后，执行另一个 Mono。
-Mono.just(&quot;File uploaded successfully: &quot; + filePart.filename()) 创建了一个新的 Mono，它会发出一个包含成功消息的字符串。
-因此，.then(...) 确保了文件传输完成后，再发出成功上传的消息。
-
-
-
-3. 使用 cURL 调用您可以使用 curl 命令来测试这个上传接口：
-curl -X &#x27;POST&#x27; \  &#x27;http://localhost:8080/file&#x27; \  -H &#x27;accept: application/json&#x27; \  -H &#x27;Content-Type: multipart/form-data&#x27; \  -F &#x27;file=@Arthur-Ming-FlowCV-Resume-20241101.pdf;type=application/pdf&#x27;
-
-将Arthur-Ming-FlowCV-Resume-20241101.pdf改成实际文件路径就即可
-
-Swagger UI 支持为了方便 API 的可视化和测试，我们可以为其添加 Swagger UI 支持。
-1. 添加依赖如前所述，在 build.gradle 中添加 springdoc-openapi-starter-webfluxui 依赖：
-dependencies &#123;    // ...    implementation &#x27;org.springdoc:springdoc-openapi-starter-webflux-ui:2.8.6&#x27; // 请检查最新版本    // ...&#125;
-
-2. 配置 Controller 注解springdoc-openapi 库会自动扫描带有 Spring MVC 或 Spring WebFlux 注解的 Controller。您只需要确保您的 Controller 和方法使用了标准的 Spring WebFlux 注解（如 @RestController, @PostMapping, @RequestPart 等），springdoc-openapi 就会自动为您生成 OpenAPI 文档，并在启动后通过访问 /swagger-ui.html （或其他默认路径，具体取决于版本和配置）来查看。
-@Operation(    summary = &quot;Upload a single file&quot;,    description = &quot;Uploads a single file to the server&#x27;s NFS directory.&quot;,    requestBody = @RequestBody(            description = &quot;File to upload&quot;,            required = true,            content = @Content(                    mediaType = &quot;multipart/form-data&quot;,                    schema = @Schema(implementation = FileUploadRequest.class) // Use a custom schema            )    ),    responses = &#123;            @ApiResponse(responseCode = &quot;200&quot;, description = &quot;File uploaded successfully&quot;,                    content = @Content(mediaType = &quot;application/json&quot;, schema = @Schema(type = &quot;string&quot;))),            @ApiResponse(responseCode = &quot;400&quot;, description = &quot;Bad Request&quot;),            @ApiResponse(responseCode = &quot;500&quot;, description = &quot;Internal Server Error&quot;)    &#125;)
-
-FileUploadRequest定义如下：
-import io.swagger.v3.oas.annotations.media.Schema;import org.springframework.http.codec.multipart.FilePart;public class FileUploadRequest &#123;    @Schema(type = &quot;string&quot;, format = &quot;binary&quot;, description = &quot;The file to be uploaded&quot;)    private FilePart file; // The name &quot;file&quot; here should match the @RequestPart name in your controller    // Getters and setters are not strictly necessary for springdoc to pick up the schema,    // but it&#x27;s good practice if you were to use this class for other purposes.    public FilePart getFile() &#123;        return file;    &#125;    public void setFile(FilePart file) &#123;        this.file = file;    &#125;&#125;
-
-在项目启动后，访问 http://localhost:8080/swagger-ui.html （假设您的应用运行在 8080 端口），您就可以看到文件上传接口的 Swagger UI 界面了。
-
-通过以上步骤，您就成功地在 Spring WebFlux 中实现了一个文件上传到本地的功能，并为其添加了 Swagger UI 支持。您可以基于此进一步扩展，例如添加文件类型校验、大小限制，以及将文件存储目标切换为 MinIO 等对象存储服务。
-]]></content>
-      <categories>
-        <category>后端</category>
-      </categories>
-      <tags>
-        <tag>spring boot</tag>
-        <tag>gradle</tag>
-        <tag>spring webflux</tag>
-        <tag>文件上传</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>两种在Minikube中运行本地Docker镜像的简单方式</title>
     <url>/2022/03/23/back-end/two-easy-ways-to-use-local-docker-images-in-minikube/</url>
     <content><![CDATA[两种在Minikube中运行本地Docker镜像的简单方式前言本文将分享两种在Minikube中运行本地Docker镜像的简单方式
@@ -1316,6 +1255,67 @@ kubectl port-forward deployment/myapp 8080:8080
         <tag>k8s</tag>
         <tag>docker</tag>
         <tag>minikube</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>在 Spring WebFlux 中实现文件上传到本地</title>
+    <url>/2025/09/08/back-end/upload-file-into-local-in-spring-webflux/</url>
+    <content><![CDATA[在 Spring WebFlux 中实现文件上传到本地引言本文旨在介绍如何在 Spring WebFlux 框架下，实现将文件上传至本地服务器的功能。虽然目前的代码示例侧重于本地存储，但其设计思路也为未来扩展至对象存储服务（如 MinIO）奠定了基础。通过本文的学习，您将掌握在响应式编程模型下处理文件上传的关键技术。
+
+具体实现过程1. 项目搭建与依赖引入首先，您需要一个基于 Spring Boot 3.5.0 的项目。如果您使用 Gradle 作为构建工具，可以在 build.gradle 文件中添加以下依赖：
+dependencies &#123;    // ... 其他 Spring Boot 依赖    implementation &#x27;org.springframework.boot:spring-boot-starter-webflux&#x27;    // Swagger UI 依赖    implementation &#x27;org.springdoc:springdoc-openapi-starter-webflux-ui:2.8.6&#x27; // 请检查最新版本    // ...&#125;
+
+spring-boot-starter-webflux 提供了构建响应式 Web 应用所需的核心功能，springdoc-openapi-starter-webfluxui 则是集成 Swagger UI 所需的依赖。
+2. 编写 Controller接下来，我们将编写 FileController 来处理文件上传请求。
+import org.springframework.core.io.buffer.DataBufferUtils;import org.springframework.http.codec.multipart.FilePart;import org.springframework.web.bind.annotation.PostMapping;import org.springframework.web.bind.annotation.RequestPart;import org.springframework.web.bind.annotation.RestController;import reactor.core.publisher.Mono;import java.nio.file.Files;import java.nio.file.Paths;import java.io.IOException;Controllerpublic class FileController &#123;    @PostMapping(&quot;/file&quot;)    public Mono&lt;String&gt; uploadFile(@RequestPart(&quot;file&quot;) Mono&lt;FilePart&gt; filePartMono) &#123;        return filePartMono.flatMap(filePart -&gt; &#123;            // 获取用户目录            var userDir = System.getProperty(&quot;user.dir&quot;);            // 构建文件保存路径，这里假设保存在项目根目录下的 nfs 文件夹中            // 您可以根据实际需求修改路径            var path = Paths.get(userDir, &quot;nfs&quot;, filePart.filename());            // 确保 nfs 目录存在，如果不存在则创建            try &#123;                Files.createDirectories(path.getParent());            &#125; catch (IOException e) &#123;                return Mono.error(new RuntimeException(&quot;Failed to create upload directory&quot;, e));            &#125;            // 使用 transferTo 将文件内容写入到指定路径            // transferTo 方法返回一个 Mono&lt;Void&gt;，表示操作的完成            return filePart.transferTo(path)                    // then 方法用于在前一个 Mono 完成后执行下一个操作                    // 这里我们返回一个包含成功消息的 Mono&lt;String&gt;                    .then(Mono.just(&quot;File uploaded successfully: &quot; + filePart.filename()));        &#125;);    &#125;&#125;
+
+关键点解析：
+
+@PostMapping(&quot;/file&quot;): 指定该方法处理 HTTP POST 请求到 /file 路径。
+@RequestPart(&quot;file&quot;) Mono&lt;FilePart&gt; filePartMono:
+@RequestPart 注解用于接收 multipart/form-data 请求中的部分。这里的 &quot;file&quot; 对应 HTML form 表单中 &lt;input type=&quot;file&quot; name=&quot;file&quot;&gt; 的 name 属性。
+Mono&lt;FilePart&gt; 表示这是一个异步的、最多包含一个元素的发布者，代表上传的文件。Spring WebFlux 使用 Reactor 库进行响应式编程，Mono 是其核心组件之一。
+
+
+filePart.transferTo(path):
+这是 Spring WebFlux 提供的用于将上传的文件内容 直接传输 到指定 Path 的方法。
+它返回一个 Mono&lt;Void&gt;，表示文件传输操作的完成，但不会返回任何数据。在响应式流中，Void 表示一个操作的完成信号。
+
+
+.then(...):
+then() 操作符用于在源 Mono（在这里是 filePart.transferTo(path)）完成（发出完成信号）后，执行另一个 Mono。
+Mono.just(&quot;File uploaded successfully: &quot; + filePart.filename()) 创建了一个新的 Mono，它会发出一个包含成功消息的字符串。
+因此，.then(...) 确保了文件传输完成后，再发出成功上传的消息。
+
+
+
+3. 使用 cURL 调用您可以使用 curl 命令来测试这个上传接口：
+curl -X &#x27;POST&#x27; \  &#x27;http://localhost:8080/file&#x27; \  -H &#x27;accept: application/json&#x27; \  -H &#x27;Content-Type: multipart/form-data&#x27; \  -F &#x27;file=@Arthur-Ming-FlowCV-Resume-20241101.pdf;type=application/pdf&#x27;
+
+将Arthur-Ming-FlowCV-Resume-20241101.pdf改成实际文件路径就即可
+
+Swagger UI 支持为了方便 API 的可视化和测试，我们可以为其添加 Swagger UI 支持。
+1. 添加依赖如前所述，在 build.gradle 中添加 springdoc-openapi-starter-webfluxui 依赖：
+dependencies &#123;    // ...    implementation &#x27;org.springdoc:springdoc-openapi-starter-webflux-ui:2.8.6&#x27; // 请检查最新版本    // ...&#125;
+
+2. 配置 Controller 注解springdoc-openapi 库会自动扫描带有 Spring MVC 或 Spring WebFlux 注解的 Controller。您只需要确保您的 Controller 和方法使用了标准的 Spring WebFlux 注解（如 @RestController, @PostMapping, @RequestPart 等），springdoc-openapi 就会自动为您生成 OpenAPI 文档，并在启动后通过访问 /swagger-ui.html （或其他默认路径，具体取决于版本和配置）来查看。
+@Operation(    summary = &quot;Upload a single file&quot;,    description = &quot;Uploads a single file to the server&#x27;s NFS directory.&quot;,    requestBody = @RequestBody(            description = &quot;File to upload&quot;,            required = true,            content = @Content(                    mediaType = &quot;multipart/form-data&quot;,                    schema = @Schema(implementation = FileUploadRequest.class) // Use a custom schema            )    ),    responses = &#123;            @ApiResponse(responseCode = &quot;200&quot;, description = &quot;File uploaded successfully&quot;,                    content = @Content(mediaType = &quot;application/json&quot;, schema = @Schema(type = &quot;string&quot;))),            @ApiResponse(responseCode = &quot;400&quot;, description = &quot;Bad Request&quot;),            @ApiResponse(responseCode = &quot;500&quot;, description = &quot;Internal Server Error&quot;)    &#125;)
+
+FileUploadRequest定义如下：
+import io.swagger.v3.oas.annotations.media.Schema;import org.springframework.http.codec.multipart.FilePart;public class FileUploadRequest &#123;    @Schema(type = &quot;string&quot;, format = &quot;binary&quot;, description = &quot;The file to be uploaded&quot;)    private FilePart file; // The name &quot;file&quot; here should match the @RequestPart name in your controller    // Getters and setters are not strictly necessary for springdoc to pick up the schema,    // but it&#x27;s good practice if you were to use this class for other purposes.    public FilePart getFile() &#123;        return file;    &#125;    public void setFile(FilePart file) &#123;        this.file = file;    &#125;&#125;
+
+在项目启动后，访问 http://localhost:8080/swagger-ui.html （假设您的应用运行在 8080 端口），您就可以看到文件上传接口的 Swagger UI 界面了。
+
+通过以上步骤，您就成功地在 Spring WebFlux 中实现了一个文件上传到本地的功能，并为其添加了 Swagger UI 支持。您可以基于此进一步扩展，例如添加文件类型校验、大小限制，以及将文件存储目标切换为 MinIO 等对象存储服务。
+]]></content>
+      <categories>
+        <category>后端</category>
+      </categories>
+      <tags>
+        <tag>spring boot</tag>
+        <tag>gradle</tag>
+        <tag>spring webflux</tag>
+        <tag>文件上传</tag>
       </tags>
   </entry>
   <entry>
@@ -1466,6 +1466,33 @@ New Java Project With Bazel
       </tags>
   </entry>
   <entry>
+    <title>使用systemd部署podman的容器</title>
+    <url>/2025/07/20/back-end/use-systemd-to-deploy-podman-build-by-podman/</url>
+    <content><![CDATA[podman的问题podman是一个容器运行时环境，提供与 Docker 非常相似的功能并不需要在你的系统上运行任何守护进程。没有守护进程就意味着如果你想使用podman部署容器，是没有办法使用类似docker的方式去实现自动重启功能。如果使用k8s部署容器那问题不大，如果就纯容器部署，可以使用podman给出的方案：
+podman generate systemd --help[DEPRECATED] Generate systemd unitsDescription:  Generate systemd units for a pod or container.  The generated units can later be controlled via systemctl(1).DEPRECATED command:It is recommended to use Quadlets for running containers and pods under systemd.Please refer to podman-systemd.unit(5) for details.Usage:  podman generate systemd [options] &#123;CONTAINER|POD&#125;Examples:  podman generate systemd CTR  podman generate systemd --new --time 10 CTR  podman generate systemd --files --name PODOptions:      --after stringArray         Add dependencies order to the generated unit file      --container-prefix string   Systemd unit name prefix for containers (default &quot;container&quot;)  -e, --env stringArray           Set environment variables to the systemd unit files  -f, --files                     Generate .service files instead of printing to stdout      --format string             Print the created units in specified format (json)  -n, --name                      Use container/pod names instead of IDs      --new                       Create a new container or pod instead of starting an existing one      --no-header                 Skip header generation      --pod-prefix string         Systemd unit name prefix for pods (default &quot;pod&quot;)      --requires stringArray      Similar to wants, but declares stronger requirement dependencies      --restart-policy string     Systemd restart-policy (default &quot;on-failure&quot;)      --restart-sec uint          Systemd restart-sec      --separator string          Systemd unit name separator between name/id and prefix (default &quot;-&quot;)      --start-timeout uint        Start timeout override      --stop-timeout uint         Stop timeout override (default 10)      --template                  Make it a template file and use %i and %I specifiers. Working only for containers      --wants stringArray         Add (weak) requirement dependencies to the generated unit file
+
+systemdsystemd是Linux系统的一套基本构建模块。它提供了一个系统和服务管理器，作为PID 1运行并启动系统的其余部分。systemd是在引导期间启动的第一个守护进程，也是在关闭期间终止的最后一个守护进程。利用这个特性，可以使用systemd去监控容器的运行状态
+例子这里使用health-master作为例子。
+# 获取名为 health-master 的容器 IDCONTAINER_ID=$(podman ps -a --filter &quot;name=health-master&quot; --format &quot;&#123;&#123;.ID&#125;&#125;&quot;)if [ -z &quot;$CONTAINER_ID&quot; ]; then  echo &quot;未找到名为 health-master 的容器。&quot; &gt;&amp;2  exit 1fiecho &quot;找到容器 health-master，ID 为 $CONTAINER_ID&quot;# 定义服务文件的存储路径SERVICE_FILE_PATH=&quot;$HOME/.config/systemd/user&quot;SERVICE_NAME=&quot;podman-health-master&quot;# 使用 podman generate systemd 创建服务文件echo &quot;正在生成 systemd 服务文件...&quot;podman generate systemd --name --restart-policy=on-failure -t 10 &quot;$CONTAINER_ID&quot; &gt;&quot;$SERVICE_FILE_PATH/$SERVICE_NAME.service&quot;if [ $? -ne 0 ]; then  echo &quot;错误: 无法生成 $SERVICE_NAME 服务。&quot; &gt;&amp;2  exit 1fi# 修复 SELinux 上下文（如启用 SELinux）restorecon -RvF &quot;$SERVICE_FILE_PATH/$SERVICE_NAME.service&quot;# 启用用户级 systemd 支持（首次需运行）loginctl enable-linger &quot;$USER&quot;# 重新加载 systemd 配置echo &quot;重新加载 systemd 配置...&quot;systemctl --user daemon-reloadif [ $? -ne 0 ]; then  echo &quot;错误: 无法重新加载 systemd 配置。&quot; &gt;&amp;2  exit 1fi# 启用服务echo &quot;启用服务 $SERVICE_NAME...&quot;systemctl --user enable --now &quot;$SERVICE_NAME&quot;if [ $? -ne 0 ]; then  echo &quot;错误: 无法启用服务 $SERVICE_NAME。&quot; &gt;&amp;2  exit 1fi# 启动服务echo &quot;启动服务 $SERVICE_NAME...&quot;systemctl --user start &quot;$SERVICE_NAME&quot;if [ $? -ne 0 ]; then  echo &quot;错误: 无法启动服务 $SERVICE_NAME。&quot; &gt;&amp;2  exit 1fiecho &quot;服务 $SERVICE_NAME 已成功创建并启动。&quot;echo &quot;你现在可以使用以下命令管理服务:&quot;echo &quot;  systemctl --user status $SERVICE_NAME  # 查看服务状态&quot;echo &quot;  systemctl --user stop $SERVICE_NAME    # 停止服务&quot;echo &quot;  systemctl --user restart $SERVICE_NAME # 重启服务&quot;
+
+问题podman generate systemd在podman 4.4的时候就已经弃用了，目前推荐使用Quadlet
+引用
+使用 Podman 以非 root 用户身份运行 Linux 容器
+System and Service Manager
+Linux Systemd基础教程
+How to replace the “podman generate systemd” command since its deprecated
+
+]]></content>
+      <categories>
+        <category>后端</category>
+      </categories>
+      <tags>
+        <tag>podman</tag>
+        <tag>容器</tag>
+        <tag>systemd</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>解决Windows下Docker启动容器时，端口被占用错误</title>
     <url>/2023/02/26/back-end/windows_docker_port_in_use_issues/</url>
     <content><![CDATA[解决Windows下Docker启动容器时，端口被占用错误问题描述在使用docker-compose启动mysql的时候遇到一个问题:
@@ -1503,33 +1530,6 @@ dism.exe /Online /Enable-Feature:Microsoft-Hyper-V /All
         <tag>docker</tag>
         <tag>windows</tag>
         <tag>docker desktop</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>使用systemd部署podman的容器</title>
-    <url>/2025/07/20/back-end/use-systemd-to-deploy-podman-build-by-podman/</url>
-    <content><![CDATA[podman的问题podman是一个容器运行时环境，提供与 Docker 非常相似的功能并不需要在你的系统上运行任何守护进程。没有守护进程就意味着如果你想使用podman部署容器，是没有办法使用类似docker的方式去实现自动重启功能。如果使用k8s部署容器那问题不大，如果就纯容器部署，可以使用podman给出的方案：
-podman generate systemd --help[DEPRECATED] Generate systemd unitsDescription:  Generate systemd units for a pod or container.  The generated units can later be controlled via systemctl(1).DEPRECATED command:It is recommended to use Quadlets for running containers and pods under systemd.Please refer to podman-systemd.unit(5) for details.Usage:  podman generate systemd [options] &#123;CONTAINER|POD&#125;Examples:  podman generate systemd CTR  podman generate systemd --new --time 10 CTR  podman generate systemd --files --name PODOptions:      --after stringArray         Add dependencies order to the generated unit file      --container-prefix string   Systemd unit name prefix for containers (default &quot;container&quot;)  -e, --env stringArray           Set environment variables to the systemd unit files  -f, --files                     Generate .service files instead of printing to stdout      --format string             Print the created units in specified format (json)  -n, --name                      Use container/pod names instead of IDs      --new                       Create a new container or pod instead of starting an existing one      --no-header                 Skip header generation      --pod-prefix string         Systemd unit name prefix for pods (default &quot;pod&quot;)      --requires stringArray      Similar to wants, but declares stronger requirement dependencies      --restart-policy string     Systemd restart-policy (default &quot;on-failure&quot;)      --restart-sec uint          Systemd restart-sec      --separator string          Systemd unit name separator between name/id and prefix (default &quot;-&quot;)      --start-timeout uint        Start timeout override      --stop-timeout uint         Stop timeout override (default 10)      --template                  Make it a template file and use %i and %I specifiers. Working only for containers      --wants stringArray         Add (weak) requirement dependencies to the generated unit file
-
-systemdsystemd是Linux系统的一套基本构建模块。它提供了一个系统和服务管理器，作为PID 1运行并启动系统的其余部分。systemd是在引导期间启动的第一个守护进程，也是在关闭期间终止的最后一个守护进程。利用这个特性，可以使用systemd去监控容器的运行状态
-例子这里使用health-master作为例子。
-# 获取名为 health-master 的容器 IDCONTAINER_ID=$(podman ps -a --filter &quot;name=health-master&quot; --format &quot;&#123;&#123;.ID&#125;&#125;&quot;)if [ -z &quot;$CONTAINER_ID&quot; ]; then  echo &quot;未找到名为 health-master 的容器。&quot; &gt;&amp;2  exit 1fiecho &quot;找到容器 health-master，ID 为 $CONTAINER_ID&quot;# 定义服务文件的存储路径SERVICE_FILE_PATH=&quot;$HOME/.config/systemd/user&quot;SERVICE_NAME=&quot;podman-health-master&quot;# 使用 podman generate systemd 创建服务文件echo &quot;正在生成 systemd 服务文件...&quot;podman generate systemd --name --restart-policy=on-failure -t 10 &quot;$CONTAINER_ID&quot; &gt;&quot;$SERVICE_FILE_PATH/$SERVICE_NAME.service&quot;if [ $? -ne 0 ]; then  echo &quot;错误: 无法生成 $SERVICE_NAME 服务。&quot; &gt;&amp;2  exit 1fi# 修复 SELinux 上下文（如启用 SELinux）restorecon -RvF &quot;$SERVICE_FILE_PATH/$SERVICE_NAME.service&quot;# 启用用户级 systemd 支持（首次需运行）loginctl enable-linger &quot;$USER&quot;# 重新加载 systemd 配置echo &quot;重新加载 systemd 配置...&quot;systemctl --user daemon-reloadif [ $? -ne 0 ]; then  echo &quot;错误: 无法重新加载 systemd 配置。&quot; &gt;&amp;2  exit 1fi# 启用服务echo &quot;启用服务 $SERVICE_NAME...&quot;systemctl --user enable --now &quot;$SERVICE_NAME&quot;if [ $? -ne 0 ]; then  echo &quot;错误: 无法启用服务 $SERVICE_NAME。&quot; &gt;&amp;2  exit 1fi# 启动服务echo &quot;启动服务 $SERVICE_NAME...&quot;systemctl --user start &quot;$SERVICE_NAME&quot;if [ $? -ne 0 ]; then  echo &quot;错误: 无法启动服务 $SERVICE_NAME。&quot; &gt;&amp;2  exit 1fiecho &quot;服务 $SERVICE_NAME 已成功创建并启动。&quot;echo &quot;你现在可以使用以下命令管理服务:&quot;echo &quot;  systemctl --user status $SERVICE_NAME  # 查看服务状态&quot;echo &quot;  systemctl --user stop $SERVICE_NAME    # 停止服务&quot;echo &quot;  systemctl --user restart $SERVICE_NAME # 重启服务&quot;
-
-问题podman generate systemd在podman 4.4的时候就已经弃用了，目前推荐使用Quadlet
-引用
-使用 Podman 以非 root 用户身份运行 Linux 容器
-System and Service Manager
-Linux Systemd基础教程
-How to replace the “podman generate systemd” command since its deprecated
-
-]]></content>
-      <categories>
-        <category>后端</category>
-      </categories>
-      <tags>
-        <tag>podman</tag>
-        <tag>容器</tag>
-        <tag>systemd</tag>
       </tags>
   </entry>
   <entry>
@@ -1672,57 +1672,6 @@ GSS Data Store使用Podman部署问题：你提到在虚拟机上通过 Podman s
       </tags>
   </entry>
   <entry>
-    <title>为 Angular Material 应用添加完美深色模式支持</title>
-    <url>/2025/09/28/front-end/angular-material-perfect-dark-mode/</url>
-    <content><![CDATA[💡 为 Angular Material 应用添加完美深色模式支持深色模式（Dark Mode）是现代应用不可或缺的功能。它不仅能提升用户在低光环境下的舒适度，还能让应用看起来更专业、更时尚。
-如果你正在使用 Angular Material，实现深色模式可以非常优雅和高效。本文将分享我如何通过一个独立的 ThemePickerComponent，结合 Angular Signals 和 系统偏好检测，为我的应用添加深色模式的完整过程。
-🛠️ 核心思路概览我的深色模式解决方案基于以下几个关键机制：
-
-CSS 变量与 color-scheme: 利用 Angular Material 基于 CSS 变量的主题机制，并通过在 &lt;html&gt; 标签上切换 color-scheme 属性来控制主题。
-Angular Signals: 使用 signal() 存储和管理当前的主题模式 (&#39;light&#39; 或 &#39;dark&#39;)。
-持久化与偏好: 通过 localStorage 记住用户的选择，同时使用 window.matchMedia 监听用户操作系统的偏好设置。
-
-💻 关键代码解析与实现步骤1. 配置主题和 color-scheme (styles.scss)在全局样式文件中，我们确保应用能响应 color-scheme 变化，并设置 Material 主题。
-/* ui/src/styles.scss */@use &#x27;@angular/material&#x27; as mat;html, body &#123;  font-family: Roboto, &quot;Helvetica Neue&quot;, sans-serif;&#125;html &#123;  background-color: var(--mat-sys-surface);  color: var(--mat-sys-on-surface);  // ✨ 关键：允许浏览器知道页面支持两种颜色方案  color-scheme: light dark;  @include mat.theme((        color: (          // Material 会根据 color-scheme 自动应用 light/dark 调色板          primary: mat.$rose-palette,           tertiary: mat.$red-palette,      ),      typography: Roboto,      density: 0,  ));&#125;
-
-我们通过 background-color: var(--mat-sys-surface) 来使用 Material 系统级 CSS 变量，确保背景颜色随着主题切换而正确变化。
-2. ThemePickerComponent：主题切换器这是整个功能的核心。它负责初始化、监听和切换主题。
-A. HTML 模板：根据模式切换图标我们使用 mat-icon-button 和 @if 语法根据 mode() 的值显示太阳或月亮图标。
-&lt;button class=&quot;theme-button&quot; mat-icon-button    [matTooltip]=&quot;&#x27;Change Theme&#x27;&quot;    (click)=&quot;changeMode()&quot;  &gt;     @if (mode() === &#x27;dark&#x27;) &#123;       &lt;mat-icon&gt;dark_mode&lt;/mat-icon&gt;     &#125; @else &#123;       &lt;mat-icon&gt;light_mode&lt;/mat-icon&gt;     &#125;&lt;/button&gt;
-
-B. TypeScript 逻辑：Signals, Effects, 和持久化// ui/src/app/components/theme-picker/theme-picker.component.tsimport &#123; afterNextRender, Component, effect, inject, OnInit, Renderer2, signal &#125; from &#x27;@angular/core&#x27;;// ... 导入 MatButtonModule, MatIconModule, MatTooltipModule@Component(&#123;...&#125;)export class ThemePickerComponent implements OnInit &#123;  static storageKey = &#x27;batcher-ui-theme&#x27;;  mode = signal(&#x27;light&#x27;);  private renderer = inject(Renderer2);  constructor() &#123;    // 1. 响应式更新：当 mode() 变化时，更新 &lt;html&gt; 元素的 color-scheme    effect(() =&gt; &#123;      const mode = this.mode();      this.renderer.setStyle(document.documentElement, &#x27;color-scheme&#x27;, mode);    &#125;);    // 2. 初始化：客户端渲染后，加载存储或系统偏好    afterNextRender(() =&gt; &#123;      // 优先加载 localStorage 存储的模式，否则检测系统偏好      const systemPreference = window.matchMedia(&#x27;(prefers-color-scheme: dark)&#x27;).matches ? &#x27;dark&#x27; : &#x27;light&#x27;;      const storedMode = this.getStoredMode() || systemPreference;            if (storedMode) &#123;        this.mode.set(storedMode);      &#125;    &#125;);  &#125;  ngOnInit(): void &#123;    // 3. 实时监听：如果用户未设置过偏好，跟随系统主题的实时变化    window.matchMedia(&#x27;(prefers-color-scheme: dark)&#x27;).addEventListener(&#x27;change&#x27;, e =&gt; &#123;      const storedMode = this.getStoredMode();      if (!storedMode) &#123;        this.mode.set(e.matches ? &#x27;dark&#x27; : &#x27;light&#x27;);      &#125;    &#125;);  &#125;  changeMode(): void &#123;    const newMode = this.mode() === &#x27;light&#x27; ? &#x27;dark&#x27; : &#x27;light&#x27;;    this.mode.set(newMode);    this.storeMode(newMode);  &#125;  // 4. 持久化方法 (storeMode, getStoredMode)  storeMode(mode: string): void &#123;    try &#123;      localStorage.setItem(ThemePickerComponent.storageKey, mode);    &#125; catch &#123; /* ignore */ &#125;  &#125;  getStoredMode(): string | null &#123;    try &#123;      return localStorage.getItem(ThemePickerComponent.storageKey);    &#125; catch &#123; return null; &#125;  &#125;&#125;
-
-C. SCSS处理(可选)修改icon的颜色去适配material 3的配色
-.theme-button &#123;    color: var(--mat-primary);&#125;
-
-3. 集成到导航栏 (navigation.component.html)我们将 app-theme-picker 组件放置在应用导航栏（mat-toolbar）的右侧。
-&lt;mat-toolbar&gt;    &lt;div class=&quot;flex-grow-1&quot;&gt;&lt;/div&gt;    &lt;app-theme-picker class=&quot;theme-picker&quot;&gt;&lt;/app-theme-picker&gt;&lt;/mat-toolbar&gt;
-
-导航栏样式调整
-我们还调整了导航栏的背景色，使其使用更适合作为容器背景的 Material 系统变量。
-/* ui/src/app/components/navigation/navigation.component.scss */:host &#123;  color: var(--mat-sys-primary);  // 更改为使用 surface-container-low，这通常更适合作为页面/容器的背景  background: var(--mat-sys-surface-container-low);&#125;// ... 省略其他样式.flex-grow-1 &#123;  flex-grow: 1;&#125;
-
-
-✨ 总结通过上述实现，我们的 Angular Material 应用获得了：
-
-用户自定义: 用户可以随时通过点击按钮切换光亮&#x2F;深色模式。
-偏好记忆: 应用会记住用户的选择，即使重新打开浏览器也不会丢失。
-尊重系统设置: 如果用户从未手动切换过主题，应用会默认跟随操作系统的偏好设置。
-
-使用 Angular Signals 和 Effects 极大地简化了状态管理和响应式更新，让深色模式的实现既强大又简洁！
-🔗 完整的代码变更你可以查看这个 GitHub Commit 来了解所有相关的代码修改：
-fix(ui): add dark mode
-]]></content>
-      <categories>
-        <category>前端</category>
-      </categories>
-      <tags>
-        <tag>angular</tag>
-        <tag>angular material</tag>
-        <tag>dark mode</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>2026年5月8号面试总结</title>
     <url>/2026/05/08/front-end/2026-0508-interview/</url>
     <content><![CDATA[前言2026年5月8号有一场面试，是对方架构师来面试的我。总的来说，面试的效果不是很好。面试的岗位是前端岗位，但是问的很多是后端架构的设计，我认为我的准备不是很好，我需要继续努力补全自己。
@@ -1778,6 +1727,121 @@ MySQL | 事务隔离级别详解
       <tags>
         <tag>高级前端工程师</tag>
         <tag>面试</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>为 Angular Material 应用添加完美深色模式支持</title>
+    <url>/2025/09/28/front-end/angular-material-perfect-dark-mode/</url>
+    <content><![CDATA[💡 为 Angular Material 应用添加完美深色模式支持深色模式（Dark Mode）是现代应用不可或缺的功能。它不仅能提升用户在低光环境下的舒适度，还能让应用看起来更专业、更时尚。
+如果你正在使用 Angular Material，实现深色模式可以非常优雅和高效。本文将分享我如何通过一个独立的 ThemePickerComponent，结合 Angular Signals 和 系统偏好检测，为我的应用添加深色模式的完整过程。
+🛠️ 核心思路概览我的深色模式解决方案基于以下几个关键机制：
+
+CSS 变量与 color-scheme: 利用 Angular Material 基于 CSS 变量的主题机制，并通过在 &lt;html&gt; 标签上切换 color-scheme 属性来控制主题。
+Angular Signals: 使用 signal() 存储和管理当前的主题模式 (&#39;light&#39; 或 &#39;dark&#39;)。
+持久化与偏好: 通过 localStorage 记住用户的选择，同时使用 window.matchMedia 监听用户操作系统的偏好设置。
+
+💻 关键代码解析与实现步骤1. 配置主题和 color-scheme (styles.scss)在全局样式文件中，我们确保应用能响应 color-scheme 变化，并设置 Material 主题。
+/* ui/src/styles.scss */@use &#x27;@angular/material&#x27; as mat;html, body &#123;  font-family: Roboto, &quot;Helvetica Neue&quot;, sans-serif;&#125;html &#123;  background-color: var(--mat-sys-surface);  color: var(--mat-sys-on-surface);  // ✨ 关键：允许浏览器知道页面支持两种颜色方案  color-scheme: light dark;  @include mat.theme((        color: (          // Material 会根据 color-scheme 自动应用 light/dark 调色板          primary: mat.$rose-palette,           tertiary: mat.$red-palette,      ),      typography: Roboto,      density: 0,  ));&#125;
+
+我们通过 background-color: var(--mat-sys-surface) 来使用 Material 系统级 CSS 变量，确保背景颜色随着主题切换而正确变化。
+2. ThemePickerComponent：主题切换器这是整个功能的核心。它负责初始化、监听和切换主题。
+A. HTML 模板：根据模式切换图标我们使用 mat-icon-button 和 @if 语法根据 mode() 的值显示太阳或月亮图标。
+&lt;button class=&quot;theme-button&quot; mat-icon-button    [matTooltip]=&quot;&#x27;Change Theme&#x27;&quot;    (click)=&quot;changeMode()&quot;  &gt;     @if (mode() === &#x27;dark&#x27;) &#123;       &lt;mat-icon&gt;dark_mode&lt;/mat-icon&gt;     &#125; @else &#123;       &lt;mat-icon&gt;light_mode&lt;/mat-icon&gt;     &#125;&lt;/button&gt;
+
+B. TypeScript 逻辑：Signals, Effects, 和持久化// ui/src/app/components/theme-picker/theme-picker.component.tsimport &#123; afterNextRender, Component, effect, inject, OnInit, Renderer2, signal &#125; from &#x27;@angular/core&#x27;;// ... 导入 MatButtonModule, MatIconModule, MatTooltipModule@Component(&#123;...&#125;)export class ThemePickerComponent implements OnInit &#123;  static storageKey = &#x27;batcher-ui-theme&#x27;;  mode = signal(&#x27;light&#x27;);  private renderer = inject(Renderer2);  constructor() &#123;    // 1. 响应式更新：当 mode() 变化时，更新 &lt;html&gt; 元素的 color-scheme    effect(() =&gt; &#123;      const mode = this.mode();      this.renderer.setStyle(document.documentElement, &#x27;color-scheme&#x27;, mode);    &#125;);    // 2. 初始化：客户端渲染后，加载存储或系统偏好    afterNextRender(() =&gt; &#123;      // 优先加载 localStorage 存储的模式，否则检测系统偏好      const systemPreference = window.matchMedia(&#x27;(prefers-color-scheme: dark)&#x27;).matches ? &#x27;dark&#x27; : &#x27;light&#x27;;      const storedMode = this.getStoredMode() || systemPreference;            if (storedMode) &#123;        this.mode.set(storedMode);      &#125;    &#125;);  &#125;  ngOnInit(): void &#123;    // 3. 实时监听：如果用户未设置过偏好，跟随系统主题的实时变化    window.matchMedia(&#x27;(prefers-color-scheme: dark)&#x27;).addEventListener(&#x27;change&#x27;, e =&gt; &#123;      const storedMode = this.getStoredMode();      if (!storedMode) &#123;        this.mode.set(e.matches ? &#x27;dark&#x27; : &#x27;light&#x27;);      &#125;    &#125;);  &#125;  changeMode(): void &#123;    const newMode = this.mode() === &#x27;light&#x27; ? &#x27;dark&#x27; : &#x27;light&#x27;;    this.mode.set(newMode);    this.storeMode(newMode);  &#125;  // 4. 持久化方法 (storeMode, getStoredMode)  storeMode(mode: string): void &#123;    try &#123;      localStorage.setItem(ThemePickerComponent.storageKey, mode);    &#125; catch &#123; /* ignore */ &#125;  &#125;  getStoredMode(): string | null &#123;    try &#123;      return localStorage.getItem(ThemePickerComponent.storageKey);    &#125; catch &#123; return null; &#125;  &#125;&#125;
+
+C. SCSS处理(可选)修改icon的颜色去适配material 3的配色
+.theme-button &#123;    color: var(--mat-primary);&#125;
+
+3. 集成到导航栏 (navigation.component.html)我们将 app-theme-picker 组件放置在应用导航栏（mat-toolbar）的右侧。
+&lt;mat-toolbar&gt;    &lt;div class=&quot;flex-grow-1&quot;&gt;&lt;/div&gt;    &lt;app-theme-picker class=&quot;theme-picker&quot;&gt;&lt;/app-theme-picker&gt;&lt;/mat-toolbar&gt;
+
+导航栏样式调整
+我们还调整了导航栏的背景色，使其使用更适合作为容器背景的 Material 系统变量。
+/* ui/src/app/components/navigation/navigation.component.scss */:host &#123;  color: var(--mat-sys-primary);  // 更改为使用 surface-container-low，这通常更适合作为页面/容器的背景  background: var(--mat-sys-surface-container-low);&#125;// ... 省略其他样式.flex-grow-1 &#123;  flex-grow: 1;&#125;
+
+
+✨ 总结通过上述实现，我们的 Angular Material 应用获得了：
+
+用户自定义: 用户可以随时通过点击按钮切换光亮&#x2F;深色模式。
+偏好记忆: 应用会记住用户的选择，即使重新打开浏览器也不会丢失。
+尊重系统设置: 如果用户从未手动切换过主题，应用会默认跟随操作系统的偏好设置。
+
+使用 Angular Signals 和 Effects 极大地简化了状态管理和响应式更新，让深色模式的实现既强大又简洁！
+🔗 完整的代码变更你可以查看这个 GitHub Commit 来了解所有相关的代码修改：
+fix(ui): add dark mode
+]]></content>
+      <categories>
+        <category>前端</category>
+      </categories>
+      <tags>
+        <tag>angular</tag>
+        <tag>angular material</tag>
+        <tag>dark mode</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Angular独立组件简单体验</title>
+    <url>/2022/06/09/front-end/angular-standalone-components-app/</url>
+    <content><![CDATA[Angular独立组件简单体验前言Angular 14一项令人兴奋的特性就是Angular的独立组件终于来了。
+在Angular 14中， 开发者可以尝试使用独立组件开发各种组件，但是值得注意的是Angular独立组件的API仍然没有稳定下，将来可能存在一些破坏性更新，所以不推荐在生产环境中使用。
+如何创建一个独立组件对于已有的组件，我们可以在@Component()中添加standalone: true的标识，然后我们可以在没有@NgModule()的情况下直接使用imports导入其他模块了。如果是新建组件，可以使用ng generate component &lt;name&gt; --standalone的命令，直接创建一个独立组件, 例如：
+ng generate component button-list --standalone
+
+@Component(&#123;  selector: &#x27;app-button-list&#x27;,  standalone: true,  imports: [    CommonModule,  ],  templateUrl: &#x27;./button-list.component.html&#x27;,  styleUrls: [&#x27;./button-list.component.scss&#x27;]&#125;)export class ButtonListComponent implements OnInit
+
+在独立组件中导入已有的模块我们可以在imports中添加已有的模块，以MatButtonModule为例：
+imports: [    CommonModule,    MatButtonModule,],
+
+这样子我们就可以在ButtonListComponent中使用MatButtonModule的mat-button组件了：
+&lt;button mat-button&gt;Basic&lt;/button&gt;&lt;button mat-button color=&quot;primary&quot;&gt;Primary&lt;/button&gt;&lt;button mat-button color=&quot;accent&quot;&gt;Accent&lt;/button&gt;&lt;button mat-button color=&quot;warn&quot;&gt;Warn&lt;/button&gt;&lt;button mat-button disabled&gt;Disabled&lt;/button&gt;&lt;a mat-button href=&quot;https://damingerdai.github.io&quot; target=&quot;_blank&quot;&gt;Link&lt;/a&gt;
+
+效果图：
+
+使用独立组件启动Angular应用第一步， 将AppComponent设置为独立组件：
+@Component(&#123;  selector: &#x27;app-root&#x27;,  templateUrl: &#x27;./app.component.html&#x27;,  styleUrls: [&#x27;./app.component.scss&#x27;],  standalone: true,&#125;)export class AppComponent &#123;    ...&#125;
+
+第二步，将AppModule的imports中的导入的模块加入到AppComponent的imports中,但是有两个模块例外： BrowserModule和BrowserAnimationsModule。
+如果导入的话，可能会导致** BrowserModule have already been loaded. If you need access to common directives such as NgIf and NgFor, import the CommonModule instead.**的问题：
+
+第三步，删除app.module.ts文件
+最后一步， 将main.ts中的：
+import &#123; platformBrowserDynamic &#125; from &#x27;@angular/platform-browser-dynamic&#x27;;platformBrowserDynamic().bootstrapModule(AppModule)  .catch(err =&gt; console.error(err));
+
+改为：
+bootstrapApplication(AppComponent).catch(err =&gt; console.error(err));
+
+这样子我们就实现了使用独立组件启动Angular组件了。
+为独立组件配置路由我这里分别有三个独立组件： HomeComponent, ButtonListComponent 和 ChipListComponent，
+然后在main.ts中创建ROUTES对象
+const ROUTES: Route[] = [  &#123;    path: &#x27;&#x27;,    pathMatch: &#x27;full&#x27;,    redirectTo: &#x27;home&#x27;  &#125;,  &#123;    path: &#x27;home&#x27;,    component: HomeComponent  &#125;,  &#123;    path: &#x27;button&#x27;,    loadComponent: () =&gt;      import(&#x27;./app/button-list/button-list.component&#x27;).then(        (mod) =&gt; mod.ButtonListComponent      ),  &#125;,  &#123;    path: &#x27;chip&#x27;,    loadComponent: () =&gt;      import(&#x27;./app/chip-list/chip-list.component&#x27;).then(        (mod) =&gt; mod.ChipListComponent      ),  &#125;,];
+
+其中ButtonListComponent和ChipListComponent使用loadComponent去实现路由懒加载。
+最后在bootstrapApplication的第二个参数中使用providers注册RouterModule好了。
+bootstrapApplication(AppComponent, &#123;  providers: [    importProvidersFrom(RouterModule.forRoot([...ROUTES])),  ],&#125;).catch(err =&gt; console.error(err));
+
+效果图：
+
+配置依赖注入当我们想要启动Angular应用的时候，可能需要注入一些值或者服务。 在bootstrapApplication, 我们可以通过providers来注册值或者服务。
+比如，我有一个获取图片的url，需要注入到PhotoService中：
+bootstrapApplication(AppComponent, &#123;  providers: [    &#123;      provide: &#x27;photoUrl&#x27;,      useValue: &#x27;https://picsum.photos&#x27;,    &#125;,    &#123;provide: PhotosService, useClass: PhotosService &#125;,    importProvidersFrom(RouterModule.forRoot([...ROUTES])),    importProvidersFrom(HttpClientModule)  ],&#125;)
+
+PhotoService代码如下：
+@Injectable()export class PhotosService &#123;  constructor(    @Inject(&#x27;photoUrl&#x27;) private photoUrl: string,    private http: HttpClient  ) &#123; &#125;  public getPhotoUrl(i: number): string &#123;    return `$&#123;this.photoUrl&#125;/200/300?random=$&#123;i&#125;`;  &#125;&#125;
+
+源代码本文所使用的源代码
+线上demo
+参考资料
+Angular v14 is now available!
+Getting started with standalone components
+Angular Material
+
+]]></content>
+      <categories>
+        <category>前端</category>
+      </categories>
+      <tags>
+        <tag>angular</tag>
       </tags>
   </entry>
   <entry>
@@ -1973,70 +2037,6 @@ Sprint 周期：通常为 1 到 4 周，2 周为常见做法。
       </tags>
   </entry>
   <entry>
-    <title>Angular独立组件简单体验</title>
-    <url>/2022/06/09/front-end/angular-standalone-components-app/</url>
-    <content><![CDATA[Angular独立组件简单体验前言Angular 14一项令人兴奋的特性就是Angular的独立组件终于来了。
-在Angular 14中， 开发者可以尝试使用独立组件开发各种组件，但是值得注意的是Angular独立组件的API仍然没有稳定下，将来可能存在一些破坏性更新，所以不推荐在生产环境中使用。
-如何创建一个独立组件对于已有的组件，我们可以在@Component()中添加standalone: true的标识，然后我们可以在没有@NgModule()的情况下直接使用imports导入其他模块了。如果是新建组件，可以使用ng generate component &lt;name&gt; --standalone的命令，直接创建一个独立组件, 例如：
-ng generate component button-list --standalone
-
-@Component(&#123;  selector: &#x27;app-button-list&#x27;,  standalone: true,  imports: [    CommonModule,  ],  templateUrl: &#x27;./button-list.component.html&#x27;,  styleUrls: [&#x27;./button-list.component.scss&#x27;]&#125;)export class ButtonListComponent implements OnInit
-
-在独立组件中导入已有的模块我们可以在imports中添加已有的模块，以MatButtonModule为例：
-imports: [    CommonModule,    MatButtonModule,],
-
-这样子我们就可以在ButtonListComponent中使用MatButtonModule的mat-button组件了：
-&lt;button mat-button&gt;Basic&lt;/button&gt;&lt;button mat-button color=&quot;primary&quot;&gt;Primary&lt;/button&gt;&lt;button mat-button color=&quot;accent&quot;&gt;Accent&lt;/button&gt;&lt;button mat-button color=&quot;warn&quot;&gt;Warn&lt;/button&gt;&lt;button mat-button disabled&gt;Disabled&lt;/button&gt;&lt;a mat-button href=&quot;https://damingerdai.github.io&quot; target=&quot;_blank&quot;&gt;Link&lt;/a&gt;
-
-效果图：
-
-使用独立组件启动Angular应用第一步， 将AppComponent设置为独立组件：
-@Component(&#123;  selector: &#x27;app-root&#x27;,  templateUrl: &#x27;./app.component.html&#x27;,  styleUrls: [&#x27;./app.component.scss&#x27;],  standalone: true,&#125;)export class AppComponent &#123;    ...&#125;
-
-第二步，将AppModule的imports中的导入的模块加入到AppComponent的imports中,但是有两个模块例外： BrowserModule和BrowserAnimationsModule。
-如果导入的话，可能会导致** BrowserModule have already been loaded. If you need access to common directives such as NgIf and NgFor, import the CommonModule instead.**的问题：
-
-第三步，删除app.module.ts文件
-最后一步， 将main.ts中的：
-import &#123; platformBrowserDynamic &#125; from &#x27;@angular/platform-browser-dynamic&#x27;;platformBrowserDynamic().bootstrapModule(AppModule)  .catch(err =&gt; console.error(err));
-
-改为：
-bootstrapApplication(AppComponent).catch(err =&gt; console.error(err));
-
-这样子我们就实现了使用独立组件启动Angular组件了。
-为独立组件配置路由我这里分别有三个独立组件： HomeComponent, ButtonListComponent 和 ChipListComponent，
-然后在main.ts中创建ROUTES对象
-const ROUTES: Route[] = [  &#123;    path: &#x27;&#x27;,    pathMatch: &#x27;full&#x27;,    redirectTo: &#x27;home&#x27;  &#125;,  &#123;    path: &#x27;home&#x27;,    component: HomeComponent  &#125;,  &#123;    path: &#x27;button&#x27;,    loadComponent: () =&gt;      import(&#x27;./app/button-list/button-list.component&#x27;).then(        (mod) =&gt; mod.ButtonListComponent      ),  &#125;,  &#123;    path: &#x27;chip&#x27;,    loadComponent: () =&gt;      import(&#x27;./app/chip-list/chip-list.component&#x27;).then(        (mod) =&gt; mod.ChipListComponent      ),  &#125;,];
-
-其中ButtonListComponent和ChipListComponent使用loadComponent去实现路由懒加载。
-最后在bootstrapApplication的第二个参数中使用providers注册RouterModule好了。
-bootstrapApplication(AppComponent, &#123;  providers: [    importProvidersFrom(RouterModule.forRoot([...ROUTES])),  ],&#125;).catch(err =&gt; console.error(err));
-
-效果图：
-
-配置依赖注入当我们想要启动Angular应用的时候，可能需要注入一些值或者服务。 在bootstrapApplication, 我们可以通过providers来注册值或者服务。
-比如，我有一个获取图片的url，需要注入到PhotoService中：
-bootstrapApplication(AppComponent, &#123;  providers: [    &#123;      provide: &#x27;photoUrl&#x27;,      useValue: &#x27;https://picsum.photos&#x27;,    &#125;,    &#123;provide: PhotosService, useClass: PhotosService &#125;,    importProvidersFrom(RouterModule.forRoot([...ROUTES])),    importProvidersFrom(HttpClientModule)  ],&#125;)
-
-PhotoService代码如下：
-@Injectable()export class PhotosService &#123;  constructor(    @Inject(&#x27;photoUrl&#x27;) private photoUrl: string,    private http: HttpClient  ) &#123; &#125;  public getPhotoUrl(i: number): string &#123;    return `$&#123;this.photoUrl&#125;/200/300?random=$&#123;i&#125;`;  &#125;&#125;
-
-源代码本文所使用的源代码
-线上demo
-参考资料
-Angular v14 is now available!
-Getting started with standalone components
-Angular Material
-
-]]></content>
-      <categories>
-        <category>前端</category>
-      </categories>
-      <tags>
-        <tag>angular</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>在windows上构建angular项目(上)</title>
     <url>/2021/05/13/front-end/build-angular-on-windows-01/</url>
     <content><![CDATA[在windows上构建angular项目 (上)前端三大框架( angular, reac, vue )中，angular一直都是一个很独特的存在。首先，angular的概念很多，服务、依赖注入、模块，指令等，都是在前端圈不是很常用的，此外，angular使用了bazel作为构建工具，而react和vue都是使用了rollup，因此在本地编译构建angular将会远远超过react和vue，如果你是用的windows平台，那么一个个坑需要自己慢慢来填。。。
@@ -2228,85 +2228,6 @@ document.documentElement.style.setProperty(&#x27;--primary-color&#x27;, &#x27;#e
       <tags>
         <tag>面试</tag>
         <tag>css</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>如何使用bazel去构建基于express和typescript的nodejs项目</title>
-    <url>/2023/08/10/front-end/how-to-use-bazel-to-build-nodejs-typescript-expressjs/</url>
-    <content><![CDATA[前言Bazel 是一款类似于 Make、Maven 和 Gradle的开源构建和测试工具。它使用可读的高级构建语言，支持多种变成语言编写的项目，并且能够为多个平台进行构建。Bazel 支持构建包含多个仓库、大量开发人员的大型代码库。
-详细介绍可见Bazel官网。
-目的本文的目的是使用bazel5去构建一个完整的nodejs后端项目，并不负责bazel相关知识的介绍。
-配置首先在package.json文件中·devDependencies·部分添加：
-&quot;@bazel/bazelisk&quot;: &quot;^1.7.5&quot;,&quot;@bazel/buildifier&quot;: &quot;^6.0.0&quot;,&quot;@bazel/ibazel&quot;: &quot;^0.16.0&quot;,&quot;@bazel/typescript&quot;: &quot;^5.8.1&quot;,
-
-然后再执行安装依赖命令。
-创建.bazelignore文件并写入下面的内容:
-.gitnode_modulesdist
-
-创建.bazelrc文件并写入下面的内容:
-# Enable debugging tests with --config=debugtest:debug --test_arg=--node_options=--inspect-brk --test_output=streamed --test_strategy=exclusive --test_timeout=9999 --nocache_test_results# Do not attempt to de-flake locally.# On CI we might set this to `3` to run with deflaking.test --flaky_test_attempts=1################################ Filesystem interactions     ################################# Create symlinks in the project:# - dist/bin for outputs# - dist/testlogs, dist/genfiles# - bazel-out# NB: bazel-out should be excluded from the editor configuration.# The checked-in /.vscode/settings.json does this for VSCode.# Other editors may require manual config to ignore this directory.# In the past, we say a problem where VSCode traversed a massive tree, opening file handles and# eventually a surprising failure with auto-discovery of the C++ toolchain in# MacOS High Sierra.# See https://github.com/bazelbuild/bazel/issues/4603build --symlink_prefix=dist/# Turn off legacy external runfilesbuild --nolegacy_external_runfilesrun --nolegacy_external_runfilestest --nolegacy_external_runfiles# Turn on --incompatible_strict_action_env which was on by default# in Bazel 0.21.0 but turned off again in 0.22.0. Follow# https://github.com/bazelbuild/bazel/issues/7026 for more details.# This flag is needed to so that the bazel cache is not invalidated# when running bazel via `yarn bazel`.# See https://github.com/angular/angular/issues/27514.build --incompatible_strict_action_envrun --incompatible_strict_action_envtest --incompatible_strict_action_env# Do not build runfile trees by default. If an execution strategy relies on runfile# symlink teee, the tree is created on-demand. See: https://github.com/bazelbuild/bazel/issues/6627# and https://github.com/bazelbuild/bazel/commit/03246077f948f2790a83520e7dccc2625650e6dfbuild --nobuild_runfile_linksbuild --enable_runfiles################################ Release support             ## Turn on these settings with ##  --config=release           ################################# Releases should always be stamped with version control info# This command assumes node on the path and is a workaround for# https://github.com/bazelbuild/bazel/issues/4802build:release --workspace_status_command=&quot;yarn -s ng-dev release build-env-stamp --mode=release&quot;build:release --stamp# Building AIO against local Angular deps requires stamping# versions in Angular packages due to CLI version checks.build:aio_local_deps --stampbuild:aio_local_deps --workspace_status_command=&quot;yarn -s --cwd aio local-workspace-status&quot;# Snapshots should also be stamped with version control information.build:snapshot-build --workspace_status_command=&quot;yarn -s ng-dev release build-env-stamp --mode=snapshot&quot;build:snapshot-build --stamp########################################################### AIO architect build configuration                      ## See aio/angular.json for available configurations.     ## To build with a partiular configuration:               ##   bazel build //aio:build --aio_build_config=&lt;config&gt;  ## Default config is `stable``.                           ###########################################################build --flag_alias=aio_build_config=//aio:flag_aio_build_config##################################### AIO first party dep substitution ## Turn on with                     ##  --config=aio_local_deps         #####################################build:aio_local_deps --//aio:flag_aio_local_deps################################ Output                      ################################# A more useful default output mode for bazel query# Prints eg. &quot;ng_module rule //foo:bar&quot; rather than just &quot;//foo:bar&quot;query --output=label_kind# By default, failing tests don&#x27;t print any output, it goes to the log filetest --test_output=errors################################# Settings for CircleCI        ################################## Bazel flags for CircleCI are in /.circleci/bazel.linux.rc and /.circleci/bazel.windows.rc################################### Remote Build Execution support ## Turn on these settings with    ##  --config=remote               #################################### The following --define=EXECUTOR=remote will be able to be removed# once https://github.com/bazelbuild/bazel/issues/7254 is fixedbuild:remote --define=EXECUTOR=remote# Set a higher timeout value, just in case.build:remote --remote_timeout=600# Bazel detects maximum number of jobs based on host resources.# Since we run remotely, we can increase this number significantly.common:remote --jobs=200build:remote --google_default_credentials# Limit the number of test jobs for on an AIO local deps build. The example tests running# concurrently pushes the circleci executor RAM usage to its limits.test:aio_local_deps --jobs=24# Force remote exeuctions to consider the entire run as linuxbuild:remote --cpu=k8build:remote --host_cpu=k8# Toolchain and platform related flagsbuild:remote --crosstool_top=@npm//@angular/build-tooling/bazel/remote-execution/cpp:cc_toolchain_suitebuild:remote --extra_toolchains=@npm//@angular/build-tooling/bazel/remote-execution/cpp:cc_toolchainbuild:remote --extra_execution_platforms=@npm//@angular/build-tooling/bazel/remote-execution:platformbuild:remote --host_platform=@npm//@angular/build-tooling/bazel/remote-execution:platformbuild:remote --platforms=@npm//@angular/build-tooling/bazel/remote-execution:platform# Remote instance and cachingbuild:remote --remote_instance_name=projects/internal-200822/instances/primary_instancebuild:remote --project_id=internal-200822build:remote --remote_cache=remotebuildexecution.googleapis.combuild:remote --remote_executor=remotebuildexecution.googleapis.com# Use HTTP remote cachebuild:remote-cache --remote_cache=https://storage.googleapis.com/angular-team-cachebuild:remote-cache --remote_accept_cached=truebuild:remote-cache --remote_upload_local_results=truebuild:remote-cache --google_default_credentials# Ensure that tags like &quot;no-remote-exec&quot; get propagated to actions created by rules,# even if the rule implementation does not explicitly pass them to the execution requirements.# https://bazel.build/reference/command-line-reference#flag--experimental_allow_tags_propagationcommon --experimental_allow_tags_propagation# Disable network access in the sandbox by default. To enable network access# for a particular target, use:## load(&quot;@npm//@angular/build-tooling/bazel/remote-execution:index.bzl&quot;, &quot;ENABLE_NETWORK&quot;)# my_target(#   ...,#   exec_properties = ENABLE_NETWORK,   # Enables network in remote exec#   tags = [&quot;requires-network&quot;]         # Enables network in sandbox# )build --nosandbox_default_allow_network################################### Saucelabs tests settings       ## Turn on these settings with    ##  --config=saucelabs            #################################### For saucelabs tests we don&#x27;t want to enable flaky test attempts. Karma has its own integrated# retry mechanism and we do not want to retry unnecessarily if Karma already tried multiple times.test:saucelabs --flaky_test_attempts=1################# Flag Aliases ################## --ng_perf will ask the Ivy compiler to produce performance results for each build.build --flag_alias=ng_perf=//packages/compiler-cli:ng_perf##################################################### User bazel configuration# NOTE: This needs to be the *last* entry in the config.##################################################### Load any settings which are specific to the current user. Needs to be *last* statement# in this config, as the user configuration should be able to overwrite flags from this file.try-import %workspace%/.bazelrc.user
-
-创建.bazelversion用于指定bazel版本：
-5.0.0
-
-
-可以使用bazel5的任意版本，理论上都支持，但是不要使用bazel6的版本
-
-新建WORKSPACE用于定义bazel的工作区：
-workspace(   name = &quot;express-postgres-ts-starter&quot;,    managed_directories = &#123;        &quot;@npm&quot;: [&quot;node_modules&quot;],    &#125;,)
-
-导入http_archive用于获取bazel的库：
-load(&quot;@bazel_tools//tools/build_defs/repo:http.bzl&quot;, &quot;http_archive&quot;)
-
-如果使用了.yarn文件夹用于限制yarn的版本，可以通过创建yarn.bzl解决：
-YARN_PATH = &quot;.yarn/releases/yarn-1.22.19.cjs&quot;YARN_LABEL = &quot;//:&quot; + YARN_PATH
-
-然后在WORKSPACE导入：
-load(&quot;//:yarn.bzl&quot;, &quot;YARN_LABEL&quot;)
-
-引入bazel的nodesj依赖库：
-http_archive(    name = &quot;build_bazel_rules_nodejs&quot;,    sha256 = &quot;5dd1e5dea1322174c57d3ca7b899da381d516220793d0adef3ba03b9d23baa8e&quot;,    urls = [        &quot;https://github.com/bazelbuild/rules_nodejs/releases/download/5.8.3/rules_nodejs-5.8.3.tar.gz&quot;,        &quot;https://ghproxy.com/https://github.com/bazelbuild/rules_nodejs/releases/download/5.8.3/rules_nodejs-5.8.3.tar.gz&quot;    ],)load(&quot;@build_bazel_rules_nodejs//:repositories.bzl&quot;, &quot;build_bazel_rules_nodejs_dependencies&quot;)build_bazel_rules_nodejs_dependencies()http_archive(    name = &quot;rules_pkg&quot;,    sha256 = &quot;62eeb544ff1ef41d786e329e1536c1d541bb9bcad27ae984d57f18f314018e66&quot;,    urls = [        &quot;https://mirror.bazel.build/github.com/bazelbuild/rules_pkg/releases/download/0.6.0/rules_pkg-0.6.0.tar.gz&quot;,        &quot;https://github.com/bazelbuild/rules_pkg/releases/download/0.6.0/rules_pkg-0.6.0.tar.gz&quot;,        &quot;https://ghproxy.com/https://github.com/bazelbuild/rules_pkg/releases/download/0.6.0/rules_pkg-0.6.0.tar.gz&quot;,    ],)# Fetch Aspect lib for utilities like write_source_files# NOTE: We cannot move past version 1.23.2 of aspect_bazel_lib because it requires us to move to bazel 6.0.0 which#       breaks our usage of managed_directorieshttp_archive(    name = &quot;aspect_bazel_lib&quot;,    sha256 = &quot;4b2e774387bae6242879820086b7b738d49bf3d0659522ea5d9363be01a27582&quot;,    strip_prefix = &quot;bazel-lib-1.23.2&quot;,    urls = [        &quot;https://github.com/aspect-build/bazel-lib/archive/refs/tags/v1.23.2.tar.gz&quot;,        &quot;https://ghproxy.com/https://github.com/aspect-build/bazel-lib/archive/refs/tags/v1.23.2.tar.gz&quot;,    ])
-
-配置nodejs工具链：
-load(&quot;@rules_nodejs//nodejs:repositories.bzl&quot;, &quot;nodejs_register_toolchains&quot;)nodejs_register_toolchains(    name = &quot;nodejs&quot;,    node_version = &quot;18.10.0&quot;,)
-
-
-在arm mac上不支持nodejs20的版本，不确定其他平台时候是否支持nodejs20
-
-配置yarn_install下载依赖：
-load(&quot;@build_bazel_rules_nodejs//:index.bzl&quot;, &quot;yarn_install&quot;)yarn_install(    name = &quot;npm&quot;,		data = [        YARN_LABEL,        &quot;//:.yarnrc&quot;,				&quot;//:patches/trim-newlines+5.0.0.patch&quot;		],		exports_directories_only = False,		symlink_node_modules = True,    package_json = &quot;//:package.json&quot;,		yarn = YARN_LABEL,    yarn_lock = &quot;//:yarn.lock&quot;,)
-
-创建BUILD.bazel, 并定义为公开的:
-package(default_visibility = [&quot;//visibility:public&quot;])
-
-导入ts_project和nodejs_binary用于构建typescript和nodejs：
-load(&quot;@npm//@bazel/typescript:index.bzl&quot;, &quot;ts_project&quot;)load(&quot;@build_bazel_rules_nodejs//:index.bzl&quot;, &quot;nodejs_binary&quot;)
-
-定义SRCS变量用于声明所有需要参与编译的ts文件：
-SRCS = glob(	[		&quot;src/**/*.ts&quot;,	],	exclude = [		&quot;src/**/*.spec.ts&quot;	])
-
-使用ts_project将ts编译成js：
-ts_project(    name = &quot;server-ts&quot;,    srcs = [&quot;server.ts&quot; ] + SRCS,    resolve_json_module = True,    source_map = True,    tsconfig = &quot;//:tsconfig.json&quot;,    visibility = [&quot;//visibility:public&quot;],    deps = [        &quot;@npm//@apollo/server&quot;,        &quot;@npm//@graphql-tools/merge&quot;,        &quot;@npm//body-parser&quot;,        &quot;@npm//compression&quot;,        &quot;@npm//cookie-parser&quot;,        &quot;@npm//dotenv&quot;,        &quot;@npm//exceljs&quot;,        &quot;@npm//express&quot;,        &quot;@npm//express-fileupload&quot;,        &quot;@npm//express-joi-validation&quot;,        &quot;@npm//express-session&quot;,        &quot;@npm//graphql&quot;,        &quot;@npm//graphql-tag&quot;,        &quot;@npm//helmet&quot;,        &quot;@npm//joi&quot;,        &quot;@npm//jsonwebtoken&quot;,        &quot;@npm//knex&quot;,        &quot;@npm//lodash&quot;,        &quot;@npm//minio&quot;,        &quot;@npm//morgan&quot;,        &quot;@npm//pg&quot;,        &quot;@npm//pg-boss&quot;,        &quot;@npm//redis&quot;,        &quot;@npm//socket.io&quot;,        &quot;@npm//winston&quot;,        &quot;@npm//@types/express&quot;,        &quot;@npm//@types/express-fileupload&quot;,        &quot;@npm//@types/express-session&quot;,        &quot;@npm//@types/jest&quot;,        &quot;@npm//@types/node&quot;,    ])
-
-现在可以编译了：
-yarn bazel build //... 
-
-最后可以在dist/bin看到一个server.js, 我们可以通过执行node dist/bin/server.js运行我们的nodejs项目了。
-参考
-Bazel官网
-Bazel 学习笔记 (一) 快速开始
-使用Bazel编译TypeScript
-angular
-feat: add bazel support
-
-]]></content>
-      <categories>
-        <category>前端</category>
-      </categories>
-      <tags>
-        <tag>bazel</tag>
-        <tag>typescript</tag>
-        <tag>nodejs</tag>
       </tags>
   </entry>
   <entry>
@@ -2525,6 +2446,85 @@ React Fiber 调度
         <tag>白屏</tag>
         <tag>优化</tag>
         <tag>复盘</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>如何使用bazel去构建基于express和typescript的nodejs项目</title>
+    <url>/2023/08/10/front-end/how-to-use-bazel-to-build-nodejs-typescript-expressjs/</url>
+    <content><![CDATA[前言Bazel 是一款类似于 Make、Maven 和 Gradle的开源构建和测试工具。它使用可读的高级构建语言，支持多种变成语言编写的项目，并且能够为多个平台进行构建。Bazel 支持构建包含多个仓库、大量开发人员的大型代码库。
+详细介绍可见Bazel官网。
+目的本文的目的是使用bazel5去构建一个完整的nodejs后端项目，并不负责bazel相关知识的介绍。
+配置首先在package.json文件中·devDependencies·部分添加：
+&quot;@bazel/bazelisk&quot;: &quot;^1.7.5&quot;,&quot;@bazel/buildifier&quot;: &quot;^6.0.0&quot;,&quot;@bazel/ibazel&quot;: &quot;^0.16.0&quot;,&quot;@bazel/typescript&quot;: &quot;^5.8.1&quot;,
+
+然后再执行安装依赖命令。
+创建.bazelignore文件并写入下面的内容:
+.gitnode_modulesdist
+
+创建.bazelrc文件并写入下面的内容:
+# Enable debugging tests with --config=debugtest:debug --test_arg=--node_options=--inspect-brk --test_output=streamed --test_strategy=exclusive --test_timeout=9999 --nocache_test_results# Do not attempt to de-flake locally.# On CI we might set this to `3` to run with deflaking.test --flaky_test_attempts=1################################ Filesystem interactions     ################################# Create symlinks in the project:# - dist/bin for outputs# - dist/testlogs, dist/genfiles# - bazel-out# NB: bazel-out should be excluded from the editor configuration.# The checked-in /.vscode/settings.json does this for VSCode.# Other editors may require manual config to ignore this directory.# In the past, we say a problem where VSCode traversed a massive tree, opening file handles and# eventually a surprising failure with auto-discovery of the C++ toolchain in# MacOS High Sierra.# See https://github.com/bazelbuild/bazel/issues/4603build --symlink_prefix=dist/# Turn off legacy external runfilesbuild --nolegacy_external_runfilesrun --nolegacy_external_runfilestest --nolegacy_external_runfiles# Turn on --incompatible_strict_action_env which was on by default# in Bazel 0.21.0 but turned off again in 0.22.0. Follow# https://github.com/bazelbuild/bazel/issues/7026 for more details.# This flag is needed to so that the bazel cache is not invalidated# when running bazel via `yarn bazel`.# See https://github.com/angular/angular/issues/27514.build --incompatible_strict_action_envrun --incompatible_strict_action_envtest --incompatible_strict_action_env# Do not build runfile trees by default. If an execution strategy relies on runfile# symlink teee, the tree is created on-demand. See: https://github.com/bazelbuild/bazel/issues/6627# and https://github.com/bazelbuild/bazel/commit/03246077f948f2790a83520e7dccc2625650e6dfbuild --nobuild_runfile_linksbuild --enable_runfiles################################ Release support             ## Turn on these settings with ##  --config=release           ################################# Releases should always be stamped with version control info# This command assumes node on the path and is a workaround for# https://github.com/bazelbuild/bazel/issues/4802build:release --workspace_status_command=&quot;yarn -s ng-dev release build-env-stamp --mode=release&quot;build:release --stamp# Building AIO against local Angular deps requires stamping# versions in Angular packages due to CLI version checks.build:aio_local_deps --stampbuild:aio_local_deps --workspace_status_command=&quot;yarn -s --cwd aio local-workspace-status&quot;# Snapshots should also be stamped with version control information.build:snapshot-build --workspace_status_command=&quot;yarn -s ng-dev release build-env-stamp --mode=snapshot&quot;build:snapshot-build --stamp########################################################### AIO architect build configuration                      ## See aio/angular.json for available configurations.     ## To build with a partiular configuration:               ##   bazel build //aio:build --aio_build_config=&lt;config&gt;  ## Default config is `stable``.                           ###########################################################build --flag_alias=aio_build_config=//aio:flag_aio_build_config##################################### AIO first party dep substitution ## Turn on with                     ##  --config=aio_local_deps         #####################################build:aio_local_deps --//aio:flag_aio_local_deps################################ Output                      ################################# A more useful default output mode for bazel query# Prints eg. &quot;ng_module rule //foo:bar&quot; rather than just &quot;//foo:bar&quot;query --output=label_kind# By default, failing tests don&#x27;t print any output, it goes to the log filetest --test_output=errors################################# Settings for CircleCI        ################################## Bazel flags for CircleCI are in /.circleci/bazel.linux.rc and /.circleci/bazel.windows.rc################################### Remote Build Execution support ## Turn on these settings with    ##  --config=remote               #################################### The following --define=EXECUTOR=remote will be able to be removed# once https://github.com/bazelbuild/bazel/issues/7254 is fixedbuild:remote --define=EXECUTOR=remote# Set a higher timeout value, just in case.build:remote --remote_timeout=600# Bazel detects maximum number of jobs based on host resources.# Since we run remotely, we can increase this number significantly.common:remote --jobs=200build:remote --google_default_credentials# Limit the number of test jobs for on an AIO local deps build. The example tests running# concurrently pushes the circleci executor RAM usage to its limits.test:aio_local_deps --jobs=24# Force remote exeuctions to consider the entire run as linuxbuild:remote --cpu=k8build:remote --host_cpu=k8# Toolchain and platform related flagsbuild:remote --crosstool_top=@npm//@angular/build-tooling/bazel/remote-execution/cpp:cc_toolchain_suitebuild:remote --extra_toolchains=@npm//@angular/build-tooling/bazel/remote-execution/cpp:cc_toolchainbuild:remote --extra_execution_platforms=@npm//@angular/build-tooling/bazel/remote-execution:platformbuild:remote --host_platform=@npm//@angular/build-tooling/bazel/remote-execution:platformbuild:remote --platforms=@npm//@angular/build-tooling/bazel/remote-execution:platform# Remote instance and cachingbuild:remote --remote_instance_name=projects/internal-200822/instances/primary_instancebuild:remote --project_id=internal-200822build:remote --remote_cache=remotebuildexecution.googleapis.combuild:remote --remote_executor=remotebuildexecution.googleapis.com# Use HTTP remote cachebuild:remote-cache --remote_cache=https://storage.googleapis.com/angular-team-cachebuild:remote-cache --remote_accept_cached=truebuild:remote-cache --remote_upload_local_results=truebuild:remote-cache --google_default_credentials# Ensure that tags like &quot;no-remote-exec&quot; get propagated to actions created by rules,# even if the rule implementation does not explicitly pass them to the execution requirements.# https://bazel.build/reference/command-line-reference#flag--experimental_allow_tags_propagationcommon --experimental_allow_tags_propagation# Disable network access in the sandbox by default. To enable network access# for a particular target, use:## load(&quot;@npm//@angular/build-tooling/bazel/remote-execution:index.bzl&quot;, &quot;ENABLE_NETWORK&quot;)# my_target(#   ...,#   exec_properties = ENABLE_NETWORK,   # Enables network in remote exec#   tags = [&quot;requires-network&quot;]         # Enables network in sandbox# )build --nosandbox_default_allow_network################################### Saucelabs tests settings       ## Turn on these settings with    ##  --config=saucelabs            #################################### For saucelabs tests we don&#x27;t want to enable flaky test attempts. Karma has its own integrated# retry mechanism and we do not want to retry unnecessarily if Karma already tried multiple times.test:saucelabs --flaky_test_attempts=1################# Flag Aliases ################## --ng_perf will ask the Ivy compiler to produce performance results for each build.build --flag_alias=ng_perf=//packages/compiler-cli:ng_perf##################################################### User bazel configuration# NOTE: This needs to be the *last* entry in the config.##################################################### Load any settings which are specific to the current user. Needs to be *last* statement# in this config, as the user configuration should be able to overwrite flags from this file.try-import %workspace%/.bazelrc.user
+
+创建.bazelversion用于指定bazel版本：
+5.0.0
+
+
+可以使用bazel5的任意版本，理论上都支持，但是不要使用bazel6的版本
+
+新建WORKSPACE用于定义bazel的工作区：
+workspace(   name = &quot;express-postgres-ts-starter&quot;,    managed_directories = &#123;        &quot;@npm&quot;: [&quot;node_modules&quot;],    &#125;,)
+
+导入http_archive用于获取bazel的库：
+load(&quot;@bazel_tools//tools/build_defs/repo:http.bzl&quot;, &quot;http_archive&quot;)
+
+如果使用了.yarn文件夹用于限制yarn的版本，可以通过创建yarn.bzl解决：
+YARN_PATH = &quot;.yarn/releases/yarn-1.22.19.cjs&quot;YARN_LABEL = &quot;//:&quot; + YARN_PATH
+
+然后在WORKSPACE导入：
+load(&quot;//:yarn.bzl&quot;, &quot;YARN_LABEL&quot;)
+
+引入bazel的nodesj依赖库：
+http_archive(    name = &quot;build_bazel_rules_nodejs&quot;,    sha256 = &quot;5dd1e5dea1322174c57d3ca7b899da381d516220793d0adef3ba03b9d23baa8e&quot;,    urls = [        &quot;https://github.com/bazelbuild/rules_nodejs/releases/download/5.8.3/rules_nodejs-5.8.3.tar.gz&quot;,        &quot;https://ghproxy.com/https://github.com/bazelbuild/rules_nodejs/releases/download/5.8.3/rules_nodejs-5.8.3.tar.gz&quot;    ],)load(&quot;@build_bazel_rules_nodejs//:repositories.bzl&quot;, &quot;build_bazel_rules_nodejs_dependencies&quot;)build_bazel_rules_nodejs_dependencies()http_archive(    name = &quot;rules_pkg&quot;,    sha256 = &quot;62eeb544ff1ef41d786e329e1536c1d541bb9bcad27ae984d57f18f314018e66&quot;,    urls = [        &quot;https://mirror.bazel.build/github.com/bazelbuild/rules_pkg/releases/download/0.6.0/rules_pkg-0.6.0.tar.gz&quot;,        &quot;https://github.com/bazelbuild/rules_pkg/releases/download/0.6.0/rules_pkg-0.6.0.tar.gz&quot;,        &quot;https://ghproxy.com/https://github.com/bazelbuild/rules_pkg/releases/download/0.6.0/rules_pkg-0.6.0.tar.gz&quot;,    ],)# Fetch Aspect lib for utilities like write_source_files# NOTE: We cannot move past version 1.23.2 of aspect_bazel_lib because it requires us to move to bazel 6.0.0 which#       breaks our usage of managed_directorieshttp_archive(    name = &quot;aspect_bazel_lib&quot;,    sha256 = &quot;4b2e774387bae6242879820086b7b738d49bf3d0659522ea5d9363be01a27582&quot;,    strip_prefix = &quot;bazel-lib-1.23.2&quot;,    urls = [        &quot;https://github.com/aspect-build/bazel-lib/archive/refs/tags/v1.23.2.tar.gz&quot;,        &quot;https://ghproxy.com/https://github.com/aspect-build/bazel-lib/archive/refs/tags/v1.23.2.tar.gz&quot;,    ])
+
+配置nodejs工具链：
+load(&quot;@rules_nodejs//nodejs:repositories.bzl&quot;, &quot;nodejs_register_toolchains&quot;)nodejs_register_toolchains(    name = &quot;nodejs&quot;,    node_version = &quot;18.10.0&quot;,)
+
+
+在arm mac上不支持nodejs20的版本，不确定其他平台时候是否支持nodejs20
+
+配置yarn_install下载依赖：
+load(&quot;@build_bazel_rules_nodejs//:index.bzl&quot;, &quot;yarn_install&quot;)yarn_install(    name = &quot;npm&quot;,		data = [        YARN_LABEL,        &quot;//:.yarnrc&quot;,				&quot;//:patches/trim-newlines+5.0.0.patch&quot;		],		exports_directories_only = False,		symlink_node_modules = True,    package_json = &quot;//:package.json&quot;,		yarn = YARN_LABEL,    yarn_lock = &quot;//:yarn.lock&quot;,)
+
+创建BUILD.bazel, 并定义为公开的:
+package(default_visibility = [&quot;//visibility:public&quot;])
+
+导入ts_project和nodejs_binary用于构建typescript和nodejs：
+load(&quot;@npm//@bazel/typescript:index.bzl&quot;, &quot;ts_project&quot;)load(&quot;@build_bazel_rules_nodejs//:index.bzl&quot;, &quot;nodejs_binary&quot;)
+
+定义SRCS变量用于声明所有需要参与编译的ts文件：
+SRCS = glob(	[		&quot;src/**/*.ts&quot;,	],	exclude = [		&quot;src/**/*.spec.ts&quot;	])
+
+使用ts_project将ts编译成js：
+ts_project(    name = &quot;server-ts&quot;,    srcs = [&quot;server.ts&quot; ] + SRCS,    resolve_json_module = True,    source_map = True,    tsconfig = &quot;//:tsconfig.json&quot;,    visibility = [&quot;//visibility:public&quot;],    deps = [        &quot;@npm//@apollo/server&quot;,        &quot;@npm//@graphql-tools/merge&quot;,        &quot;@npm//body-parser&quot;,        &quot;@npm//compression&quot;,        &quot;@npm//cookie-parser&quot;,        &quot;@npm//dotenv&quot;,        &quot;@npm//exceljs&quot;,        &quot;@npm//express&quot;,        &quot;@npm//express-fileupload&quot;,        &quot;@npm//express-joi-validation&quot;,        &quot;@npm//express-session&quot;,        &quot;@npm//graphql&quot;,        &quot;@npm//graphql-tag&quot;,        &quot;@npm//helmet&quot;,        &quot;@npm//joi&quot;,        &quot;@npm//jsonwebtoken&quot;,        &quot;@npm//knex&quot;,        &quot;@npm//lodash&quot;,        &quot;@npm//minio&quot;,        &quot;@npm//morgan&quot;,        &quot;@npm//pg&quot;,        &quot;@npm//pg-boss&quot;,        &quot;@npm//redis&quot;,        &quot;@npm//socket.io&quot;,        &quot;@npm//winston&quot;,        &quot;@npm//@types/express&quot;,        &quot;@npm//@types/express-fileupload&quot;,        &quot;@npm//@types/express-session&quot;,        &quot;@npm//@types/jest&quot;,        &quot;@npm//@types/node&quot;,    ])
+
+现在可以编译了：
+yarn bazel build //... 
+
+最后可以在dist/bin看到一个server.js, 我们可以通过执行node dist/bin/server.js运行我们的nodejs项目了。
+参考
+Bazel官网
+Bazel 学习笔记 (一) 快速开始
+使用Bazel编译TypeScript
+angular
+feat: add bazel support
+
+]]></content>
+      <categories>
+        <category>前端</category>
+      </categories>
+      <tags>
+        <tag>bazel</tag>
+        <tag>typescript</tag>
+        <tag>nodejs</tag>
       </tags>
   </entry>
   <entry>
@@ -3401,24 +3401,6 @@ JS: The difference between “undefined”, “null” and “void 0”
       </tags>
   </entry>
   <entry>
-    <title>2022年度总结</title>
-    <url>/2021/12/31/summary/2022/</url>
-    <content><![CDATA[2022年度总结2022年真的是一个让人难以忘怀的年份，尤其在先后经历了上海封城、老丈人去世、领证结婚。
-疫情还记得2020年疫情刚开始的时候，那时侯自己一个人开车回上海，路上的车辆非常少，开车的感觉真的可以说非常爽，完全可以闭着眼开车，反正看不到车，即使进了上海市区。那个时候单纯的想，少则三个月，多则半年，疫情就会自然而然的过去，到时候我们该吃吃该喝喝。虽然这个判断翻车了，但是2021年也是对国内疫情还是比较乐观。但是2022年的上海封城打破了我所有的幻想。我从来没想过上海居然玩砸了“动态清理”，从华亭宾馆开始，上海的疫情持续不断，感染人数死活都下不去。
-3月份我刚搬到南翔就被封控了，但是我刚开始还好，虽然什么吃的都没有，但是只要封控时间到了就能出去买点东西。但遗憾的是，从4月份开始，上海开始静默了，我足足封在家里差不多两个月。我本来是不反对封城的，但是上海市政府真的很让人失望，疫情两年了，市政府似乎没有做好任何相关封城的预案。而且总感觉可能涉及到二十大的高层安排，市政府决策层应该是存在分歧的，并且和医疗系统的人也存在一定的隔阂。由于上层的问题，基层机构出现各种乱七八糟的事儿那也能理解了。
-在经过了白纸运动之后，我们的防疫政策从一个极端走向另外一个极端。我们彻底放开了，让80%以上的人感染了一遍。我不是反对放开，但是我比较反对如此毫无征兆的放开，没有准备好各种的退烧药，没有准备好口罩。
-技术今年继续做一个web2.5的项目，就是web2.0 + 区块链，不能算得上正宗的web3.0。其核心就是将部分原来放在数据库的数据放在区块链里。所以我们一般自称为web2.5。
-目前部门想全力押宝·web3·，希望能和审计部门能够做好技术服务，所以未来对区块链的研究大概率是会集中中DeFi(去中心化金融)。对我来说，金融是一个毫无头绪的东西，之前并没有接触过，没有一个良好的业务场景可以让我研究，导致对我来说DeFi可能只是一个比较空泛的名词。
-过去的一年，对以太坊还是比较浅显的，同时将也做了一些简单的demo。总的来说，也算简单的入门学了点皮毛，但是对智能合约的开发还是基本上一窍不通的。希望接下来的一年可以深入研究智能合约，可以独立开发智能合约并部署到一个测试网络。solana也会是一个比较重要的关注方向，但是考虑到solana的东家出点事儿，可能不太会重心在这个方面，不过rust语言还是会尽量深挖一下，这是一个很有挑战性的方向
-今年应该很少写angular了，更多开始写react。从我个人的角度来说，jsx和react hook对写一些组件来说确实是一把利器，但是对于如何做好一个完整的、强大的前端web应用来说，react的生态是不足的，太碎裂了，导致在接手不同的项目的时候总是能看到不同的react写法和工程组织形式。最近在react-mobile-picker做一个重构。一个方面是想改成通用的monorepo的组织形式，另外一个方面是需要升级核心依赖并使用typescript重写。目前这个工作还在努力中。 angular方面更多的专注于ngx-dom-confetti, 目前仅仅是对dom-confetti的angular封装，将来的计划是参考ripple的代码设计，将来可以好好的重构这个项目。hoteler-web是我一直会维护的angular的项目。
-今天在google domains买了个域名，然后尝试使用k3s的ingress部署了[https://hoteler.damingerdai.com/]。感觉使用k3s部署一些简单的应用基本上问题不大了。[hoteler](https://github.com/damingerdai/hoteler)已经是一个很稳定的demo，大概率是不会进行大规模的重构了。所以目前只有一个很简单的想法那就是使用spring cloud进行重写，这个是不太能自己部署到线上环境了，毕竟服务器资源就那么点，跑不起那么多的资源。
-针对golang的话，我目前私下的在做一个关于健康的demo，目前还在开发中，前端使用react，后端使用golang。目前希望在技术上的突破是使用loki做日志管理，Jaeger用于链路追踪，这是1.0的计划。2.0的话（如果有时间的话），希望可以加入区块链的一些元素，至少能做成个·web2.5·。
-今年其实还是探索了很多的技术。比如minio, harbor, drone, gogs和gitea。
-个人生活今天对我最大的事儿就是结婚了，没有比举办婚礼更重要的事儿了。本来由于收到上半年疫情的影响，原来不指望今年结婚的。本来定的日子是明年的正月办酒席，但是丈母娘觉得今年的夏天那么热，冬天一定很会冷，希望我们今年就是把事儿办了。所以婚期提前到11月份举行，本来日子选的好好的，也没啥好纠结的，毕竟妹子是自己谈的。但是明天和意外你永远都不知道哪个先来，我老丈人在婚礼的前两天去世了。在婚礼前的几个礼拜，我老丈人生病了，是便秘导致的肠梗阻。在医院治疗了一段时间本来已经治好了，但是不知道是医院的水平问题还是我老丈人本身的问题，在治疗过程中可能没有控制好糖尿病导致肺部感染， 在icu躺了几天之后终究将抢救无效去世，年仅50岁。在殡仪馆里，我看到同批火化的人中就属我老丈人最年轻。有的时间真的感觉世事无常，国庆节回去的时候，老丈人还好好的，结果才过去一个月不到，人就没了。
-展望未来对2023年这个经济判断是真的不太好说，谁也不知道明年会怎么想，我也不敢瞎说，我只能我大概率会重点关注·DeFi·。然后希望能够保住就业，保住现金流。
-]]></content>
-  </entry>
-  <entry>
     <title>2023年度总结</title>
     <url>/2024/01/06/summary/2023/</url>
     <content><![CDATA[2023年度总结2023年就这样子莫名其妙的过了，又是稀里糊涂的一年。这一年，和最爱的人去了一趟西藏，圆了她心心念念的梦想；这一年，坐了30多小时的火车，跨越千里去见证一段美好的爱情；这一年，参加了加入PWC以来第二次的线下年会，疫情总算是过去了。
@@ -3442,6 +3424,24 @@ PWC线下年会我是19年加入PWC的。PWC的年会其实是财年的意思，
 参加她的大学同学的婚礼
 
 最后Time files over us, but leaves its shadow behind.
+]]></content>
+  </entry>
+  <entry>
+    <title>2022年度总结</title>
+    <url>/2021/12/31/summary/2022/</url>
+    <content><![CDATA[2022年度总结2022年真的是一个让人难以忘怀的年份，尤其在先后经历了上海封城、老丈人去世、领证结婚。
+疫情还记得2020年疫情刚开始的时候，那时侯自己一个人开车回上海，路上的车辆非常少，开车的感觉真的可以说非常爽，完全可以闭着眼开车，反正看不到车，即使进了上海市区。那个时候单纯的想，少则三个月，多则半年，疫情就会自然而然的过去，到时候我们该吃吃该喝喝。虽然这个判断翻车了，但是2021年也是对国内疫情还是比较乐观。但是2022年的上海封城打破了我所有的幻想。我从来没想过上海居然玩砸了“动态清理”，从华亭宾馆开始，上海的疫情持续不断，感染人数死活都下不去。
+3月份我刚搬到南翔就被封控了，但是我刚开始还好，虽然什么吃的都没有，但是只要封控时间到了就能出去买点东西。但遗憾的是，从4月份开始，上海开始静默了，我足足封在家里差不多两个月。我本来是不反对封城的，但是上海市政府真的很让人失望，疫情两年了，市政府似乎没有做好任何相关封城的预案。而且总感觉可能涉及到二十大的高层安排，市政府决策层应该是存在分歧的，并且和医疗系统的人也存在一定的隔阂。由于上层的问题，基层机构出现各种乱七八糟的事儿那也能理解了。
+在经过了白纸运动之后，我们的防疫政策从一个极端走向另外一个极端。我们彻底放开了，让80%以上的人感染了一遍。我不是反对放开，但是我比较反对如此毫无征兆的放开，没有准备好各种的退烧药，没有准备好口罩。
+技术今年继续做一个web2.5的项目，就是web2.0 + 区块链，不能算得上正宗的web3.0。其核心就是将部分原来放在数据库的数据放在区块链里。所以我们一般自称为web2.5。
+目前部门想全力押宝·web3·，希望能和审计部门能够做好技术服务，所以未来对区块链的研究大概率是会集中中DeFi(去中心化金融)。对我来说，金融是一个毫无头绪的东西，之前并没有接触过，没有一个良好的业务场景可以让我研究，导致对我来说DeFi可能只是一个比较空泛的名词。
+过去的一年，对以太坊还是比较浅显的，同时将也做了一些简单的demo。总的来说，也算简单的入门学了点皮毛，但是对智能合约的开发还是基本上一窍不通的。希望接下来的一年可以深入研究智能合约，可以独立开发智能合约并部署到一个测试网络。solana也会是一个比较重要的关注方向，但是考虑到solana的东家出点事儿，可能不太会重心在这个方面，不过rust语言还是会尽量深挖一下，这是一个很有挑战性的方向
+今年应该很少写angular了，更多开始写react。从我个人的角度来说，jsx和react hook对写一些组件来说确实是一把利器，但是对于如何做好一个完整的、强大的前端web应用来说，react的生态是不足的，太碎裂了，导致在接手不同的项目的时候总是能看到不同的react写法和工程组织形式。最近在react-mobile-picker做一个重构。一个方面是想改成通用的monorepo的组织形式，另外一个方面是需要升级核心依赖并使用typescript重写。目前这个工作还在努力中。 angular方面更多的专注于ngx-dom-confetti, 目前仅仅是对dom-confetti的angular封装，将来的计划是参考ripple的代码设计，将来可以好好的重构这个项目。hoteler-web是我一直会维护的angular的项目。
+今天在google domains买了个域名，然后尝试使用k3s的ingress部署了[https://hoteler.damingerdai.com/]。感觉使用k3s部署一些简单的应用基本上问题不大了。[hoteler](https://github.com/damingerdai/hoteler)已经是一个很稳定的demo，大概率是不会进行大规模的重构了。所以目前只有一个很简单的想法那就是使用spring cloud进行重写，这个是不太能自己部署到线上环境了，毕竟服务器资源就那么点，跑不起那么多的资源。
+针对golang的话，我目前私下的在做一个关于健康的demo，目前还在开发中，前端使用react，后端使用golang。目前希望在技术上的突破是使用loki做日志管理，Jaeger用于链路追踪，这是1.0的计划。2.0的话（如果有时间的话），希望可以加入区块链的一些元素，至少能做成个·web2.5·。
+今年其实还是探索了很多的技术。比如minio, harbor, drone, gogs和gitea。
+个人生活今天对我最大的事儿就是结婚了，没有比举办婚礼更重要的事儿了。本来由于收到上半年疫情的影响，原来不指望今年结婚的。本来定的日子是明年的正月办酒席，但是丈母娘觉得今年的夏天那么热，冬天一定很会冷，希望我们今年就是把事儿办了。所以婚期提前到11月份举行，本来日子选的好好的，也没啥好纠结的，毕竟妹子是自己谈的。但是明天和意外你永远都不知道哪个先来，我老丈人在婚礼的前两天去世了。在婚礼前的几个礼拜，我老丈人生病了，是便秘导致的肠梗阻。在医院治疗了一段时间本来已经治好了，但是不知道是医院的水平问题还是我老丈人本身的问题，在治疗过程中可能没有控制好糖尿病导致肺部感染， 在icu躺了几天之后终究将抢救无效去世，年仅50岁。在殡仪馆里，我看到同批火化的人中就属我老丈人最年轻。有的时间真的感觉世事无常，国庆节回去的时候，老丈人还好好的，结果才过去一个月不到，人就没了。
+展望未来对2023年这个经济判断是真的不太好说，谁也不知道明年会怎么想，我也不敢瞎说，我只能我大概率会重点关注·DeFi·。然后希望能够保住就业，保住现金流。
 ]]></content>
   </entry>
   <entry>
@@ -3499,6 +3499,27 @@ PWC线下年会我是19年加入PWC的。PWC的年会其实是财年的意思，
 愿 2026，不是简单的“更忙”，而是“更好”。
 持续学习，持续创造，持续成为更清醒的自己。
 ]]></content>
+  </entry>
+  <entry>
+    <title>记录一些测试币的水龙头</title>
+    <url>/2023/01/07/web3/some-token-faucet/</url>
+    <content><![CDATA[记录一些测试币的水龙头记录一些常用的区块链水龙头，以防忘记
+GoerliGoerli Testnet Faucet: 不太记得当初是怎么知道了，但是似乎永远失败…
+GOERLI FAUCET, 每天可以获取0.1 ETH(以前是可以每天领取0.25ETH), 需要使用Alchemy账号.
+Mining Faucet, 使用cpu的算力去挖矿，问题不大，可以使用。
+polygonpolygon faucet, 支持多个测试网络，但是Goerli的ETH没拿到
+参考资料
+免費取得Goerli測試幣
+
+]]></content>
+      <categories>
+        <category>web3</category>
+      </categories>
+      <tags>
+        <tag>web3</tag>
+        <tag>Goerli</tag>
+        <tag>polygon</tag>
+      </tags>
   </entry>
   <entry>
     <title>无 Docker Desktop + Colima + Docker Compose v2 标准化方案</title>
@@ -3976,6 +3997,32 @@ Workspaces/├── personal/  # 存放个人项目└── company/   # 存�
       </tags>
   </entry>
   <entry>
+    <title>使用中国手机号码验证mailgun账号</title>
+    <url>/2025/08/13/software/how-register-mailgun-with-china-mobile-number/</url>
+    <content><![CDATA[前言Mailgun 是一个专为开发者设计的邮件发送平台，支持通过 API 高效、稳定地发送和接收邮件。它广泛用于用户通知、营销邮件、自动化开发信等场景。每个月可免费发送10000封邮件，可以添加1000个域名，每封邮件都有跟踪日志，简单明了的管理界面。
+注册点 mailgun.com 右上角的“start for free“进去是不会给免费版选项的，只有 free trial，而 https://www.mailgun.com/pricing/ 页面则有免费 plan，常规注册即可，无需填写信用卡.
+验证mailgun会发送邮件要求验证号码。在验证页面会要求用户提供手机号验证。但是对中国手机号码来说，可能存在收不到验证码的可能。
+
+解决在mailgun后台，点击右上角的问号❓，点击“Support”按钮。提交一个工单，点击左下方“Open a ticket”的开工单按钮。在开工单页面下拉选择“Account Management”类别，然后输入问题标题和具体内容。
+这是我总结的模版：
+Subject: Unable to Verify Email Due to Excessive VerificationContent:I am unable to complete email verification because I encountered an issue after entering my mobile phone number (+86 xxxxxxxxxxx) and requesting a verification code. The system notified me that I have exceeded the allowed number of attempts, along with other unspecified reminders.
+
+然后大概在24小时内就能解决。(我是40分钟就解决了)。
+其他别相信咸鱼上那帮所谓提供海外手机号码验证服务的那帮垃圾。
+引用
+Mailgun账号注册、域名配置、API开通教程
+Mailgun China
+国外Mailgun邮件服务账号验证不成功怎么办
+
+]]></content>
+      <categories>
+        <category>软件</category>
+      </categories>
+      <tags>
+        <tag>mailgun</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>🚀 记一次本地 Homelab 环境 Gitea 升级迁移与 Actions (CI/CD) 完美集成实战</title>
     <url>/2026/06/02/software/gitea-upgrade-and-actions-integration/</url>
     <content><![CDATA[🚀 记一次本地 Homelab 环境 Gitea 升级迁移与 Actions (CI&#x2F;CD) 完美集成实战📌 前言最近对本地 Homelab 服务器的私有代码托管平台 Gitea 进行了一次大版本升级迁移（升级至 v1.26）。原本以为只是一次简单的 docker compose up，没想到中间经历了数据库连错库、旧运行器残留、以及 Gitea Actions (Act Runner) 容器网络隔离等一连串经典的暗坑。
@@ -4047,32 +4094,6 @@ Hello Gitea Actions! This is a compiled Go binary!
         <tag>git</tag>
         <tag>gitea action</tag>
         <tag>CI/CD</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>使用中国手机号码验证mailgun账号</title>
-    <url>/2025/08/13/software/how-register-mailgun-with-china-mobile-number/</url>
-    <content><![CDATA[前言Mailgun 是一个专为开发者设计的邮件发送平台，支持通过 API 高效、稳定地发送和接收邮件。它广泛用于用户通知、营销邮件、自动化开发信等场景。每个月可免费发送10000封邮件，可以添加1000个域名，每封邮件都有跟踪日志，简单明了的管理界面。
-注册点 mailgun.com 右上角的“start for free“进去是不会给免费版选项的，只有 free trial，而 https://www.mailgun.com/pricing/ 页面则有免费 plan，常规注册即可，无需填写信用卡.
-验证mailgun会发送邮件要求验证号码。在验证页面会要求用户提供手机号验证。但是对中国手机号码来说，可能存在收不到验证码的可能。
-
-解决在mailgun后台，点击右上角的问号❓，点击“Support”按钮。提交一个工单，点击左下方“Open a ticket”的开工单按钮。在开工单页面下拉选择“Account Management”类别，然后输入问题标题和具体内容。
-这是我总结的模版：
-Subject: Unable to Verify Email Due to Excessive VerificationContent:I am unable to complete email verification because I encountered an issue after entering my mobile phone number (+86 xxxxxxxxxxx) and requesting a verification code. The system notified me that I have exceeded the allowed number of attempts, along with other unspecified reminders.
-
-然后大概在24小时内就能解决。(我是40分钟就解决了)。
-其他别相信咸鱼上那帮所谓提供海外手机号码验证服务的那帮垃圾。
-引用
-Mailgun账号注册、域名配置、API开通教程
-Mailgun China
-国外Mailgun邮件服务账号验证不成功怎么办
-
-]]></content>
-      <categories>
-        <category>软件</category>
-      </categories>
-      <tags>
-        <tag>mailgun</tag>
       </tags>
   </entry>
   <entry>
@@ -4375,62 +4396,6 @@ bug描述
       </tags>
   </entry>
   <entry>
-    <title>📝 PostgreSQL 18.x Docker 镜像 PGDATA 路径变更说明</title>
-    <url>/2025/10/04/software/postgresql-18-docker-pgdata-path-changes/</url>
-    <content><![CDATA[📝 PostgreSQL 18.x Docker 镜像 PGDATA 路径变更说明本文档旨在记录 PostgreSQL 官方 Docker 镜像自版本 18.0 起，其默认数据目录（PGDATA）路径的变化，并指导如何正确配置卷挂载以实现数据持久化。
-🚀 核心变更：PGDATA 路径版本化从 PostgreSQL 18.x 开始，官方 Docker 镜像将数据库的数据存储位置 (PGDATA 环境变量) 更改为版本特定的路径。
-
-PostgreSQL PGDATA 路径变更
-
-
-PostgreSQL 版本
-旧版本 PGDATA 默认路径
-18.x 版本 PGDATA 默认路径
-
-
-
-17.x 及以前
-/var/lib/postgresql/data
-N&#x2F;A
-
-
-18.x 及以后
-N&#x2F;A
-/var/lib/postgresql/18/docker
-
-
-🔍 变更原因采用版本化的 PGDATA 路径有以下重要意义：
-
-便于升级 (pg_upgrade): 允许用户将不同主版本的数据库数据目录（例如 &#x2F;var&#x2F;lib&#x2F;postgresql&#x2F;17&#x2F;docker 和 &#x2F;var&#x2F;lib&#x2F;postgresql&#x2F;18&#x2F;docker）并行挂载到父目录 &#x2F;var&#x2F;lib&#x2F;postgresql 下，从而更有效地利用 pg_upgrade 等工具进行版本间升级。
-确保数据持久性: 在重新创建或升级容器时，通过将卷准确挂载到版本特定的路径，确保了数据的正确持久化。
-
-💾 数据持久化配置当使用 PostgreSQL 18.x 官方镜像时，必须将您的持久化卷（无论是命名卷还是绑定挂载）挂载到新的 PGDATA 路径：/var/lib/postgresql/18/docker。
-使用 Docker Compose在您的 docker-compose.yaml 文件中，应将卷配置指向新的路径：
-services:  postgres:    image: postgres:18.0-alpine3.22    container_name: postgres    # ... 其他配置 ...    volumes:      # ⚠️ 必须指向版本特定的 PGDATA 路径      - pg18-data-volume:/var/lib/postgresql/18/dockervolumes:  pg18-data-volume:
-
-使用 Docker Run (绑定挂载示例)使用 docker run 命令进行绑定挂载时，也需要指定新的路径：
-docker run -d \  -v my_postgres_data:/var/lib/postgresql/18/docker \  -e POSTGRES_PASSWORD=your_password \  --name postgres18 \  postgres:18.0-alpline3.22
-
-⚠️ 升级注意事项在从 PostgreSQL 17.x 或更早版本升级到 18.x 时，由于主版本之间的内部存储格式不兼容，不能简单地更改镜像标签并重用旧的 &#x2F;var&#x2F;lib&#x2F;postgresql&#x2F;data 卷。
-正确的主版本升级流程应是：
-
-从旧版本容器中执行 pg_dumpall 创建完整的 SQL 备份。
-停止旧容器，创建并启动一个新的 PostgreSQL 18.x 容器，并使用 新路径 挂载卷。
-将第 1 步中的 SQL 备份文件导入（psql）到新的 PostgreSQL 18.x 容器中。
-
-]]></content>
-      <categories>
-        <category>软件</category>
-      </categories>
-      <tags>
-        <tag>docker</tag>
-        <tag>postgres</tag>
-        <tag>容器</tag>
-        <tag>docker compose</tag>
-        <tag>postgres18</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>Podman的hello world入门</title>
     <url>/2024/01/21/software/podman-hello-world/</url>
     <content><![CDATA[前言Podnam是一个符合OCI，用于在 Linux® 系统上开发、提供了与 Docker 等类似的功能来管理容器。管理和运行容器开源工具。 Podman 最初由 Red Hat® 工程师与开源社区一起开发。Podman使用 libpod 库管理整个容器生态系统。
@@ -4530,6 +4495,62 @@ Kite + K3s + Traefik + Prometheus 的组合，既保证了监控的深度，又�
         <tag>k3s</tag>
         <tag>kubernetes</tag>
         <tag>kite</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>📝 PostgreSQL 18.x Docker 镜像 PGDATA 路径变更说明</title>
+    <url>/2025/10/04/software/postgresql-18-docker-pgdata-path-changes/</url>
+    <content><![CDATA[📝 PostgreSQL 18.x Docker 镜像 PGDATA 路径变更说明本文档旨在记录 PostgreSQL 官方 Docker 镜像自版本 18.0 起，其默认数据目录（PGDATA）路径的变化，并指导如何正确配置卷挂载以实现数据持久化。
+🚀 核心变更：PGDATA 路径版本化从 PostgreSQL 18.x 开始，官方 Docker 镜像将数据库的数据存储位置 (PGDATA 环境变量) 更改为版本特定的路径。
+
+PostgreSQL PGDATA 路径变更
+
+
+PostgreSQL 版本
+旧版本 PGDATA 默认路径
+18.x 版本 PGDATA 默认路径
+
+
+
+17.x 及以前
+/var/lib/postgresql/data
+N&#x2F;A
+
+
+18.x 及以后
+N&#x2F;A
+/var/lib/postgresql/18/docker
+
+
+🔍 变更原因采用版本化的 PGDATA 路径有以下重要意义：
+
+便于升级 (pg_upgrade): 允许用户将不同主版本的数据库数据目录（例如 &#x2F;var&#x2F;lib&#x2F;postgresql&#x2F;17&#x2F;docker 和 &#x2F;var&#x2F;lib&#x2F;postgresql&#x2F;18&#x2F;docker）并行挂载到父目录 &#x2F;var&#x2F;lib&#x2F;postgresql 下，从而更有效地利用 pg_upgrade 等工具进行版本间升级。
+确保数据持久性: 在重新创建或升级容器时，通过将卷准确挂载到版本特定的路径，确保了数据的正确持久化。
+
+💾 数据持久化配置当使用 PostgreSQL 18.x 官方镜像时，必须将您的持久化卷（无论是命名卷还是绑定挂载）挂载到新的 PGDATA 路径：/var/lib/postgresql/18/docker。
+使用 Docker Compose在您的 docker-compose.yaml 文件中，应将卷配置指向新的路径：
+services:  postgres:    image: postgres:18.0-alpine3.22    container_name: postgres    # ... 其他配置 ...    volumes:      # ⚠️ 必须指向版本特定的 PGDATA 路径      - pg18-data-volume:/var/lib/postgresql/18/dockervolumes:  pg18-data-volume:
+
+使用 Docker Run (绑定挂载示例)使用 docker run 命令进行绑定挂载时，也需要指定新的路径：
+docker run -d \  -v my_postgres_data:/var/lib/postgresql/18/docker \  -e POSTGRES_PASSWORD=your_password \  --name postgres18 \  postgres:18.0-alpline3.22
+
+⚠️ 升级注意事项在从 PostgreSQL 17.x 或更早版本升级到 18.x 时，由于主版本之间的内部存储格式不兼容，不能简单地更改镜像标签并重用旧的 &#x2F;var&#x2F;lib&#x2F;postgresql&#x2F;data 卷。
+正确的主版本升级流程应是：
+
+从旧版本容器中执行 pg_dumpall 创建完整的 SQL 备份。
+停止旧容器，创建并启动一个新的 PostgreSQL 18.x 容器，并使用 新路径 挂载卷。
+将第 1 步中的 SQL 备份文件导入（psql）到新的 PostgreSQL 18.x 容器中。
+
+]]></content>
+      <categories>
+        <category>软件</category>
+      </categories>
+      <tags>
+        <tag>docker</tag>
+        <tag>postgres</tag>
+        <tag>容器</tag>
+        <tag>docker compose</tag>
+        <tag>postgres18</tag>
       </tags>
   </entry>
   <entry>
@@ -4637,27 +4658,6 @@ sudo tailscale up --advertise-routes=192.168.31.0/24 --accept-dns=false
         <tag>内网穿透</tag>
         <tag>NAS</tag>
         <tag>异地组网</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>记录一些测试币的水龙头</title>
-    <url>/2023/01/07/web3/some-token-faucet/</url>
-    <content><![CDATA[记录一些测试币的水龙头记录一些常用的区块链水龙头，以防忘记
-GoerliGoerli Testnet Faucet: 不太记得当初是怎么知道了，但是似乎永远失败…
-GOERLI FAUCET, 每天可以获取0.1 ETH(以前是可以每天领取0.25ETH), 需要使用Alchemy账号.
-Mining Faucet, 使用cpu的算力去挖矿，问题不大，可以使用。
-polygonpolygon faucet, 支持多个测试网络，但是Goerli的ETH没拿到
-参考资料
-免費取得Goerli測試幣
-
-]]></content>
-      <categories>
-        <category>web3</category>
-      </categories>
-      <tags>
-        <tag>web3</tag>
-        <tag>Goerli</tag>
-        <tag>polygon</tag>
       </tags>
   </entry>
   <entry>
