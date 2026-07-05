@@ -208,38 +208,6 @@ DaoAuthenticationProviderDaoAuthenticationProvider是用于实现用户名密码
       </tags>
   </entry>
   <entry>
-    <title>使用github action推送到docker的镜像仓库</title>
-    <url>/2022/04/16/back-end/github-action-push-docker-image-to-github-packages/</url>
-    <content><![CDATA[准备请在github的设置页面上创建一个token，并确保有以下的权限：
-
-repo
-read:packages
-write:packages
-
-
-请保存好该token，因为github将隐藏该值
-
-在github的仓库的secrets设置页面(例：https://github.com/{your_username}/{your_repository_name}/settings/secrets/actions)里创建一个名为GHCR_PAT的secrets
-
-创建GitHub Action文件在.github/workflow中创建一个build-and-publish.yml:
-name: Build and Publishon:  push:    branches: [ master ]jobs:  build-and-push-docker-image:    name: Build Docker image and push to repositories    runs-on: ubuntu-latest    steps:      - name: Checkout code        uses: actions/checkout@v2      - name: Set up Docker Buildx        id: buildx        uses: docker/setup-buildx-action@v1      - name: Login to Github Packages        uses: docker/login-action@v1        with:          registry: ghcr.io          username: $&#123;&#123; github.actor &#125;&#125;          password: $&#123;&#123; secrets.GHCR_PAT &#125;&#125;      - name: Build image and push to GitHub Container Registry        uses: docker/build-push-action@v2        id: docker_build        with:          context: .          tags: |            # 将usernmae和repository改成你自己的github账号和仓库名            ghcr.io/&#123;usernmae&#125;/&#123;repository&#125;:$&#123;&#123; github.sha &#125;&#125;            # 当且只有运行在master分支时才需要推送到github容器仓库          push: $&#123;&#123; github.ref == &#x27;refs/heads/master&#x27; &#125;&#125;      - name: Image digest        run: echo $&#123;&#123; steps.docker_build.outputs.digest &#125;&#125;
-
-默认推送的镜像是私有，想要公开，可以在https://github.com/users/&#123;your_username&#125;/packages/container/&#123;your_repository_name&#125;/settings下面的Danger Zone中的Change package visibility设置成public还是private。
-参考资料
-How to build and push Docker image with GitHub actions?
-Hoteler
-
-]]></content>
-      <categories>
-        <category>后端</category>
-      </categories>
-      <tags>
-        <tag>docker</tag>
-        <tag>github</tag>
-        <tag>github action</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>Go + Next.js 实现 2FA (TOTP) 的踩坑记录与架构复盘</title>
     <url>/2026/07/03/back-end/go-nextjs-2fa-totp-review/</url>
     <content><![CDATA[Go + Next.js 实现 2FA (TOTP) 的踩坑记录与架构复盘最近给手头的项目加上了基于 TOTP（基于时间的一次性密码）的双因子认证（2FA）流程。整体思路是传统的双阶段认证（Two-Stage）：
@@ -301,6 +269,38 @@ Code Review 后的重构 TODO 列表以下是目前首版代码里暴露出来�
         <tag>nextjs</tag>
         <tag>2fa</tag>
         <tag>totp</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>使用github action推送到docker的镜像仓库</title>
+    <url>/2022/04/16/back-end/github-action-push-docker-image-to-github-packages/</url>
+    <content><![CDATA[准备请在github的设置页面上创建一个token，并确保有以下的权限：
+
+repo
+read:packages
+write:packages
+
+
+请保存好该token，因为github将隐藏该值
+
+在github的仓库的secrets设置页面(例：https://github.com/{your_username}/{your_repository_name}/settings/secrets/actions)里创建一个名为GHCR_PAT的secrets
+
+创建GitHub Action文件在.github/workflow中创建一个build-and-publish.yml:
+name: Build and Publishon:  push:    branches: [ master ]jobs:  build-and-push-docker-image:    name: Build Docker image and push to repositories    runs-on: ubuntu-latest    steps:      - name: Checkout code        uses: actions/checkout@v2      - name: Set up Docker Buildx        id: buildx        uses: docker/setup-buildx-action@v1      - name: Login to Github Packages        uses: docker/login-action@v1        with:          registry: ghcr.io          username: $&#123;&#123; github.actor &#125;&#125;          password: $&#123;&#123; secrets.GHCR_PAT &#125;&#125;      - name: Build image and push to GitHub Container Registry        uses: docker/build-push-action@v2        id: docker_build        with:          context: .          tags: |            # 将usernmae和repository改成你自己的github账号和仓库名            ghcr.io/&#123;usernmae&#125;/&#123;repository&#125;:$&#123;&#123; github.sha &#125;&#125;            # 当且只有运行在master分支时才需要推送到github容器仓库          push: $&#123;&#123; github.ref == &#x27;refs/heads/master&#x27; &#125;&#125;      - name: Image digest        run: echo $&#123;&#123; steps.docker_build.outputs.digest &#125;&#125;
+
+默认推送的镜像是私有，想要公开，可以在https://github.com/users/&#123;your_username&#125;/packages/container/&#123;your_repository_name&#125;/settings下面的Danger Zone中的Change package visibility设置成public还是private。
+参考资料
+How to build and push Docker image with GitHub actions?
+Hoteler
+
+]]></content>
+      <categories>
+        <category>后端</category>
+      </categories>
+      <tags>
+        <tag>docker</tag>
+        <tag>github</tag>
+        <tag>github action</tag>
       </tags>
   </entry>
   <entry>
@@ -1466,6 +1466,33 @@ New Java Project With Bazel
       </tags>
   </entry>
   <entry>
+    <title>使用systemd部署podman的容器</title>
+    <url>/2025/07/20/back-end/use-systemd-to-deploy-podman-build-by-podman/</url>
+    <content><![CDATA[podman的问题podman是一个容器运行时环境，提供与 Docker 非常相似的功能并不需要在你的系统上运行任何守护进程。没有守护进程就意味着如果你想使用podman部署容器，是没有办法使用类似docker的方式去实现自动重启功能。如果使用k8s部署容器那问题不大，如果就纯容器部署，可以使用podman给出的方案：
+podman generate systemd --help[DEPRECATED] Generate systemd unitsDescription:  Generate systemd units for a pod or container.  The generated units can later be controlled via systemctl(1).DEPRECATED command:It is recommended to use Quadlets for running containers and pods under systemd.Please refer to podman-systemd.unit(5) for details.Usage:  podman generate systemd [options] &#123;CONTAINER|POD&#125;Examples:  podman generate systemd CTR  podman generate systemd --new --time 10 CTR  podman generate systemd --files --name PODOptions:      --after stringArray         Add dependencies order to the generated unit file      --container-prefix string   Systemd unit name prefix for containers (default &quot;container&quot;)  -e, --env stringArray           Set environment variables to the systemd unit files  -f, --files                     Generate .service files instead of printing to stdout      --format string             Print the created units in specified format (json)  -n, --name                      Use container/pod names instead of IDs      --new                       Create a new container or pod instead of starting an existing one      --no-header                 Skip header generation      --pod-prefix string         Systemd unit name prefix for pods (default &quot;pod&quot;)      --requires stringArray      Similar to wants, but declares stronger requirement dependencies      --restart-policy string     Systemd restart-policy (default &quot;on-failure&quot;)      --restart-sec uint          Systemd restart-sec      --separator string          Systemd unit name separator between name/id and prefix (default &quot;-&quot;)      --start-timeout uint        Start timeout override      --stop-timeout uint         Stop timeout override (default 10)      --template                  Make it a template file and use %i and %I specifiers. Working only for containers      --wants stringArray         Add (weak) requirement dependencies to the generated unit file
+
+systemdsystemd是Linux系统的一套基本构建模块。它提供了一个系统和服务管理器，作为PID 1运行并启动系统的其余部分。systemd是在引导期间启动的第一个守护进程，也是在关闭期间终止的最后一个守护进程。利用这个特性，可以使用systemd去监控容器的运行状态
+例子这里使用health-master作为例子。
+# 获取名为 health-master 的容器 IDCONTAINER_ID=$(podman ps -a --filter &quot;name=health-master&quot; --format &quot;&#123;&#123;.ID&#125;&#125;&quot;)if [ -z &quot;$CONTAINER_ID&quot; ]; then  echo &quot;未找到名为 health-master 的容器。&quot; &gt;&amp;2  exit 1fiecho &quot;找到容器 health-master，ID 为 $CONTAINER_ID&quot;# 定义服务文件的存储路径SERVICE_FILE_PATH=&quot;$HOME/.config/systemd/user&quot;SERVICE_NAME=&quot;podman-health-master&quot;# 使用 podman generate systemd 创建服务文件echo &quot;正在生成 systemd 服务文件...&quot;podman generate systemd --name --restart-policy=on-failure -t 10 &quot;$CONTAINER_ID&quot; &gt;&quot;$SERVICE_FILE_PATH/$SERVICE_NAME.service&quot;if [ $? -ne 0 ]; then  echo &quot;错误: 无法生成 $SERVICE_NAME 服务。&quot; &gt;&amp;2  exit 1fi# 修复 SELinux 上下文（如启用 SELinux）restorecon -RvF &quot;$SERVICE_FILE_PATH/$SERVICE_NAME.service&quot;# 启用用户级 systemd 支持（首次需运行）loginctl enable-linger &quot;$USER&quot;# 重新加载 systemd 配置echo &quot;重新加载 systemd 配置...&quot;systemctl --user daemon-reloadif [ $? -ne 0 ]; then  echo &quot;错误: 无法重新加载 systemd 配置。&quot; &gt;&amp;2  exit 1fi# 启用服务echo &quot;启用服务 $SERVICE_NAME...&quot;systemctl --user enable --now &quot;$SERVICE_NAME&quot;if [ $? -ne 0 ]; then  echo &quot;错误: 无法启用服务 $SERVICE_NAME。&quot; &gt;&amp;2  exit 1fi# 启动服务echo &quot;启动服务 $SERVICE_NAME...&quot;systemctl --user start &quot;$SERVICE_NAME&quot;if [ $? -ne 0 ]; then  echo &quot;错误: 无法启动服务 $SERVICE_NAME。&quot; &gt;&amp;2  exit 1fiecho &quot;服务 $SERVICE_NAME 已成功创建并启动。&quot;echo &quot;你现在可以使用以下命令管理服务:&quot;echo &quot;  systemctl --user status $SERVICE_NAME  # 查看服务状态&quot;echo &quot;  systemctl --user stop $SERVICE_NAME    # 停止服务&quot;echo &quot;  systemctl --user restart $SERVICE_NAME # 重启服务&quot;
+
+问题podman generate systemd在podman 4.4的时候就已经弃用了，目前推荐使用Quadlet
+引用
+使用 Podman 以非 root 用户身份运行 Linux 容器
+System and Service Manager
+Linux Systemd基础教程
+How to replace the “podman generate systemd” command since its deprecated
+
+]]></content>
+      <categories>
+        <category>后端</category>
+      </categories>
+      <tags>
+        <tag>podman</tag>
+        <tag>容器</tag>
+        <tag>systemd</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>解决Windows下Docker启动容器时，端口被占用错误</title>
     <url>/2023/02/26/back-end/windows_docker_port_in_use_issues/</url>
     <content><![CDATA[解决Windows下Docker启动容器时，端口被占用错误问题描述在使用docker-compose启动mysql的时候遇到一个问题:
@@ -1506,30 +1533,61 @@ dism.exe /Online /Enable-Feature:Microsoft-Hyper-V /All
       </tags>
   </entry>
   <entry>
-    <title>使用systemd部署podman的容器</title>
-    <url>/2025/07/20/back-end/use-systemd-to-deploy-podman-build-by-podman/</url>
-    <content><![CDATA[podman的问题podman是一个容器运行时环境，提供与 Docker 非常相似的功能并不需要在你的系统上运行任何守护进程。没有守护进程就意味着如果你想使用podman部署容器，是没有办法使用类似docker的方式去实现自动重启功能。如果使用k8s部署容器那问题不大，如果就纯容器部署，可以使用podman给出的方案：
-podman generate systemd --help[DEPRECATED] Generate systemd unitsDescription:  Generate systemd units for a pod or container.  The generated units can later be controlled via systemctl(1).DEPRECATED command:It is recommended to use Quadlets for running containers and pods under systemd.Please refer to podman-systemd.unit(5) for details.Usage:  podman generate systemd [options] &#123;CONTAINER|POD&#125;Examples:  podman generate systemd CTR  podman generate systemd --new --time 10 CTR  podman generate systemd --files --name PODOptions:      --after stringArray         Add dependencies order to the generated unit file      --container-prefix string   Systemd unit name prefix for containers (default &quot;container&quot;)  -e, --env stringArray           Set environment variables to the systemd unit files  -f, --files                     Generate .service files instead of printing to stdout      --format string             Print the created units in specified format (json)  -n, --name                      Use container/pod names instead of IDs      --new                       Create a new container or pod instead of starting an existing one      --no-header                 Skip header generation      --pod-prefix string         Systemd unit name prefix for pods (default &quot;pod&quot;)      --requires stringArray      Similar to wants, but declares stronger requirement dependencies      --restart-policy string     Systemd restart-policy (default &quot;on-failure&quot;)      --restart-sec uint          Systemd restart-sec      --separator string          Systemd unit name separator between name/id and prefix (default &quot;-&quot;)      --start-timeout uint        Start timeout override      --stop-timeout uint         Stop timeout override (default 10)      --template                  Make it a template file and use %i and %I specifiers. Working only for containers      --wants stringArray         Add (weak) requirement dependencies to the generated unit file
+    <title>2026年5月8号面试总结</title>
+    <url>/2026/05/08/front-end/2026-0508-interview/</url>
+    <content><![CDATA[前言2026年5月8号有一场面试，是对方架构师来面试的我。总的来说，面试的效果不是很好。面试的岗位是前端岗位，但是问的很多是后端架构的设计，我认为我的准备不是很好，我需要继续努力补全自己。
+问题Java的虚拟线程问题：Java的虚拟线程是什么，怎么创建？
+回答如下：
+在Java 21中，引入了虚拟线程（Virtual Threads）来简化和增强并发性，这使得在Java中编程并发程序更容易、更高效。
+虚拟线程，也称为“用户模式线程（user-mode threads）”或“纤程（fibers）”。该功能旨在简化并发编程并提供更好的可扩展性。虚拟线程是轻量级的，这意味着它们可以比传统线程创建更多数量，并且开销要少得多。这使得在自己的线程中运行单独任务或请求变得更加实用，即使在高吞吐量的程序中也是如此。
+在Java 21中创建和使用虚拟线程有多种方法：
+1. 使用静态构建器方法Thread.startVirtualThread方法将可运行对象作为参数来创建，并立即启动虚拟线程，具体如下代码：
+Runnable runnable = () -&gt; &#123;    System.out.println(&quot;Hello, www.didispace.com&quot;);&#125;;// 使用静态构建器方法Thread virtualThread = Thread.startVirtualThread(runnable);
 
-systemdsystemd是Linux系统的一套基本构建模块。它提供了一个系统和服务管理器，作为PID 1运行并启动系统的其余部分。systemd是在引导期间启动的第一个守护进程，也是在关闭期间终止的最后一个守护进程。利用这个特性，可以使用systemd去监控容器的运行状态
-例子这里使用health-master作为例子。
-# 获取名为 health-master 的容器 IDCONTAINER_ID=$(podman ps -a --filter &quot;name=health-master&quot; --format &quot;&#123;&#123;.ID&#125;&#125;&quot;)if [ -z &quot;$CONTAINER_ID&quot; ]; then  echo &quot;未找到名为 health-master 的容器。&quot; &gt;&amp;2  exit 1fiecho &quot;找到容器 health-master，ID 为 $CONTAINER_ID&quot;# 定义服务文件的存储路径SERVICE_FILE_PATH=&quot;$HOME/.config/systemd/user&quot;SERVICE_NAME=&quot;podman-health-master&quot;# 使用 podman generate systemd 创建服务文件echo &quot;正在生成 systemd 服务文件...&quot;podman generate systemd --name --restart-policy=on-failure -t 10 &quot;$CONTAINER_ID&quot; &gt;&quot;$SERVICE_FILE_PATH/$SERVICE_NAME.service&quot;if [ $? -ne 0 ]; then  echo &quot;错误: 无法生成 $SERVICE_NAME 服务。&quot; &gt;&amp;2  exit 1fi# 修复 SELinux 上下文（如启用 SELinux）restorecon -RvF &quot;$SERVICE_FILE_PATH/$SERVICE_NAME.service&quot;# 启用用户级 systemd 支持（首次需运行）loginctl enable-linger &quot;$USER&quot;# 重新加载 systemd 配置echo &quot;重新加载 systemd 配置...&quot;systemctl --user daemon-reloadif [ $? -ne 0 ]; then  echo &quot;错误: 无法重新加载 systemd 配置。&quot; &gt;&amp;2  exit 1fi# 启用服务echo &quot;启用服务 $SERVICE_NAME...&quot;systemctl --user enable --now &quot;$SERVICE_NAME&quot;if [ $? -ne 0 ]; then  echo &quot;错误: 无法启用服务 $SERVICE_NAME。&quot; &gt;&amp;2  exit 1fi# 启动服务echo &quot;启动服务 $SERVICE_NAME...&quot;systemctl --user start &quot;$SERVICE_NAME&quot;if [ $? -ne 0 ]; then  echo &quot;错误: 无法启动服务 $SERVICE_NAME。&quot; &gt;&amp;2  exit 1fiecho &quot;服务 $SERVICE_NAME 已成功创建并启动。&quot;echo &quot;你现在可以使用以下命令管理服务:&quot;echo &quot;  systemctl --user status $SERVICE_NAME  # 查看服务状态&quot;echo &quot;  systemctl --user stop $SERVICE_NAME    # 停止服务&quot;echo &quot;  systemctl --user restart $SERVICE_NAME # 重启服务&quot;
+也可以使用Thread.ofVirtual()来创建，这里还可以设置一些属性，比如：线程名称。具体如下代码：
+Thread.ofVirtual()        .name(&quot;didispace-virtual-thread&quot;)        .start(runnable);
 
-问题podman generate systemd在podman 4.4的时候就已经弃用了，目前推荐使用Quadlet
-引用
-使用 Podman 以非 root 用户身份运行 Linux 容器
-System and Service Manager
-Linux Systemd基础教程
-How to replace the “podman generate systemd” command since its deprecated
+2. 与ExecutorService结合使用从Java 5开始，就推荐开发人员使用ExecutorServices而不是直接使用Thread类了。现在，Java 21中引入了使用虚拟线程，所以也有了新的ExecutorService来适配，看看下面的例子：
+Runnable runnable = () -&gt; &#123;    System.out.println(&quot;Hello, www.didispace.com&quot;);&#125;;try (ExecutorService executorService = Executors.newVirtualThreadPerTaskExecutor()) &#123;    for (int i = 0; i &lt; 100; i++) &#123;        executorService.submit(runnable);    &#125;&#125;
+
+3. 使用虚拟线程工厂开发者还可以创建一个生成虚拟线程的工厂来管理，具体看下面的例子例子：
+Runnable runnable = () -&gt; &#123;    System.out.println(&quot;Hello, www.didispace.com&quot;);&#125;;ThreadFactory virtualThreadFactory = Thread.ofVirtual()        .name(&quot;didispace&quot;, 0)        .factory();Thread factoryThread = virtualThreadFactory.newThread(runnable);factoryThread.start;
+
+对于虚拟线程的概念，你只需要有一个基本的认识。
+
+虚拟线程是由JVM管理的轻量级线程。
+虚拟线程不需要任何显式分配或调度。
+虚拟线程非常适合I&#x2F;O密集型任务或需要大量并行性的任务。
+虚拟线程也可以用来实现异步操作。
+
+Golang的cmp模型GMP 是 Go 运行时（Runtime）层面的调度模型，它实现了用户态线程（Goroutine）与内核态线程（M）之间的多对多复用，是 Go 能够支持高并发的核心原因
+
+G (Goroutine): 协程。它是待执行的任务，存储了协程的栈、状态及指向任务函数的指针。G 的体积很小（初始仅 2KB），由 Go 运行时管理。
+M (Machine): 操作系统的物理线程。协程最终必须绑定到 M 上才能在 CPU 上运行。M 并不保存状态，它只是一个执行体。
+P (Processor): 逻辑处理器。它是 G 和 M 之间的“中介”或“本地资源池”。P 维护着一个本地就绪队列（Local Runqueue）。M 必须获取到 P 才能执行 G。
+在早期（Go 1.1 之前）只有 GM 模型，由于所有 M 都要抢夺全局队列的锁来获取 G，导致严重的锁竞争。引入 P 后，每个 P 都有本地队列，减少了锁竞争，并实现了 Work Stealing 和 Hand Off 机制，大大提升了效率
+
+
+gemini帮我回答的
+
+MySQL 事务隔离级别SQL:1992 标准定义了四种事务隔离级别，分别是读未提交（Read Uncommitted）、读已提交（Read Committed）、可重复读（Repeatable Read）和串行化（Serializable）。不同的隔离级别下会产生脏读、幻读、不可重复读等相关问题，因此在选择隔离级别的时候要根据应用场景来决定，使用合适的隔离级别。MySQL 中的 InnoDB 存储引擎提供了 SQL 标准所描述的四种事务隔离级别，默认事务隔离级别是可重复读（Repeatable Read）。
+
+读未提交（Read Uncommitted）允许脏读，就是在该隔离级别下，可能读到其他会话未提交事务修改的数据，存在脏读、不可重读读、幻读的问题。
+读已提交（Read Committed）只能查询到已提交的数据。这是 Oracle 数据库默认的事务隔离级别。存在不可重读读、幻读的问题。
+可重复读（Repeatable Read）就是在一个事务里相同条件下，无论何时查到的数据都和第一次查到的数据一致。这是 MySQL 数据库 InnoDB 引擎默认的事务隔离级别。在范围查询时存在幻读的问题。
+串行化（Serializable）是最高的事务隔离级别，它严格服从 ACID 特性的隔离级别。所有的事务依次逐个执行，事务之间互不干扰，该级别可以防止脏读、不可重复读以及幻读。但每个事务读数据时都需要获取表级的共享锁，导致读和写都会阻塞，性能极低。
+
+参考资料
+Java 21 新特性：虚拟线程（Virtual Threads）
+MySQL | 事务隔离级别详解
 
 ]]></content>
       <categories>
-        <category>后端</category>
+        <category>前端</category>
       </categories>
       <tags>
-        <tag>podman</tag>
-        <tag>容器</tag>
-        <tag>systemd</tag>
+        <tag>高级前端工程师</tag>
+        <tag>面试</tag>
       </tags>
   </entry>
   <entry>
@@ -1661,64 +1719,6 @@ GSS Data Store使用Podman部署问题：你提到在虚拟机上通过 Podman s
 利用 podman generate systemd 命令将容器的生命周期挂载到系统的 systemd 服务中。
 在 systemd 的配置中设置 Restart&#x3D;always 和 StartLimitInterval。这样即使容器因为宿主机每周末定期重启，宿主机的操作系统内核会自动检测并重新拉起服务。
 相比于简单的脚本，systemctl 提供了成熟的状态检查（Status Check）和日志回溯（Journald），能确保在没有 K8s 控制平面监控的情况下，服务依然具备基本的健壮性
-
-]]></content>
-      <categories>
-        <category>前端</category>
-      </categories>
-      <tags>
-        <tag>高级前端工程师</tag>
-        <tag>面试</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>2026年5月8号面试总结</title>
-    <url>/2026/05/08/front-end/2026-0508-interview/</url>
-    <content><![CDATA[前言2026年5月8号有一场面试，是对方架构师来面试的我。总的来说，面试的效果不是很好。面试的岗位是前端岗位，但是问的很多是后端架构的设计，我认为我的准备不是很好，我需要继续努力补全自己。
-问题Java的虚拟线程问题：Java的虚拟线程是什么，怎么创建？
-回答如下：
-在Java 21中，引入了虚拟线程（Virtual Threads）来简化和增强并发性，这使得在Java中编程并发程序更容易、更高效。
-虚拟线程，也称为“用户模式线程（user-mode threads）”或“纤程（fibers）”。该功能旨在简化并发编程并提供更好的可扩展性。虚拟线程是轻量级的，这意味着它们可以比传统线程创建更多数量，并且开销要少得多。这使得在自己的线程中运行单独任务或请求变得更加实用，即使在高吞吐量的程序中也是如此。
-在Java 21中创建和使用虚拟线程有多种方法：
-1. 使用静态构建器方法Thread.startVirtualThread方法将可运行对象作为参数来创建，并立即启动虚拟线程，具体如下代码：
-Runnable runnable = () -&gt; &#123;    System.out.println(&quot;Hello, www.didispace.com&quot;);&#125;;// 使用静态构建器方法Thread virtualThread = Thread.startVirtualThread(runnable);
-
-也可以使用Thread.ofVirtual()来创建，这里还可以设置一些属性，比如：线程名称。具体如下代码：
-Thread.ofVirtual()        .name(&quot;didispace-virtual-thread&quot;)        .start(runnable);
-
-2. 与ExecutorService结合使用从Java 5开始，就推荐开发人员使用ExecutorServices而不是直接使用Thread类了。现在，Java 21中引入了使用虚拟线程，所以也有了新的ExecutorService来适配，看看下面的例子：
-Runnable runnable = () -&gt; &#123;    System.out.println(&quot;Hello, www.didispace.com&quot;);&#125;;try (ExecutorService executorService = Executors.newVirtualThreadPerTaskExecutor()) &#123;    for (int i = 0; i &lt; 100; i++) &#123;        executorService.submit(runnable);    &#125;&#125;
-
-3. 使用虚拟线程工厂开发者还可以创建一个生成虚拟线程的工厂来管理，具体看下面的例子例子：
-Runnable runnable = () -&gt; &#123;    System.out.println(&quot;Hello, www.didispace.com&quot;);&#125;;ThreadFactory virtualThreadFactory = Thread.ofVirtual()        .name(&quot;didispace&quot;, 0)        .factory();Thread factoryThread = virtualThreadFactory.newThread(runnable);factoryThread.start;
-
-对于虚拟线程的概念，你只需要有一个基本的认识。
-
-虚拟线程是由JVM管理的轻量级线程。
-虚拟线程不需要任何显式分配或调度。
-虚拟线程非常适合I&#x2F;O密集型任务或需要大量并行性的任务。
-虚拟线程也可以用来实现异步操作。
-
-Golang的cmp模型GMP 是 Go 运行时（Runtime）层面的调度模型，它实现了用户态线程（Goroutine）与内核态线程（M）之间的多对多复用，是 Go 能够支持高并发的核心原因
-
-G (Goroutine): 协程。它是待执行的任务，存储了协程的栈、状态及指向任务函数的指针。G 的体积很小（初始仅 2KB），由 Go 运行时管理。
-M (Machine): 操作系统的物理线程。协程最终必须绑定到 M 上才能在 CPU 上运行。M 并不保存状态，它只是一个执行体。
-P (Processor): 逻辑处理器。它是 G 和 M 之间的“中介”或“本地资源池”。P 维护着一个本地就绪队列（Local Runqueue）。M 必须获取到 P 才能执行 G。
-在早期（Go 1.1 之前）只有 GM 模型，由于所有 M 都要抢夺全局队列的锁来获取 G，导致严重的锁竞争。引入 P 后，每个 P 都有本地队列，减少了锁竞争，并实现了 Work Stealing 和 Hand Off 机制，大大提升了效率
-
-
-gemini帮我回答的
-
-MySQL 事务隔离级别SQL:1992 标准定义了四种事务隔离级别，分别是读未提交（Read Uncommitted）、读已提交（Read Committed）、可重复读（Repeatable Read）和串行化（Serializable）。不同的隔离级别下会产生脏读、幻读、不可重复读等相关问题，因此在选择隔离级别的时候要根据应用场景来决定，使用合适的隔离级别。MySQL 中的 InnoDB 存储引擎提供了 SQL 标准所描述的四种事务隔离级别，默认事务隔离级别是可重复读（Repeatable Read）。
-
-读未提交（Read Uncommitted）允许脏读，就是在该隔离级别下，可能读到其他会话未提交事务修改的数据，存在脏读、不可重读读、幻读的问题。
-读已提交（Read Committed）只能查询到已提交的数据。这是 Oracle 数据库默认的事务隔离级别。存在不可重读读、幻读的问题。
-可重复读（Repeatable Read）就是在一个事务里相同条件下，无论何时查到的数据都和第一次查到的数据一致。这是 MySQL 数据库 InnoDB 引擎默认的事务隔离级别。在范围查询时存在幻读的问题。
-串行化（Serializable）是最高的事务隔离级别，它严格服从 ACID 特性的隔离级别。所有的事务依次逐个执行，事务之间互不干扰，该级别可以防止脏读、不可重复读以及幻读。但每个事务读数据时都需要获取表级的共享锁，导致读和写都会阻塞，性能极低。
-
-参考资料
-Java 21 新特性：虚拟线程（Virtual Threads）
-MySQL | 事务隔离级别详解
 
 ]]></content>
       <categories>
@@ -2449,6 +2449,85 @@ React Fiber 调度
       </tags>
   </entry>
   <entry>
+    <title>如何使用bazel去构建基于express和typescript的nodejs项目</title>
+    <url>/2023/08/10/front-end/how-to-use-bazel-to-build-nodejs-typescript-expressjs/</url>
+    <content><![CDATA[前言Bazel 是一款类似于 Make、Maven 和 Gradle的开源构建和测试工具。它使用可读的高级构建语言，支持多种变成语言编写的项目，并且能够为多个平台进行构建。Bazel 支持构建包含多个仓库、大量开发人员的大型代码库。
+详细介绍可见Bazel官网。
+目的本文的目的是使用bazel5去构建一个完整的nodejs后端项目，并不负责bazel相关知识的介绍。
+配置首先在package.json文件中·devDependencies·部分添加：
+&quot;@bazel/bazelisk&quot;: &quot;^1.7.5&quot;,&quot;@bazel/buildifier&quot;: &quot;^6.0.0&quot;,&quot;@bazel/ibazel&quot;: &quot;^0.16.0&quot;,&quot;@bazel/typescript&quot;: &quot;^5.8.1&quot;,
+
+然后再执行安装依赖命令。
+创建.bazelignore文件并写入下面的内容:
+.gitnode_modulesdist
+
+创建.bazelrc文件并写入下面的内容:
+# Enable debugging tests with --config=debugtest:debug --test_arg=--node_options=--inspect-brk --test_output=streamed --test_strategy=exclusive --test_timeout=9999 --nocache_test_results# Do not attempt to de-flake locally.# On CI we might set this to `3` to run with deflaking.test --flaky_test_attempts=1################################ Filesystem interactions     ################################# Create symlinks in the project:# - dist/bin for outputs# - dist/testlogs, dist/genfiles# - bazel-out# NB: bazel-out should be excluded from the editor configuration.# The checked-in /.vscode/settings.json does this for VSCode.# Other editors may require manual config to ignore this directory.# In the past, we say a problem where VSCode traversed a massive tree, opening file handles and# eventually a surprising failure with auto-discovery of the C++ toolchain in# MacOS High Sierra.# See https://github.com/bazelbuild/bazel/issues/4603build --symlink_prefix=dist/# Turn off legacy external runfilesbuild --nolegacy_external_runfilesrun --nolegacy_external_runfilestest --nolegacy_external_runfiles# Turn on --incompatible_strict_action_env which was on by default# in Bazel 0.21.0 but turned off again in 0.22.0. Follow# https://github.com/bazelbuild/bazel/issues/7026 for more details.# This flag is needed to so that the bazel cache is not invalidated# when running bazel via `yarn bazel`.# See https://github.com/angular/angular/issues/27514.build --incompatible_strict_action_envrun --incompatible_strict_action_envtest --incompatible_strict_action_env# Do not build runfile trees by default. If an execution strategy relies on runfile# symlink teee, the tree is created on-demand. See: https://github.com/bazelbuild/bazel/issues/6627# and https://github.com/bazelbuild/bazel/commit/03246077f948f2790a83520e7dccc2625650e6dfbuild --nobuild_runfile_linksbuild --enable_runfiles################################ Release support             ## Turn on these settings with ##  --config=release           ################################# Releases should always be stamped with version control info# This command assumes node on the path and is a workaround for# https://github.com/bazelbuild/bazel/issues/4802build:release --workspace_status_command=&quot;yarn -s ng-dev release build-env-stamp --mode=release&quot;build:release --stamp# Building AIO against local Angular deps requires stamping# versions in Angular packages due to CLI version checks.build:aio_local_deps --stampbuild:aio_local_deps --workspace_status_command=&quot;yarn -s --cwd aio local-workspace-status&quot;# Snapshots should also be stamped with version control information.build:snapshot-build --workspace_status_command=&quot;yarn -s ng-dev release build-env-stamp --mode=snapshot&quot;build:snapshot-build --stamp########################################################### AIO architect build configuration                      ## See aio/angular.json for available configurations.     ## To build with a partiular configuration:               ##   bazel build //aio:build --aio_build_config=&lt;config&gt;  ## Default config is `stable``.                           ###########################################################build --flag_alias=aio_build_config=//aio:flag_aio_build_config##################################### AIO first party dep substitution ## Turn on with                     ##  --config=aio_local_deps         #####################################build:aio_local_deps --//aio:flag_aio_local_deps################################ Output                      ################################# A more useful default output mode for bazel query# Prints eg. &quot;ng_module rule //foo:bar&quot; rather than just &quot;//foo:bar&quot;query --output=label_kind# By default, failing tests don&#x27;t print any output, it goes to the log filetest --test_output=errors################################# Settings for CircleCI        ################################## Bazel flags for CircleCI are in /.circleci/bazel.linux.rc and /.circleci/bazel.windows.rc################################### Remote Build Execution support ## Turn on these settings with    ##  --config=remote               #################################### The following --define=EXECUTOR=remote will be able to be removed# once https://github.com/bazelbuild/bazel/issues/7254 is fixedbuild:remote --define=EXECUTOR=remote# Set a higher timeout value, just in case.build:remote --remote_timeout=600# Bazel detects maximum number of jobs based on host resources.# Since we run remotely, we can increase this number significantly.common:remote --jobs=200build:remote --google_default_credentials# Limit the number of test jobs for on an AIO local deps build. The example tests running# concurrently pushes the circleci executor RAM usage to its limits.test:aio_local_deps --jobs=24# Force remote exeuctions to consider the entire run as linuxbuild:remote --cpu=k8build:remote --host_cpu=k8# Toolchain and platform related flagsbuild:remote --crosstool_top=@npm//@angular/build-tooling/bazel/remote-execution/cpp:cc_toolchain_suitebuild:remote --extra_toolchains=@npm//@angular/build-tooling/bazel/remote-execution/cpp:cc_toolchainbuild:remote --extra_execution_platforms=@npm//@angular/build-tooling/bazel/remote-execution:platformbuild:remote --host_platform=@npm//@angular/build-tooling/bazel/remote-execution:platformbuild:remote --platforms=@npm//@angular/build-tooling/bazel/remote-execution:platform# Remote instance and cachingbuild:remote --remote_instance_name=projects/internal-200822/instances/primary_instancebuild:remote --project_id=internal-200822build:remote --remote_cache=remotebuildexecution.googleapis.combuild:remote --remote_executor=remotebuildexecution.googleapis.com# Use HTTP remote cachebuild:remote-cache --remote_cache=https://storage.googleapis.com/angular-team-cachebuild:remote-cache --remote_accept_cached=truebuild:remote-cache --remote_upload_local_results=truebuild:remote-cache --google_default_credentials# Ensure that tags like &quot;no-remote-exec&quot; get propagated to actions created by rules,# even if the rule implementation does not explicitly pass them to the execution requirements.# https://bazel.build/reference/command-line-reference#flag--experimental_allow_tags_propagationcommon --experimental_allow_tags_propagation# Disable network access in the sandbox by default. To enable network access# for a particular target, use:## load(&quot;@npm//@angular/build-tooling/bazel/remote-execution:index.bzl&quot;, &quot;ENABLE_NETWORK&quot;)# my_target(#   ...,#   exec_properties = ENABLE_NETWORK,   # Enables network in remote exec#   tags = [&quot;requires-network&quot;]         # Enables network in sandbox# )build --nosandbox_default_allow_network################################### Saucelabs tests settings       ## Turn on these settings with    ##  --config=saucelabs            #################################### For saucelabs tests we don&#x27;t want to enable flaky test attempts. Karma has its own integrated# retry mechanism and we do not want to retry unnecessarily if Karma already tried multiple times.test:saucelabs --flaky_test_attempts=1################# Flag Aliases ################## --ng_perf will ask the Ivy compiler to produce performance results for each build.build --flag_alias=ng_perf=//packages/compiler-cli:ng_perf##################################################### User bazel configuration# NOTE: This needs to be the *last* entry in the config.##################################################### Load any settings which are specific to the current user. Needs to be *last* statement# in this config, as the user configuration should be able to overwrite flags from this file.try-import %workspace%/.bazelrc.user
+
+创建.bazelversion用于指定bazel版本：
+5.0.0
+
+
+可以使用bazel5的任意版本，理论上都支持，但是不要使用bazel6的版本
+
+新建WORKSPACE用于定义bazel的工作区：
+workspace(   name = &quot;express-postgres-ts-starter&quot;,    managed_directories = &#123;        &quot;@npm&quot;: [&quot;node_modules&quot;],    &#125;,)
+
+导入http_archive用于获取bazel的库：
+load(&quot;@bazel_tools//tools/build_defs/repo:http.bzl&quot;, &quot;http_archive&quot;)
+
+如果使用了.yarn文件夹用于限制yarn的版本，可以通过创建yarn.bzl解决：
+YARN_PATH = &quot;.yarn/releases/yarn-1.22.19.cjs&quot;YARN_LABEL = &quot;//:&quot; + YARN_PATH
+
+然后在WORKSPACE导入：
+load(&quot;//:yarn.bzl&quot;, &quot;YARN_LABEL&quot;)
+
+引入bazel的nodesj依赖库：
+http_archive(    name = &quot;build_bazel_rules_nodejs&quot;,    sha256 = &quot;5dd1e5dea1322174c57d3ca7b899da381d516220793d0adef3ba03b9d23baa8e&quot;,    urls = [        &quot;https://github.com/bazelbuild/rules_nodejs/releases/download/5.8.3/rules_nodejs-5.8.3.tar.gz&quot;,        &quot;https://ghproxy.com/https://github.com/bazelbuild/rules_nodejs/releases/download/5.8.3/rules_nodejs-5.8.3.tar.gz&quot;    ],)load(&quot;@build_bazel_rules_nodejs//:repositories.bzl&quot;, &quot;build_bazel_rules_nodejs_dependencies&quot;)build_bazel_rules_nodejs_dependencies()http_archive(    name = &quot;rules_pkg&quot;,    sha256 = &quot;62eeb544ff1ef41d786e329e1536c1d541bb9bcad27ae984d57f18f314018e66&quot;,    urls = [        &quot;https://mirror.bazel.build/github.com/bazelbuild/rules_pkg/releases/download/0.6.0/rules_pkg-0.6.0.tar.gz&quot;,        &quot;https://github.com/bazelbuild/rules_pkg/releases/download/0.6.0/rules_pkg-0.6.0.tar.gz&quot;,        &quot;https://ghproxy.com/https://github.com/bazelbuild/rules_pkg/releases/download/0.6.0/rules_pkg-0.6.0.tar.gz&quot;,    ],)# Fetch Aspect lib for utilities like write_source_files# NOTE: We cannot move past version 1.23.2 of aspect_bazel_lib because it requires us to move to bazel 6.0.0 which#       breaks our usage of managed_directorieshttp_archive(    name = &quot;aspect_bazel_lib&quot;,    sha256 = &quot;4b2e774387bae6242879820086b7b738d49bf3d0659522ea5d9363be01a27582&quot;,    strip_prefix = &quot;bazel-lib-1.23.2&quot;,    urls = [        &quot;https://github.com/aspect-build/bazel-lib/archive/refs/tags/v1.23.2.tar.gz&quot;,        &quot;https://ghproxy.com/https://github.com/aspect-build/bazel-lib/archive/refs/tags/v1.23.2.tar.gz&quot;,    ])
+
+配置nodejs工具链：
+load(&quot;@rules_nodejs//nodejs:repositories.bzl&quot;, &quot;nodejs_register_toolchains&quot;)nodejs_register_toolchains(    name = &quot;nodejs&quot;,    node_version = &quot;18.10.0&quot;,)
+
+
+在arm mac上不支持nodejs20的版本，不确定其他平台时候是否支持nodejs20
+
+配置yarn_install下载依赖：
+load(&quot;@build_bazel_rules_nodejs//:index.bzl&quot;, &quot;yarn_install&quot;)yarn_install(    name = &quot;npm&quot;,		data = [        YARN_LABEL,        &quot;//:.yarnrc&quot;,				&quot;//:patches/trim-newlines+5.0.0.patch&quot;		],		exports_directories_only = False,		symlink_node_modules = True,    package_json = &quot;//:package.json&quot;,		yarn = YARN_LABEL,    yarn_lock = &quot;//:yarn.lock&quot;,)
+
+创建BUILD.bazel, 并定义为公开的:
+package(default_visibility = [&quot;//visibility:public&quot;])
+
+导入ts_project和nodejs_binary用于构建typescript和nodejs：
+load(&quot;@npm//@bazel/typescript:index.bzl&quot;, &quot;ts_project&quot;)load(&quot;@build_bazel_rules_nodejs//:index.bzl&quot;, &quot;nodejs_binary&quot;)
+
+定义SRCS变量用于声明所有需要参与编译的ts文件：
+SRCS = glob(	[		&quot;src/**/*.ts&quot;,	],	exclude = [		&quot;src/**/*.spec.ts&quot;	])
+
+使用ts_project将ts编译成js：
+ts_project(    name = &quot;server-ts&quot;,    srcs = [&quot;server.ts&quot; ] + SRCS,    resolve_json_module = True,    source_map = True,    tsconfig = &quot;//:tsconfig.json&quot;,    visibility = [&quot;//visibility:public&quot;],    deps = [        &quot;@npm//@apollo/server&quot;,        &quot;@npm//@graphql-tools/merge&quot;,        &quot;@npm//body-parser&quot;,        &quot;@npm//compression&quot;,        &quot;@npm//cookie-parser&quot;,        &quot;@npm//dotenv&quot;,        &quot;@npm//exceljs&quot;,        &quot;@npm//express&quot;,        &quot;@npm//express-fileupload&quot;,        &quot;@npm//express-joi-validation&quot;,        &quot;@npm//express-session&quot;,        &quot;@npm//graphql&quot;,        &quot;@npm//graphql-tag&quot;,        &quot;@npm//helmet&quot;,        &quot;@npm//joi&quot;,        &quot;@npm//jsonwebtoken&quot;,        &quot;@npm//knex&quot;,        &quot;@npm//lodash&quot;,        &quot;@npm//minio&quot;,        &quot;@npm//morgan&quot;,        &quot;@npm//pg&quot;,        &quot;@npm//pg-boss&quot;,        &quot;@npm//redis&quot;,        &quot;@npm//socket.io&quot;,        &quot;@npm//winston&quot;,        &quot;@npm//@types/express&quot;,        &quot;@npm//@types/express-fileupload&quot;,        &quot;@npm//@types/express-session&quot;,        &quot;@npm//@types/jest&quot;,        &quot;@npm//@types/node&quot;,    ])
+
+现在可以编译了：
+yarn bazel build //... 
+
+最后可以在dist/bin看到一个server.js, 我们可以通过执行node dist/bin/server.js运行我们的nodejs项目了。
+参考
+Bazel官网
+Bazel 学习笔记 (一) 快速开始
+使用Bazel编译TypeScript
+angular
+feat: add bazel support
+
+]]></content>
+      <categories>
+        <category>前端</category>
+      </categories>
+      <tags>
+        <tag>bazel</tag>
+        <tag>typescript</tag>
+        <tag>nodejs</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>script标签中的defer和async</title>
     <url>/2024/11/04/front-end/html-scripts-defer-async/</url>
     <content><![CDATA[浏览器中script标签中的defer和async有什么区别，优缺点是什么，应用场景是什么？在 HTML 中，&lt;script&gt; 标签的 defer 和 async 属性用于控制脚本的加载和执行方式，尤其是在处理 JavaScript 文件时。它们之间的主要区别和应用场景如下：
@@ -2577,85 +2656,6 @@ var name = &quot;The Window&quot;;var object = &#123;　　name : &quot;My Objec
       </categories>
       <tags>
         <tag>javascript</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>如何使用bazel去构建基于express和typescript的nodejs项目</title>
-    <url>/2023/08/10/front-end/how-to-use-bazel-to-build-nodejs-typescript-expressjs/</url>
-    <content><![CDATA[前言Bazel 是一款类似于 Make、Maven 和 Gradle的开源构建和测试工具。它使用可读的高级构建语言，支持多种变成语言编写的项目，并且能够为多个平台进行构建。Bazel 支持构建包含多个仓库、大量开发人员的大型代码库。
-详细介绍可见Bazel官网。
-目的本文的目的是使用bazel5去构建一个完整的nodejs后端项目，并不负责bazel相关知识的介绍。
-配置首先在package.json文件中·devDependencies·部分添加：
-&quot;@bazel/bazelisk&quot;: &quot;^1.7.5&quot;,&quot;@bazel/buildifier&quot;: &quot;^6.0.0&quot;,&quot;@bazel/ibazel&quot;: &quot;^0.16.0&quot;,&quot;@bazel/typescript&quot;: &quot;^5.8.1&quot;,
-
-然后再执行安装依赖命令。
-创建.bazelignore文件并写入下面的内容:
-.gitnode_modulesdist
-
-创建.bazelrc文件并写入下面的内容:
-# Enable debugging tests with --config=debugtest:debug --test_arg=--node_options=--inspect-brk --test_output=streamed --test_strategy=exclusive --test_timeout=9999 --nocache_test_results# Do not attempt to de-flake locally.# On CI we might set this to `3` to run with deflaking.test --flaky_test_attempts=1################################ Filesystem interactions     ################################# Create symlinks in the project:# - dist/bin for outputs# - dist/testlogs, dist/genfiles# - bazel-out# NB: bazel-out should be excluded from the editor configuration.# The checked-in /.vscode/settings.json does this for VSCode.# Other editors may require manual config to ignore this directory.# In the past, we say a problem where VSCode traversed a massive tree, opening file handles and# eventually a surprising failure with auto-discovery of the C++ toolchain in# MacOS High Sierra.# See https://github.com/bazelbuild/bazel/issues/4603build --symlink_prefix=dist/# Turn off legacy external runfilesbuild --nolegacy_external_runfilesrun --nolegacy_external_runfilestest --nolegacy_external_runfiles# Turn on --incompatible_strict_action_env which was on by default# in Bazel 0.21.0 but turned off again in 0.22.0. Follow# https://github.com/bazelbuild/bazel/issues/7026 for more details.# This flag is needed to so that the bazel cache is not invalidated# when running bazel via `yarn bazel`.# See https://github.com/angular/angular/issues/27514.build --incompatible_strict_action_envrun --incompatible_strict_action_envtest --incompatible_strict_action_env# Do not build runfile trees by default. If an execution strategy relies on runfile# symlink teee, the tree is created on-demand. See: https://github.com/bazelbuild/bazel/issues/6627# and https://github.com/bazelbuild/bazel/commit/03246077f948f2790a83520e7dccc2625650e6dfbuild --nobuild_runfile_linksbuild --enable_runfiles################################ Release support             ## Turn on these settings with ##  --config=release           ################################# Releases should always be stamped with version control info# This command assumes node on the path and is a workaround for# https://github.com/bazelbuild/bazel/issues/4802build:release --workspace_status_command=&quot;yarn -s ng-dev release build-env-stamp --mode=release&quot;build:release --stamp# Building AIO against local Angular deps requires stamping# versions in Angular packages due to CLI version checks.build:aio_local_deps --stampbuild:aio_local_deps --workspace_status_command=&quot;yarn -s --cwd aio local-workspace-status&quot;# Snapshots should also be stamped with version control information.build:snapshot-build --workspace_status_command=&quot;yarn -s ng-dev release build-env-stamp --mode=snapshot&quot;build:snapshot-build --stamp########################################################### AIO architect build configuration                      ## See aio/angular.json for available configurations.     ## To build with a partiular configuration:               ##   bazel build //aio:build --aio_build_config=&lt;config&gt;  ## Default config is `stable``.                           ###########################################################build --flag_alias=aio_build_config=//aio:flag_aio_build_config##################################### AIO first party dep substitution ## Turn on with                     ##  --config=aio_local_deps         #####################################build:aio_local_deps --//aio:flag_aio_local_deps################################ Output                      ################################# A more useful default output mode for bazel query# Prints eg. &quot;ng_module rule //foo:bar&quot; rather than just &quot;//foo:bar&quot;query --output=label_kind# By default, failing tests don&#x27;t print any output, it goes to the log filetest --test_output=errors################################# Settings for CircleCI        ################################## Bazel flags for CircleCI are in /.circleci/bazel.linux.rc and /.circleci/bazel.windows.rc################################### Remote Build Execution support ## Turn on these settings with    ##  --config=remote               #################################### The following --define=EXECUTOR=remote will be able to be removed# once https://github.com/bazelbuild/bazel/issues/7254 is fixedbuild:remote --define=EXECUTOR=remote# Set a higher timeout value, just in case.build:remote --remote_timeout=600# Bazel detects maximum number of jobs based on host resources.# Since we run remotely, we can increase this number significantly.common:remote --jobs=200build:remote --google_default_credentials# Limit the number of test jobs for on an AIO local deps build. The example tests running# concurrently pushes the circleci executor RAM usage to its limits.test:aio_local_deps --jobs=24# Force remote exeuctions to consider the entire run as linuxbuild:remote --cpu=k8build:remote --host_cpu=k8# Toolchain and platform related flagsbuild:remote --crosstool_top=@npm//@angular/build-tooling/bazel/remote-execution/cpp:cc_toolchain_suitebuild:remote --extra_toolchains=@npm//@angular/build-tooling/bazel/remote-execution/cpp:cc_toolchainbuild:remote --extra_execution_platforms=@npm//@angular/build-tooling/bazel/remote-execution:platformbuild:remote --host_platform=@npm//@angular/build-tooling/bazel/remote-execution:platformbuild:remote --platforms=@npm//@angular/build-tooling/bazel/remote-execution:platform# Remote instance and cachingbuild:remote --remote_instance_name=projects/internal-200822/instances/primary_instancebuild:remote --project_id=internal-200822build:remote --remote_cache=remotebuildexecution.googleapis.combuild:remote --remote_executor=remotebuildexecution.googleapis.com# Use HTTP remote cachebuild:remote-cache --remote_cache=https://storage.googleapis.com/angular-team-cachebuild:remote-cache --remote_accept_cached=truebuild:remote-cache --remote_upload_local_results=truebuild:remote-cache --google_default_credentials# Ensure that tags like &quot;no-remote-exec&quot; get propagated to actions created by rules,# even if the rule implementation does not explicitly pass them to the execution requirements.# https://bazel.build/reference/command-line-reference#flag--experimental_allow_tags_propagationcommon --experimental_allow_tags_propagation# Disable network access in the sandbox by default. To enable network access# for a particular target, use:## load(&quot;@npm//@angular/build-tooling/bazel/remote-execution:index.bzl&quot;, &quot;ENABLE_NETWORK&quot;)# my_target(#   ...,#   exec_properties = ENABLE_NETWORK,   # Enables network in remote exec#   tags = [&quot;requires-network&quot;]         # Enables network in sandbox# )build --nosandbox_default_allow_network################################### Saucelabs tests settings       ## Turn on these settings with    ##  --config=saucelabs            #################################### For saucelabs tests we don&#x27;t want to enable flaky test attempts. Karma has its own integrated# retry mechanism and we do not want to retry unnecessarily if Karma already tried multiple times.test:saucelabs --flaky_test_attempts=1################# Flag Aliases ################## --ng_perf will ask the Ivy compiler to produce performance results for each build.build --flag_alias=ng_perf=//packages/compiler-cli:ng_perf##################################################### User bazel configuration# NOTE: This needs to be the *last* entry in the config.##################################################### Load any settings which are specific to the current user. Needs to be *last* statement# in this config, as the user configuration should be able to overwrite flags from this file.try-import %workspace%/.bazelrc.user
-
-创建.bazelversion用于指定bazel版本：
-5.0.0
-
-
-可以使用bazel5的任意版本，理论上都支持，但是不要使用bazel6的版本
-
-新建WORKSPACE用于定义bazel的工作区：
-workspace(   name = &quot;express-postgres-ts-starter&quot;,    managed_directories = &#123;        &quot;@npm&quot;: [&quot;node_modules&quot;],    &#125;,)
-
-导入http_archive用于获取bazel的库：
-load(&quot;@bazel_tools//tools/build_defs/repo:http.bzl&quot;, &quot;http_archive&quot;)
-
-如果使用了.yarn文件夹用于限制yarn的版本，可以通过创建yarn.bzl解决：
-YARN_PATH = &quot;.yarn/releases/yarn-1.22.19.cjs&quot;YARN_LABEL = &quot;//:&quot; + YARN_PATH
-
-然后在WORKSPACE导入：
-load(&quot;//:yarn.bzl&quot;, &quot;YARN_LABEL&quot;)
-
-引入bazel的nodesj依赖库：
-http_archive(    name = &quot;build_bazel_rules_nodejs&quot;,    sha256 = &quot;5dd1e5dea1322174c57d3ca7b899da381d516220793d0adef3ba03b9d23baa8e&quot;,    urls = [        &quot;https://github.com/bazelbuild/rules_nodejs/releases/download/5.8.3/rules_nodejs-5.8.3.tar.gz&quot;,        &quot;https://ghproxy.com/https://github.com/bazelbuild/rules_nodejs/releases/download/5.8.3/rules_nodejs-5.8.3.tar.gz&quot;    ],)load(&quot;@build_bazel_rules_nodejs//:repositories.bzl&quot;, &quot;build_bazel_rules_nodejs_dependencies&quot;)build_bazel_rules_nodejs_dependencies()http_archive(    name = &quot;rules_pkg&quot;,    sha256 = &quot;62eeb544ff1ef41d786e329e1536c1d541bb9bcad27ae984d57f18f314018e66&quot;,    urls = [        &quot;https://mirror.bazel.build/github.com/bazelbuild/rules_pkg/releases/download/0.6.0/rules_pkg-0.6.0.tar.gz&quot;,        &quot;https://github.com/bazelbuild/rules_pkg/releases/download/0.6.0/rules_pkg-0.6.0.tar.gz&quot;,        &quot;https://ghproxy.com/https://github.com/bazelbuild/rules_pkg/releases/download/0.6.0/rules_pkg-0.6.0.tar.gz&quot;,    ],)# Fetch Aspect lib for utilities like write_source_files# NOTE: We cannot move past version 1.23.2 of aspect_bazel_lib because it requires us to move to bazel 6.0.0 which#       breaks our usage of managed_directorieshttp_archive(    name = &quot;aspect_bazel_lib&quot;,    sha256 = &quot;4b2e774387bae6242879820086b7b738d49bf3d0659522ea5d9363be01a27582&quot;,    strip_prefix = &quot;bazel-lib-1.23.2&quot;,    urls = [        &quot;https://github.com/aspect-build/bazel-lib/archive/refs/tags/v1.23.2.tar.gz&quot;,        &quot;https://ghproxy.com/https://github.com/aspect-build/bazel-lib/archive/refs/tags/v1.23.2.tar.gz&quot;,    ])
-
-配置nodejs工具链：
-load(&quot;@rules_nodejs//nodejs:repositories.bzl&quot;, &quot;nodejs_register_toolchains&quot;)nodejs_register_toolchains(    name = &quot;nodejs&quot;,    node_version = &quot;18.10.0&quot;,)
-
-
-在arm mac上不支持nodejs20的版本，不确定其他平台时候是否支持nodejs20
-
-配置yarn_install下载依赖：
-load(&quot;@build_bazel_rules_nodejs//:index.bzl&quot;, &quot;yarn_install&quot;)yarn_install(    name = &quot;npm&quot;,		data = [        YARN_LABEL,        &quot;//:.yarnrc&quot;,				&quot;//:patches/trim-newlines+5.0.0.patch&quot;		],		exports_directories_only = False,		symlink_node_modules = True,    package_json = &quot;//:package.json&quot;,		yarn = YARN_LABEL,    yarn_lock = &quot;//:yarn.lock&quot;,)
-
-创建BUILD.bazel, 并定义为公开的:
-package(default_visibility = [&quot;//visibility:public&quot;])
-
-导入ts_project和nodejs_binary用于构建typescript和nodejs：
-load(&quot;@npm//@bazel/typescript:index.bzl&quot;, &quot;ts_project&quot;)load(&quot;@build_bazel_rules_nodejs//:index.bzl&quot;, &quot;nodejs_binary&quot;)
-
-定义SRCS变量用于声明所有需要参与编译的ts文件：
-SRCS = glob(	[		&quot;src/**/*.ts&quot;,	],	exclude = [		&quot;src/**/*.spec.ts&quot;	])
-
-使用ts_project将ts编译成js：
-ts_project(    name = &quot;server-ts&quot;,    srcs = [&quot;server.ts&quot; ] + SRCS,    resolve_json_module = True,    source_map = True,    tsconfig = &quot;//:tsconfig.json&quot;,    visibility = [&quot;//visibility:public&quot;],    deps = [        &quot;@npm//@apollo/server&quot;,        &quot;@npm//@graphql-tools/merge&quot;,        &quot;@npm//body-parser&quot;,        &quot;@npm//compression&quot;,        &quot;@npm//cookie-parser&quot;,        &quot;@npm//dotenv&quot;,        &quot;@npm//exceljs&quot;,        &quot;@npm//express&quot;,        &quot;@npm//express-fileupload&quot;,        &quot;@npm//express-joi-validation&quot;,        &quot;@npm//express-session&quot;,        &quot;@npm//graphql&quot;,        &quot;@npm//graphql-tag&quot;,        &quot;@npm//helmet&quot;,        &quot;@npm//joi&quot;,        &quot;@npm//jsonwebtoken&quot;,        &quot;@npm//knex&quot;,        &quot;@npm//lodash&quot;,        &quot;@npm//minio&quot;,        &quot;@npm//morgan&quot;,        &quot;@npm//pg&quot;,        &quot;@npm//pg-boss&quot;,        &quot;@npm//redis&quot;,        &quot;@npm//socket.io&quot;,        &quot;@npm//winston&quot;,        &quot;@npm//@types/express&quot;,        &quot;@npm//@types/express-fileupload&quot;,        &quot;@npm//@types/express-session&quot;,        &quot;@npm//@types/jest&quot;,        &quot;@npm//@types/node&quot;,    ])
-
-现在可以编译了：
-yarn bazel build //... 
-
-最后可以在dist/bin看到一个server.js, 我们可以通过执行node dist/bin/server.js运行我们的nodejs项目了。
-参考
-Bazel官网
-Bazel 学习笔记 (一) 快速开始
-使用Bazel编译TypeScript
-angular
-feat: add bazel support
-
-]]></content>
-      <categories>
-        <category>前端</category>
-      </categories>
-      <tags>
-        <tag>bazel</tag>
-        <tag>typescript</tag>
-        <tag>nodejs</tag>
       </tags>
   </entry>
   <entry>
@@ -2927,6 +2927,20 @@ Resend 发送失败？ 确保你的发件域名在 Resend 后台已通过 DNS �
       </tags>
   </entry>
   <entry>
+    <title>Nodejs项目的Dockerfile模版</title>
+    <url>/2021/10/20/front-end/node-docker-template/</url>
+    <content><![CDATA[Nodejs项目的Dockerfile模版基于YarnFROM node:14.17.6-alpine3.14 as build# 取消对https的证书限制# ENV SELF_SIGNED_CERT_IN_CHAIN=true# ENV NODE_TLS_REJECT_UNAUTHORIZED=0# RUN npm config set strict-ssl false# RUN yarn config set strict-ssl falseRUN apk update &amp;&amp; apk add bashCOPY package.json yarn.lock .npmrc /tmp/RUN cd /tmp &amp;&amp; yarn install --frozen-lockfile --non-interactiveRUN mkdir -p /app &amp;&amp; cp -a /tmp/node_modules /app/WORKDIR /appCOPY . /appRUN yarn buildFROM build AS ciWORKDIR /appRUN yarn run test:ci &amp;&amp; yarn install --frozen-lockfile --non-interactive --productionFROM node:14.17.6-alpine3.14 as releaseRUN mkdir -p /app &amp;&amp; \	addgroup -S daminggroup &amp;&amp; \	adduser -S -h /app -G daminggroup daminguser &amp;&amp; \	chown -R daminguser:daminggroup /appWORKDIR /appCOPY --from=ci --chown=daminguser:daminggroup /app/dist ./distCOPY --from=ci --chown=daminguser:daminggroup /app/node_modules ./node_modulesCOPY --from=ci --chown=daminguser:daminggroup /app/package.json .HEALTHCHECK --interval=30s --timeout=30s CMD curl -f http://localhost:3978/ping || exit 1EXPOSE 3978CMD [&quot;sh&quot;, &quot;-c&quot;, &quot;node dist/index.js&quot;]
+
+基于NPMFROM node:14.17.6-alpine3.14 as build# pwc network limit# ENV SELF_SIGNED_CERT_IN_CHAIN=true# ENV NODE_TLS_REJECT_UNAUTHORIZED=0# RUN npm config set strict-ssl false# RUN yarn config set strict-ssl falseRUN apk update &amp;&amp; apk add bashCOPY package.json package-lock.json .npmrc /tmp/RUN cd /tmp &amp;&amp; npm installRUN mkdir -p /app &amp;&amp; cp -a /tmp/node_modules /app/WORKDIR /appCOPY . /appRUN npm run buildFROM build AS ciWORKDIR /appRUN npm run test:ci &amp;&amp; npm install --production --ignore-scripts trueFROM node:14.17.6-alpine3.14 as releaseRUN mkdir -p /app &amp;&amp; \	addgroup -S daminggroup &amp;&amp; \	adduser -S -h /app -G daminggroup daminguser &amp;&amp; \	chown -R daminguser:daminggroup /appWORKDIR /appCOPY --from=ci --chown=daminguser:daminggroup /app/dist ./distCOPY --from=ci --chown=daminguser:daminggroup /app/node_modules ./node_modulesCOPY --from=ci --chown=daminguser:daminggroup /app/package.json .HEALTHCHECK --interval=30s --timeout=30s CMD curl -f http://localhost:3978/ping || exit 1EXPOSE 3978CMD [&quot;sh&quot;, &quot;-c&quot;, &quot;node dist/index.js&quot;]]]></content>
+      <categories>
+        <category>前端</category>
+      </categories>
+      <tags>
+        <tag>docker</tag>
+        <tag>nodejs</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>在 Next.js 16 (Turbopack) 中集成 RDKit.js 渲染 SMILES 的工程实践与踩坑指南</title>
     <url>/2026/06/16/front-end/nextjs16-rdkitjs-smiles/</url>
     <content><![CDATA[在 Next.js 16 (Turbopack) 中集成 RDKit.js 渲染 SMILES 的工程实践与踩坑指南前言在生物制药数字化（AIDD、LIMS 等系统）的前端开发中，SMILES（简化分子线性输入规范）是表示分子结构最常用的文本格式。为了在前端实现“输入文本，实时预览 2D 分子结构”，我们需要引入化学信息学界的工业级开源工具包：RDKit.js。
@@ -2975,20 +2989,6 @@ Module not found: Can&#x27;t resolve &#x27;fs&#x27;./node_modules/@rdkit/rdkit/d
         <tag>nexjts</tag>
         <tag>rdkitjs</tag>
         <tag>smiles</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>Nodejs项目的Dockerfile模版</title>
-    <url>/2021/10/20/front-end/node-docker-template/</url>
-    <content><![CDATA[Nodejs项目的Dockerfile模版基于YarnFROM node:14.17.6-alpine3.14 as build# 取消对https的证书限制# ENV SELF_SIGNED_CERT_IN_CHAIN=true# ENV NODE_TLS_REJECT_UNAUTHORIZED=0# RUN npm config set strict-ssl false# RUN yarn config set strict-ssl falseRUN apk update &amp;&amp; apk add bashCOPY package.json yarn.lock .npmrc /tmp/RUN cd /tmp &amp;&amp; yarn install --frozen-lockfile --non-interactiveRUN mkdir -p /app &amp;&amp; cp -a /tmp/node_modules /app/WORKDIR /appCOPY . /appRUN yarn buildFROM build AS ciWORKDIR /appRUN yarn run test:ci &amp;&amp; yarn install --frozen-lockfile --non-interactive --productionFROM node:14.17.6-alpine3.14 as releaseRUN mkdir -p /app &amp;&amp; \	addgroup -S daminggroup &amp;&amp; \	adduser -S -h /app -G daminggroup daminguser &amp;&amp; \	chown -R daminguser:daminggroup /appWORKDIR /appCOPY --from=ci --chown=daminguser:daminggroup /app/dist ./distCOPY --from=ci --chown=daminguser:daminggroup /app/node_modules ./node_modulesCOPY --from=ci --chown=daminguser:daminggroup /app/package.json .HEALTHCHECK --interval=30s --timeout=30s CMD curl -f http://localhost:3978/ping || exit 1EXPOSE 3978CMD [&quot;sh&quot;, &quot;-c&quot;, &quot;node dist/index.js&quot;]
-
-基于NPMFROM node:14.17.6-alpine3.14 as build# pwc network limit# ENV SELF_SIGNED_CERT_IN_CHAIN=true# ENV NODE_TLS_REJECT_UNAUTHORIZED=0# RUN npm config set strict-ssl false# RUN yarn config set strict-ssl falseRUN apk update &amp;&amp; apk add bashCOPY package.json package-lock.json .npmrc /tmp/RUN cd /tmp &amp;&amp; npm installRUN mkdir -p /app &amp;&amp; cp -a /tmp/node_modules /app/WORKDIR /appCOPY . /appRUN npm run buildFROM build AS ciWORKDIR /appRUN npm run test:ci &amp;&amp; npm install --production --ignore-scripts trueFROM node:14.17.6-alpine3.14 as releaseRUN mkdir -p /app &amp;&amp; \	addgroup -S daminggroup &amp;&amp; \	adduser -S -h /app -G daminggroup daminguser &amp;&amp; \	chown -R daminguser:daminggroup /appWORKDIR /appCOPY --from=ci --chown=daminguser:daminggroup /app/dist ./distCOPY --from=ci --chown=daminguser:daminggroup /app/node_modules ./node_modulesCOPY --from=ci --chown=daminguser:daminggroup /app/package.json .HEALTHCHECK --interval=30s --timeout=30s CMD curl -f http://localhost:3978/ping || exit 1EXPOSE 3978CMD [&quot;sh&quot;, &quot;-c&quot;, &quot;node dist/index.js&quot;]]]></content>
-      <categories>
-        <category>前端</category>
-      </categories>
-      <tags>
-        <tag>docker</tag>
-        <tag>nodejs</tag>
       </tags>
   </entry>
   <entry>
@@ -3367,6 +3367,40 @@ main.8c8b27cf.chunk大小为804B。
       </tags>
   </entry>
   <entry>
+    <title>TypeScript中可选链</title>
+    <url>/2021/07/03/front-end/ts-optional-chaining/</url>
+    <content><![CDATA[TypeScript中可选链什么是可选链TypeScript 3.7中一个最引人关注的特性便是可选链(Optional Chaining)。
+所谓可选链，就是当我们试图使用访问对象的字段或者方法时，如果对象为null或者undefined，TypeScript将会自动停止运行的代码，以防止空指针异常。
+可选链的使用首先定义一个接口 A, 有一个字段b，b可能是字符串，也可能是null:
+interface A &#123;    b: string | null&#125;
+
+定义一个变量a:
+const a = &#123;    b: &#x27;c&#x27;&#125;
+
+使用?.来访问字段:
+console.log(a?.b)
+
+如果a为null或者undefined, 将输出undefined
+TypeScript做了什么可选链并不是ts的专利，在js就已经存在了，除了ie,其他现代浏览器最新版本都是支持了，但是一些老版本就不支持，因此ts没有使用js的语法，而是通过三元表达式? :转译。因此上面的代码将会转译成:
+console.log(a === null || a === void 0 ? void 0 : a.b);
+
+但是ts没有判断a是否是undefined, 而是因为在js中， undefined不仅是值，也可能是一个全局变量。直到es5之前，undefined是可以被修改的。我们可以通过下面的代码来修改:
+(function() &#123;  var undefined = 1  console.log(undefined) // 1&#125;)()
+
+参考
+深入理解 TypeScript(可选链（Optional Chaining）)
+JS: The difference between “undefined”, “null” and “void 0”
+可选链操作符
+
+]]></content>
+      <categories>
+        <category>前端</category>
+      </categories>
+      <tags>
+        <tag>typeScript</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>无 Docker Desktop + Colima + Docker Compose v2 标准化方案</title>
     <url>/2026/04/27/software/colima-docker-compose-setup/</url>
     <content><![CDATA[无 Docker Desktop + 纯 CLI + Colima + Docker Compose v2 标准化方案一、背景在 macOS 环境中，Docker Desktop 虽然开箱即用，但存在以下问题：
@@ -3522,37 +3556,49 @@ docker compose up
       </tags>
   </entry>
   <entry>
-    <title>TypeScript中可选链</title>
-    <url>/2021/07/03/front-end/ts-optional-chaining/</url>
-    <content><![CDATA[TypeScript中可选链什么是可选链TypeScript 3.7中一个最引人关注的特性便是可选链(Optional Chaining)。
-所谓可选链，就是当我们试图使用访问对象的字段或者方法时，如果对象为null或者undefined，TypeScript将会自动停止运行的代码，以防止空指针异常。
-可选链的使用首先定义一个接口 A, 有一个字段b，b可能是字符串，也可能是null:
-interface A &#123;    b: string | null&#125;
+    <title>在k3s中配置私有镜像仓库</title>
+    <url>/2025/03/06/software/connect-to-private-docker-registry-in-k3s/</url>
+    <content><![CDATA[前言本文的目的是实现在k3s中可以访问使用docker部署registry。
+部署registry启动一个一次性容器用于创建账号密码.密码文件路径以&#x2F;root&#x2F;registry&#x2F;htpasswd为例,账号密码以admin和12345678为例.
+docker run --rm --entrypoint \    htpasswd httpd:2 -Bbn \    admin 12345678 &gt; ./registry/htpasswd
 
-定义一个变量a:
-const a = &#123;    b: &#x27;c&#x27;&#125;
+编写docker compose的yaml文件用于启动registry。
+services:  registry:    image: registry:2    container_name: registry    volumes:      # - ./config.yml:/etc/docker/registry/config.yml      - ./htpasswd:/auth/htpasswd      - ./registry:/var/lib/registry      - /etc/localtime:/etc/localtime    ports:      - 5000:5000    environment:      - REGISTRY_AUTH=htpasswd      - REGISTRY_AUTH_HTPASSWD_PATH=/auth/htpasswd      - REGISTRY_AUTH_HTPASSWD_REALM=Registry Realm      - REGISTRY_STORAGE_DELETE_ENABLED=true    networks:      - registry-network    restart: always    extra_hosts:      - host.docker.internal:host-gatewaynetworks:  registry-network:    external: false
 
-使用?.来访问字段:
-console.log(a?.b)
+resistry默认提供web ui使用，我们可以使用docker-registry-ui部署一个web ui。
+registry-ui:image: joxit/docker-registry-ui:maincontainer_name: registry-uirestart: alwaysports:  - 5001:80environment:  - SINGLE_REGISTRY=true  - REGISTRY_TITLE=Docker Registry UI  - DELETE_IMAGES=true  - SHOW_CONTENT_DIGEST=true  - NGINX_PROXY_PASS_URL=http://registry:5000  - SHOW_CATALOG_NB_TAGS=true  - CATALOG_MIN_BRANCHES=1  - CATALOG_MAX_BRANCHES=1  - TAGLIST_PAGE_SIZE=100  - REGISTRY_SECURED=false  - CATALOG_ELEMENTS_LIMIT=1000networks:  - registry-networkextra_hosts:  - host.docker.internal:host-gateway
 
-如果a为null或者undefined, 将输出undefined
-TypeScript做了什么可选链并不是ts的专利，在js就已经存在了，除了ie,其他现代浏览器最新版本都是支持了，但是一些老版本就不支持，因此ts没有使用js的语法，而是通过三元表达式? :转译。因此上面的代码将会转译成:
-console.log(a === null || a === void 0 ? void 0 : a.b);
+然后通过·docker compose up -d·就可以启动了。
+docker连接私有仓库docker默认不支持http协议，需要额外配置, 通过在&#x2F;etc&#x2F;docker&#x2F;daemon.json 中将私有仓库地址添加进入就好了。
+&#123;  &quot;insecure-registries&quot;: [&quot;192.168.31.220:5000&quot;]&#125;
 
-但是ts没有判断a是否是undefined, 而是因为在js中， undefined不仅是值，也可能是一个全局变量。直到es5之前，undefined是可以被修改的。我们可以通过下面的代码来修改:
-(function() &#123;  var undefined = 1  console.log(undefined) // 1&#125;)()
+然后可以通过docker login去登陆私有仓库。
+docker login 192.168.31.220:5000
 
-参考
-深入理解 TypeScript(可选链（Optional Chaining）)
-JS: The difference between “undefined”, “null” and “void 0”
-可选链操作符
+k3s连接私有仓库如果k3s使用docker运行时就不需要额外的操作了，就可以操作了应该（没试过）
+如果k3s使用containerd运行时，需要自行配置&#x2F;var&#x2F;lib&#x2F;rancher&#x2F;k3s&#x2F;agent&#x2F;etc&#x2F;containerd&#x2F;config.toml。
+一般而言不鼓励直接修改&#x2F;var&#x2F;lib&#x2F;rancher&#x2F;k3s&#x2F;agent&#x2F;etc&#x2F;containerd&#x2F;config.toml文件，而是通过 &#x2F;etc&#x2F;rancher&#x2F;k3s&#x2F;registries.yaml让k3s自行生成containerd的配置文件。
+mirrors:  &quot;192.168.31.220:5000&quot;:    endpoint:      - &quot;http://192.168.31.220:5000&quot;configs:  &quot;192.168.31.220:5000&quot;:    auth:      username: admin      password: password    tls:      insecure_skip_verify: true
+
+mirrors定义镜像仓库的镜像规则（mirror），用于指定如何访问特定的私有仓库。当容器运行时尝试拉取镜像时，会根据 mirrors 的配置决定从哪个地址拉取。configs定义私有仓库的认证和 TLS 配置。当访问私有仓库时，容器运行时会使用这里配置的用户名、密码和 TLS 设置。
+有的时候k3s不一定能够实时自动监听registries.yaml的改动，所以最好的方式还是重启k3s:
+sudo systemctl restart k3s-agent   # worker 节点# 或者sudo systemctl restart k3s         # server 节点
+
+现在可以通过创建一个pod去测试k3s是否正常访问私有仓库。
+这里推荐使用crictl去直接拉取私有仓库的镜像。
+sudo crictl pull 192.168.31.220:5000/hoteler-api:07e1b87e82ccfc49e5bee7d3d88cf2c304376056
+
+参考资料
+Docker login 登录私服，报错； http: server gave HTTP response to HTTPS client
+Private Registry Configuration
 
 ]]></content>
       <categories>
-        <category>前端</category>
+        <category>软件</category>
       </categories>
       <tags>
-        <tag>typeScript</tag>
+        <tag>k3s</tag>
+        <tag>docker registry</tag>
       </tags>
   </entry>
   <entry>
@@ -3676,99 +3722,6 @@ NXDOMAIN 错误：因为是内网域名，公共 DNS 无法解析。解决办法
       </tags>
   </entry>
   <entry>
-    <title>在k3s中配置私有镜像仓库</title>
-    <url>/2025/03/06/software/connect-to-private-docker-registry-in-k3s/</url>
-    <content><![CDATA[前言本文的目的是实现在k3s中可以访问使用docker部署registry。
-部署registry启动一个一次性容器用于创建账号密码.密码文件路径以&#x2F;root&#x2F;registry&#x2F;htpasswd为例,账号密码以admin和12345678为例.
-docker run --rm --entrypoint \    htpasswd httpd:2 -Bbn \    admin 12345678 &gt; ./registry/htpasswd
-
-编写docker compose的yaml文件用于启动registry。
-services:  registry:    image: registry:2    container_name: registry    volumes:      # - ./config.yml:/etc/docker/registry/config.yml      - ./htpasswd:/auth/htpasswd      - ./registry:/var/lib/registry      - /etc/localtime:/etc/localtime    ports:      - 5000:5000    environment:      - REGISTRY_AUTH=htpasswd      - REGISTRY_AUTH_HTPASSWD_PATH=/auth/htpasswd      - REGISTRY_AUTH_HTPASSWD_REALM=Registry Realm      - REGISTRY_STORAGE_DELETE_ENABLED=true    networks:      - registry-network    restart: always    extra_hosts:      - host.docker.internal:host-gatewaynetworks:  registry-network:    external: false
-
-resistry默认提供web ui使用，我们可以使用docker-registry-ui部署一个web ui。
-registry-ui:image: joxit/docker-registry-ui:maincontainer_name: registry-uirestart: alwaysports:  - 5001:80environment:  - SINGLE_REGISTRY=true  - REGISTRY_TITLE=Docker Registry UI  - DELETE_IMAGES=true  - SHOW_CONTENT_DIGEST=true  - NGINX_PROXY_PASS_URL=http://registry:5000  - SHOW_CATALOG_NB_TAGS=true  - CATALOG_MIN_BRANCHES=1  - CATALOG_MAX_BRANCHES=1  - TAGLIST_PAGE_SIZE=100  - REGISTRY_SECURED=false  - CATALOG_ELEMENTS_LIMIT=1000networks:  - registry-networkextra_hosts:  - host.docker.internal:host-gateway
-
-然后通过·docker compose up -d·就可以启动了。
-docker连接私有仓库docker默认不支持http协议，需要额外配置, 通过在&#x2F;etc&#x2F;docker&#x2F;daemon.json 中将私有仓库地址添加进入就好了。
-&#123;  &quot;insecure-registries&quot;: [&quot;192.168.31.220:5000&quot;]&#125;
-
-然后可以通过docker login去登陆私有仓库。
-docker login 192.168.31.220:5000
-
-k3s连接私有仓库如果k3s使用docker运行时就不需要额外的操作了，就可以操作了应该（没试过）
-如果k3s使用containerd运行时，需要自行配置&#x2F;var&#x2F;lib&#x2F;rancher&#x2F;k3s&#x2F;agent&#x2F;etc&#x2F;containerd&#x2F;config.toml。
-一般而言不鼓励直接修改&#x2F;var&#x2F;lib&#x2F;rancher&#x2F;k3s&#x2F;agent&#x2F;etc&#x2F;containerd&#x2F;config.toml文件，而是通过 &#x2F;etc&#x2F;rancher&#x2F;k3s&#x2F;registries.yaml让k3s自行生成containerd的配置文件。
-mirrors:  &quot;192.168.31.220:5000&quot;:    endpoint:      - &quot;http://192.168.31.220:5000&quot;configs:  &quot;192.168.31.220:5000&quot;:    auth:      username: admin      password: password    tls:      insecure_skip_verify: true
-
-mirrors定义镜像仓库的镜像规则（mirror），用于指定如何访问特定的私有仓库。当容器运行时尝试拉取镜像时，会根据 mirrors 的配置决定从哪个地址拉取。configs定义私有仓库的认证和 TLS 配置。当访问私有仓库时，容器运行时会使用这里配置的用户名、密码和 TLS 设置。
-有的时候k3s不一定能够实时自动监听registries.yaml的改动，所以最好的方式还是重启k3s:
-sudo systemctl restart k3s-agent   # worker 节点# 或者sudo systemctl restart k3s         # server 节点
-
-现在可以通过创建一个pod去测试k3s是否正常访问私有仓库。
-这里推荐使用crictl去直接拉取私有仓库的镜像。
-sudo crictl pull 192.168.31.220:5000/hoteler-api:07e1b87e82ccfc49e5bee7d3d88cf2c304376056
-
-参考资料
-Docker login 登录私服，报错； http: server gave HTTP response to HTTPS client
-Private Registry Configuration
-
-]]></content>
-      <categories>
-        <category>软件</category>
-      </categories>
-      <tags>
-        <tag>k3s</tag>
-        <tag>docker registry</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>在 Minikube 上部署 Rancher：避坑指南与实战教程</title>
-    <url>/2026/01/20/software/deploy-rancher-on-minikube-guide/</url>
-    <content><![CDATA[前言在本地环境（如 Minikube）部署 Rancher 时，最常见的两个问题是资源分配不足和证书签发卡死。本文将记录如何通过宿主机 IP（192.168.31.133）和固定 NodePort（30081）成功搭建 Rancher。
-一、 环境准备
-宿主机 IP: 192.168.31.133
-目标访问端口: 30081
-
-1. 启动 Minikube (关键参数)在 Docker 驱动下，Minikube 运行在容器内。为了让宿主机能直接访问 NodePort，必须在启动时通过 --ports 参数建立隧道映射。
-# 建议先清理旧环境minikube delete# 启动并映射 30081 端口，分配至少 8GB 内存（Rancher 较重，建议给足）minikube start --cpus 4 --memory 8192 --driver=docker --ports=30081:30081
-
-2. 安装 Helmcurl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
-
-
-二、 部署 cert-manager (证书基础)Rancher 依赖 cert-manager 来处理 SSL 证书。请确保组件完全运行后再进行下一步。
-helm repo add jetstack https://charts.jetstack.iohelm repo update# 安装 CRDskubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.13.0/cert-manager.crds.yaml# 安装组件helm install cert-manager jetstack/cert-manager \  --namespace cert-manager \  --create-namespace \  --version v1.13.0
-
-三、 安装 Rancher 与 sslip.io 的秘密1. 执行安装命令helm repo add rancher-stable https://releases.rancher.com/server-charts/stablehelm repo updatehelm install rancher rancher-stable/rancher \  --namespace cattle-system \  --create-namespace \  --set hostname=rancher.192.168.31.133.sslip.io \  --set bootstrapPassword=admin \  --set service.type=NodePort
-
-2. 深度解析：为什么用 sslip.io？在命令中我们设置了 hostname=rancher.192.168.31.133.sslip.io。
-
-为什么填它？ Rancher 强制要求一个域名来生成证书和配置内部路由。sslip.io 是一个免费服务，它会自动将 192.168.31.133.sslip.io 解析到你的宿主机 IP。
-为什么实际没用到？ 虽然证书是发给这个域名的，但我们通过 NodePort 直接访问 IP 也能打开页面。不过，强烈建议保留此设置，因为后续 Rancher 纳管其他集群时，会使用这个域名生成注册 URL。
-
-四、 性能优化与网络微调 (避坑核心)1. 缩减副本数：解决启动卡死Rancher 默认启动 3 个副本，在单机 Minikube 上会造成严重的资源竞争，导致 Pod 长期处于 0/1 Ready。初始化时请务必缩减为 1 个：
-kubectl scale deploy rancher -n cattle-system --replicas=1
-
-2. 固定 NodePort 端口默认端口是随机的，我们需要手动将其固定为映射好的 30081：
-kubectl patch svc rancher -n cattle-system -p &#x27;&#123;&quot;spec&quot;:&#123;&quot;ports&quot;:[&#123;&quot;port&quot;:443,&quot;targetPort&quot;:443,&quot;nodePort&quot;:30081,&quot;name&quot;:&quot;https-internal&quot;&#125;]&#125;&#125;&#x27;
-
-五、 状态排查运行 kubectl get certificate -n cattle-system。如果 READY 为 True，说明证书签发成功。此时只需静候 2 分钟，Pod 就会变为 1/1 Ready。
-附录：Rancher 健康检查脚本为了方便大家快速定位部署问题，可以保存以下脚本 check_rancher.sh：
-#!/bin/bashecho &quot;===== 1. 检查 Cert-Manager 状态 =====&quot;kubectl get pods -n cert-managerecho -e &quot;\n===== 2. 检查证书签发状态 =====&quot;kubectl get certificate -n cattle-systemecho -e &quot;\n===== 3. 检查 Rancher Pod 运行状态 =====&quot;kubectl get pods -n cattle-system -l app=rancherecho -e &quot;\n===== 4. 检查服务端口映射 =====&quot;kubectl get svc -n cattle-system rancherecho -e &quot;\n===== 5. 获取初始登录密码 =====&quot;kubectl get secret --namespace cattle-system bootstrap-secret -o jsonpath=&#123;.data.bootstrapPassword&#125; | base64 --decode &amp;&amp; echo &quot;&quot;echo -e &quot;\n[提示] 请访问: https://192.168.31.133:30081&quot;
-
-使用方法：chmod +x check_rancher.sh &amp;&amp; ./check_rancher.sh
-
-博主结语：在 Minikube 上跑 Rancher 是一件很酷的事，但一定要给够内存并手动控制副本数。希望这篇教程能让你少走弯路！
-]]></content>
-      <categories>
-        <category>软件</category>
-      </categories>
-      <tags>
-        <tag>minikube</tag>
-        <tag>kubernetes</tag>
-        <tag>rancher</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>在内网 Kubernetes 集群上使用 Helm 安装 Rancher 并支持域名访问</title>
     <url>/2025/08/17/software/deploying-rancher-via-helm-in-rrivate-kubernetes-with-custom-domain-configuration/</url>
     <content><![CDATA[前言本指南将帮助您在 192.168.31.222 的内网服务器上，使用 Helm 安装 Rancher，并通过域名 rancher.damingerdaiinternal.com 访问。  
@@ -3876,6 +3829,53 @@ Workspaces/├── personal/  # 存放个人项目└── company/   # 存�
       </tags>
   </entry>
   <entry>
+    <title>在 Minikube 上部署 Rancher：避坑指南与实战教程</title>
+    <url>/2026/01/20/software/deploy-rancher-on-minikube-guide/</url>
+    <content><![CDATA[前言在本地环境（如 Minikube）部署 Rancher 时，最常见的两个问题是资源分配不足和证书签发卡死。本文将记录如何通过宿主机 IP（192.168.31.133）和固定 NodePort（30081）成功搭建 Rancher。
+一、 环境准备
+宿主机 IP: 192.168.31.133
+目标访问端口: 30081
+
+1. 启动 Minikube (关键参数)在 Docker 驱动下，Minikube 运行在容器内。为了让宿主机能直接访问 NodePort，必须在启动时通过 --ports 参数建立隧道映射。
+# 建议先清理旧环境minikube delete# 启动并映射 30081 端口，分配至少 8GB 内存（Rancher 较重，建议给足）minikube start --cpus 4 --memory 8192 --driver=docker --ports=30081:30081
+
+2. 安装 Helmcurl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+
+
+二、 部署 cert-manager (证书基础)Rancher 依赖 cert-manager 来处理 SSL 证书。请确保组件完全运行后再进行下一步。
+helm repo add jetstack https://charts.jetstack.iohelm repo update# 安装 CRDskubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.13.0/cert-manager.crds.yaml# 安装组件helm install cert-manager jetstack/cert-manager \  --namespace cert-manager \  --create-namespace \  --version v1.13.0
+
+三、 安装 Rancher 与 sslip.io 的秘密1. 执行安装命令helm repo add rancher-stable https://releases.rancher.com/server-charts/stablehelm repo updatehelm install rancher rancher-stable/rancher \  --namespace cattle-system \  --create-namespace \  --set hostname=rancher.192.168.31.133.sslip.io \  --set bootstrapPassword=admin \  --set service.type=NodePort
+
+2. 深度解析：为什么用 sslip.io？在命令中我们设置了 hostname=rancher.192.168.31.133.sslip.io。
+
+为什么填它？ Rancher 强制要求一个域名来生成证书和配置内部路由。sslip.io 是一个免费服务，它会自动将 192.168.31.133.sslip.io 解析到你的宿主机 IP。
+为什么实际没用到？ 虽然证书是发给这个域名的，但我们通过 NodePort 直接访问 IP 也能打开页面。不过，强烈建议保留此设置，因为后续 Rancher 纳管其他集群时，会使用这个域名生成注册 URL。
+
+四、 性能优化与网络微调 (避坑核心)1. 缩减副本数：解决启动卡死Rancher 默认启动 3 个副本，在单机 Minikube 上会造成严重的资源竞争，导致 Pod 长期处于 0/1 Ready。初始化时请务必缩减为 1 个：
+kubectl scale deploy rancher -n cattle-system --replicas=1
+
+2. 固定 NodePort 端口默认端口是随机的，我们需要手动将其固定为映射好的 30081：
+kubectl patch svc rancher -n cattle-system -p &#x27;&#123;&quot;spec&quot;:&#123;&quot;ports&quot;:[&#123;&quot;port&quot;:443,&quot;targetPort&quot;:443,&quot;nodePort&quot;:30081,&quot;name&quot;:&quot;https-internal&quot;&#125;]&#125;&#125;&#x27;
+
+五、 状态排查运行 kubectl get certificate -n cattle-system。如果 READY 为 True，说明证书签发成功。此时只需静候 2 分钟，Pod 就会变为 1/1 Ready。
+附录：Rancher 健康检查脚本为了方便大家快速定位部署问题，可以保存以下脚本 check_rancher.sh：
+#!/bin/bashecho &quot;===== 1. 检查 Cert-Manager 状态 =====&quot;kubectl get pods -n cert-managerecho -e &quot;\n===== 2. 检查证书签发状态 =====&quot;kubectl get certificate -n cattle-systemecho -e &quot;\n===== 3. 检查 Rancher Pod 运行状态 =====&quot;kubectl get pods -n cattle-system -l app=rancherecho -e &quot;\n===== 4. 检查服务端口映射 =====&quot;kubectl get svc -n cattle-system rancherecho -e &quot;\n===== 5. 获取初始登录密码 =====&quot;kubectl get secret --namespace cattle-system bootstrap-secret -o jsonpath=&#123;.data.bootstrapPassword&#125; | base64 --decode &amp;&amp; echo &quot;&quot;echo -e &quot;\n[提示] 请访问: https://192.168.31.133:30081&quot;
+
+使用方法：chmod +x check_rancher.sh &amp;&amp; ./check_rancher.sh
+
+博主结语：在 Minikube 上跑 Rancher 是一件很酷的事，但一定要给够内存并手动控制副本数。希望这篇教程能让你少走弯路！
+]]></content>
+      <categories>
+        <category>软件</category>
+      </categories>
+      <tags>
+        <tag>minikube</tag>
+        <tag>kubernetes</tag>
+        <tag>rancher</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>🚀 记一次本地 Homelab 环境 Gitea 升级迁移与 Actions (CI/CD) 完美集成实战</title>
     <url>/2026/06/02/software/gitea-upgrade-and-actions-integration/</url>
     <content><![CDATA[🚀 记一次本地 Homelab 环境 Gitea 升级迁移与 Actions (CI&#x2F;CD) 完美集成实战📌 前言最近对本地 Homelab 服务器的私有代码托管平台 Gitea 进行了一次大版本升级迁移（升级至 v1.26）。原本以为只是一次简单的 docker compose up，没想到中间经历了数据库连错库、旧运行器残留、以及 Gitea Actions (Act Runner) 容器网络隔离等一连串经典的暗坑。
@@ -3950,6 +3950,32 @@ Hello Gitea Actions! This is a compiled Go binary!
       </tags>
   </entry>
   <entry>
+    <title>使用中国手机号码验证mailgun账号</title>
+    <url>/2025/08/13/software/how-register-mailgun-with-china-mobile-number/</url>
+    <content><![CDATA[前言Mailgun 是一个专为开发者设计的邮件发送平台，支持通过 API 高效、稳定地发送和接收邮件。它广泛用于用户通知、营销邮件、自动化开发信等场景。每个月可免费发送10000封邮件，可以添加1000个域名，每封邮件都有跟踪日志，简单明了的管理界面。
+注册点 mailgun.com 右上角的“start for free“进去是不会给免费版选项的，只有 free trial，而 https://www.mailgun.com/pricing/ 页面则有免费 plan，常规注册即可，无需填写信用卡.
+验证mailgun会发送邮件要求验证号码。在验证页面会要求用户提供手机号验证。但是对中国手机号码来说，可能存在收不到验证码的可能。
+
+解决在mailgun后台，点击右上角的问号❓，点击“Support”按钮。提交一个工单，点击左下方“Open a ticket”的开工单按钮。在开工单页面下拉选择“Account Management”类别，然后输入问题标题和具体内容。
+这是我总结的模版：
+Subject: Unable to Verify Email Due to Excessive VerificationContent:I am unable to complete email verification because I encountered an issue after entering my mobile phone number (+86 xxxxxxxxxxx) and requesting a verification code. The system notified me that I have exceeded the allowed number of attempts, along with other unspecified reminders.
+
+然后大概在24小时内就能解决。(我是40分钟就解决了)。
+其他别相信咸鱼上那帮所谓提供海外手机号码验证服务的那帮垃圾。
+引用
+Mailgun账号注册、域名配置、API开通教程
+Mailgun China
+国外Mailgun邮件服务账号验证不成功怎么办
+
+]]></content>
+      <categories>
+        <category>软件</category>
+      </categories>
+      <tags>
+        <tag>mailgun</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>Grafana UI 部署与技术复盘报告</title>
     <url>/2026/02/22/software/how-to-deploy-grafana-on-k3s-with-ingress/</url>
     <content><![CDATA[Grafana UI 部署与技术复盘报告1. 基础环境
@@ -3998,32 +4024,6 @@ UI 方式: 登录后进入 User Profile -&gt; Change Password 修改。
         <tag>Grafana</tag>
         <tag>Ingress</tag>
         <tag>Gateway Api</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>使用中国手机号码验证mailgun账号</title>
-    <url>/2025/08/13/software/how-register-mailgun-with-china-mobile-number/</url>
-    <content><![CDATA[前言Mailgun 是一个专为开发者设计的邮件发送平台，支持通过 API 高效、稳定地发送和接收邮件。它广泛用于用户通知、营销邮件、自动化开发信等场景。每个月可免费发送10000封邮件，可以添加1000个域名，每封邮件都有跟踪日志，简单明了的管理界面。
-注册点 mailgun.com 右上角的“start for free“进去是不会给免费版选项的，只有 free trial，而 https://www.mailgun.com/pricing/ 页面则有免费 plan，常规注册即可，无需填写信用卡.
-验证mailgun会发送邮件要求验证号码。在验证页面会要求用户提供手机号验证。但是对中国手机号码来说，可能存在收不到验证码的可能。
-
-解决在mailgun后台，点击右上角的问号❓，点击“Support”按钮。提交一个工单，点击左下方“Open a ticket”的开工单按钮。在开工单页面下拉选择“Account Management”类别，然后输入问题标题和具体内容。
-这是我总结的模版：
-Subject: Unable to Verify Email Due to Excessive VerificationContent:I am unable to complete email verification because I encountered an issue after entering my mobile phone number (+86 xxxxxxxxxxx) and requesting a verification code. The system notified me that I have exceeded the allowed number of attempts, along with other unspecified reminders.
-
-然后大概在24小时内就能解决。(我是40分钟就解决了)。
-其他别相信咸鱼上那帮所谓提供海外手机号码验证服务的那帮垃圾。
-引用
-Mailgun账号注册、域名配置、API开通教程
-Mailgun China
-国外Mailgun邮件服务账号验证不成功怎么办
-
-]]></content>
-      <categories>
-        <category>软件</category>
-      </categories>
-      <tags>
-        <tag>mailgun</tag>
       </tags>
   </entry>
   <entry>
@@ -4184,6 +4184,64 @@ kubectl cnpg versionBuild: &#123;Version:1.29.1 Commit:a4060c152 Date:2026-05-08
       </tags>
   </entry>
   <entry>
+    <title>从 Demo 到生产级：Kite 在 K3s 上的 PostgreSQL 与 Ingress 部署实战</title>
+    <url>/2026/04/05/software/kite-production-setup-with-external-postgres-and-ingress/</url>
+    <content><![CDATA[从 Demo 到生产级：Kite 在 K3s 上的高可用数据库与 HTTPS 部署实践引言在之前的文章 《玩转 K8s 面板：轻量级 Kite 安装全记录 (K3s 篇)》 中，我们快速搭建了测试环境。但随着使用深入，原方案的局限性开始显现。今天我们将进行一次彻头彻尾的“生产级”改造。
+
+1. 原方案的痛点：为什么不能用于生产？原方案最大的问题在于数据持久化。
+
+默认 SQLite 的风险：原方案依赖 Pod 内部或本地路径的 SQLite 数据库。在 Kubernetes 环境下，Pod 是随毁随建的（Stateless）。
+数据丢失：一旦节点重启、Pod 漂移或进行版本升级，所有用户配置、AI 工作流数据将全部丢失。
+不可扩展性：SQLite 不支持多实例并发写入，限制了未来的水平扩展。
+
+
+2. 外部数据库集成：计算与存储分离为了实现数据持久化，我们将数据库移出 K3s 集群，部署在独立的服务器（192.168.31.220）上。
+2.1 数据库初始化在 PG 服务器上执行：
+CREATE DATABASE kite_db;CREATE USER kite_user WITH PASSWORD &#x27;20260405&#x27;;-- CREATE DATABASE kite_db OWNER kite_user; 同步创建数据库ALTER DATABASE kite_db OWNER TO kite_user;
+
+2.2 神奇的“桥梁”：Service &amp; EndpointSlice为了让集群内的 Pod 能通过 external-pg 这个域名访问外部 IP，我们利用 K8s 的服务发现机制：
+# external-db.yamlapiVersion: v1kind: Servicemetadata:  name: external-pg  namespace: kite-systemspec:  ports:    - protocol: TCP      port: 5432      targetPort: 5432---apiVersion: discovery.k8s.io/v1kind: EndpointSlicemetadata:  name: external-pg-slice  namespace: kite-system  labels:    kubernetes.io/service-name: external-pgaddressType: IPv4ports:  - protocol: TCP    port: 5432endpoints:  - addresses: [&quot;192.168.31.220&quot;]
+
+Kubernetes 正在逐步废弃旧的 Endpoints 资源，转而推荐使用更高效的 EndpointSlice。虽然旧的 Endpoints 目前依然能工作，但为了符合生产环境的长期维护标准（以及消除那个烦人的 Warning），我们直接按照新标准来。
+
+
+3. 安全访问：Ingress 与 TLS 证书生产环境离不开 HTTPS。我们通过 Traefik Ingress 配置自签名证书。
+3.1 创建 TLS Secretopenssl req -x509 -nodes -days 365 -newkey rsa:2048 \  -keyout tls.key -out tls.crt -subj &quot;/CN=kite.damingerdailocal.com&quot;kubectl create secret tls kite-tls-secret --cert=tls.crt --key=tls.key -n kite-system
+
+3.2 刷新本地 DNS (macOS)在 /etc/hosts 添加 192.168.31.98 kite.damingerdailocal.com 后，别忘了执行刷新：
+sudo dscacheutil -flushcache; sudo killall -HUP mDNSResponder
+
+
+4. 终极部署：Helm 一键点火通过自定义 values.yaml 覆盖默认配置，禁用 SQLite 并启用 PG 和 Ingress。
+db:  type: postgres  dsn: &quot;postgres://kite_user:20260405@external-pg:5432/kite_db?sslmode=disable&quot;sqlite:  persistence:    enabled: falseingress:  enabled: true  className: &quot;traefik&quot;  tls:    - secretName: kite-tls-secret      hosts: [&quot;kite.damingerdailocal.com&quot;]
+
+执行部署：
+helm upgrade --install kite kite/kite --namespace kite-system --create-namespace -f values.yaml
+
+
+
+在 Helm 的设计中，upgrade –install 是生产环境最常用的命令, 如果 Kite 还没安装：它会执行 安装 (Install) 动作，创建一个新的 Release;如果 Kite 已经安装：它会对比 my-values.yaml 和当前的配置，执行 更新 (Upgrade) 动作。
+
+
+5. 避坑总结与经验谈在这次迁移中，我遇到了几个典型问题，希望能帮到大家：
+
+Namespace 依赖陷阱：直接 apply 带有 namespace 属性的资源时，若命名空间不存在会报错。经验： 在 YAML 头部包含 Namespace 定义，或先执行 kubectl create ns。
+残留资源冲突：清理 default 命名空间的旧 Service 时，Endpoints 资源通常会随之自动删除。如果遇到 NotFound 报错，说明 K8s 已经帮你处理好了。
+Readiness Probe 假死：Pod 启动后显示 0/1 READY，通常是正在执行数据库 Migration。经验： 通过 kubectl logs 观察是否有 CREATE TABLE 动作，不要急着重启。
+外部访问阻碍：如果 ping 通了但 curl 不通，大概率是目标机器（192.168.31.220）的防火墙没放行 5432 端口。
+
+结语通过这次改造，Kite 已经具备了应对生产环境的基础能力。数据有了保障，访问有了加密。
+]]></content>
+      <categories>
+        <category>软件</category>
+      </categories>
+      <tags>
+        <tag>k3s</tag>
+        <tag>kubernetes</tag>
+        <tag>kite</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>轻量级私有镜像仓库选型——Zot 部署与多工具兼容性实测</title>
     <url>/2026/02/21/software/lightweight-oci-registry-zot-deployment-guide/</url>
     <content><![CDATA[技术博客：轻量级私有镜像仓库选型——Zot 部署与多工具兼容性实测1. 选型背景在私有化环境构建容器镜像仓库时，传统的 Docker Registry (V2) 缺乏原生 UI，而 Harbor 架构过于臃肿。经过调研，Zot 表现出了极佳的工业属性：单二进制文件、资源占用极低、完全兼容 OCI 规范。
@@ -4265,64 +4323,6 @@ Multipass - 如 Docker 般的虛擬機
       </categories>
       <tags>
         <tag>multipass</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>从 Demo 到生产级：Kite 在 K3s 上的 PostgreSQL 与 Ingress 部署实战</title>
-    <url>/2026/04/05/software/kite-production-setup-with-external-postgres-and-ingress/</url>
-    <content><![CDATA[从 Demo 到生产级：Kite 在 K3s 上的高可用数据库与 HTTPS 部署实践引言在之前的文章 《玩转 K8s 面板：轻量级 Kite 安装全记录 (K3s 篇)》 中，我们快速搭建了测试环境。但随着使用深入，原方案的局限性开始显现。今天我们将进行一次彻头彻尾的“生产级”改造。
-
-1. 原方案的痛点：为什么不能用于生产？原方案最大的问题在于数据持久化。
-
-默认 SQLite 的风险：原方案依赖 Pod 内部或本地路径的 SQLite 数据库。在 Kubernetes 环境下，Pod 是随毁随建的（Stateless）。
-数据丢失：一旦节点重启、Pod 漂移或进行版本升级，所有用户配置、AI 工作流数据将全部丢失。
-不可扩展性：SQLite 不支持多实例并发写入，限制了未来的水平扩展。
-
-
-2. 外部数据库集成：计算与存储分离为了实现数据持久化，我们将数据库移出 K3s 集群，部署在独立的服务器（192.168.31.220）上。
-2.1 数据库初始化在 PG 服务器上执行：
-CREATE DATABASE kite_db;CREATE USER kite_user WITH PASSWORD &#x27;20260405&#x27;;-- CREATE DATABASE kite_db OWNER kite_user; 同步创建数据库ALTER DATABASE kite_db OWNER TO kite_user;
-
-2.2 神奇的“桥梁”：Service &amp; EndpointSlice为了让集群内的 Pod 能通过 external-pg 这个域名访问外部 IP，我们利用 K8s 的服务发现机制：
-# external-db.yamlapiVersion: v1kind: Servicemetadata:  name: external-pg  namespace: kite-systemspec:  ports:    - protocol: TCP      port: 5432      targetPort: 5432---apiVersion: discovery.k8s.io/v1kind: EndpointSlicemetadata:  name: external-pg-slice  namespace: kite-system  labels:    kubernetes.io/service-name: external-pgaddressType: IPv4ports:  - protocol: TCP    port: 5432endpoints:  - addresses: [&quot;192.168.31.220&quot;]
-
-Kubernetes 正在逐步废弃旧的 Endpoints 资源，转而推荐使用更高效的 EndpointSlice。虽然旧的 Endpoints 目前依然能工作，但为了符合生产环境的长期维护标准（以及消除那个烦人的 Warning），我们直接按照新标准来。
-
-
-3. 安全访问：Ingress 与 TLS 证书生产环境离不开 HTTPS。我们通过 Traefik Ingress 配置自签名证书。
-3.1 创建 TLS Secretopenssl req -x509 -nodes -days 365 -newkey rsa:2048 \  -keyout tls.key -out tls.crt -subj &quot;/CN=kite.damingerdailocal.com&quot;kubectl create secret tls kite-tls-secret --cert=tls.crt --key=tls.key -n kite-system
-
-3.2 刷新本地 DNS (macOS)在 /etc/hosts 添加 192.168.31.98 kite.damingerdailocal.com 后，别忘了执行刷新：
-sudo dscacheutil -flushcache; sudo killall -HUP mDNSResponder
-
-
-4. 终极部署：Helm 一键点火通过自定义 values.yaml 覆盖默认配置，禁用 SQLite 并启用 PG 和 Ingress。
-db:  type: postgres  dsn: &quot;postgres://kite_user:20260405@external-pg:5432/kite_db?sslmode=disable&quot;sqlite:  persistence:    enabled: falseingress:  enabled: true  className: &quot;traefik&quot;  tls:    - secretName: kite-tls-secret      hosts: [&quot;kite.damingerdailocal.com&quot;]
-
-执行部署：
-helm upgrade --install kite kite/kite --namespace kite-system --create-namespace -f values.yaml
-
-
-
-在 Helm 的设计中，upgrade –install 是生产环境最常用的命令, 如果 Kite 还没安装：它会执行 安装 (Install) 动作，创建一个新的 Release;如果 Kite 已经安装：它会对比 my-values.yaml 和当前的配置，执行 更新 (Upgrade) 动作。
-
-
-5. 避坑总结与经验谈在这次迁移中，我遇到了几个典型问题，希望能帮到大家：
-
-Namespace 依赖陷阱：直接 apply 带有 namespace 属性的资源时，若命名空间不存在会报错。经验： 在 YAML 头部包含 Namespace 定义，或先执行 kubectl create ns。
-残留资源冲突：清理 default 命名空间的旧 Service 时，Endpoints 资源通常会随之自动删除。如果遇到 NotFound 报错，说明 K8s 已经帮你处理好了。
-Readiness Probe 假死：Pod 启动后显示 0/1 READY，通常是正在执行数据库 Migration。经验： 通过 kubectl logs 观察是否有 CREATE TABLE 动作，不要急着重启。
-外部访问阻碍：如果 ping 通了但 curl 不通，大概率是目标机器（192.168.31.220）的防火墙没放行 5432 端口。
-
-结语通过这次改造，Kite 已经具备了应对生产环境的基础能力。数据有了保障，访问有了加密。
-]]></content>
-      <categories>
-        <category>软件</category>
-      </categories>
-      <tags>
-        <tag>k3s</tag>
-        <tag>kubernetes</tag>
-        <tag>kite</tag>
       </tags>
   </entry>
   <entry>
@@ -4455,53 +4455,64 @@ docker run -d \  -v my_postgres_data:/var/lib/postgresql/18/docker \  -e POSTGRE
       </tags>
   </entry>
   <entry>
-    <title>玩转 K8s 面板：轻量级 Kite 安装全记录 (K3s 篇)</title>
-    <url>/2026/01/25/software/setup-kite-with-prometheus-on-k3s/</url>
-    <content><![CDATA[前言在 Kubernetes 运维中，官方的 Dashboard 虽然功能齐全但显得有些沉重。如果你正在寻找一款轻量、现代化、且安装简单的监控面板，Kite 绝对是一个惊喜。本文将详细记录如何在 K3s 环境下安装 Kite，并配置 Ingress 域名访问以及集成 Prometheus 历史监控。
-一、 环境准备
-集群环境：K3s (自带 Traefik Ingress Controller)
-节点 IP：192.168.31.222
-目标域名：kite.damingerdaiinternal.com
+    <title>Docker + acme.sh 搭建 Tailscale 自建 DERP 中继节点完整记录</title>
+    <url>/2026/07/05/software/self-host-tailscale-derp-with-docker-acme-sh/</url>
+    <content><![CDATA[Docker + acme.sh 搭建 Tailscale 自建 DERP 中继节点完整记录1. 方案架构为了实现证书自动申请、续期与 DERP 服务无缝衔接，采用 Docker Compose 进行单机编排。acme-sh 容器负责通过 Cloudflare DNS 验证申请 Let’s Encrypt 证书并导出为 DERP 所需的格式；derper 容器挂载相同的证书目录并运行中继服务。
+[Cloudflare DNS-01 验证]       │       ▼ ┌─────────── derp-acme (容器) ───────────┐ │ 使用 CF_Token 申请证书，并将其安装转换为  │ │ derp.example.com.crt / .key             │ └───────────────────┬────────────────────┘                     │ (共享挂载 ./certs)                     ▼ ┌────────── tailscale-derp (容器) ────────┐ │ 监听 9443(TCP) 与 13478(UDP)           │ │ 自动加载证书并提供中继服务                │ └────────────────────────────────────────┘
 
-二、 部署 Kite 核心组件首先，我们直接使用官方提供的清单将 Kite 安装到 kube-system 命名空间下：
-kubectl apply -f https://raw.githubusercontent.com/zxh326/kite/refs/heads/main/deploy/install.yaml
 
-1. 修改服务为 NodePort (可选)为了方便最初的调试，我们可以将 Service 类型修改为 NodePort 并指定端口 32008：
-kubectl patch svc kite -n kube-system -p &#x27;&#123;&quot;spec&quot;:&#123;&quot;type&quot;:&quot;NodePort&quot;,&quot;ports&quot;:[&#123;&quot;port&quot;:8080,&quot;targetPort&quot;:8080,&quot;nodePort&quot;:32008&#125;]&#125;&#125;&#x27;
+2. 部署步骤新建工作目录并配置 .env 文件在 /opt/derp（或自定义目录）下新建 .env 文件，写入环境变量。
 
-2. 重置管理员密码Kite 默认通过环境变量管理账户。如果你需要自定义或重置密码，可以执行：
-kubectl set env deployment/kite KITE_ADMIN_USER=admin KITE_ADMIN_PASSWORD=your_new_password -n kube-system
+注意：Cloudflare API Token 必须具备 Zone.DNS:Edit 权限，否则 acme.sh 无法在域名下添加用于验证的 TXT 记录。
 
-三、 配置 Ingress 域名访问 (HTTPS)由于 K3s 默认使用 Traefik，我们使用现代化的 ingressClassName 语法进行配置。
-1. 创建自签名证书 Secret为了支持 HTTPS，我们先为域名创建一个证书：
-openssl req -x509 -nodes -days 365 -newkey rsa:2048 \  -keyout tls.key -out tls.crt \  -subj &quot;/CN=kite.damingerdaiinternal.com&quot;kubectl create secret tls kite-tls --cert=tls.crt --key=tls.key -n kube-system
+# 域名与 TokenDERP_DOMAIN=derp.example.comCF_TOKEN=你的_Cloudflare_DNS_编辑权限_Token# 自定义服务端口DERP_TCP_PORT=9443DERP_UDP_PORT=13478
 
-2. 应用 Ingress 规则创建 kite-ingress.yaml：
-apiVersion: networking.k8s.io/v1kind: Ingressmetadata:  name: kite-ingress  namespace: kube-systemspec:  ingressClassName: traefik  tls:    - hosts: [&quot;kite.damingerdaiinternal.com&quot;]      secretName: kite-tls  rules:    - host: kite.damingerdaiinternal.com      http:        paths:          - path: /            pathType: Prefix            backend:              service:                name: kite                port:                  number: 8080
+编写 docker-compose.yml配置两个服务。acme-sh 在首次启动时若检测到无证书文件，则触发申请并使用 --install-cert 转换导出，随后运行 crond 用于每日自动续期检测。
+services:  acme-sh:    image: neilpang/acme.sh:latest    container_name: derp-acme    restart: always    environment:      - CF_Token=$&#123;CF_TOKEN&#125;    volumes:      - ./certs:/acme.sh    entrypoint: &gt;      sh -c &quot;      if [ ! -f /acme.sh/$&#123;DERP_DOMAIN&#125;_ecc/$&#123;DERP_DOMAIN&#125;.crt ]; then        acme.sh --issue --dns dns_cf -d $&#123;DERP_DOMAIN&#125; --server letsencrypt;        mkdir -p /acme.sh/$&#123;DERP_DOMAIN&#125;_ecc;        acme.sh --install-cert -d $&#123;DERP_DOMAIN&#125; --cert-file /acme.sh/$&#123;DERP_DOMAIN&#125;_ecc/$&#123;DERP_DOMAIN&#125;.crt --key-file /acme.sh/$&#123;DERP_DOMAIN&#125;_ecc/$&#123;DERP_DOMAIN&#125;.key;      fi;      exec crond -f&quot;  derper:    image: fredliang/derper:latest    container_name: tailscale-derp    restart: always    ports:      - &quot;$&#123;DERP_TCP_PORT&#125;:$&#123;DERP_TCP_PORT&#125;&quot;      - &quot;$&#123;DERP_UDP_PORT&#125;:$&#123;DERP_UDP_PORT&#125;/udp&quot;    environment:      - DERP_DOMAIN=$&#123;DERP_DOMAIN&#125;      - DERP_CERT_MODE=manual      - DERP_CERT_DIR=/app/certs/$&#123;DERP_DOMAIN&#125;_ecc      - DERP_ADDR=:$&#123;DERP_TCP_PORT&#125;      - DERP_HTTP_PORT=-1      - DERP_STUN_PORT=$&#123;DERP_UDP_PORT&#125;      - DERP_VERIFY_CLIENTS=false    volumes:      - ./certs:/app/certs    depends_on:      - acme-sh
 
-应用配置：kubectl apply -f kite-ingress.yaml。随后在本地 hosts 文件中添加 192.168.31.222 kite.damingerdaiinternal.com 即可访问。
+启动服务清理历史缓存目录并启动容器：
+docker compose down &amp;&amp; rm -rf ./certs/* &amp;&amp; docker compose up -d
 
-四、 集成 Prometheus 开启历史监控Kite 默认只显示来自 metrics-server 的实时数据，无法看到历史趋势。我们需要接入 Prometheus。
-1. 安装 kube-prometheus-stack使用 Helm 快速部署全套监控栈：
-helm repo add prometheus-community https://prometheus-community.github.io/helm-chartshelm repo updatehelm install prometheus prometheus-community/kube-prometheus-stack --namespace monitoring --create-namespace
+确认 derp-acme 输出证书安装成功日志：
+derp-acme  | Your cert is in: /acme.sh/derp.example.com_ecc/derp.example.com.cerderp-acme  | Installing cert to: /acme.sh/derp.example.com_ecc/derp.example.com.crt
 
-2. 配置 Kite 连接 Prometheus找到 Prometheus 在集群内的 DNS 地址，并将其注入 Kite 的环境变量：
-# DNS地址通常为：http://[服务名].[命名空间].svc.cluster.local:9090kubectl set env deployment/kite PROMETHEUS_URL=http://prometheus-kube-prometheus-prometheus.monitoring.svc.cluster.local:9090 -n kube-system
+确认 tailscale-derp 成功加载证书并开始监听：
+tailscale-derp  | derper: serving on :9443 with TLS
 
-五、 总结稍等几分钟，待 Prometheus 完成指标抓取后，刷新 Kite 界面，你就会发现原先的 “Limited historical data” 提示消失了，取而代之的是精美的 CPU 和内存历史曲线图。
-Kite + K3s + Traefik + Prometheus 的组合，既保证了监控的深度，又维持了极低的资源消耗，非常适合中小规模集群或边缘计算场景。
-💡 小贴士
-如果发现 Ingress 无法解析，请检查 kubectl get ingress -n kube-system 的 ADDRESS 列。
-如果图表长时间不出数据，请确认 kube-state-metrics 是否在 monitoring 命名空间下正常运行。
 
+3. Tailscale 控制台 ACL 配置
+登录 Tailscale 管理后台，进入 Access Controls 页面。
+将编辑器切换至 JSON editor。
+在根对象内追加 derpMap 配置，指定自定义 Region ID（如 901）及对应端口：
+
+&#123;  &quot;acls&quot;: [    &#123; &quot;action&quot;: &quot;accept&quot;, &quot;src&quot;: [&quot;*&quot;], &quot;dst&quot;: [&quot;*:*&quot;] &#125;  ],  &quot;derpMap&quot;: &#123;    &quot;OmitDefaultRegions&quot;: false,    &quot;Regions&quot;: &#123;      &quot;901&quot;: &#123;        &quot;RegionID&quot;:   901,        &quot;RegionCode&quot;: &quot;hk-custom&quot;,        &quot;RegionName&quot;: &quot;Hong Kong Custom DERP&quot;,        &quot;Nodes&quot;: [          &#123;            &quot;Name&quot;:             &quot;hk-01&quot;,            &quot;RegionID&quot;:         901,            &quot;HostName&quot;:         &quot;derp.example.com&quot;,            &quot;DERPPort&quot;:         9443,            &quot;STUNPort&quot;:         13478,            &quot;InsecureForTests&quot;: false          &#125;        ]      &#125;    &#125;  &#125;&#125;
+
+保存配置，等待节点策略同步。
+
+4. 状态验证与故障排查客户端网络检查在本地设备终端运行：
+tailscale netcheck
+
+控制台输出回显确认 hk-custom 节点已被识别，且延迟正常：
+Report:	* UDP: true	* IPv4: yes	* Nearest DERP: Hong Kong Custom DERP	* DERP latency:		- hk-custom: 60.1ms   (Hong Kong Custom DERP)		- tok: 230.7ms        (Tokyo)
+
+故障记录：远端节点单向失联现象：本地测试 tailscale ping &lt;对端IP&gt; 依然绕道旧节点（如 tok），且响应时间过长。运行 tailscale status 查看对端状态：
+100.123.186.96  earzer  linux  active; relay &quot;tok&quot;, tx 7644 rx 0
+
+本地有流量发送（tx），但未收到任何对端回包（rx 0），表明远端 Linux 设备未刷新最新的 DERP 路由图，仍向旧中继节点发送握手包。
+解决方法：登录该远端 Linux 设备，执行命令强制重置并刷新本地的 Tailscale 状态与中继映射缓存：
+sudo tailscale downsudo tailscale up --reset
+
+重置后，两端节点均能正常通过自建的 hk-custom 节点进行双向中继通信。
+引用1. 
 ]]></content>
       <categories>
         <category>软件</category>
       </categories>
       <tags>
-        <tag>k3s</tag>
-        <tag>kubernetes</tag>
-        <tag>kite</tag>
+        <tag>docker</tag>
+        <tag>acme.sh</tag>
+        <tag>tailsacle</tag>
+        <tag>自建derp</tag>
       </tags>
   </entry>
   <entry>
@@ -4612,6 +4623,56 @@ sudo tailscale up --advertise-routes=192.168.31.0/24 --accept-dns=false
       </tags>
   </entry>
   <entry>
+    <title>玩转 K8s 面板：轻量级 Kite 安装全记录 (K3s 篇)</title>
+    <url>/2026/01/25/software/setup-kite-with-prometheus-on-k3s/</url>
+    <content><![CDATA[前言在 Kubernetes 运维中，官方的 Dashboard 虽然功能齐全但显得有些沉重。如果你正在寻找一款轻量、现代化、且安装简单的监控面板，Kite 绝对是一个惊喜。本文将详细记录如何在 K3s 环境下安装 Kite，并配置 Ingress 域名访问以及集成 Prometheus 历史监控。
+一、 环境准备
+集群环境：K3s (自带 Traefik Ingress Controller)
+节点 IP：192.168.31.222
+目标域名：kite.damingerdaiinternal.com
+
+二、 部署 Kite 核心组件首先，我们直接使用官方提供的清单将 Kite 安装到 kube-system 命名空间下：
+kubectl apply -f https://raw.githubusercontent.com/zxh326/kite/refs/heads/main/deploy/install.yaml
+
+1. 修改服务为 NodePort (可选)为了方便最初的调试，我们可以将 Service 类型修改为 NodePort 并指定端口 32008：
+kubectl patch svc kite -n kube-system -p &#x27;&#123;&quot;spec&quot;:&#123;&quot;type&quot;:&quot;NodePort&quot;,&quot;ports&quot;:[&#123;&quot;port&quot;:8080,&quot;targetPort&quot;:8080,&quot;nodePort&quot;:32008&#125;]&#125;&#125;&#x27;
+
+2. 重置管理员密码Kite 默认通过环境变量管理账户。如果你需要自定义或重置密码，可以执行：
+kubectl set env deployment/kite KITE_ADMIN_USER=admin KITE_ADMIN_PASSWORD=your_new_password -n kube-system
+
+三、 配置 Ingress 域名访问 (HTTPS)由于 K3s 默认使用 Traefik，我们使用现代化的 ingressClassName 语法进行配置。
+1. 创建自签名证书 Secret为了支持 HTTPS，我们先为域名创建一个证书：
+openssl req -x509 -nodes -days 365 -newkey rsa:2048 \  -keyout tls.key -out tls.crt \  -subj &quot;/CN=kite.damingerdaiinternal.com&quot;kubectl create secret tls kite-tls --cert=tls.crt --key=tls.key -n kube-system
+
+2. 应用 Ingress 规则创建 kite-ingress.yaml：
+apiVersion: networking.k8s.io/v1kind: Ingressmetadata:  name: kite-ingress  namespace: kube-systemspec:  ingressClassName: traefik  tls:    - hosts: [&quot;kite.damingerdaiinternal.com&quot;]      secretName: kite-tls  rules:    - host: kite.damingerdaiinternal.com      http:        paths:          - path: /            pathType: Prefix            backend:              service:                name: kite                port:                  number: 8080
+
+应用配置：kubectl apply -f kite-ingress.yaml。随后在本地 hosts 文件中添加 192.168.31.222 kite.damingerdaiinternal.com 即可访问。
+
+四、 集成 Prometheus 开启历史监控Kite 默认只显示来自 metrics-server 的实时数据，无法看到历史趋势。我们需要接入 Prometheus。
+1. 安装 kube-prometheus-stack使用 Helm 快速部署全套监控栈：
+helm repo add prometheus-community https://prometheus-community.github.io/helm-chartshelm repo updatehelm install prometheus prometheus-community/kube-prometheus-stack --namespace monitoring --create-namespace
+
+2. 配置 Kite 连接 Prometheus找到 Prometheus 在集群内的 DNS 地址，并将其注入 Kite 的环境变量：
+# DNS地址通常为：http://[服务名].[命名空间].svc.cluster.local:9090kubectl set env deployment/kite PROMETHEUS_URL=http://prometheus-kube-prometheus-prometheus.monitoring.svc.cluster.local:9090 -n kube-system
+
+五、 总结稍等几分钟，待 Prometheus 完成指标抓取后，刷新 Kite 界面，你就会发现原先的 “Limited historical data” 提示消失了，取而代之的是精美的 CPU 和内存历史曲线图。
+Kite + K3s + Traefik + Prometheus 的组合，既保证了监控的深度，又维持了极低的资源消耗，非常适合中小规模集群或边缘计算场景。
+💡 小贴士
+如果发现 Ingress 无法解析，请检查 kubectl get ingress -n kube-system 的 ADDRESS 列。
+如果图表长时间不出数据，请确认 kube-state-metrics 是否在 monitoring 命名空间下正常运行。
+
+]]></content>
+      <categories>
+        <category>软件</category>
+      </categories>
+      <tags>
+        <tag>k3s</tag>
+        <tag>kubernetes</tag>
+        <tag>kite</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>2022年度总结</title>
     <url>/2021/12/31/summary/2022/</url>
     <content><![CDATA[2022年度总结2022年真的是一个让人难以忘怀的年份，尤其在先后经历了上海封城、老丈人去世、领证结婚。
@@ -4627,32 +4688,6 @@ sudo tailscale up --advertise-routes=192.168.31.0/24 --accept-dns=false
 今年其实还是探索了很多的技术。比如minio, harbor, drone, gogs和gitea。
 个人生活今天对我最大的事儿就是结婚了，没有比举办婚礼更重要的事儿了。本来由于收到上半年疫情的影响，原来不指望今年结婚的。本来定的日子是明年的正月办酒席，但是丈母娘觉得今年的夏天那么热，冬天一定很会冷，希望我们今年就是把事儿办了。所以婚期提前到11月份举行，本来日子选的好好的，也没啥好纠结的，毕竟妹子是自己谈的。但是明天和意外你永远都不知道哪个先来，我老丈人在婚礼的前两天去世了。在婚礼前的几个礼拜，我老丈人生病了，是便秘导致的肠梗阻。在医院治疗了一段时间本来已经治好了，但是不知道是医院的水平问题还是我老丈人本身的问题，在治疗过程中可能没有控制好糖尿病导致肺部感染， 在icu躺了几天之后终究将抢救无效去世，年仅50岁。在殡仪馆里，我看到同批火化的人中就属我老丈人最年轻。有的时间真的感觉世事无常，国庆节回去的时候，老丈人还好好的，结果才过去一个月不到，人就没了。
 展望未来对2023年这个经济判断是真的不太好说，谁也不知道明年会怎么想，我也不敢瞎说，我只能我大概率会重点关注·DeFi·。然后希望能够保住就业，保住现金流。
-]]></content>
-  </entry>
-  <entry>
-    <title>2023年度总结</title>
-    <url>/2024/01/06/summary/2023/</url>
-    <content><![CDATA[2023年度总结2023年就这样子莫名其妙的过了，又是稀里糊涂的一年。这一年，和最爱的人去了一趟西藏，圆了她心心念念的梦想；这一年，坐了30多小时的火车，跨越千里去见证一段美好的爱情；这一年，参加了加入PWC以来第二次的线下年会，疫情总算是过去了。
-美好的西藏其实是先从上海到成都出发，在成都带了两天，陪她那只叫做花花的大熊猫。 其实19年时候我去过成都大熊貓繁育研究基地，那个时候还没有花花，也没有那么多的游客，当然也有可能我去的是淡季，不过总算是满足她的心愿了。吃了当地的特色，三大炮，鸡豆花，兔腿，麻婆豆腐，其实那个陈麻婆的那个夫妻肺片还是很有特色的，不辣，有点甜，和紫燕百味鸡的那个压根就不一样的。
-我们是报了一个旅行团，四个人，一个司机。除了我们之外，还有一个山东小哥，一个四川小伙。山东小哥是真的很社牛，和什么人都能聊起来，喜欢旅游，朋友圈三天两头出去玩，晒各地的美景。四川小伙是拿到美国一家博士的offer了，想在出国前能够好好放松一下。四个人一个司机，就这样子从成都沿着318国道出发了。
-去了很多地方，但是我没记住，因为这不是我热爱的，吃了很多美食，我记住了它们的味道，永远不会忘记。
-到了拉萨，我们去看了小昭寺，布达拉宫。吃了当地牦牛肉，喝了当地的牦牛奶做的奶茶。真的是美滋滋的日子啊。
-
-
-
-
-
-
-PWC线下年会我是19年加入PWC的。PWC的年会其实是财年的意思，所以通常是5月份办年会。20年收到疫情的影响，此后的年会都是线上举行的，虽然有元宇宙的等加持，但是对我来而已其实并没有参与感的。收到疫情的影响，很多同事已经没有来公司面对面办公了，曾经的团队早就各奔东西，甚至都不在一个部门的了。
-终于，口罩没了，在加入PWC的第四年中，迎来的第二次线下年会。酒店更高级了，吃的很好，食物也精致，但是呢，我还是感觉19年那次年会吃的更惬意点。
-
-嘉峪关之行嘉峪关之行单纯的是因为大学同学结婚，便选择坐了30多小时的火车，先去西安和好友会和，再去嘉峪关。嘉峪关风景不错，可惜很难再有机会去了。
-
-其他我们还去来了迪士尼
-
-参加她的大学同学的婚礼
-
-最后Time files over us, but leaves its shadow behind.
 ]]></content>
   </entry>
   <entry>
@@ -4724,6 +4759,32 @@ API 陷阱：旧版教程常用 traefik.containo.us&#x2F;v1alpha1，新版 K3s �
       </tags>
   </entry>
   <entry>
+    <title>2023年度总结</title>
+    <url>/2024/01/06/summary/2023/</url>
+    <content><![CDATA[2023年度总结2023年就这样子莫名其妙的过了，又是稀里糊涂的一年。这一年，和最爱的人去了一趟西藏，圆了她心心念念的梦想；这一年，坐了30多小时的火车，跨越千里去见证一段美好的爱情；这一年，参加了加入PWC以来第二次的线下年会，疫情总算是过去了。
+美好的西藏其实是先从上海到成都出发，在成都带了两天，陪她那只叫做花花的大熊猫。 其实19年时候我去过成都大熊貓繁育研究基地，那个时候还没有花花，也没有那么多的游客，当然也有可能我去的是淡季，不过总算是满足她的心愿了。吃了当地的特色，三大炮，鸡豆花，兔腿，麻婆豆腐，其实那个陈麻婆的那个夫妻肺片还是很有特色的，不辣，有点甜，和紫燕百味鸡的那个压根就不一样的。
+我们是报了一个旅行团，四个人，一个司机。除了我们之外，还有一个山东小哥，一个四川小伙。山东小哥是真的很社牛，和什么人都能聊起来，喜欢旅游，朋友圈三天两头出去玩，晒各地的美景。四川小伙是拿到美国一家博士的offer了，想在出国前能够好好放松一下。四个人一个司机，就这样子从成都沿着318国道出发了。
+去了很多地方，但是我没记住，因为这不是我热爱的，吃了很多美食，我记住了它们的味道，永远不会忘记。
+到了拉萨，我们去看了小昭寺，布达拉宫。吃了当地牦牛肉，喝了当地的牦牛奶做的奶茶。真的是美滋滋的日子啊。
+
+
+
+
+
+
+PWC线下年会我是19年加入PWC的。PWC的年会其实是财年的意思，所以通常是5月份办年会。20年收到疫情的影响，此后的年会都是线上举行的，虽然有元宇宙的等加持，但是对我来而已其实并没有参与感的。收到疫情的影响，很多同事已经没有来公司面对面办公了，曾经的团队早就各奔东西，甚至都不在一个部门的了。
+终于，口罩没了，在加入PWC的第四年中，迎来的第二次线下年会。酒店更高级了，吃的很好，食物也精致，但是呢，我还是感觉19年那次年会吃的更惬意点。
+
+嘉峪关之行嘉峪关之行单纯的是因为大学同学结婚，便选择坐了30多小时的火车，先去西安和好友会和，再去嘉峪关。嘉峪关风景不错，可惜很难再有机会去了。
+
+其他我们还去来了迪士尼
+
+参加她的大学同学的婚礼
+
+最后Time files over us, but leaves its shadow behind.
+]]></content>
+  </entry>
+  <entry>
     <title>2024年度总结</title>
     <url>/2025/01/13/summary/2024/</url>
     <content><![CDATA[2024年度总结对我来说，2024年是一个特别有意义的一年。8月24号，我美丽又可爱的宝宝出生了，体验到了初为人父的喜悦；10月7号，国庆节刚过，公司人事就开邮件通知我我的岗位被取消了。
@@ -4736,6 +4797,27 @@ API 陷阱：旧版教程常用 traefik.containo.us&#x2F;v1alpha1，新版 K3s �
 摩根士丹利进入摩根士丹利之后其实有段时间是不太适应的，习惯了普华永道这种混合办公和不定时工作制，不太能接受摩根士丹利这种965的风格，不过还好，两周就适应了，发了工资就更加适应，没有必要和钱过不去。摩根士丹利里面什么情况我不方便多说，但是根据工作安排来看，坚持到2026年底问题不大，以后就再说吧。
 总结如果没有裁员这回事儿，那么2024年对我还是一个挺不错的年份。涨点工资（普华永道每年7月调薪），有个儿子，本来就可以这样子过去了。可惜没有如果，现在在摩根做外包也能接受，毕竟正式员工对我们算得上非常nice了。希望2025年可以平平安安，保住工作，少点个人消费，多点留给家人。技术也没有什么大的想法，保住工作就行，苟活到经济能够真的复苏吧。
 ]]></content>
+  </entry>
+  <entry>
+    <title>记录一些测试币的水龙头</title>
+    <url>/2023/01/07/web3/some-token-faucet/</url>
+    <content><![CDATA[记录一些测试币的水龙头记录一些常用的区块链水龙头，以防忘记
+GoerliGoerli Testnet Faucet: 不太记得当初是怎么知道了，但是似乎永远失败…
+GOERLI FAUCET, 每天可以获取0.1 ETH(以前是可以每天领取0.25ETH), 需要使用Alchemy账号.
+Mining Faucet, 使用cpu的算力去挖矿，问题不大，可以使用。
+polygonpolygon faucet, 支持多个测试网络，但是Goerli的ETH没拿到
+参考资料
+免費取得Goerli測試幣
+
+]]></content>
+      <categories>
+        <category>web3</category>
+      </categories>
+      <tags>
+        <tag>web3</tag>
+        <tag>Goerli</tag>
+        <tag>polygon</tag>
+      </tags>
   </entry>
   <entry>
     <title>2025年度总结</title>
@@ -4778,27 +4860,6 @@ API 陷阱：旧版教程常用 traefik.containo.us&#x2F;v1alpha1，新版 K3s �
 愿 2026，不是简单的“更忙”，而是“更好”。
 持续学习，持续创造，持续成为更清醒的自己。
 ]]></content>
-  </entry>
-  <entry>
-    <title>记录一些测试币的水龙头</title>
-    <url>/2023/01/07/web3/some-token-faucet/</url>
-    <content><![CDATA[记录一些测试币的水龙头记录一些常用的区块链水龙头，以防忘记
-GoerliGoerli Testnet Faucet: 不太记得当初是怎么知道了，但是似乎永远失败…
-GOERLI FAUCET, 每天可以获取0.1 ETH(以前是可以每天领取0.25ETH), 需要使用Alchemy账号.
-Mining Faucet, 使用cpu的算力去挖矿，问题不大，可以使用。
-polygonpolygon faucet, 支持多个测试网络，但是Goerli的ETH没拿到
-参考资料
-免費取得Goerli測試幣
-
-]]></content>
-      <categories>
-        <category>web3</category>
-      </categories>
-      <tags>
-        <tag>web3</tag>
-        <tag>Goerli</tag>
-        <tag>polygon</tag>
-      </tags>
   </entry>
   <entry>
     <title>drone + gogs + docker实现持续自动化部署</title>
@@ -4947,6 +5008,36 @@ cd &quot;$(brew --repo)/Library/Taps/homebrew/homebrew-core&quot; &amp;&amp; git
       </tags>
   </entry>
   <entry>
+    <title>在armbian上使用snap安装neovim</title>
+    <url>/2025/02/14/software/install/use-snap-to-install-neovim-on-armbian/</url>
+    <content><![CDATA[概述最近搞了一台armbian的机子，想在上面安装neovim，但是发现apt上的nvim版本太低了，只有0.4.0好像。经过一番的搜索，发现Snaps可以满足我的要求。
+Snaps介绍Snaps是由Canonical提供的跨分发包管理系统的工具.Snaps 基本上是一个与其依赖项和库一起编译的应用程序——为应用程序运行提供了一个沙盒环境。它们安装起来更容易、更快捷，可以接收最新更新，并且不受操作系统和其他应用程序的限制。
+安装Snaps使用apt安装Snap；
+sudo apt install snapd
+
+安装neovim使用snap安装neovim:
+sudo snap install --classic nvim
+
+检查一下noevim的版本：
+nvim --version
+
+输出如下：
+NVIM v0.10.4Build type: RelWithDebInfoLuaJIT 2.1.1713484068Run &quot;nvim -V1 -v&quot; for more info
+
+参考资料
+如何在各种 Linux 发行版中安装和使用 Snap
+
+]]></content>
+      <categories>
+        <category>软件</category>
+      </categories>
+      <tags>
+        <tag>neovim</tag>
+        <tag>snap</tag>
+        <tag>armbian</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>轻量化 K8s 管理方案：在 k3s 中部署 Skooner 可视化面板</title>
     <url>/2026/01/08/software/k8s/deploy-skooner-on-k3s/</url>
     <content><![CDATA[前言管理 Kubernetes 集群不应该以牺牲系统资源为代价。虽然官方 Dashboard 功能强大，但对于小型集群或单节点 k3s 环境来说，它往往显得过于臃肿。如果你正在寻找一个极致轻快、响应迅速的管理界面，Skooner 是一个完美的平衡点。
@@ -4987,36 +5078,6 @@ kubectl patch svc skooner -n kube-system --type=&#x27;json&#x27; -p=&#x27;[&#123
         <tag>k3s</tag>
         <tag>kubernetes</tag>
         <tag>skooner</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>在armbian上使用snap安装neovim</title>
-    <url>/2025/02/14/software/install/use-snap-to-install-neovim-on-armbian/</url>
-    <content><![CDATA[概述最近搞了一台armbian的机子，想在上面安装neovim，但是发现apt上的nvim版本太低了，只有0.4.0好像。经过一番的搜索，发现Snaps可以满足我的要求。
-Snaps介绍Snaps是由Canonical提供的跨分发包管理系统的工具.Snaps 基本上是一个与其依赖项和库一起编译的应用程序——为应用程序运行提供了一个沙盒环境。它们安装起来更容易、更快捷，可以接收最新更新，并且不受操作系统和其他应用程序的限制。
-安装Snaps使用apt安装Snap；
-sudo apt install snapd
-
-安装neovim使用snap安装neovim:
-sudo snap install --classic nvim
-
-检查一下noevim的版本：
-nvim --version
-
-输出如下：
-NVIM v0.10.4Build type: RelWithDebInfoLuaJIT 2.1.1713484068Run &quot;nvim -V1 -v&quot; for more info
-
-参考资料
-如何在各种 Linux 发行版中安装和使用 Snap
-
-]]></content>
-      <categories>
-        <category>软件</category>
-      </categories>
-      <tags>
-        <tag>neovim</tag>
-        <tag>snap</tag>
-        <tag>armbian</tag>
       </tags>
   </entry>
   <entry>
@@ -5163,26 +5224,6 @@ Minikube - Kubernetes本地实验环境
       </tags>
   </entry>
   <entry>
-    <title>K3S安装的时候默认使用docker</title>
-    <url>/2022/05/15/software/k8s/k3s-install-with-docker/</url>
-    <content><![CDATA[K3S安装的时候默认使用docker问题k8s在1.20之后就弃用docker的运行时了，所以k3s也开始默认使用containerd作为默认的运行时。这导致一个问题。那就是k3s无法访问本地docker镜像。
-解决方案一种解决方案就是使用containerd的镜像，而不是docker。还有一种方式是在安装时就指定k3s使用docker作为运行环境。
-/usr/local/bin/k3s-uninstall.shcurl -sfL https://get.k3s.io | sh -s - server --docker
-
-国内用户，可以使用以下方法加速安装：
-curl -sfL https://rancher-mirror.rancher.cn/k3s/k3s-install.sh | INSTALL_K3S_MIRROR=cn sh -s - server --docker
-]]></content>
-      <categories>
-        <category>软件</category>
-      </categories>
-      <tags>
-        <tag>k8s</tag>
-        <tag>docker</tag>
-        <tag>k3s</tag>
-        <tag>kubernetes</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>在Ubuntu 18.04.5 LTS上安装minkube</title>
     <url>/2021/01/01/software/k8s/how-to-install-minkube/</url>
     <content><![CDATA[在Ubuntu 18.04.5 LTS上安装minkube要求
@@ -5235,6 +5276,26 @@ eyJhbGciOiJSUzI1NiIsImtpZCI6Imk0TWpNeGM3SWVrMHllMVphM0FPVFZIZ2RIaXZIbll2UzZObkJS
         <tag>minikube</tag>
         <tag>kubernetes</tag>
         <tag>Ubuntu</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>K3S安装的时候默认使用docker</title>
+    <url>/2022/05/15/software/k8s/k3s-install-with-docker/</url>
+    <content><![CDATA[K3S安装的时候默认使用docker问题k8s在1.20之后就弃用docker的运行时了，所以k3s也开始默认使用containerd作为默认的运行时。这导致一个问题。那就是k3s无法访问本地docker镜像。
+解决方案一种解决方案就是使用containerd的镜像，而不是docker。还有一种方式是在安装时就指定k3s使用docker作为运行环境。
+/usr/local/bin/k3s-uninstall.shcurl -sfL https://get.k3s.io | sh -s - server --docker
+
+国内用户，可以使用以下方法加速安装：
+curl -sfL https://rancher-mirror.rancher.cn/k3s/k3s-install.sh | INSTALL_K3S_MIRROR=cn sh -s - server --docker
+]]></content>
+      <categories>
+        <category>软件</category>
+      </categories>
+      <tags>
+        <tag>k8s</tag>
+        <tag>docker</tag>
+        <tag>k3s</tag>
+        <tag>kubernetes</tag>
       </tags>
   </entry>
 </search>
