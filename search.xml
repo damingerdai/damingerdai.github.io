@@ -194,6 +194,20 @@ module(    name = &quot;hoteler&quot;,    compatibility_level = 1,)bazel_dep(   
       </tags>
   </entry>
   <entry>
+    <title>Spring Security 中基于用户信息的动态密码加密</title>
+    <url>/2025/02/08/back-end/dynamic-password-encryption-based-on-user-information-in-spring-security/</url>
+    <content><![CDATA[Spring Security 中基于用户信息的动态密码加密前言通过自定义 Spring Security 的 DaoAuthenticationProvider，可以实现根据用户信息的不同，动态切换不同的密码加密方式。这种方法允许您根据用户的角色、组或其他属性，选择最合适的加密算法，从而提高安全性或满足特定的业务需求。
+DaoAuthenticationProviderDaoAuthenticationProvider是用于实现用户名密码的登陆AuthenticationProvider，通过自定义实现additionalAuthenticationChecks方法可以实现从UserDetails获取一个字段从而动态获取密码加密服务。
+实现自定义DaoAuthenticationProvider：
+@Componentpublic class HotelerAuthenticationProvider extends DaoAuthenticationProvider implements AuthenticationProvider, ApplicationContextAware &#123;    private ApplicationContext applicationContext;    protected void additionalAuthenticationChecks(UserDetails userDetails, UsernamePasswordAuthenticationToken authentication) throws AuthenticationException &#123;        if (authentication.getCredentials() == null) &#123;            this.logger.debug(&quot;Failed to authenticate since no credentials provided&quot;);            throw new BadCredentialsException(this.messages.getMessage(&quot;AbstractUserDetailsAuthenticationProvider.badCredentials&quot;, &quot;Bad credentials&quot;));        &#125;        var user =  (User)userDetails;        var passwordType = CommonUtils.isNotEmpty(user.getPasswordType()) ? user.getPasswordType() : &quot;noop&quot;;        var passwordService = this.getPasswordService(passwordType);        var presentedPassword = authentication.getCredentials().toString();        if (!user.getPassword().equals(passwordService.encodePassword(presentedPassword))) &#123;            this.logger.debug(&quot;Failed to authenticate since password does not match stored value&quot;);            throw new BadCredentialsException(this.messages.getMessage(&quot;AbstractUserDetailsAuthenticationProvider.badCredentials&quot;, &quot;Bad credentials&quot;));        &#125;    &#125;    @Override    public void setApplicationContext(ApplicationContext applicationContext) throws BeansException &#123;        this.applicationContext = applicationContext;    &#125;    @Override    protected void doAfterPropertiesSet() &#123;        super.doAfterPropertiesSet();        Assert.notNull(this.applicationContext, &quot;A applicationContext must be set&quot;);    &#125;    protected IPasswordService getPasswordService(String passwordType) &#123;        return Objects.requireNonNull(this.applicationContext).getBean(passwordType + &quot;PasswordService&quot;, IPasswordService.class);    &#125;    public HotelerAuthenticationProvider(UserDetailsService userDetailsService) &#123;        super();        this.setUserDetailsService(userDetailsService);    &#125;&#125;
+
+将HotelerAuthenticationProvider注入到AuthenticationManager中：
+@Beanpublic AuthenticationManager authenticationManager(HotelerAuthenticationProvider authenticationProvider) &#123;;    ProviderManager pm = new ProviderManager(authenticationProvider);    return pm;&#125;]]></content>
+      <tags>
+        <tag>Spring Security</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>使用github action推送到docker的镜像仓库</title>
     <url>/2022/04/16/back-end/github-action-push-docker-image-to-github-packages/</url>
     <content><![CDATA[准备请在github的设置页面上创建一个token，并确保有以下的权限：
@@ -223,67 +237,6 @@ Hoteler
         <tag>docker</tag>
         <tag>github</tag>
         <tag>github action</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>Spring Security 中基于用户信息的动态密码加密</title>
-    <url>/2025/02/08/back-end/dynamic-password-encryption-based-on-user-information-in-spring-security/</url>
-    <content><![CDATA[Spring Security 中基于用户信息的动态密码加密前言通过自定义 Spring Security 的 DaoAuthenticationProvider，可以实现根据用户信息的不同，动态切换不同的密码加密方式。这种方法允许您根据用户的角色、组或其他属性，选择最合适的加密算法，从而提高安全性或满足特定的业务需求。
-DaoAuthenticationProviderDaoAuthenticationProvider是用于实现用户名密码的登陆AuthenticationProvider，通过自定义实现additionalAuthenticationChecks方法可以实现从UserDetails获取一个字段从而动态获取密码加密服务。
-实现自定义DaoAuthenticationProvider：
-@Componentpublic class HotelerAuthenticationProvider extends DaoAuthenticationProvider implements AuthenticationProvider, ApplicationContextAware &#123;    private ApplicationContext applicationContext;    protected void additionalAuthenticationChecks(UserDetails userDetails, UsernamePasswordAuthenticationToken authentication) throws AuthenticationException &#123;        if (authentication.getCredentials() == null) &#123;            this.logger.debug(&quot;Failed to authenticate since no credentials provided&quot;);            throw new BadCredentialsException(this.messages.getMessage(&quot;AbstractUserDetailsAuthenticationProvider.badCredentials&quot;, &quot;Bad credentials&quot;));        &#125;        var user =  (User)userDetails;        var passwordType = CommonUtils.isNotEmpty(user.getPasswordType()) ? user.getPasswordType() : &quot;noop&quot;;        var passwordService = this.getPasswordService(passwordType);        var presentedPassword = authentication.getCredentials().toString();        if (!user.getPassword().equals(passwordService.encodePassword(presentedPassword))) &#123;            this.logger.debug(&quot;Failed to authenticate since password does not match stored value&quot;);            throw new BadCredentialsException(this.messages.getMessage(&quot;AbstractUserDetailsAuthenticationProvider.badCredentials&quot;, &quot;Bad credentials&quot;));        &#125;    &#125;    @Override    public void setApplicationContext(ApplicationContext applicationContext) throws BeansException &#123;        this.applicationContext = applicationContext;    &#125;    @Override    protected void doAfterPropertiesSet() &#123;        super.doAfterPropertiesSet();        Assert.notNull(this.applicationContext, &quot;A applicationContext must be set&quot;);    &#125;    protected IPasswordService getPasswordService(String passwordType) &#123;        return Objects.requireNonNull(this.applicationContext).getBean(passwordType + &quot;PasswordService&quot;, IPasswordService.class);    &#125;    public HotelerAuthenticationProvider(UserDetailsService userDetailsService) &#123;        super();        this.setUserDetailsService(userDetailsService);    &#125;&#125;
-
-将HotelerAuthenticationProvider注入到AuthenticationManager中：
-@Beanpublic AuthenticationManager authenticationManager(HotelerAuthenticationProvider authenticationProvider) &#123;;    ProviderManager pm = new ProviderManager(authenticationProvider);    return pm;&#125;]]></content>
-      <tags>
-        <tag>Spring Security</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>实践分享：在 Go 项目中实现一个安全的密码重置流程</title>
-    <url>/2026/02/08/back-end/go-secure-password-reset-atomic-transaction/</url>
-    <content><![CDATA[实践分享：在 Go 项目中实现一个安全的密码重置流程1. 业务场景在我们的 health-master 项目中，我们需要一个安全且用户体验良好的密码重置功能。用户流程如下：
-
-输入邮箱申请重置  收到邮件链接。
-点击链接  页面显示脱敏后的账号（确认没点错）。
-输入并提交新密码  链接失效  修改成功。
-
-2. 技术难点与设计方案2.1 数据库建模我们不只是存一个 Token 字符串，而是将“重置请求”看作一个有生命周期的资源。
-CREATE TABLE tokens (    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),    user_id UUID NOT NULL,    token_hash VARCHAR(64) NOT NULL, -- 存储 SHA-256 哈希值而非明文    category VARCHAR(20) NOT NULL,   -- 类型，如 password_reset    used_count INT DEFAULT 0,       -- 已使用次数    max_uses INT DEFAULT 1,         -- 最大使用次数（1即阅后即焚）    expires_at TIMESTAMP NOT NULL,  -- 过期时间    is_revoked BOOLEAN DEFAULT FALSE -- 是否手动撤销);CREATE INDEX idx_token_hash ON tokens(token_hash);
-
-2.2 Token 的安全性：Hash 存储直接在数据库存储明文 Token 是危险的。我们效仿密码存储的逻辑，在数据库中存储 Token 的 SHA-256 哈希值。
-
-生成： crypto/rand 生成 32 字节随机数  发送给用户。
-存储： sha256(raw_token)  存入 token_hash 字段。
-校验： 接收用户传来的 Token  哈希后去数据库匹配。
-
-2.3 原子核销：防止并发重置为了保证“阅后即焚”（重置一次即失效），我们使用了 PostgreSQL 的原子更新操作。在 ConsumeToken 时，我们通过一行 SQL 同时完成校验与核销：
-UPDATE tokensSET used_count = used_count + 1, last_used_at = NOW()WHERE token_hash = $1   AND category = &#x27;password_reset&#x27;  AND used_count &lt; max_uses  -- 核心：确保只用一次  AND expires_at &gt; NOW()RETURNING user_id;
-
-2.4 隐私保护：SQL 层面的脱敏用户打开页面时，我们希望展示其 Email 但不暴露完整地址。为了性能，我们直接在 SQL 中处理：
-SELECT     CASE         WHEN POSITION(&#x27;@&#x27; IN u.email) &gt; 3 THEN             OVERLAY(u.email PLACING &#x27;***&#x27; FROM 3 FOR POSITION(&#x27;@&#x27; IN u.email) - 3)        ELSE             OVERLAY(u.email PLACING &#x27;***&#x27; FROM 2 FOR POSITION(&#x27;@&#x27; IN u.email) - 2)    END AS masked_emailFROM tokens t JOIN users u ON t.user_id = u.id ...
-
-3. 代码架构实现 (Service 层)在 ResetPassword 的 Service 实现中，我们利用了 Go 的 命名返回值 (Named Return Parameters) 来优雅地管理事务。这种写法确保了只要有任何一步报错，tx.Rollback() 就会被正确执行。
-func (userService *UserService) ResetPassword(ctx context.Context, email, rawToken, newPassword string) (user *model.User, err error) &#123;    // 1. 耗时操作：Bcrypt 放在事务外    hashedPassword, _ := bcrypt.GenerateFromPassword([]byte(newPassword), bcrypt.DefaultCost)    tx, _ := userService.pool.Begin(ctx)    defer func() &#123;        if err != nil &#123; tx.Rollback(ctx) &#125; else &#123; err = tx.Commit(ctx) &#125;    &#125;()    repos := repository.New(tx)    // 2. 核销 Token    tokenRecord, err := repos.TokenRecordRepository.ConsumeToken(ctx, rawToken, &quot;password_reset&quot;)    // 3. 更新密码...&#125;
-
-4. RESTful API 设计为了符合现代 API 规范，我们将重置流程定义为对 password-resets 资源的操作：
-
-POST /password-resets: 创建重置请求。
-GET /password-resets/:token: 预检查并获取用户信息。
-PUT /password-resets/:token: 执行更新。
-
-5. TODO：后续优化这个 PR 已经打下了坚实的基础，后续我们还可以：
-
-自动清理： 增加 Cron Job 每天定时清理过期超过 24 小时的 Token 记录。
-安全审计： 在重置成功后，发送一封“密码已修改”的提醒邮件。
-
-]]></content>
-      <categories>
-        <category>后端</category>
-      </categories>
-      <tags>
-        <tag>postgres</tag>
-        <tag>golang</tag>
       </tags>
   </entry>
   <entry>
@@ -351,6 +304,53 @@ Code Review 后的重构 TODO 列表以下是目前首版代码里暴露出来�
       </tags>
   </entry>
   <entry>
+    <title>实践分享：在 Go 项目中实现一个安全的密码重置流程</title>
+    <url>/2026/02/08/back-end/go-secure-password-reset-atomic-transaction/</url>
+    <content><![CDATA[实践分享：在 Go 项目中实现一个安全的密码重置流程1. 业务场景在我们的 health-master 项目中，我们需要一个安全且用户体验良好的密码重置功能。用户流程如下：
+
+输入邮箱申请重置  收到邮件链接。
+点击链接  页面显示脱敏后的账号（确认没点错）。
+输入并提交新密码  链接失效  修改成功。
+
+2. 技术难点与设计方案2.1 数据库建模我们不只是存一个 Token 字符串，而是将“重置请求”看作一个有生命周期的资源。
+CREATE TABLE tokens (    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),    user_id UUID NOT NULL,    token_hash VARCHAR(64) NOT NULL, -- 存储 SHA-256 哈希值而非明文    category VARCHAR(20) NOT NULL,   -- 类型，如 password_reset    used_count INT DEFAULT 0,       -- 已使用次数    max_uses INT DEFAULT 1,         -- 最大使用次数（1即阅后即焚）    expires_at TIMESTAMP NOT NULL,  -- 过期时间    is_revoked BOOLEAN DEFAULT FALSE -- 是否手动撤销);CREATE INDEX idx_token_hash ON tokens(token_hash);
+
+2.2 Token 的安全性：Hash 存储直接在数据库存储明文 Token 是危险的。我们效仿密码存储的逻辑，在数据库中存储 Token 的 SHA-256 哈希值。
+
+生成： crypto/rand 生成 32 字节随机数  发送给用户。
+存储： sha256(raw_token)  存入 token_hash 字段。
+校验： 接收用户传来的 Token  哈希后去数据库匹配。
+
+2.3 原子核销：防止并发重置为了保证“阅后即焚”（重置一次即失效），我们使用了 PostgreSQL 的原子更新操作。在 ConsumeToken 时，我们通过一行 SQL 同时完成校验与核销：
+UPDATE tokensSET used_count = used_count + 1, last_used_at = NOW()WHERE token_hash = $1   AND category = &#x27;password_reset&#x27;  AND used_count &lt; max_uses  -- 核心：确保只用一次  AND expires_at &gt; NOW()RETURNING user_id;
+
+2.4 隐私保护：SQL 层面的脱敏用户打开页面时，我们希望展示其 Email 但不暴露完整地址。为了性能，我们直接在 SQL 中处理：
+SELECT     CASE         WHEN POSITION(&#x27;@&#x27; IN u.email) &gt; 3 THEN             OVERLAY(u.email PLACING &#x27;***&#x27; FROM 3 FOR POSITION(&#x27;@&#x27; IN u.email) - 3)        ELSE             OVERLAY(u.email PLACING &#x27;***&#x27; FROM 2 FOR POSITION(&#x27;@&#x27; IN u.email) - 2)    END AS masked_emailFROM tokens t JOIN users u ON t.user_id = u.id ...
+
+3. 代码架构实现 (Service 层)在 ResetPassword 的 Service 实现中，我们利用了 Go 的 命名返回值 (Named Return Parameters) 来优雅地管理事务。这种写法确保了只要有任何一步报错，tx.Rollback() 就会被正确执行。
+func (userService *UserService) ResetPassword(ctx context.Context, email, rawToken, newPassword string) (user *model.User, err error) &#123;    // 1. 耗时操作：Bcrypt 放在事务外    hashedPassword, _ := bcrypt.GenerateFromPassword([]byte(newPassword), bcrypt.DefaultCost)    tx, _ := userService.pool.Begin(ctx)    defer func() &#123;        if err != nil &#123; tx.Rollback(ctx) &#125; else &#123; err = tx.Commit(ctx) &#125;    &#125;()    repos := repository.New(tx)    // 2. 核销 Token    tokenRecord, err := repos.TokenRecordRepository.ConsumeToken(ctx, rawToken, &quot;password_reset&quot;)    // 3. 更新密码...&#125;
+
+4. RESTful API 设计为了符合现代 API 规范，我们将重置流程定义为对 password-resets 资源的操作：
+
+POST /password-resets: 创建重置请求。
+GET /password-resets/:token: 预检查并获取用户信息。
+PUT /password-resets/:token: 执行更新。
+
+5. TODO：后续优化这个 PR 已经打下了坚实的基础，后续我们还可以：
+
+自动清理： 增加 Cron Job 每天定时清理过期超过 24 小时的 Token 记录。
+安全审计： 在重置成功后，发送一封“密码已修改”的提醒邮件。
+
+]]></content>
+      <categories>
+        <category>后端</category>
+      </categories>
+      <tags>
+        <tag>postgres</tag>
+        <tag>golang</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>Gradle配置阿里镜像</title>
     <url>/2021/10/29/back-end/gradle-ali-mirror/</url>
     <content><![CDATA[Gradle配置阿里镜像为了加快gradle的国内下载的速度，我们可以为gradle配置阿里仓库的镜像
@@ -366,6 +366,80 @@ gradle.projectsLoaded &#123;    rootProject.allprojects &#123;        buildscrip
         <category>后端</category>
       </categories>
       <tags>
+        <tag>gradle</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Gradle 强制使用指定版本的 Spring Web JAR</title>
+    <url>/2025/09/01/back-end/gradle-force-specific-version-of-spring-web-jar/</url>
+    <content><![CDATA[Gradle 强制使用指定版本的 Spring Web JAR场景说明由于公司Artifactory已禁止下载Spring Web 5.x相关依赖，必须通过本地JAR包spring-web-5.3.31.jar，强制让所有依赖Spring Web的其他库使用这个指定版本。
+方法一：使用强制版本解析这种方法通过 Gradle 的强制版本功能，强制所有依赖使用指定版本。
+Gradle 配置在 build.gradle 文件中添加以下配置：
+configurations.all &#123;    // 强制所有 spring-web 依赖使用 5.3.31 版本    resolutionStrategy &#123;        force &#x27;org.springframework:spring-web:5.3.31&#x27;    &#125;&#125;dependencies &#123;    // 添加本地 JAR 文件    implementation files(&#x27;libs/spring-web-5.3.31.jar&#x27;)        // 其他依赖...    implementation &#x27;org.springframework.boot:spring-boot-starter-web:2.7.0&#x27;    implementation &#x27;org.springframework.security:spring-security-web:5.7.1&#x27;&#125;
+
+依赖解析过程spring-boot-starter-web:2.7.0└── spring-web:5.3.18 (原始依赖)└── spring-web:5.3.31 (强制使用)spring-security-web:5.7.1└── spring-web:5.3.20 (原始依赖)└── spring-web:5.3.31 (强制使用)
+
+优点
+配置简单，一行代码解决问题
+适用于所有配置（implementation, testImplementation等）
+Gradle 自动处理版本冲突
+
+缺点
+如果本地 JAR 与强制版本不匹配，可能会导致运行时错误
+需要确保所有依赖与强制版本兼容
+
+方法二：使用依赖替换这种方法使用 Gradle 的依赖替换功能，将远程依赖替换为本地 JAR 文件。
+Gradle 配置在 build.gradle 文件中添加以下配置：
+configurations.all &#123;    resolutionStrategy.dependencySubstitution &#123;        // 将所有 spring-web 依赖替换为本地文件        substitute module(&#x27;org.springframework:spring-web&#x27;)             using files(&#x27;libs/spring-web-5.3.31.jar&#x27;)    &#125;&#125;dependencies &#123;    // 其他依赖...    implementation &#x27;org.springframework.boot:spring-boot-starter-web:2.7.0&#x27;    implementation &#x27;org.springframework.security:spring-security-web:5.7.1&#x27;&#125;
+
+依赖解析过程spring-boot-starter-web:2.7.0└── spring-web:5.3.18 (原始依赖)└── libs/spring-web-5.3.31.jar (替换为本地文件)spring-security-web:5.7.1└── spring-web:5.3.20 (原始依赖)└── libs/spring-web-5.3.31.jar (替换为本地文件)
+
+优点
+精确控制依赖来源
+可以针对特定依赖进行替换
+适用于复杂的依赖关系
+
+缺点
+配置相对复杂
+需要确保替换的依赖接口兼容
+
+方法三：排除并显式引入这种方法从所有依赖中排除 Spring Web，然后显式引入本地 JAR 文件。
+Gradle 配置在 build.gradle 文件中添加以下配置：
+configurations.all &#123;    // 全局排除所有 spring-web 依赖    exclude group: &#x27;org.springframework&#x27;, module: &#x27;spring-web&#x27;&#125;dependencies &#123;    // 添加本地 JAR 文件    implementation files(&#x27;libs/spring-web-5.3.31.jar&#x27;)        // 其他依赖，使用 exclude 确保不传递 spring-web    implementation (&#x27;org.springframework.boot:spring-boot-starter-web:2.7.0&#x27;) &#123;        exclude group: &#x27;org.springframework&#x27;, module: &#x27;spring-web&#x27;    &#125;    implementation (&#x27;org.springframework.security:spring-security-web:5.7.1&#x27;) &#123;        exclude group: &#x27;org.springframework&#x27;, module: &#x27;spring-web&#x27;    &#125;&#125;
+
+依赖解析过程spring-boot-starter-web:2.7.0└── spring-web:5.3.18 (已被排除)spring-security-web:5.7.1└── spring-web:5.3.20 (已被排除)本地引入: libs/spring-web-5.3.31.jar
+
+优点
+完全控制依赖树
+确保只使用本地 JAR
+避免任何版本冲突
+
+缺点
+配置最复杂，需要为每个依赖添加排除规则
+维护成本较高
+
+推荐使用方法推荐使用方法一：强制版本解析是最简单有效的方法，适用于大多数场景。只需确保您的本地 JAR 文件确实是 5.3.31 版本。
+验证配置是否生效添加以下任务到 build.gradle 来验证依赖解析结果：
+task checkDependencies &#123;    doLast &#123;        configurations.compileClasspath.resolvedConfiguration.resolvedArtifacts.each &#123; artifact -&gt;            println &quot;依赖: $&#123;artifact.moduleVersion.id&#125; -&gt; 文件: $&#123;artifact.file.name&#125;&quot;        &#125;                // 特别检查 spring-web        def springWebDeps = configurations.compileClasspath.incoming.dependencies            .findAll &#123; it.name == &#x27;spring-web&#x27; &#125;                println &quot;Spring Web 依赖:&quot;        springWebDeps.each &#123; dep -&gt;            println &quot;  - $&#123;dep.group&#125;:$&#123;dep.name&#125;:$&#123;dep.version&#125;&quot;        &#125;    &#125;&#125;
+
+运行 ./gradlew checkDependencies 查看所有依赖及其解析结果。
+关键要点
+**方法一（强制版本解析）**是最简单直接的方法，推荐大多数场景使用
+**方法二（依赖替换）**提供了更精确的控制，适用于复杂场景
+**方法三（排除并显式引入）**是最彻底的方法，但配置和维护成本较高
+无论使用哪种方法，都需要确保本地JAR与项目其他依赖兼容
+
+
+项目结构参考：
+项目目录/├── libs/│   ├── spring-web-5.3.31.jar│   └── 其他库文件.jar├── build.gradle├── settings.gradle└── src/
+
+通过以上配置，您可以确保所有依赖 Spring Web 的库都使用您指定的 5.3.31 版本本地 JAR 文件。
+]]></content>
+      <categories>
+        <category>后端</category>
+      </categories>
+      <tags>
+        <tag>spring boot</tag>
         <tag>gradle</tag>
       </tags>
   </entry>
@@ -476,80 +550,6 @@ kubectl port-forward service/pgbouncer 5432:5432
       <tags>
         <tag>k8s</tag>
         <tag>PostgreSQ</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>Gradle 强制使用指定版本的 Spring Web JAR</title>
-    <url>/2025/09/01/back-end/gradle-force-specific-version-of-spring-web-jar/</url>
-    <content><![CDATA[Gradle 强制使用指定版本的 Spring Web JAR场景说明由于公司Artifactory已禁止下载Spring Web 5.x相关依赖，必须通过本地JAR包spring-web-5.3.31.jar，强制让所有依赖Spring Web的其他库使用这个指定版本。
-方法一：使用强制版本解析这种方法通过 Gradle 的强制版本功能，强制所有依赖使用指定版本。
-Gradle 配置在 build.gradle 文件中添加以下配置：
-configurations.all &#123;    // 强制所有 spring-web 依赖使用 5.3.31 版本    resolutionStrategy &#123;        force &#x27;org.springframework:spring-web:5.3.31&#x27;    &#125;&#125;dependencies &#123;    // 添加本地 JAR 文件    implementation files(&#x27;libs/spring-web-5.3.31.jar&#x27;)        // 其他依赖...    implementation &#x27;org.springframework.boot:spring-boot-starter-web:2.7.0&#x27;    implementation &#x27;org.springframework.security:spring-security-web:5.7.1&#x27;&#125;
-
-依赖解析过程spring-boot-starter-web:2.7.0└── spring-web:5.3.18 (原始依赖)└── spring-web:5.3.31 (强制使用)spring-security-web:5.7.1└── spring-web:5.3.20 (原始依赖)└── spring-web:5.3.31 (强制使用)
-
-优点
-配置简单，一行代码解决问题
-适用于所有配置（implementation, testImplementation等）
-Gradle 自动处理版本冲突
-
-缺点
-如果本地 JAR 与强制版本不匹配，可能会导致运行时错误
-需要确保所有依赖与强制版本兼容
-
-方法二：使用依赖替换这种方法使用 Gradle 的依赖替换功能，将远程依赖替换为本地 JAR 文件。
-Gradle 配置在 build.gradle 文件中添加以下配置：
-configurations.all &#123;    resolutionStrategy.dependencySubstitution &#123;        // 将所有 spring-web 依赖替换为本地文件        substitute module(&#x27;org.springframework:spring-web&#x27;)             using files(&#x27;libs/spring-web-5.3.31.jar&#x27;)    &#125;&#125;dependencies &#123;    // 其他依赖...    implementation &#x27;org.springframework.boot:spring-boot-starter-web:2.7.0&#x27;    implementation &#x27;org.springframework.security:spring-security-web:5.7.1&#x27;&#125;
-
-依赖解析过程spring-boot-starter-web:2.7.0└── spring-web:5.3.18 (原始依赖)└── libs/spring-web-5.3.31.jar (替换为本地文件)spring-security-web:5.7.1└── spring-web:5.3.20 (原始依赖)└── libs/spring-web-5.3.31.jar (替换为本地文件)
-
-优点
-精确控制依赖来源
-可以针对特定依赖进行替换
-适用于复杂的依赖关系
-
-缺点
-配置相对复杂
-需要确保替换的依赖接口兼容
-
-方法三：排除并显式引入这种方法从所有依赖中排除 Spring Web，然后显式引入本地 JAR 文件。
-Gradle 配置在 build.gradle 文件中添加以下配置：
-configurations.all &#123;    // 全局排除所有 spring-web 依赖    exclude group: &#x27;org.springframework&#x27;, module: &#x27;spring-web&#x27;&#125;dependencies &#123;    // 添加本地 JAR 文件    implementation files(&#x27;libs/spring-web-5.3.31.jar&#x27;)        // 其他依赖，使用 exclude 确保不传递 spring-web    implementation (&#x27;org.springframework.boot:spring-boot-starter-web:2.7.0&#x27;) &#123;        exclude group: &#x27;org.springframework&#x27;, module: &#x27;spring-web&#x27;    &#125;    implementation (&#x27;org.springframework.security:spring-security-web:5.7.1&#x27;) &#123;        exclude group: &#x27;org.springframework&#x27;, module: &#x27;spring-web&#x27;    &#125;&#125;
-
-依赖解析过程spring-boot-starter-web:2.7.0└── spring-web:5.3.18 (已被排除)spring-security-web:5.7.1└── spring-web:5.3.20 (已被排除)本地引入: libs/spring-web-5.3.31.jar
-
-优点
-完全控制依赖树
-确保只使用本地 JAR
-避免任何版本冲突
-
-缺点
-配置最复杂，需要为每个依赖添加排除规则
-维护成本较高
-
-推荐使用方法推荐使用方法一：强制版本解析是最简单有效的方法，适用于大多数场景。只需确保您的本地 JAR 文件确实是 5.3.31 版本。
-验证配置是否生效添加以下任务到 build.gradle 来验证依赖解析结果：
-task checkDependencies &#123;    doLast &#123;        configurations.compileClasspath.resolvedConfiguration.resolvedArtifacts.each &#123; artifact -&gt;            println &quot;依赖: $&#123;artifact.moduleVersion.id&#125; -&gt; 文件: $&#123;artifact.file.name&#125;&quot;        &#125;                // 特别检查 spring-web        def springWebDeps = configurations.compileClasspath.incoming.dependencies            .findAll &#123; it.name == &#x27;spring-web&#x27; &#125;                println &quot;Spring Web 依赖:&quot;        springWebDeps.each &#123; dep -&gt;            println &quot;  - $&#123;dep.group&#125;:$&#123;dep.name&#125;:$&#123;dep.version&#125;&quot;        &#125;    &#125;&#125;
-
-运行 ./gradlew checkDependencies 查看所有依赖及其解析结果。
-关键要点
-**方法一（强制版本解析）**是最简单直接的方法，推荐大多数场景使用
-**方法二（依赖替换）**提供了更精确的控制，适用于复杂场景
-**方法三（排除并显式引入）**是最彻底的方法，但配置和维护成本较高
-无论使用哪种方法，都需要确保本地JAR与项目其他依赖兼容
-
-
-项目结构参考：
-项目目录/├── libs/│   ├── spring-web-5.3.31.jar│   └── 其他库文件.jar├── build.gradle├── settings.gradle└── src/
-
-通过以上配置，您可以确保所有依赖 Spring Web 的库都使用您指定的 5.3.31 版本本地 JAR 文件。
-]]></content>
-      <categories>
-        <category>后端</category>
-      </categories>
-      <tags>
-        <tag>spring boot</tag>
-        <tag>gradle</tag>
       </tags>
   </entry>
   <entry>
@@ -1185,67 +1185,6 @@ org.quartz.SchedulerConfigException: No local DataSource found for configuration
       </tags>
   </entry>
   <entry>
-    <title>在 Spring WebFlux 中实现文件上传到本地</title>
-    <url>/2025/09/08/back-end/upload-file-into-local-in-spring-webflux/</url>
-    <content><![CDATA[在 Spring WebFlux 中实现文件上传到本地引言本文旨在介绍如何在 Spring WebFlux 框架下，实现将文件上传至本地服务器的功能。虽然目前的代码示例侧重于本地存储，但其设计思路也为未来扩展至对象存储服务（如 MinIO）奠定了基础。通过本文的学习，您将掌握在响应式编程模型下处理文件上传的关键技术。
-
-具体实现过程1. 项目搭建与依赖引入首先，您需要一个基于 Spring Boot 3.5.0 的项目。如果您使用 Gradle 作为构建工具，可以在 build.gradle 文件中添加以下依赖：
-dependencies &#123;    // ... 其他 Spring Boot 依赖    implementation &#x27;org.springframework.boot:spring-boot-starter-webflux&#x27;    // Swagger UI 依赖    implementation &#x27;org.springdoc:springdoc-openapi-starter-webflux-ui:2.8.6&#x27; // 请检查最新版本    // ...&#125;
-
-spring-boot-starter-webflux 提供了构建响应式 Web 应用所需的核心功能，springdoc-openapi-starter-webfluxui 则是集成 Swagger UI 所需的依赖。
-2. 编写 Controller接下来，我们将编写 FileController 来处理文件上传请求。
-import org.springframework.core.io.buffer.DataBufferUtils;import org.springframework.http.codec.multipart.FilePart;import org.springframework.web.bind.annotation.PostMapping;import org.springframework.web.bind.annotation.RequestPart;import org.springframework.web.bind.annotation.RestController;import reactor.core.publisher.Mono;import java.nio.file.Files;import java.nio.file.Paths;import java.io.IOException;Controllerpublic class FileController &#123;    @PostMapping(&quot;/file&quot;)    public Mono&lt;String&gt; uploadFile(@RequestPart(&quot;file&quot;) Mono&lt;FilePart&gt; filePartMono) &#123;        return filePartMono.flatMap(filePart -&gt; &#123;            // 获取用户目录            var userDir = System.getProperty(&quot;user.dir&quot;);            // 构建文件保存路径，这里假设保存在项目根目录下的 nfs 文件夹中            // 您可以根据实际需求修改路径            var path = Paths.get(userDir, &quot;nfs&quot;, filePart.filename());            // 确保 nfs 目录存在，如果不存在则创建            try &#123;                Files.createDirectories(path.getParent());            &#125; catch (IOException e) &#123;                return Mono.error(new RuntimeException(&quot;Failed to create upload directory&quot;, e));            &#125;            // 使用 transferTo 将文件内容写入到指定路径            // transferTo 方法返回一个 Mono&lt;Void&gt;，表示操作的完成            return filePart.transferTo(path)                    // then 方法用于在前一个 Mono 完成后执行下一个操作                    // 这里我们返回一个包含成功消息的 Mono&lt;String&gt;                    .then(Mono.just(&quot;File uploaded successfully: &quot; + filePart.filename()));        &#125;);    &#125;&#125;
-
-关键点解析：
-
-@PostMapping(&quot;/file&quot;): 指定该方法处理 HTTP POST 请求到 /file 路径。
-@RequestPart(&quot;file&quot;) Mono&lt;FilePart&gt; filePartMono:
-@RequestPart 注解用于接收 multipart/form-data 请求中的部分。这里的 &quot;file&quot; 对应 HTML form 表单中 &lt;input type=&quot;file&quot; name=&quot;file&quot;&gt; 的 name 属性。
-Mono&lt;FilePart&gt; 表示这是一个异步的、最多包含一个元素的发布者，代表上传的文件。Spring WebFlux 使用 Reactor 库进行响应式编程，Mono 是其核心组件之一。
-
-
-filePart.transferTo(path):
-这是 Spring WebFlux 提供的用于将上传的文件内容 直接传输 到指定 Path 的方法。
-它返回一个 Mono&lt;Void&gt;，表示文件传输操作的完成，但不会返回任何数据。在响应式流中，Void 表示一个操作的完成信号。
-
-
-.then(...):
-then() 操作符用于在源 Mono（在这里是 filePart.transferTo(path)）完成（发出完成信号）后，执行另一个 Mono。
-Mono.just(&quot;File uploaded successfully: &quot; + filePart.filename()) 创建了一个新的 Mono，它会发出一个包含成功消息的字符串。
-因此，.then(...) 确保了文件传输完成后，再发出成功上传的消息。
-
-
-
-3. 使用 cURL 调用您可以使用 curl 命令来测试这个上传接口：
-curl -X &#x27;POST&#x27; \  &#x27;http://localhost:8080/file&#x27; \  -H &#x27;accept: application/json&#x27; \  -H &#x27;Content-Type: multipart/form-data&#x27; \  -F &#x27;file=@Arthur-Ming-FlowCV-Resume-20241101.pdf;type=application/pdf&#x27;
-
-将Arthur-Ming-FlowCV-Resume-20241101.pdf改成实际文件路径就即可
-
-Swagger UI 支持为了方便 API 的可视化和测试，我们可以为其添加 Swagger UI 支持。
-1. 添加依赖如前所述，在 build.gradle 中添加 springdoc-openapi-starter-webfluxui 依赖：
-dependencies &#123;    // ...    implementation &#x27;org.springdoc:springdoc-openapi-starter-webflux-ui:2.8.6&#x27; // 请检查最新版本    // ...&#125;
-
-2. 配置 Controller 注解springdoc-openapi 库会自动扫描带有 Spring MVC 或 Spring WebFlux 注解的 Controller。您只需要确保您的 Controller 和方法使用了标准的 Spring WebFlux 注解（如 @RestController, @PostMapping, @RequestPart 等），springdoc-openapi 就会自动为您生成 OpenAPI 文档，并在启动后通过访问 /swagger-ui.html （或其他默认路径，具体取决于版本和配置）来查看。
-@Operation(    summary = &quot;Upload a single file&quot;,    description = &quot;Uploads a single file to the server&#x27;s NFS directory.&quot;,    requestBody = @RequestBody(            description = &quot;File to upload&quot;,            required = true,            content = @Content(                    mediaType = &quot;multipart/form-data&quot;,                    schema = @Schema(implementation = FileUploadRequest.class) // Use a custom schema            )    ),    responses = &#123;            @ApiResponse(responseCode = &quot;200&quot;, description = &quot;File uploaded successfully&quot;,                    content = @Content(mediaType = &quot;application/json&quot;, schema = @Schema(type = &quot;string&quot;))),            @ApiResponse(responseCode = &quot;400&quot;, description = &quot;Bad Request&quot;),            @ApiResponse(responseCode = &quot;500&quot;, description = &quot;Internal Server Error&quot;)    &#125;)
-
-FileUploadRequest定义如下：
-import io.swagger.v3.oas.annotations.media.Schema;import org.springframework.http.codec.multipart.FilePart;public class FileUploadRequest &#123;    @Schema(type = &quot;string&quot;, format = &quot;binary&quot;, description = &quot;The file to be uploaded&quot;)    private FilePart file; // The name &quot;file&quot; here should match the @RequestPart name in your controller    // Getters and setters are not strictly necessary for springdoc to pick up the schema,    // but it&#x27;s good practice if you were to use this class for other purposes.    public FilePart getFile() &#123;        return file;    &#125;    public void setFile(FilePart file) &#123;        this.file = file;    &#125;&#125;
-
-在项目启动后，访问 http://localhost:8080/swagger-ui.html （假设您的应用运行在 8080 端口），您就可以看到文件上传接口的 Swagger UI 界面了。
-
-通过以上步骤，您就成功地在 Spring WebFlux 中实现了一个文件上传到本地的功能，并为其添加了 Swagger UI 支持。您可以基于此进一步扩展，例如添加文件类型校验、大小限制，以及将文件存储目标切换为 MinIO 等对象存储服务。
-]]></content>
-      <categories>
-        <category>后端</category>
-      </categories>
-      <tags>
-        <tag>spring boot</tag>
-        <tag>gradle</tag>
-        <tag>spring webflux</tag>
-        <tag>文件上传</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>两种在Minikube中运行本地Docker镜像的简单方式</title>
     <url>/2022/03/23/back-end/two-easy-ways-to-use-local-docker-images-in-minikube/</url>
     <content><![CDATA[两种在Minikube中运行本地Docker镜像的简单方式前言本文将分享两种在Minikube中运行本地Docker镜像的简单方式
@@ -1316,6 +1255,67 @@ kubectl port-forward deployment/myapp 8080:8080
         <tag>k8s</tag>
         <tag>docker</tag>
         <tag>minikube</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>在 Spring WebFlux 中实现文件上传到本地</title>
+    <url>/2025/09/08/back-end/upload-file-into-local-in-spring-webflux/</url>
+    <content><![CDATA[在 Spring WebFlux 中实现文件上传到本地引言本文旨在介绍如何在 Spring WebFlux 框架下，实现将文件上传至本地服务器的功能。虽然目前的代码示例侧重于本地存储，但其设计思路也为未来扩展至对象存储服务（如 MinIO）奠定了基础。通过本文的学习，您将掌握在响应式编程模型下处理文件上传的关键技术。
+
+具体实现过程1. 项目搭建与依赖引入首先，您需要一个基于 Spring Boot 3.5.0 的项目。如果您使用 Gradle 作为构建工具，可以在 build.gradle 文件中添加以下依赖：
+dependencies &#123;    // ... 其他 Spring Boot 依赖    implementation &#x27;org.springframework.boot:spring-boot-starter-webflux&#x27;    // Swagger UI 依赖    implementation &#x27;org.springdoc:springdoc-openapi-starter-webflux-ui:2.8.6&#x27; // 请检查最新版本    // ...&#125;
+
+spring-boot-starter-webflux 提供了构建响应式 Web 应用所需的核心功能，springdoc-openapi-starter-webfluxui 则是集成 Swagger UI 所需的依赖。
+2. 编写 Controller接下来，我们将编写 FileController 来处理文件上传请求。
+import org.springframework.core.io.buffer.DataBufferUtils;import org.springframework.http.codec.multipart.FilePart;import org.springframework.web.bind.annotation.PostMapping;import org.springframework.web.bind.annotation.RequestPart;import org.springframework.web.bind.annotation.RestController;import reactor.core.publisher.Mono;import java.nio.file.Files;import java.nio.file.Paths;import java.io.IOException;Controllerpublic class FileController &#123;    @PostMapping(&quot;/file&quot;)    public Mono&lt;String&gt; uploadFile(@RequestPart(&quot;file&quot;) Mono&lt;FilePart&gt; filePartMono) &#123;        return filePartMono.flatMap(filePart -&gt; &#123;            // 获取用户目录            var userDir = System.getProperty(&quot;user.dir&quot;);            // 构建文件保存路径，这里假设保存在项目根目录下的 nfs 文件夹中            // 您可以根据实际需求修改路径            var path = Paths.get(userDir, &quot;nfs&quot;, filePart.filename());            // 确保 nfs 目录存在，如果不存在则创建            try &#123;                Files.createDirectories(path.getParent());            &#125; catch (IOException e) &#123;                return Mono.error(new RuntimeException(&quot;Failed to create upload directory&quot;, e));            &#125;            // 使用 transferTo 将文件内容写入到指定路径            // transferTo 方法返回一个 Mono&lt;Void&gt;，表示操作的完成            return filePart.transferTo(path)                    // then 方法用于在前一个 Mono 完成后执行下一个操作                    // 这里我们返回一个包含成功消息的 Mono&lt;String&gt;                    .then(Mono.just(&quot;File uploaded successfully: &quot; + filePart.filename()));        &#125;);    &#125;&#125;
+
+关键点解析：
+
+@PostMapping(&quot;/file&quot;): 指定该方法处理 HTTP POST 请求到 /file 路径。
+@RequestPart(&quot;file&quot;) Mono&lt;FilePart&gt; filePartMono:
+@RequestPart 注解用于接收 multipart/form-data 请求中的部分。这里的 &quot;file&quot; 对应 HTML form 表单中 &lt;input type=&quot;file&quot; name=&quot;file&quot;&gt; 的 name 属性。
+Mono&lt;FilePart&gt; 表示这是一个异步的、最多包含一个元素的发布者，代表上传的文件。Spring WebFlux 使用 Reactor 库进行响应式编程，Mono 是其核心组件之一。
+
+
+filePart.transferTo(path):
+这是 Spring WebFlux 提供的用于将上传的文件内容 直接传输 到指定 Path 的方法。
+它返回一个 Mono&lt;Void&gt;，表示文件传输操作的完成，但不会返回任何数据。在响应式流中，Void 表示一个操作的完成信号。
+
+
+.then(...):
+then() 操作符用于在源 Mono（在这里是 filePart.transferTo(path)）完成（发出完成信号）后，执行另一个 Mono。
+Mono.just(&quot;File uploaded successfully: &quot; + filePart.filename()) 创建了一个新的 Mono，它会发出一个包含成功消息的字符串。
+因此，.then(...) 确保了文件传输完成后，再发出成功上传的消息。
+
+
+
+3. 使用 cURL 调用您可以使用 curl 命令来测试这个上传接口：
+curl -X &#x27;POST&#x27; \  &#x27;http://localhost:8080/file&#x27; \  -H &#x27;accept: application/json&#x27; \  -H &#x27;Content-Type: multipart/form-data&#x27; \  -F &#x27;file=@Arthur-Ming-FlowCV-Resume-20241101.pdf;type=application/pdf&#x27;
+
+将Arthur-Ming-FlowCV-Resume-20241101.pdf改成实际文件路径就即可
+
+Swagger UI 支持为了方便 API 的可视化和测试，我们可以为其添加 Swagger UI 支持。
+1. 添加依赖如前所述，在 build.gradle 中添加 springdoc-openapi-starter-webfluxui 依赖：
+dependencies &#123;    // ...    implementation &#x27;org.springdoc:springdoc-openapi-starter-webflux-ui:2.8.6&#x27; // 请检查最新版本    // ...&#125;
+
+2. 配置 Controller 注解springdoc-openapi 库会自动扫描带有 Spring MVC 或 Spring WebFlux 注解的 Controller。您只需要确保您的 Controller 和方法使用了标准的 Spring WebFlux 注解（如 @RestController, @PostMapping, @RequestPart 等），springdoc-openapi 就会自动为您生成 OpenAPI 文档，并在启动后通过访问 /swagger-ui.html （或其他默认路径，具体取决于版本和配置）来查看。
+@Operation(    summary = &quot;Upload a single file&quot;,    description = &quot;Uploads a single file to the server&#x27;s NFS directory.&quot;,    requestBody = @RequestBody(            description = &quot;File to upload&quot;,            required = true,            content = @Content(                    mediaType = &quot;multipart/form-data&quot;,                    schema = @Schema(implementation = FileUploadRequest.class) // Use a custom schema            )    ),    responses = &#123;            @ApiResponse(responseCode = &quot;200&quot;, description = &quot;File uploaded successfully&quot;,                    content = @Content(mediaType = &quot;application/json&quot;, schema = @Schema(type = &quot;string&quot;))),            @ApiResponse(responseCode = &quot;400&quot;, description = &quot;Bad Request&quot;),            @ApiResponse(responseCode = &quot;500&quot;, description = &quot;Internal Server Error&quot;)    &#125;)
+
+FileUploadRequest定义如下：
+import io.swagger.v3.oas.annotations.media.Schema;import org.springframework.http.codec.multipart.FilePart;public class FileUploadRequest &#123;    @Schema(type = &quot;string&quot;, format = &quot;binary&quot;, description = &quot;The file to be uploaded&quot;)    private FilePart file; // The name &quot;file&quot; here should match the @RequestPart name in your controller    // Getters and setters are not strictly necessary for springdoc to pick up the schema,    // but it&#x27;s good practice if you were to use this class for other purposes.    public FilePart getFile() &#123;        return file;    &#125;    public void setFile(FilePart file) &#123;        this.file = file;    &#125;&#125;
+
+在项目启动后，访问 http://localhost:8080/swagger-ui.html （假设您的应用运行在 8080 端口），您就可以看到文件上传接口的 Swagger UI 界面了。
+
+通过以上步骤，您就成功地在 Spring WebFlux 中实现了一个文件上传到本地的功能，并为其添加了 Swagger UI 支持。您可以基于此进一步扩展，例如添加文件类型校验、大小限制，以及将文件存储目标切换为 MinIO 等对象存储服务。
+]]></content>
+      <categories>
+        <category>后端</category>
+      </categories>
+      <tags>
+        <tag>spring boot</tag>
+        <tag>gradle</tag>
+        <tag>spring webflux</tag>
+        <tag>文件上传</tag>
       </tags>
   </entry>
   <entry>
@@ -1466,33 +1466,6 @@ New Java Project With Bazel
       </tags>
   </entry>
   <entry>
-    <title>使用systemd部署podman的容器</title>
-    <url>/2025/07/20/back-end/use-systemd-to-deploy-podman-build-by-podman/</url>
-    <content><![CDATA[podman的问题podman是一个容器运行时环境，提供与 Docker 非常相似的功能并不需要在你的系统上运行任何守护进程。没有守护进程就意味着如果你想使用podman部署容器，是没有办法使用类似docker的方式去实现自动重启功能。如果使用k8s部署容器那问题不大，如果就纯容器部署，可以使用podman给出的方案：
-podman generate systemd --help[DEPRECATED] Generate systemd unitsDescription:  Generate systemd units for a pod or container.  The generated units can later be controlled via systemctl(1).DEPRECATED command:It is recommended to use Quadlets for running containers and pods under systemd.Please refer to podman-systemd.unit(5) for details.Usage:  podman generate systemd [options] &#123;CONTAINER|POD&#125;Examples:  podman generate systemd CTR  podman generate systemd --new --time 10 CTR  podman generate systemd --files --name PODOptions:      --after stringArray         Add dependencies order to the generated unit file      --container-prefix string   Systemd unit name prefix for containers (default &quot;container&quot;)  -e, --env stringArray           Set environment variables to the systemd unit files  -f, --files                     Generate .service files instead of printing to stdout      --format string             Print the created units in specified format (json)  -n, --name                      Use container/pod names instead of IDs      --new                       Create a new container or pod instead of starting an existing one      --no-header                 Skip header generation      --pod-prefix string         Systemd unit name prefix for pods (default &quot;pod&quot;)      --requires stringArray      Similar to wants, but declares stronger requirement dependencies      --restart-policy string     Systemd restart-policy (default &quot;on-failure&quot;)      --restart-sec uint          Systemd restart-sec      --separator string          Systemd unit name separator between name/id and prefix (default &quot;-&quot;)      --start-timeout uint        Start timeout override      --stop-timeout uint         Stop timeout override (default 10)      --template                  Make it a template file and use %i and %I specifiers. Working only for containers      --wants stringArray         Add (weak) requirement dependencies to the generated unit file
-
-systemdsystemd是Linux系统的一套基本构建模块。它提供了一个系统和服务管理器，作为PID 1运行并启动系统的其余部分。systemd是在引导期间启动的第一个守护进程，也是在关闭期间终止的最后一个守护进程。利用这个特性，可以使用systemd去监控容器的运行状态
-例子这里使用health-master作为例子。
-# 获取名为 health-master 的容器 IDCONTAINER_ID=$(podman ps -a --filter &quot;name=health-master&quot; --format &quot;&#123;&#123;.ID&#125;&#125;&quot;)if [ -z &quot;$CONTAINER_ID&quot; ]; then  echo &quot;未找到名为 health-master 的容器。&quot; &gt;&amp;2  exit 1fiecho &quot;找到容器 health-master，ID 为 $CONTAINER_ID&quot;# 定义服务文件的存储路径SERVICE_FILE_PATH=&quot;$HOME/.config/systemd/user&quot;SERVICE_NAME=&quot;podman-health-master&quot;# 使用 podman generate systemd 创建服务文件echo &quot;正在生成 systemd 服务文件...&quot;podman generate systemd --name --restart-policy=on-failure -t 10 &quot;$CONTAINER_ID&quot; &gt;&quot;$SERVICE_FILE_PATH/$SERVICE_NAME.service&quot;if [ $? -ne 0 ]; then  echo &quot;错误: 无法生成 $SERVICE_NAME 服务。&quot; &gt;&amp;2  exit 1fi# 修复 SELinux 上下文（如启用 SELinux）restorecon -RvF &quot;$SERVICE_FILE_PATH/$SERVICE_NAME.service&quot;# 启用用户级 systemd 支持（首次需运行）loginctl enable-linger &quot;$USER&quot;# 重新加载 systemd 配置echo &quot;重新加载 systemd 配置...&quot;systemctl --user daemon-reloadif [ $? -ne 0 ]; then  echo &quot;错误: 无法重新加载 systemd 配置。&quot; &gt;&amp;2  exit 1fi# 启用服务echo &quot;启用服务 $SERVICE_NAME...&quot;systemctl --user enable --now &quot;$SERVICE_NAME&quot;if [ $? -ne 0 ]; then  echo &quot;错误: 无法启用服务 $SERVICE_NAME。&quot; &gt;&amp;2  exit 1fi# 启动服务echo &quot;启动服务 $SERVICE_NAME...&quot;systemctl --user start &quot;$SERVICE_NAME&quot;if [ $? -ne 0 ]; then  echo &quot;错误: 无法启动服务 $SERVICE_NAME。&quot; &gt;&amp;2  exit 1fiecho &quot;服务 $SERVICE_NAME 已成功创建并启动。&quot;echo &quot;你现在可以使用以下命令管理服务:&quot;echo &quot;  systemctl --user status $SERVICE_NAME  # 查看服务状态&quot;echo &quot;  systemctl --user stop $SERVICE_NAME    # 停止服务&quot;echo &quot;  systemctl --user restart $SERVICE_NAME # 重启服务&quot;
-
-问题podman generate systemd在podman 4.4的时候就已经弃用了，目前推荐使用Quadlet
-引用
-使用 Podman 以非 root 用户身份运行 Linux 容器
-System and Service Manager
-Linux Systemd基础教程
-How to replace the “podman generate systemd” command since its deprecated
-
-]]></content>
-      <categories>
-        <category>后端</category>
-      </categories>
-      <tags>
-        <tag>podman</tag>
-        <tag>容器</tag>
-        <tag>systemd</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>解决Windows下Docker启动容器时，端口被占用错误</title>
     <url>/2023/02/26/back-end/windows_docker_port_in_use_issues/</url>
     <content><![CDATA[解决Windows下Docker启动容器时，端口被占用错误问题描述在使用docker-compose启动mysql的时候遇到一个问题:
@@ -1533,112 +1506,30 @@ dism.exe /Online /Enable-Feature:Microsoft-Hyper-V /All
       </tags>
   </entry>
   <entry>
-    <title>2026年5月8号面试总结</title>
-    <url>/2026/05/08/front-end/2026-0508-interview/</url>
-    <content><![CDATA[前言2026年5月8号有一场面试，是对方架构师来面试的我。总的来说，面试的效果不是很好。面试的岗位是前端岗位，但是问的很多是后端架构的设计，我认为我的准备不是很好，我需要继续努力补全自己。
-问题Java的虚拟线程问题：Java的虚拟线程是什么，怎么创建？
-回答如下：
-在Java 21中，引入了虚拟线程（Virtual Threads）来简化和增强并发性，这使得在Java中编程并发程序更容易、更高效。
-虚拟线程，也称为“用户模式线程（user-mode threads）”或“纤程（fibers）”。该功能旨在简化并发编程并提供更好的可扩展性。虚拟线程是轻量级的，这意味着它们可以比传统线程创建更多数量，并且开销要少得多。这使得在自己的线程中运行单独任务或请求变得更加实用，即使在高吞吐量的程序中也是如此。
-在Java 21中创建和使用虚拟线程有多种方法：
-1. 使用静态构建器方法Thread.startVirtualThread方法将可运行对象作为参数来创建，并立即启动虚拟线程，具体如下代码：
-Runnable runnable = () -&gt; &#123;    System.out.println(&quot;Hello, www.didispace.com&quot;);&#125;;// 使用静态构建器方法Thread virtualThread = Thread.startVirtualThread(runnable);
+    <title>使用systemd部署podman的容器</title>
+    <url>/2025/07/20/back-end/use-systemd-to-deploy-podman-build-by-podman/</url>
+    <content><![CDATA[podman的问题podman是一个容器运行时环境，提供与 Docker 非常相似的功能并不需要在你的系统上运行任何守护进程。没有守护进程就意味着如果你想使用podman部署容器，是没有办法使用类似docker的方式去实现自动重启功能。如果使用k8s部署容器那问题不大，如果就纯容器部署，可以使用podman给出的方案：
+podman generate systemd --help[DEPRECATED] Generate systemd unitsDescription:  Generate systemd units for a pod or container.  The generated units can later be controlled via systemctl(1).DEPRECATED command:It is recommended to use Quadlets for running containers and pods under systemd.Please refer to podman-systemd.unit(5) for details.Usage:  podman generate systemd [options] &#123;CONTAINER|POD&#125;Examples:  podman generate systemd CTR  podman generate systemd --new --time 10 CTR  podman generate systemd --files --name PODOptions:      --after stringArray         Add dependencies order to the generated unit file      --container-prefix string   Systemd unit name prefix for containers (default &quot;container&quot;)  -e, --env stringArray           Set environment variables to the systemd unit files  -f, --files                     Generate .service files instead of printing to stdout      --format string             Print the created units in specified format (json)  -n, --name                      Use container/pod names instead of IDs      --new                       Create a new container or pod instead of starting an existing one      --no-header                 Skip header generation      --pod-prefix string         Systemd unit name prefix for pods (default &quot;pod&quot;)      --requires stringArray      Similar to wants, but declares stronger requirement dependencies      --restart-policy string     Systemd restart-policy (default &quot;on-failure&quot;)      --restart-sec uint          Systemd restart-sec      --separator string          Systemd unit name separator between name/id and prefix (default &quot;-&quot;)      --start-timeout uint        Start timeout override      --stop-timeout uint         Stop timeout override (default 10)      --template                  Make it a template file and use %i and %I specifiers. Working only for containers      --wants stringArray         Add (weak) requirement dependencies to the generated unit file
 
-也可以使用Thread.ofVirtual()来创建，这里还可以设置一些属性，比如：线程名称。具体如下代码：
-Thread.ofVirtual()        .name(&quot;didispace-virtual-thread&quot;)        .start(runnable);
+systemdsystemd是Linux系统的一套基本构建模块。它提供了一个系统和服务管理器，作为PID 1运行并启动系统的其余部分。systemd是在引导期间启动的第一个守护进程，也是在关闭期间终止的最后一个守护进程。利用这个特性，可以使用systemd去监控容器的运行状态
+例子这里使用health-master作为例子。
+# 获取名为 health-master 的容器 IDCONTAINER_ID=$(podman ps -a --filter &quot;name=health-master&quot; --format &quot;&#123;&#123;.ID&#125;&#125;&quot;)if [ -z &quot;$CONTAINER_ID&quot; ]; then  echo &quot;未找到名为 health-master 的容器。&quot; &gt;&amp;2  exit 1fiecho &quot;找到容器 health-master，ID 为 $CONTAINER_ID&quot;# 定义服务文件的存储路径SERVICE_FILE_PATH=&quot;$HOME/.config/systemd/user&quot;SERVICE_NAME=&quot;podman-health-master&quot;# 使用 podman generate systemd 创建服务文件echo &quot;正在生成 systemd 服务文件...&quot;podman generate systemd --name --restart-policy=on-failure -t 10 &quot;$CONTAINER_ID&quot; &gt;&quot;$SERVICE_FILE_PATH/$SERVICE_NAME.service&quot;if [ $? -ne 0 ]; then  echo &quot;错误: 无法生成 $SERVICE_NAME 服务。&quot; &gt;&amp;2  exit 1fi# 修复 SELinux 上下文（如启用 SELinux）restorecon -RvF &quot;$SERVICE_FILE_PATH/$SERVICE_NAME.service&quot;# 启用用户级 systemd 支持（首次需运行）loginctl enable-linger &quot;$USER&quot;# 重新加载 systemd 配置echo &quot;重新加载 systemd 配置...&quot;systemctl --user daemon-reloadif [ $? -ne 0 ]; then  echo &quot;错误: 无法重新加载 systemd 配置。&quot; &gt;&amp;2  exit 1fi# 启用服务echo &quot;启用服务 $SERVICE_NAME...&quot;systemctl --user enable --now &quot;$SERVICE_NAME&quot;if [ $? -ne 0 ]; then  echo &quot;错误: 无法启用服务 $SERVICE_NAME。&quot; &gt;&amp;2  exit 1fi# 启动服务echo &quot;启动服务 $SERVICE_NAME...&quot;systemctl --user start &quot;$SERVICE_NAME&quot;if [ $? -ne 0 ]; then  echo &quot;错误: 无法启动服务 $SERVICE_NAME。&quot; &gt;&amp;2  exit 1fiecho &quot;服务 $SERVICE_NAME 已成功创建并启动。&quot;echo &quot;你现在可以使用以下命令管理服务:&quot;echo &quot;  systemctl --user status $SERVICE_NAME  # 查看服务状态&quot;echo &quot;  systemctl --user stop $SERVICE_NAME    # 停止服务&quot;echo &quot;  systemctl --user restart $SERVICE_NAME # 重启服务&quot;
 
-2. 与ExecutorService结合使用从Java 5开始，就推荐开发人员使用ExecutorServices而不是直接使用Thread类了。现在，Java 21中引入了使用虚拟线程，所以也有了新的ExecutorService来适配，看看下面的例子：
-Runnable runnable = () -&gt; &#123;    System.out.println(&quot;Hello, www.didispace.com&quot;);&#125;;try (ExecutorService executorService = Executors.newVirtualThreadPerTaskExecutor()) &#123;    for (int i = 0; i &lt; 100; i++) &#123;        executorService.submit(runnable);    &#125;&#125;
-
-3. 使用虚拟线程工厂开发者还可以创建一个生成虚拟线程的工厂来管理，具体看下面的例子例子：
-Runnable runnable = () -&gt; &#123;    System.out.println(&quot;Hello, www.didispace.com&quot;);&#125;;ThreadFactory virtualThreadFactory = Thread.ofVirtual()        .name(&quot;didispace&quot;, 0)        .factory();Thread factoryThread = virtualThreadFactory.newThread(runnable);factoryThread.start;
-
-对于虚拟线程的概念，你只需要有一个基本的认识。
-
-虚拟线程是由JVM管理的轻量级线程。
-虚拟线程不需要任何显式分配或调度。
-虚拟线程非常适合I&#x2F;O密集型任务或需要大量并行性的任务。
-虚拟线程也可以用来实现异步操作。
-
-Golang的cmp模型GMP 是 Go 运行时（Runtime）层面的调度模型，它实现了用户态线程（Goroutine）与内核态线程（M）之间的多对多复用，是 Go 能够支持高并发的核心原因
-
-G (Goroutine): 协程。它是待执行的任务，存储了协程的栈、状态及指向任务函数的指针。G 的体积很小（初始仅 2KB），由 Go 运行时管理。
-M (Machine): 操作系统的物理线程。协程最终必须绑定到 M 上才能在 CPU 上运行。M 并不保存状态，它只是一个执行体。
-P (Processor): 逻辑处理器。它是 G 和 M 之间的“中介”或“本地资源池”。P 维护着一个本地就绪队列（Local Runqueue）。M 必须获取到 P 才能执行 G。
-在早期（Go 1.1 之前）只有 GM 模型，由于所有 M 都要抢夺全局队列的锁来获取 G，导致严重的锁竞争。引入 P 后，每个 P 都有本地队列，减少了锁竞争，并实现了 Work Stealing 和 Hand Off 机制，大大提升了效率
-
-
-gemini帮我回答的
-
-MySQL 事务隔离级别SQL:1992 标准定义了四种事务隔离级别，分别是读未提交（Read Uncommitted）、读已提交（Read Committed）、可重复读（Repeatable Read）和串行化（Serializable）。不同的隔离级别下会产生脏读、幻读、不可重复读等相关问题，因此在选择隔离级别的时候要根据应用场景来决定，使用合适的隔离级别。MySQL 中的 InnoDB 存储引擎提供了 SQL 标准所描述的四种事务隔离级别，默认事务隔离级别是可重复读（Repeatable Read）。
-
-读未提交（Read Uncommitted）允许脏读，就是在该隔离级别下，可能读到其他会话未提交事务修改的数据，存在脏读、不可重读读、幻读的问题。
-读已提交（Read Committed）只能查询到已提交的数据。这是 Oracle 数据库默认的事务隔离级别。存在不可重读读、幻读的问题。
-可重复读（Repeatable Read）就是在一个事务里相同条件下，无论何时查到的数据都和第一次查到的数据一致。这是 MySQL 数据库 InnoDB 引擎默认的事务隔离级别。在范围查询时存在幻读的问题。
-串行化（Serializable）是最高的事务隔离级别，它严格服从 ACID 特性的隔离级别。所有的事务依次逐个执行，事务之间互不干扰，该级别可以防止脏读、不可重复读以及幻读。但每个事务读数据时都需要获取表级的共享锁，导致读和写都会阻塞，性能极低。
-
-参考资料
-Java 21 新特性：虚拟线程（Virtual Threads）
-MySQL | 事务隔离级别详解
+问题podman generate systemd在podman 4.4的时候就已经弃用了，目前推荐使用Quadlet
+引用
+使用 Podman 以非 root 用户身份运行 Linux 容器
+System and Service Manager
+Linux Systemd基础教程
+How to replace the “podman generate systemd” command since its deprecated
 
 ]]></content>
       <categories>
-        <category>前端</category>
+        <category>后端</category>
       </categories>
       <tags>
-        <tag>高级前端工程师</tag>
-        <tag>面试</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>为 Angular Material 应用添加完美深色模式支持</title>
-    <url>/2025/09/28/front-end/angular-material-perfect-dark-mode/</url>
-    <content><![CDATA[💡 为 Angular Material 应用添加完美深色模式支持深色模式（Dark Mode）是现代应用不可或缺的功能。它不仅能提升用户在低光环境下的舒适度，还能让应用看起来更专业、更时尚。
-如果你正在使用 Angular Material，实现深色模式可以非常优雅和高效。本文将分享我如何通过一个独立的 ThemePickerComponent，结合 Angular Signals 和 系统偏好检测，为我的应用添加深色模式的完整过程。
-🛠️ 核心思路概览我的深色模式解决方案基于以下几个关键机制：
-
-CSS 变量与 color-scheme: 利用 Angular Material 基于 CSS 变量的主题机制，并通过在 &lt;html&gt; 标签上切换 color-scheme 属性来控制主题。
-Angular Signals: 使用 signal() 存储和管理当前的主题模式 (&#39;light&#39; 或 &#39;dark&#39;)。
-持久化与偏好: 通过 localStorage 记住用户的选择，同时使用 window.matchMedia 监听用户操作系统的偏好设置。
-
-💻 关键代码解析与实现步骤1. 配置主题和 color-scheme (styles.scss)在全局样式文件中，我们确保应用能响应 color-scheme 变化，并设置 Material 主题。
-/* ui/src/styles.scss */@use &#x27;@angular/material&#x27; as mat;html, body &#123;  font-family: Roboto, &quot;Helvetica Neue&quot;, sans-serif;&#125;html &#123;  background-color: var(--mat-sys-surface);  color: var(--mat-sys-on-surface);  // ✨ 关键：允许浏览器知道页面支持两种颜色方案  color-scheme: light dark;  @include mat.theme((        color: (          // Material 会根据 color-scheme 自动应用 light/dark 调色板          primary: mat.$rose-palette,           tertiary: mat.$red-palette,      ),      typography: Roboto,      density: 0,  ));&#125;
-
-我们通过 background-color: var(--mat-sys-surface) 来使用 Material 系统级 CSS 变量，确保背景颜色随着主题切换而正确变化。
-2. ThemePickerComponent：主题切换器这是整个功能的核心。它负责初始化、监听和切换主题。
-A. HTML 模板：根据模式切换图标我们使用 mat-icon-button 和 @if 语法根据 mode() 的值显示太阳或月亮图标。
-&lt;button class=&quot;theme-button&quot; mat-icon-button    [matTooltip]=&quot;&#x27;Change Theme&#x27;&quot;    (click)=&quot;changeMode()&quot;  &gt;     @if (mode() === &#x27;dark&#x27;) &#123;       &lt;mat-icon&gt;dark_mode&lt;/mat-icon&gt;     &#125; @else &#123;       &lt;mat-icon&gt;light_mode&lt;/mat-icon&gt;     &#125;&lt;/button&gt;
-
-B. TypeScript 逻辑：Signals, Effects, 和持久化// ui/src/app/components/theme-picker/theme-picker.component.tsimport &#123; afterNextRender, Component, effect, inject, OnInit, Renderer2, signal &#125; from &#x27;@angular/core&#x27;;// ... 导入 MatButtonModule, MatIconModule, MatTooltipModule@Component(&#123;...&#125;)export class ThemePickerComponent implements OnInit &#123;  static storageKey = &#x27;batcher-ui-theme&#x27;;  mode = signal(&#x27;light&#x27;);  private renderer = inject(Renderer2);  constructor() &#123;    // 1. 响应式更新：当 mode() 变化时，更新 &lt;html&gt; 元素的 color-scheme    effect(() =&gt; &#123;      const mode = this.mode();      this.renderer.setStyle(document.documentElement, &#x27;color-scheme&#x27;, mode);    &#125;);    // 2. 初始化：客户端渲染后，加载存储或系统偏好    afterNextRender(() =&gt; &#123;      // 优先加载 localStorage 存储的模式，否则检测系统偏好      const systemPreference = window.matchMedia(&#x27;(prefers-color-scheme: dark)&#x27;).matches ? &#x27;dark&#x27; : &#x27;light&#x27;;      const storedMode = this.getStoredMode() || systemPreference;            if (storedMode) &#123;        this.mode.set(storedMode);      &#125;    &#125;);  &#125;  ngOnInit(): void &#123;    // 3. 实时监听：如果用户未设置过偏好，跟随系统主题的实时变化    window.matchMedia(&#x27;(prefers-color-scheme: dark)&#x27;).addEventListener(&#x27;change&#x27;, e =&gt; &#123;      const storedMode = this.getStoredMode();      if (!storedMode) &#123;        this.mode.set(e.matches ? &#x27;dark&#x27; : &#x27;light&#x27;);      &#125;    &#125;);  &#125;  changeMode(): void &#123;    const newMode = this.mode() === &#x27;light&#x27; ? &#x27;dark&#x27; : &#x27;light&#x27;;    this.mode.set(newMode);    this.storeMode(newMode);  &#125;  // 4. 持久化方法 (storeMode, getStoredMode)  storeMode(mode: string): void &#123;    try &#123;      localStorage.setItem(ThemePickerComponent.storageKey, mode);    &#125; catch &#123; /* ignore */ &#125;  &#125;  getStoredMode(): string | null &#123;    try &#123;      return localStorage.getItem(ThemePickerComponent.storageKey);    &#125; catch &#123; return null; &#125;  &#125;&#125;
-
-C. SCSS处理(可选)修改icon的颜色去适配material 3的配色
-.theme-button &#123;    color: var(--mat-primary);&#125;
-
-3. 集成到导航栏 (navigation.component.html)我们将 app-theme-picker 组件放置在应用导航栏（mat-toolbar）的右侧。
-&lt;mat-toolbar&gt;    &lt;div class=&quot;flex-grow-1&quot;&gt;&lt;/div&gt;    &lt;app-theme-picker class=&quot;theme-picker&quot;&gt;&lt;/app-theme-picker&gt;&lt;/mat-toolbar&gt;
-
-导航栏样式调整
-我们还调整了导航栏的背景色，使其使用更适合作为容器背景的 Material 系统变量。
-/* ui/src/app/components/navigation/navigation.component.scss */:host &#123;  color: var(--mat-sys-primary);  // 更改为使用 surface-container-low，这通常更适合作为页面/容器的背景  background: var(--mat-sys-surface-container-low);&#125;// ... 省略其他样式.flex-grow-1 &#123;  flex-grow: 1;&#125;
-
-
-✨ 总结通过上述实现，我们的 Angular Material 应用获得了：
-
-用户自定义: 用户可以随时通过点击按钮切换光亮&#x2F;深色模式。
-偏好记忆: 应用会记住用户的选择，即使重新打开浏览器也不会丢失。
-尊重系统设置: 如果用户从未手动切换过主题，应用会默认跟随操作系统的偏好设置。
-
-使用 Angular Signals 和 Effects 极大地简化了状态管理和响应式更新，让深色模式的实现既强大又简洁！
-🔗 完整的代码变更你可以查看这个 GitHub Commit 来了解所有相关的代码修改：
-fix(ui): add dark mode
-]]></content>
-      <categories>
-        <category>前端</category>
-      </categories>
-      <tags>
-        <tag>angular</tag>
-        <tag>angular material</tag>
-        <tag>dark mode</tag>
+        <tag>podman</tag>
+        <tag>容器</tag>
+        <tag>systemd</tag>
       </tags>
   </entry>
   <entry>
@@ -1778,6 +1669,115 @@ GSS Data Store使用Podman部署问题：你提到在虚拟机上通过 Podman s
       <tags>
         <tag>高级前端工程师</tag>
         <tag>面试</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>2026年5月8号面试总结</title>
+    <url>/2026/05/08/front-end/2026-0508-interview/</url>
+    <content><![CDATA[前言2026年5月8号有一场面试，是对方架构师来面试的我。总的来说，面试的效果不是很好。面试的岗位是前端岗位，但是问的很多是后端架构的设计，我认为我的准备不是很好，我需要继续努力补全自己。
+问题Java的虚拟线程问题：Java的虚拟线程是什么，怎么创建？
+回答如下：
+在Java 21中，引入了虚拟线程（Virtual Threads）来简化和增强并发性，这使得在Java中编程并发程序更容易、更高效。
+虚拟线程，也称为“用户模式线程（user-mode threads）”或“纤程（fibers）”。该功能旨在简化并发编程并提供更好的可扩展性。虚拟线程是轻量级的，这意味着它们可以比传统线程创建更多数量，并且开销要少得多。这使得在自己的线程中运行单独任务或请求变得更加实用，即使在高吞吐量的程序中也是如此。
+在Java 21中创建和使用虚拟线程有多种方法：
+1. 使用静态构建器方法Thread.startVirtualThread方法将可运行对象作为参数来创建，并立即启动虚拟线程，具体如下代码：
+Runnable runnable = () -&gt; &#123;    System.out.println(&quot;Hello, www.didispace.com&quot;);&#125;;// 使用静态构建器方法Thread virtualThread = Thread.startVirtualThread(runnable);
+
+也可以使用Thread.ofVirtual()来创建，这里还可以设置一些属性，比如：线程名称。具体如下代码：
+Thread.ofVirtual()        .name(&quot;didispace-virtual-thread&quot;)        .start(runnable);
+
+2. 与ExecutorService结合使用从Java 5开始，就推荐开发人员使用ExecutorServices而不是直接使用Thread类了。现在，Java 21中引入了使用虚拟线程，所以也有了新的ExecutorService来适配，看看下面的例子：
+Runnable runnable = () -&gt; &#123;    System.out.println(&quot;Hello, www.didispace.com&quot;);&#125;;try (ExecutorService executorService = Executors.newVirtualThreadPerTaskExecutor()) &#123;    for (int i = 0; i &lt; 100; i++) &#123;        executorService.submit(runnable);    &#125;&#125;
+
+3. 使用虚拟线程工厂开发者还可以创建一个生成虚拟线程的工厂来管理，具体看下面的例子例子：
+Runnable runnable = () -&gt; &#123;    System.out.println(&quot;Hello, www.didispace.com&quot;);&#125;;ThreadFactory virtualThreadFactory = Thread.ofVirtual()        .name(&quot;didispace&quot;, 0)        .factory();Thread factoryThread = virtualThreadFactory.newThread(runnable);factoryThread.start;
+
+对于虚拟线程的概念，你只需要有一个基本的认识。
+
+虚拟线程是由JVM管理的轻量级线程。
+虚拟线程不需要任何显式分配或调度。
+虚拟线程非常适合I&#x2F;O密集型任务或需要大量并行性的任务。
+虚拟线程也可以用来实现异步操作。
+
+Golang的cmp模型GMP 是 Go 运行时（Runtime）层面的调度模型，它实现了用户态线程（Goroutine）与内核态线程（M）之间的多对多复用，是 Go 能够支持高并发的核心原因
+
+G (Goroutine): 协程。它是待执行的任务，存储了协程的栈、状态及指向任务函数的指针。G 的体积很小（初始仅 2KB），由 Go 运行时管理。
+M (Machine): 操作系统的物理线程。协程最终必须绑定到 M 上才能在 CPU 上运行。M 并不保存状态，它只是一个执行体。
+P (Processor): 逻辑处理器。它是 G 和 M 之间的“中介”或“本地资源池”。P 维护着一个本地就绪队列（Local Runqueue）。M 必须获取到 P 才能执行 G。
+在早期（Go 1.1 之前）只有 GM 模型，由于所有 M 都要抢夺全局队列的锁来获取 G，导致严重的锁竞争。引入 P 后，每个 P 都有本地队列，减少了锁竞争，并实现了 Work Stealing 和 Hand Off 机制，大大提升了效率
+
+
+gemini帮我回答的
+
+MySQL 事务隔离级别SQL:1992 标准定义了四种事务隔离级别，分别是读未提交（Read Uncommitted）、读已提交（Read Committed）、可重复读（Repeatable Read）和串行化（Serializable）。不同的隔离级别下会产生脏读、幻读、不可重复读等相关问题，因此在选择隔离级别的时候要根据应用场景来决定，使用合适的隔离级别。MySQL 中的 InnoDB 存储引擎提供了 SQL 标准所描述的四种事务隔离级别，默认事务隔离级别是可重复读（Repeatable Read）。
+
+读未提交（Read Uncommitted）允许脏读，就是在该隔离级别下，可能读到其他会话未提交事务修改的数据，存在脏读、不可重读读、幻读的问题。
+读已提交（Read Committed）只能查询到已提交的数据。这是 Oracle 数据库默认的事务隔离级别。存在不可重读读、幻读的问题。
+可重复读（Repeatable Read）就是在一个事务里相同条件下，无论何时查到的数据都和第一次查到的数据一致。这是 MySQL 数据库 InnoDB 引擎默认的事务隔离级别。在范围查询时存在幻读的问题。
+串行化（Serializable）是最高的事务隔离级别，它严格服从 ACID 特性的隔离级别。所有的事务依次逐个执行，事务之间互不干扰，该级别可以防止脏读、不可重复读以及幻读。但每个事务读数据时都需要获取表级的共享锁，导致读和写都会阻塞，性能极低。
+
+参考资料
+Java 21 新特性：虚拟线程（Virtual Threads）
+MySQL | 事务隔离级别详解
+
+]]></content>
+      <categories>
+        <category>前端</category>
+      </categories>
+      <tags>
+        <tag>高级前端工程师</tag>
+        <tag>面试</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>为 Angular Material 应用添加完美深色模式支持</title>
+    <url>/2025/09/28/front-end/angular-material-perfect-dark-mode/</url>
+    <content><![CDATA[💡 为 Angular Material 应用添加完美深色模式支持深色模式（Dark Mode）是现代应用不可或缺的功能。它不仅能提升用户在低光环境下的舒适度，还能让应用看起来更专业、更时尚。
+如果你正在使用 Angular Material，实现深色模式可以非常优雅和高效。本文将分享我如何通过一个独立的 ThemePickerComponent，结合 Angular Signals 和 系统偏好检测，为我的应用添加深色模式的完整过程。
+🛠️ 核心思路概览我的深色模式解决方案基于以下几个关键机制：
+
+CSS 变量与 color-scheme: 利用 Angular Material 基于 CSS 变量的主题机制，并通过在 &lt;html&gt; 标签上切换 color-scheme 属性来控制主题。
+Angular Signals: 使用 signal() 存储和管理当前的主题模式 (&#39;light&#39; 或 &#39;dark&#39;)。
+持久化与偏好: 通过 localStorage 记住用户的选择，同时使用 window.matchMedia 监听用户操作系统的偏好设置。
+
+💻 关键代码解析与实现步骤1. 配置主题和 color-scheme (styles.scss)在全局样式文件中，我们确保应用能响应 color-scheme 变化，并设置 Material 主题。
+/* ui/src/styles.scss */@use &#x27;@angular/material&#x27; as mat;html, body &#123;  font-family: Roboto, &quot;Helvetica Neue&quot;, sans-serif;&#125;html &#123;  background-color: var(--mat-sys-surface);  color: var(--mat-sys-on-surface);  // ✨ 关键：允许浏览器知道页面支持两种颜色方案  color-scheme: light dark;  @include mat.theme((        color: (          // Material 会根据 color-scheme 自动应用 light/dark 调色板          primary: mat.$rose-palette,           tertiary: mat.$red-palette,      ),      typography: Roboto,      density: 0,  ));&#125;
+
+我们通过 background-color: var(--mat-sys-surface) 来使用 Material 系统级 CSS 变量，确保背景颜色随着主题切换而正确变化。
+2. ThemePickerComponent：主题切换器这是整个功能的核心。它负责初始化、监听和切换主题。
+A. HTML 模板：根据模式切换图标我们使用 mat-icon-button 和 @if 语法根据 mode() 的值显示太阳或月亮图标。
+&lt;button class=&quot;theme-button&quot; mat-icon-button    [matTooltip]=&quot;&#x27;Change Theme&#x27;&quot;    (click)=&quot;changeMode()&quot;  &gt;     @if (mode() === &#x27;dark&#x27;) &#123;       &lt;mat-icon&gt;dark_mode&lt;/mat-icon&gt;     &#125; @else &#123;       &lt;mat-icon&gt;light_mode&lt;/mat-icon&gt;     &#125;&lt;/button&gt;
+
+B. TypeScript 逻辑：Signals, Effects, 和持久化// ui/src/app/components/theme-picker/theme-picker.component.tsimport &#123; afterNextRender, Component, effect, inject, OnInit, Renderer2, signal &#125; from &#x27;@angular/core&#x27;;// ... 导入 MatButtonModule, MatIconModule, MatTooltipModule@Component(&#123;...&#125;)export class ThemePickerComponent implements OnInit &#123;  static storageKey = &#x27;batcher-ui-theme&#x27;;  mode = signal(&#x27;light&#x27;);  private renderer = inject(Renderer2);  constructor() &#123;    // 1. 响应式更新：当 mode() 变化时，更新 &lt;html&gt; 元素的 color-scheme    effect(() =&gt; &#123;      const mode = this.mode();      this.renderer.setStyle(document.documentElement, &#x27;color-scheme&#x27;, mode);    &#125;);    // 2. 初始化：客户端渲染后，加载存储或系统偏好    afterNextRender(() =&gt; &#123;      // 优先加载 localStorage 存储的模式，否则检测系统偏好      const systemPreference = window.matchMedia(&#x27;(prefers-color-scheme: dark)&#x27;).matches ? &#x27;dark&#x27; : &#x27;light&#x27;;      const storedMode = this.getStoredMode() || systemPreference;            if (storedMode) &#123;        this.mode.set(storedMode);      &#125;    &#125;);  &#125;  ngOnInit(): void &#123;    // 3. 实时监听：如果用户未设置过偏好，跟随系统主题的实时变化    window.matchMedia(&#x27;(prefers-color-scheme: dark)&#x27;).addEventListener(&#x27;change&#x27;, e =&gt; &#123;      const storedMode = this.getStoredMode();      if (!storedMode) &#123;        this.mode.set(e.matches ? &#x27;dark&#x27; : &#x27;light&#x27;);      &#125;    &#125;);  &#125;  changeMode(): void &#123;    const newMode = this.mode() === &#x27;light&#x27; ? &#x27;dark&#x27; : &#x27;light&#x27;;    this.mode.set(newMode);    this.storeMode(newMode);  &#125;  // 4. 持久化方法 (storeMode, getStoredMode)  storeMode(mode: string): void &#123;    try &#123;      localStorage.setItem(ThemePickerComponent.storageKey, mode);    &#125; catch &#123; /* ignore */ &#125;  &#125;  getStoredMode(): string | null &#123;    try &#123;      return localStorage.getItem(ThemePickerComponent.storageKey);    &#125; catch &#123; return null; &#125;  &#125;&#125;
+
+C. SCSS处理(可选)修改icon的颜色去适配material 3的配色
+.theme-button &#123;    color: var(--mat-primary);&#125;
+
+3. 集成到导航栏 (navigation.component.html)我们将 app-theme-picker 组件放置在应用导航栏（mat-toolbar）的右侧。
+&lt;mat-toolbar&gt;    &lt;div class=&quot;flex-grow-1&quot;&gt;&lt;/div&gt;    &lt;app-theme-picker class=&quot;theme-picker&quot;&gt;&lt;/app-theme-picker&gt;&lt;/mat-toolbar&gt;
+
+导航栏样式调整
+我们还调整了导航栏的背景色，使其使用更适合作为容器背景的 Material 系统变量。
+/* ui/src/app/components/navigation/navigation.component.scss */:host &#123;  color: var(--mat-sys-primary);  // 更改为使用 surface-container-low，这通常更适合作为页面/容器的背景  background: var(--mat-sys-surface-container-low);&#125;// ... 省略其他样式.flex-grow-1 &#123;  flex-grow: 1;&#125;
+
+
+✨ 总结通过上述实现，我们的 Angular Material 应用获得了：
+
+用户自定义: 用户可以随时通过点击按钮切换光亮&#x2F;深色模式。
+偏好记忆: 应用会记住用户的选择，即使重新打开浏览器也不会丢失。
+尊重系统设置: 如果用户从未手动切换过主题，应用会默认跟随操作系统的偏好设置。
+
+使用 Angular Signals 和 Effects 极大地简化了状态管理和响应式更新，让深色模式的实现既强大又简洁！
+🔗 完整的代码变更你可以查看这个 GitHub Commit 来了解所有相关的代码修改：
+fix(ui): add dark mode
+]]></content>
+      <categories>
+        <category>前端</category>
+      </categories>
+      <tags>
+        <tag>angular</tag>
+        <tag>angular material</tag>
+        <tag>dark mode</tag>
       </tags>
   </entry>
   <entry>
@@ -2449,85 +2449,6 @@ React Fiber 调度
       </tags>
   </entry>
   <entry>
-    <title>如何使用bazel去构建基于express和typescript的nodejs项目</title>
-    <url>/2023/08/10/front-end/how-to-use-bazel-to-build-nodejs-typescript-expressjs/</url>
-    <content><![CDATA[前言Bazel 是一款类似于 Make、Maven 和 Gradle的开源构建和测试工具。它使用可读的高级构建语言，支持多种变成语言编写的项目，并且能够为多个平台进行构建。Bazel 支持构建包含多个仓库、大量开发人员的大型代码库。
-详细介绍可见Bazel官网。
-目的本文的目的是使用bazel5去构建一个完整的nodejs后端项目，并不负责bazel相关知识的介绍。
-配置首先在package.json文件中·devDependencies·部分添加：
-&quot;@bazel/bazelisk&quot;: &quot;^1.7.5&quot;,&quot;@bazel/buildifier&quot;: &quot;^6.0.0&quot;,&quot;@bazel/ibazel&quot;: &quot;^0.16.0&quot;,&quot;@bazel/typescript&quot;: &quot;^5.8.1&quot;,
-
-然后再执行安装依赖命令。
-创建.bazelignore文件并写入下面的内容:
-.gitnode_modulesdist
-
-创建.bazelrc文件并写入下面的内容:
-# Enable debugging tests with --config=debugtest:debug --test_arg=--node_options=--inspect-brk --test_output=streamed --test_strategy=exclusive --test_timeout=9999 --nocache_test_results# Do not attempt to de-flake locally.# On CI we might set this to `3` to run with deflaking.test --flaky_test_attempts=1################################ Filesystem interactions     ################################# Create symlinks in the project:# - dist/bin for outputs# - dist/testlogs, dist/genfiles# - bazel-out# NB: bazel-out should be excluded from the editor configuration.# The checked-in /.vscode/settings.json does this for VSCode.# Other editors may require manual config to ignore this directory.# In the past, we say a problem where VSCode traversed a massive tree, opening file handles and# eventually a surprising failure with auto-discovery of the C++ toolchain in# MacOS High Sierra.# See https://github.com/bazelbuild/bazel/issues/4603build --symlink_prefix=dist/# Turn off legacy external runfilesbuild --nolegacy_external_runfilesrun --nolegacy_external_runfilestest --nolegacy_external_runfiles# Turn on --incompatible_strict_action_env which was on by default# in Bazel 0.21.0 but turned off again in 0.22.0. Follow# https://github.com/bazelbuild/bazel/issues/7026 for more details.# This flag is needed to so that the bazel cache is not invalidated# when running bazel via `yarn bazel`.# See https://github.com/angular/angular/issues/27514.build --incompatible_strict_action_envrun --incompatible_strict_action_envtest --incompatible_strict_action_env# Do not build runfile trees by default. If an execution strategy relies on runfile# symlink teee, the tree is created on-demand. See: https://github.com/bazelbuild/bazel/issues/6627# and https://github.com/bazelbuild/bazel/commit/03246077f948f2790a83520e7dccc2625650e6dfbuild --nobuild_runfile_linksbuild --enable_runfiles################################ Release support             ## Turn on these settings with ##  --config=release           ################################# Releases should always be stamped with version control info# This command assumes node on the path and is a workaround for# https://github.com/bazelbuild/bazel/issues/4802build:release --workspace_status_command=&quot;yarn -s ng-dev release build-env-stamp --mode=release&quot;build:release --stamp# Building AIO against local Angular deps requires stamping# versions in Angular packages due to CLI version checks.build:aio_local_deps --stampbuild:aio_local_deps --workspace_status_command=&quot;yarn -s --cwd aio local-workspace-status&quot;# Snapshots should also be stamped with version control information.build:snapshot-build --workspace_status_command=&quot;yarn -s ng-dev release build-env-stamp --mode=snapshot&quot;build:snapshot-build --stamp########################################################### AIO architect build configuration                      ## See aio/angular.json for available configurations.     ## To build with a partiular configuration:               ##   bazel build //aio:build --aio_build_config=&lt;config&gt;  ## Default config is `stable``.                           ###########################################################build --flag_alias=aio_build_config=//aio:flag_aio_build_config##################################### AIO first party dep substitution ## Turn on with                     ##  --config=aio_local_deps         #####################################build:aio_local_deps --//aio:flag_aio_local_deps################################ Output                      ################################# A more useful default output mode for bazel query# Prints eg. &quot;ng_module rule //foo:bar&quot; rather than just &quot;//foo:bar&quot;query --output=label_kind# By default, failing tests don&#x27;t print any output, it goes to the log filetest --test_output=errors################################# Settings for CircleCI        ################################## Bazel flags for CircleCI are in /.circleci/bazel.linux.rc and /.circleci/bazel.windows.rc################################### Remote Build Execution support ## Turn on these settings with    ##  --config=remote               #################################### The following --define=EXECUTOR=remote will be able to be removed# once https://github.com/bazelbuild/bazel/issues/7254 is fixedbuild:remote --define=EXECUTOR=remote# Set a higher timeout value, just in case.build:remote --remote_timeout=600# Bazel detects maximum number of jobs based on host resources.# Since we run remotely, we can increase this number significantly.common:remote --jobs=200build:remote --google_default_credentials# Limit the number of test jobs for on an AIO local deps build. The example tests running# concurrently pushes the circleci executor RAM usage to its limits.test:aio_local_deps --jobs=24# Force remote exeuctions to consider the entire run as linuxbuild:remote --cpu=k8build:remote --host_cpu=k8# Toolchain and platform related flagsbuild:remote --crosstool_top=@npm//@angular/build-tooling/bazel/remote-execution/cpp:cc_toolchain_suitebuild:remote --extra_toolchains=@npm//@angular/build-tooling/bazel/remote-execution/cpp:cc_toolchainbuild:remote --extra_execution_platforms=@npm//@angular/build-tooling/bazel/remote-execution:platformbuild:remote --host_platform=@npm//@angular/build-tooling/bazel/remote-execution:platformbuild:remote --platforms=@npm//@angular/build-tooling/bazel/remote-execution:platform# Remote instance and cachingbuild:remote --remote_instance_name=projects/internal-200822/instances/primary_instancebuild:remote --project_id=internal-200822build:remote --remote_cache=remotebuildexecution.googleapis.combuild:remote --remote_executor=remotebuildexecution.googleapis.com# Use HTTP remote cachebuild:remote-cache --remote_cache=https://storage.googleapis.com/angular-team-cachebuild:remote-cache --remote_accept_cached=truebuild:remote-cache --remote_upload_local_results=truebuild:remote-cache --google_default_credentials# Ensure that tags like &quot;no-remote-exec&quot; get propagated to actions created by rules,# even if the rule implementation does not explicitly pass them to the execution requirements.# https://bazel.build/reference/command-line-reference#flag--experimental_allow_tags_propagationcommon --experimental_allow_tags_propagation# Disable network access in the sandbox by default. To enable network access# for a particular target, use:## load(&quot;@npm//@angular/build-tooling/bazel/remote-execution:index.bzl&quot;, &quot;ENABLE_NETWORK&quot;)# my_target(#   ...,#   exec_properties = ENABLE_NETWORK,   # Enables network in remote exec#   tags = [&quot;requires-network&quot;]         # Enables network in sandbox# )build --nosandbox_default_allow_network################################### Saucelabs tests settings       ## Turn on these settings with    ##  --config=saucelabs            #################################### For saucelabs tests we don&#x27;t want to enable flaky test attempts. Karma has its own integrated# retry mechanism and we do not want to retry unnecessarily if Karma already tried multiple times.test:saucelabs --flaky_test_attempts=1################# Flag Aliases ################## --ng_perf will ask the Ivy compiler to produce performance results for each build.build --flag_alias=ng_perf=//packages/compiler-cli:ng_perf##################################################### User bazel configuration# NOTE: This needs to be the *last* entry in the config.##################################################### Load any settings which are specific to the current user. Needs to be *last* statement# in this config, as the user configuration should be able to overwrite flags from this file.try-import %workspace%/.bazelrc.user
-
-创建.bazelversion用于指定bazel版本：
-5.0.0
-
-
-可以使用bazel5的任意版本，理论上都支持，但是不要使用bazel6的版本
-
-新建WORKSPACE用于定义bazel的工作区：
-workspace(   name = &quot;express-postgres-ts-starter&quot;,    managed_directories = &#123;        &quot;@npm&quot;: [&quot;node_modules&quot;],    &#125;,)
-
-导入http_archive用于获取bazel的库：
-load(&quot;@bazel_tools//tools/build_defs/repo:http.bzl&quot;, &quot;http_archive&quot;)
-
-如果使用了.yarn文件夹用于限制yarn的版本，可以通过创建yarn.bzl解决：
-YARN_PATH = &quot;.yarn/releases/yarn-1.22.19.cjs&quot;YARN_LABEL = &quot;//:&quot; + YARN_PATH
-
-然后在WORKSPACE导入：
-load(&quot;//:yarn.bzl&quot;, &quot;YARN_LABEL&quot;)
-
-引入bazel的nodesj依赖库：
-http_archive(    name = &quot;build_bazel_rules_nodejs&quot;,    sha256 = &quot;5dd1e5dea1322174c57d3ca7b899da381d516220793d0adef3ba03b9d23baa8e&quot;,    urls = [        &quot;https://github.com/bazelbuild/rules_nodejs/releases/download/5.8.3/rules_nodejs-5.8.3.tar.gz&quot;,        &quot;https://ghproxy.com/https://github.com/bazelbuild/rules_nodejs/releases/download/5.8.3/rules_nodejs-5.8.3.tar.gz&quot;    ],)load(&quot;@build_bazel_rules_nodejs//:repositories.bzl&quot;, &quot;build_bazel_rules_nodejs_dependencies&quot;)build_bazel_rules_nodejs_dependencies()http_archive(    name = &quot;rules_pkg&quot;,    sha256 = &quot;62eeb544ff1ef41d786e329e1536c1d541bb9bcad27ae984d57f18f314018e66&quot;,    urls = [        &quot;https://mirror.bazel.build/github.com/bazelbuild/rules_pkg/releases/download/0.6.0/rules_pkg-0.6.0.tar.gz&quot;,        &quot;https://github.com/bazelbuild/rules_pkg/releases/download/0.6.0/rules_pkg-0.6.0.tar.gz&quot;,        &quot;https://ghproxy.com/https://github.com/bazelbuild/rules_pkg/releases/download/0.6.0/rules_pkg-0.6.0.tar.gz&quot;,    ],)# Fetch Aspect lib for utilities like write_source_files# NOTE: We cannot move past version 1.23.2 of aspect_bazel_lib because it requires us to move to bazel 6.0.0 which#       breaks our usage of managed_directorieshttp_archive(    name = &quot;aspect_bazel_lib&quot;,    sha256 = &quot;4b2e774387bae6242879820086b7b738d49bf3d0659522ea5d9363be01a27582&quot;,    strip_prefix = &quot;bazel-lib-1.23.2&quot;,    urls = [        &quot;https://github.com/aspect-build/bazel-lib/archive/refs/tags/v1.23.2.tar.gz&quot;,        &quot;https://ghproxy.com/https://github.com/aspect-build/bazel-lib/archive/refs/tags/v1.23.2.tar.gz&quot;,    ])
-
-配置nodejs工具链：
-load(&quot;@rules_nodejs//nodejs:repositories.bzl&quot;, &quot;nodejs_register_toolchains&quot;)nodejs_register_toolchains(    name = &quot;nodejs&quot;,    node_version = &quot;18.10.0&quot;,)
-
-
-在arm mac上不支持nodejs20的版本，不确定其他平台时候是否支持nodejs20
-
-配置yarn_install下载依赖：
-load(&quot;@build_bazel_rules_nodejs//:index.bzl&quot;, &quot;yarn_install&quot;)yarn_install(    name = &quot;npm&quot;,		data = [        YARN_LABEL,        &quot;//:.yarnrc&quot;,				&quot;//:patches/trim-newlines+5.0.0.patch&quot;		],		exports_directories_only = False,		symlink_node_modules = True,    package_json = &quot;//:package.json&quot;,		yarn = YARN_LABEL,    yarn_lock = &quot;//:yarn.lock&quot;,)
-
-创建BUILD.bazel, 并定义为公开的:
-package(default_visibility = [&quot;//visibility:public&quot;])
-
-导入ts_project和nodejs_binary用于构建typescript和nodejs：
-load(&quot;@npm//@bazel/typescript:index.bzl&quot;, &quot;ts_project&quot;)load(&quot;@build_bazel_rules_nodejs//:index.bzl&quot;, &quot;nodejs_binary&quot;)
-
-定义SRCS变量用于声明所有需要参与编译的ts文件：
-SRCS = glob(	[		&quot;src/**/*.ts&quot;,	],	exclude = [		&quot;src/**/*.spec.ts&quot;	])
-
-使用ts_project将ts编译成js：
-ts_project(    name = &quot;server-ts&quot;,    srcs = [&quot;server.ts&quot; ] + SRCS,    resolve_json_module = True,    source_map = True,    tsconfig = &quot;//:tsconfig.json&quot;,    visibility = [&quot;//visibility:public&quot;],    deps = [        &quot;@npm//@apollo/server&quot;,        &quot;@npm//@graphql-tools/merge&quot;,        &quot;@npm//body-parser&quot;,        &quot;@npm//compression&quot;,        &quot;@npm//cookie-parser&quot;,        &quot;@npm//dotenv&quot;,        &quot;@npm//exceljs&quot;,        &quot;@npm//express&quot;,        &quot;@npm//express-fileupload&quot;,        &quot;@npm//express-joi-validation&quot;,        &quot;@npm//express-session&quot;,        &quot;@npm//graphql&quot;,        &quot;@npm//graphql-tag&quot;,        &quot;@npm//helmet&quot;,        &quot;@npm//joi&quot;,        &quot;@npm//jsonwebtoken&quot;,        &quot;@npm//knex&quot;,        &quot;@npm//lodash&quot;,        &quot;@npm//minio&quot;,        &quot;@npm//morgan&quot;,        &quot;@npm//pg&quot;,        &quot;@npm//pg-boss&quot;,        &quot;@npm//redis&quot;,        &quot;@npm//socket.io&quot;,        &quot;@npm//winston&quot;,        &quot;@npm//@types/express&quot;,        &quot;@npm//@types/express-fileupload&quot;,        &quot;@npm//@types/express-session&quot;,        &quot;@npm//@types/jest&quot;,        &quot;@npm//@types/node&quot;,    ])
-
-现在可以编译了：
-yarn bazel build //... 
-
-最后可以在dist/bin看到一个server.js, 我们可以通过执行node dist/bin/server.js运行我们的nodejs项目了。
-参考
-Bazel官网
-Bazel 学习笔记 (一) 快速开始
-使用Bazel编译TypeScript
-angular
-feat: add bazel support
-
-]]></content>
-      <categories>
-        <category>前端</category>
-      </categories>
-      <tags>
-        <tag>bazel</tag>
-        <tag>typescript</tag>
-        <tag>nodejs</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>script标签中的defer和async</title>
     <url>/2024/11/04/front-end/html-scripts-defer-async/</url>
     <content><![CDATA[浏览器中script标签中的defer和async有什么区别，优缺点是什么，应用场景是什么？在 HTML 中，&lt;script&gt; 标签的 defer 和 async 属性用于控制脚本的加载和执行方式，尤其是在处理 JavaScript 文件时。它们之间的主要区别和应用场景如下：
@@ -2656,6 +2577,85 @@ var name = &quot;The Window&quot;;var object = &#123;　　name : &quot;My Objec
       </categories>
       <tags>
         <tag>javascript</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>如何使用bazel去构建基于express和typescript的nodejs项目</title>
+    <url>/2023/08/10/front-end/how-to-use-bazel-to-build-nodejs-typescript-expressjs/</url>
+    <content><![CDATA[前言Bazel 是一款类似于 Make、Maven 和 Gradle的开源构建和测试工具。它使用可读的高级构建语言，支持多种变成语言编写的项目，并且能够为多个平台进行构建。Bazel 支持构建包含多个仓库、大量开发人员的大型代码库。
+详细介绍可见Bazel官网。
+目的本文的目的是使用bazel5去构建一个完整的nodejs后端项目，并不负责bazel相关知识的介绍。
+配置首先在package.json文件中·devDependencies·部分添加：
+&quot;@bazel/bazelisk&quot;: &quot;^1.7.5&quot;,&quot;@bazel/buildifier&quot;: &quot;^6.0.0&quot;,&quot;@bazel/ibazel&quot;: &quot;^0.16.0&quot;,&quot;@bazel/typescript&quot;: &quot;^5.8.1&quot;,
+
+然后再执行安装依赖命令。
+创建.bazelignore文件并写入下面的内容:
+.gitnode_modulesdist
+
+创建.bazelrc文件并写入下面的内容:
+# Enable debugging tests with --config=debugtest:debug --test_arg=--node_options=--inspect-brk --test_output=streamed --test_strategy=exclusive --test_timeout=9999 --nocache_test_results# Do not attempt to de-flake locally.# On CI we might set this to `3` to run with deflaking.test --flaky_test_attempts=1################################ Filesystem interactions     ################################# Create symlinks in the project:# - dist/bin for outputs# - dist/testlogs, dist/genfiles# - bazel-out# NB: bazel-out should be excluded from the editor configuration.# The checked-in /.vscode/settings.json does this for VSCode.# Other editors may require manual config to ignore this directory.# In the past, we say a problem where VSCode traversed a massive tree, opening file handles and# eventually a surprising failure with auto-discovery of the C++ toolchain in# MacOS High Sierra.# See https://github.com/bazelbuild/bazel/issues/4603build --symlink_prefix=dist/# Turn off legacy external runfilesbuild --nolegacy_external_runfilesrun --nolegacy_external_runfilestest --nolegacy_external_runfiles# Turn on --incompatible_strict_action_env which was on by default# in Bazel 0.21.0 but turned off again in 0.22.0. Follow# https://github.com/bazelbuild/bazel/issues/7026 for more details.# This flag is needed to so that the bazel cache is not invalidated# when running bazel via `yarn bazel`.# See https://github.com/angular/angular/issues/27514.build --incompatible_strict_action_envrun --incompatible_strict_action_envtest --incompatible_strict_action_env# Do not build runfile trees by default. If an execution strategy relies on runfile# symlink teee, the tree is created on-demand. See: https://github.com/bazelbuild/bazel/issues/6627# and https://github.com/bazelbuild/bazel/commit/03246077f948f2790a83520e7dccc2625650e6dfbuild --nobuild_runfile_linksbuild --enable_runfiles################################ Release support             ## Turn on these settings with ##  --config=release           ################################# Releases should always be stamped with version control info# This command assumes node on the path and is a workaround for# https://github.com/bazelbuild/bazel/issues/4802build:release --workspace_status_command=&quot;yarn -s ng-dev release build-env-stamp --mode=release&quot;build:release --stamp# Building AIO against local Angular deps requires stamping# versions in Angular packages due to CLI version checks.build:aio_local_deps --stampbuild:aio_local_deps --workspace_status_command=&quot;yarn -s --cwd aio local-workspace-status&quot;# Snapshots should also be stamped with version control information.build:snapshot-build --workspace_status_command=&quot;yarn -s ng-dev release build-env-stamp --mode=snapshot&quot;build:snapshot-build --stamp########################################################### AIO architect build configuration                      ## See aio/angular.json for available configurations.     ## To build with a partiular configuration:               ##   bazel build //aio:build --aio_build_config=&lt;config&gt;  ## Default config is `stable``.                           ###########################################################build --flag_alias=aio_build_config=//aio:flag_aio_build_config##################################### AIO first party dep substitution ## Turn on with                     ##  --config=aio_local_deps         #####################################build:aio_local_deps --//aio:flag_aio_local_deps################################ Output                      ################################# A more useful default output mode for bazel query# Prints eg. &quot;ng_module rule //foo:bar&quot; rather than just &quot;//foo:bar&quot;query --output=label_kind# By default, failing tests don&#x27;t print any output, it goes to the log filetest --test_output=errors################################# Settings for CircleCI        ################################## Bazel flags for CircleCI are in /.circleci/bazel.linux.rc and /.circleci/bazel.windows.rc################################### Remote Build Execution support ## Turn on these settings with    ##  --config=remote               #################################### The following --define=EXECUTOR=remote will be able to be removed# once https://github.com/bazelbuild/bazel/issues/7254 is fixedbuild:remote --define=EXECUTOR=remote# Set a higher timeout value, just in case.build:remote --remote_timeout=600# Bazel detects maximum number of jobs based on host resources.# Since we run remotely, we can increase this number significantly.common:remote --jobs=200build:remote --google_default_credentials# Limit the number of test jobs for on an AIO local deps build. The example tests running# concurrently pushes the circleci executor RAM usage to its limits.test:aio_local_deps --jobs=24# Force remote exeuctions to consider the entire run as linuxbuild:remote --cpu=k8build:remote --host_cpu=k8# Toolchain and platform related flagsbuild:remote --crosstool_top=@npm//@angular/build-tooling/bazel/remote-execution/cpp:cc_toolchain_suitebuild:remote --extra_toolchains=@npm//@angular/build-tooling/bazel/remote-execution/cpp:cc_toolchainbuild:remote --extra_execution_platforms=@npm//@angular/build-tooling/bazel/remote-execution:platformbuild:remote --host_platform=@npm//@angular/build-tooling/bazel/remote-execution:platformbuild:remote --platforms=@npm//@angular/build-tooling/bazel/remote-execution:platform# Remote instance and cachingbuild:remote --remote_instance_name=projects/internal-200822/instances/primary_instancebuild:remote --project_id=internal-200822build:remote --remote_cache=remotebuildexecution.googleapis.combuild:remote --remote_executor=remotebuildexecution.googleapis.com# Use HTTP remote cachebuild:remote-cache --remote_cache=https://storage.googleapis.com/angular-team-cachebuild:remote-cache --remote_accept_cached=truebuild:remote-cache --remote_upload_local_results=truebuild:remote-cache --google_default_credentials# Ensure that tags like &quot;no-remote-exec&quot; get propagated to actions created by rules,# even if the rule implementation does not explicitly pass them to the execution requirements.# https://bazel.build/reference/command-line-reference#flag--experimental_allow_tags_propagationcommon --experimental_allow_tags_propagation# Disable network access in the sandbox by default. To enable network access# for a particular target, use:## load(&quot;@npm//@angular/build-tooling/bazel/remote-execution:index.bzl&quot;, &quot;ENABLE_NETWORK&quot;)# my_target(#   ...,#   exec_properties = ENABLE_NETWORK,   # Enables network in remote exec#   tags = [&quot;requires-network&quot;]         # Enables network in sandbox# )build --nosandbox_default_allow_network################################### Saucelabs tests settings       ## Turn on these settings with    ##  --config=saucelabs            #################################### For saucelabs tests we don&#x27;t want to enable flaky test attempts. Karma has its own integrated# retry mechanism and we do not want to retry unnecessarily if Karma already tried multiple times.test:saucelabs --flaky_test_attempts=1################# Flag Aliases ################## --ng_perf will ask the Ivy compiler to produce performance results for each build.build --flag_alias=ng_perf=//packages/compiler-cli:ng_perf##################################################### User bazel configuration# NOTE: This needs to be the *last* entry in the config.##################################################### Load any settings which are specific to the current user. Needs to be *last* statement# in this config, as the user configuration should be able to overwrite flags from this file.try-import %workspace%/.bazelrc.user
+
+创建.bazelversion用于指定bazel版本：
+5.0.0
+
+
+可以使用bazel5的任意版本，理论上都支持，但是不要使用bazel6的版本
+
+新建WORKSPACE用于定义bazel的工作区：
+workspace(   name = &quot;express-postgres-ts-starter&quot;,    managed_directories = &#123;        &quot;@npm&quot;: [&quot;node_modules&quot;],    &#125;,)
+
+导入http_archive用于获取bazel的库：
+load(&quot;@bazel_tools//tools/build_defs/repo:http.bzl&quot;, &quot;http_archive&quot;)
+
+如果使用了.yarn文件夹用于限制yarn的版本，可以通过创建yarn.bzl解决：
+YARN_PATH = &quot;.yarn/releases/yarn-1.22.19.cjs&quot;YARN_LABEL = &quot;//:&quot; + YARN_PATH
+
+然后在WORKSPACE导入：
+load(&quot;//:yarn.bzl&quot;, &quot;YARN_LABEL&quot;)
+
+引入bazel的nodesj依赖库：
+http_archive(    name = &quot;build_bazel_rules_nodejs&quot;,    sha256 = &quot;5dd1e5dea1322174c57d3ca7b899da381d516220793d0adef3ba03b9d23baa8e&quot;,    urls = [        &quot;https://github.com/bazelbuild/rules_nodejs/releases/download/5.8.3/rules_nodejs-5.8.3.tar.gz&quot;,        &quot;https://ghproxy.com/https://github.com/bazelbuild/rules_nodejs/releases/download/5.8.3/rules_nodejs-5.8.3.tar.gz&quot;    ],)load(&quot;@build_bazel_rules_nodejs//:repositories.bzl&quot;, &quot;build_bazel_rules_nodejs_dependencies&quot;)build_bazel_rules_nodejs_dependencies()http_archive(    name = &quot;rules_pkg&quot;,    sha256 = &quot;62eeb544ff1ef41d786e329e1536c1d541bb9bcad27ae984d57f18f314018e66&quot;,    urls = [        &quot;https://mirror.bazel.build/github.com/bazelbuild/rules_pkg/releases/download/0.6.0/rules_pkg-0.6.0.tar.gz&quot;,        &quot;https://github.com/bazelbuild/rules_pkg/releases/download/0.6.0/rules_pkg-0.6.0.tar.gz&quot;,        &quot;https://ghproxy.com/https://github.com/bazelbuild/rules_pkg/releases/download/0.6.0/rules_pkg-0.6.0.tar.gz&quot;,    ],)# Fetch Aspect lib for utilities like write_source_files# NOTE: We cannot move past version 1.23.2 of aspect_bazel_lib because it requires us to move to bazel 6.0.0 which#       breaks our usage of managed_directorieshttp_archive(    name = &quot;aspect_bazel_lib&quot;,    sha256 = &quot;4b2e774387bae6242879820086b7b738d49bf3d0659522ea5d9363be01a27582&quot;,    strip_prefix = &quot;bazel-lib-1.23.2&quot;,    urls = [        &quot;https://github.com/aspect-build/bazel-lib/archive/refs/tags/v1.23.2.tar.gz&quot;,        &quot;https://ghproxy.com/https://github.com/aspect-build/bazel-lib/archive/refs/tags/v1.23.2.tar.gz&quot;,    ])
+
+配置nodejs工具链：
+load(&quot;@rules_nodejs//nodejs:repositories.bzl&quot;, &quot;nodejs_register_toolchains&quot;)nodejs_register_toolchains(    name = &quot;nodejs&quot;,    node_version = &quot;18.10.0&quot;,)
+
+
+在arm mac上不支持nodejs20的版本，不确定其他平台时候是否支持nodejs20
+
+配置yarn_install下载依赖：
+load(&quot;@build_bazel_rules_nodejs//:index.bzl&quot;, &quot;yarn_install&quot;)yarn_install(    name = &quot;npm&quot;,		data = [        YARN_LABEL,        &quot;//:.yarnrc&quot;,				&quot;//:patches/trim-newlines+5.0.0.patch&quot;		],		exports_directories_only = False,		symlink_node_modules = True,    package_json = &quot;//:package.json&quot;,		yarn = YARN_LABEL,    yarn_lock = &quot;//:yarn.lock&quot;,)
+
+创建BUILD.bazel, 并定义为公开的:
+package(default_visibility = [&quot;//visibility:public&quot;])
+
+导入ts_project和nodejs_binary用于构建typescript和nodejs：
+load(&quot;@npm//@bazel/typescript:index.bzl&quot;, &quot;ts_project&quot;)load(&quot;@build_bazel_rules_nodejs//:index.bzl&quot;, &quot;nodejs_binary&quot;)
+
+定义SRCS变量用于声明所有需要参与编译的ts文件：
+SRCS = glob(	[		&quot;src/**/*.ts&quot;,	],	exclude = [		&quot;src/**/*.spec.ts&quot;	])
+
+使用ts_project将ts编译成js：
+ts_project(    name = &quot;server-ts&quot;,    srcs = [&quot;server.ts&quot; ] + SRCS,    resolve_json_module = True,    source_map = True,    tsconfig = &quot;//:tsconfig.json&quot;,    visibility = [&quot;//visibility:public&quot;],    deps = [        &quot;@npm//@apollo/server&quot;,        &quot;@npm//@graphql-tools/merge&quot;,        &quot;@npm//body-parser&quot;,        &quot;@npm//compression&quot;,        &quot;@npm//cookie-parser&quot;,        &quot;@npm//dotenv&quot;,        &quot;@npm//exceljs&quot;,        &quot;@npm//express&quot;,        &quot;@npm//express-fileupload&quot;,        &quot;@npm//express-joi-validation&quot;,        &quot;@npm//express-session&quot;,        &quot;@npm//graphql&quot;,        &quot;@npm//graphql-tag&quot;,        &quot;@npm//helmet&quot;,        &quot;@npm//joi&quot;,        &quot;@npm//jsonwebtoken&quot;,        &quot;@npm//knex&quot;,        &quot;@npm//lodash&quot;,        &quot;@npm//minio&quot;,        &quot;@npm//morgan&quot;,        &quot;@npm//pg&quot;,        &quot;@npm//pg-boss&quot;,        &quot;@npm//redis&quot;,        &quot;@npm//socket.io&quot;,        &quot;@npm//winston&quot;,        &quot;@npm//@types/express&quot;,        &quot;@npm//@types/express-fileupload&quot;,        &quot;@npm//@types/express-session&quot;,        &quot;@npm//@types/jest&quot;,        &quot;@npm//@types/node&quot;,    ])
+
+现在可以编译了：
+yarn bazel build //... 
+
+最后可以在dist/bin看到一个server.js, 我们可以通过执行node dist/bin/server.js运行我们的nodejs项目了。
+参考
+Bazel官网
+Bazel 学习笔记 (一) 快速开始
+使用Bazel编译TypeScript
+angular
+feat: add bazel support
+
+]]></content>
+      <categories>
+        <category>前端</category>
+      </categories>
+      <tags>
+        <tag>bazel</tag>
+        <tag>typescript</tag>
+        <tag>nodejs</tag>
       </tags>
   </entry>
   <entry>
@@ -3175,32 +3175,6 @@ exports只是module.exports的引用，主要用于辅助导出属性或方法�
       </tags>
   </entry>
   <entry>
-    <title>Performance Fix for Stripe.js Script Loading</title>
-    <url>/2025/11/16/front-end/performance-fix-for-stripejs-scripts-loading/</url>
-    <content><![CDATA[Technical SummaryThis summary details a refactoring effort aimed at preventing the premature loading of the Stripe payment script, a common cause of degraded initial page load performance in applications that integrate third-party libraries.
-The ObjectiveThe primary goal was to ensure that the core Stripe JavaScript file (e.g., https://m.stripe.com/6 or https://js.stripe.com/v3/) is only requested and downloaded when a user actually enters a payment-required context, facilitating true lazy loading.
-The Problem: Immediate Execution on Module ImportIn the original code structure, the Stripe initialization was handled in a shared service file as follows:
-// src/shared/service/stripe.ts (Old Code)import &#123; loadStripe &#125; from &#x27;@stripe/stripe-js&#x27;;// The issue lies here: loadStripe is executed immediately in the top-level scope.export const stripePromise = loadStripe(    import.meta.env.VITE_STRIPE_PRIVATE_API_KEY).then(stripe =&gt; &#123;    // ...    return stripe;&#125;);
-
-Because the expression loadStripe(...) was immediately executed and its resulting Promise was exported (export const stripePromise = ...), any component that imported this file—even if it was a component on a non-payment page—would trigger the synchronous execution of this module. This instantly called loadStripe(), initiating the network request for the Stripe script, regardless of the component’s render state.
-The Solution: Wrapping Initialization in an Exported FunctionThe fix involved decoupling the loadStripe call from the module’s initial execution flow by wrapping it inside an exported function, getStripePromise().
-1. Refactoring the Stripe Service FileThe stripe.ts file was changed to export a function instead of an eagerly evaluated Promise:
-// src/shared/service/stripe.ts (New Code)import &#123; loadStripe &#125; from &#x27;@stripe/stripe-js&#x27;;export const getStripePromise = () =&gt; &#123;    console.warn(&#x27;Stripe load function called.&#x27;);    return loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY).then(stripe =&gt; &#123;        console.warn(&#x27;Stripe script downloaded and loaded.&#x27;);        return stripe;    &#125;);&#125;;// The immediate export of the promise was removed:// //export const stripePromise = getStripePromise(); 
-
-2. Local Initialization in Consumer ComponentsThe components that utilize the Stripe context (e.g., paymentMethod/index.tsx, setupChecker/index.tsx) were updated to call this function locally within their own module scope:
-// src/components/stripe/paymentMethod/index.tsx (New Code)import &#123; getStripePromise &#125; from &#x27;@/shared/service/stripe&#x27;;// The promise is now initialized here, within the specific payment module.const stripePromise = getStripePromise(); // This module is expected to be loaded via React.lazy() in a parent component.
-
-ConclusionThis refactoring successfully shifts the responsibility for initiating the Stripe script download from the application’s core bundle to the specific, smaller JavaScript chunk of the payment module. By ensuring the loadStripe() function is only executed when the payment component is mounted and its module is finally loaded (typically via a React.lazy trigger), we eliminate unnecessary network requests on initial page loads, contributing to a better user experience and improved performance metrics.
-]]></content>
-      <categories>
-        <category>前端</category>
-      </categories>
-      <tags>
-        <tag>react</tag>
-        <tag>stripe</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>基于 Microsoft Graph API 与 React Email 构建现代化邮件发送系统</title>
     <url>/2025/12/27/front-end/react-email-ms-graph-nodemailer/</url>
     <content><![CDATA[背景在传统的 Node.js 服务端开发中，使用 Nodemailer 配合 SMTP 协议是发送邮件的标准做法。然而，随着安全标准的提升，微软已宣布将在 2026 年彻底停止 Outlook&#x2F;Microsoft 365 对 SMTP 基础身份验证（Basic Auth）的支持。
@@ -3247,6 +3221,32 @@ Sending Emails via Outlook with Nodemailer and Microsoft Graph
         <tag>react-email</tag>
         <tag>Microsoft Graph API</tag>
         <tag>nodemailer</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Performance Fix for Stripe.js Script Loading</title>
+    <url>/2025/11/16/front-end/performance-fix-for-stripejs-scripts-loading/</url>
+    <content><![CDATA[Technical SummaryThis summary details a refactoring effort aimed at preventing the premature loading of the Stripe payment script, a common cause of degraded initial page load performance in applications that integrate third-party libraries.
+The ObjectiveThe primary goal was to ensure that the core Stripe JavaScript file (e.g., https://m.stripe.com/6 or https://js.stripe.com/v3/) is only requested and downloaded when a user actually enters a payment-required context, facilitating true lazy loading.
+The Problem: Immediate Execution on Module ImportIn the original code structure, the Stripe initialization was handled in a shared service file as follows:
+// src/shared/service/stripe.ts (Old Code)import &#123; loadStripe &#125; from &#x27;@stripe/stripe-js&#x27;;// The issue lies here: loadStripe is executed immediately in the top-level scope.export const stripePromise = loadStripe(    import.meta.env.VITE_STRIPE_PRIVATE_API_KEY).then(stripe =&gt; &#123;    // ...    return stripe;&#125;);
+
+Because the expression loadStripe(...) was immediately executed and its resulting Promise was exported (export const stripePromise = ...), any component that imported this file—even if it was a component on a non-payment page—would trigger the synchronous execution of this module. This instantly called loadStripe(), initiating the network request for the Stripe script, regardless of the component’s render state.
+The Solution: Wrapping Initialization in an Exported FunctionThe fix involved decoupling the loadStripe call from the module’s initial execution flow by wrapping it inside an exported function, getStripePromise().
+1. Refactoring the Stripe Service FileThe stripe.ts file was changed to export a function instead of an eagerly evaluated Promise:
+// src/shared/service/stripe.ts (New Code)import &#123; loadStripe &#125; from &#x27;@stripe/stripe-js&#x27;;export const getStripePromise = () =&gt; &#123;    console.warn(&#x27;Stripe load function called.&#x27;);    return loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY).then(stripe =&gt; &#123;        console.warn(&#x27;Stripe script downloaded and loaded.&#x27;);        return stripe;    &#125;);&#125;;// The immediate export of the promise was removed:// //export const stripePromise = getStripePromise(); 
+
+2. Local Initialization in Consumer ComponentsThe components that utilize the Stripe context (e.g., paymentMethod/index.tsx, setupChecker/index.tsx) were updated to call this function locally within their own module scope:
+// src/components/stripe/paymentMethod/index.tsx (New Code)import &#123; getStripePromise &#125; from &#x27;@/shared/service/stripe&#x27;;// The promise is now initialized here, within the specific payment module.const stripePromise = getStripePromise(); // This module is expected to be loaded via React.lazy() in a parent component.
+
+ConclusionThis refactoring successfully shifts the responsibility for initiating the Stripe script download from the application’s core bundle to the specific, smaller JavaScript chunk of the payment module. By ensuring the loadStripe() function is only executed when the payment component is mounted and its module is finally loaded (typically via a React.lazy trigger), we eliminate unnecessary network requests on initial page loads, contributing to a better user experience and improved performance metrics.
+]]></content>
+      <categories>
+        <category>前端</category>
+      </categories>
+      <tags>
+        <tag>react</tag>
+        <tag>stripe</tag>
       </tags>
   </entry>
   <entry>
@@ -3364,86 +3364,6 @@ main.8c8b27cf.chunk大小为804B。
       <tags>
         <tag>angular</tag>
         <tag>react</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>TypeScript中可选链</title>
-    <url>/2021/07/03/front-end/ts-optional-chaining/</url>
-    <content><![CDATA[TypeScript中可选链什么是可选链TypeScript 3.7中一个最引人关注的特性便是可选链(Optional Chaining)。
-所谓可选链，就是当我们试图使用访问对象的字段或者方法时，如果对象为null或者undefined，TypeScript将会自动停止运行的代码，以防止空指针异常。
-可选链的使用首先定义一个接口 A, 有一个字段b，b可能是字符串，也可能是null:
-interface A &#123;    b: string | null&#125;
-
-定义一个变量a:
-const a = &#123;    b: &#x27;c&#x27;&#125;
-
-使用?.来访问字段:
-console.log(a?.b)
-
-如果a为null或者undefined, 将输出undefined
-TypeScript做了什么可选链并不是ts的专利，在js就已经存在了，除了ie,其他现代浏览器最新版本都是支持了，但是一些老版本就不支持，因此ts没有使用js的语法，而是通过三元表达式? :转译。因此上面的代码将会转译成:
-console.log(a === null || a === void 0 ? void 0 : a.b);
-
-但是ts没有判断a是否是undefined, 而是因为在js中， undefined不仅是值，也可能是一个全局变量。直到es5之前，undefined是可以被修改的。我们可以通过下面的代码来修改:
-(function() &#123;  var undefined = 1  console.log(undefined) // 1&#125;)()
-
-参考
-深入理解 TypeScript(可选链（Optional Chaining）)
-JS: The difference between “undefined”, “null” and “void 0”
-可选链操作符
-
-]]></content>
-      <categories>
-        <category>前端</category>
-      </categories>
-      <tags>
-        <tag>typeScript</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>在k3s中配置私有镜像仓库</title>
-    <url>/2025/03/06/software/connect-to-private-docker-registry-in-k3s/</url>
-    <content><![CDATA[前言本文的目的是实现在k3s中可以访问使用docker部署registry。
-部署registry启动一个一次性容器用于创建账号密码.密码文件路径以&#x2F;root&#x2F;registry&#x2F;htpasswd为例,账号密码以admin和12345678为例.
-docker run --rm --entrypoint \    htpasswd httpd:2 -Bbn \    admin 12345678 &gt; ./registry/htpasswd
-
-编写docker compose的yaml文件用于启动registry。
-services:  registry:    image: registry:2    container_name: registry    volumes:      # - ./config.yml:/etc/docker/registry/config.yml      - ./htpasswd:/auth/htpasswd      - ./registry:/var/lib/registry      - /etc/localtime:/etc/localtime    ports:      - 5000:5000    environment:      - REGISTRY_AUTH=htpasswd      - REGISTRY_AUTH_HTPASSWD_PATH=/auth/htpasswd      - REGISTRY_AUTH_HTPASSWD_REALM=Registry Realm      - REGISTRY_STORAGE_DELETE_ENABLED=true    networks:      - registry-network    restart: always    extra_hosts:      - host.docker.internal:host-gatewaynetworks:  registry-network:    external: false
-
-resistry默认提供web ui使用，我们可以使用docker-registry-ui部署一个web ui。
-registry-ui:image: joxit/docker-registry-ui:maincontainer_name: registry-uirestart: alwaysports:  - 5001:80environment:  - SINGLE_REGISTRY=true  - REGISTRY_TITLE=Docker Registry UI  - DELETE_IMAGES=true  - SHOW_CONTENT_DIGEST=true  - NGINX_PROXY_PASS_URL=http://registry:5000  - SHOW_CATALOG_NB_TAGS=true  - CATALOG_MIN_BRANCHES=1  - CATALOG_MAX_BRANCHES=1  - TAGLIST_PAGE_SIZE=100  - REGISTRY_SECURED=false  - CATALOG_ELEMENTS_LIMIT=1000networks:  - registry-networkextra_hosts:  - host.docker.internal:host-gateway
-
-然后通过·docker compose up -d·就可以启动了。
-docker连接私有仓库docker默认不支持http协议，需要额外配置, 通过在&#x2F;etc&#x2F;docker&#x2F;daemon.json 中将私有仓库地址添加进入就好了。
-&#123;  &quot;insecure-registries&quot;: [&quot;192.168.31.220:5000&quot;]&#125;
-
-然后可以通过docker login去登陆私有仓库。
-docker login 192.168.31.220:5000
-
-k3s连接私有仓库如果k3s使用docker运行时就不需要额外的操作了，就可以操作了应该（没试过）
-如果k3s使用containerd运行时，需要自行配置&#x2F;var&#x2F;lib&#x2F;rancher&#x2F;k3s&#x2F;agent&#x2F;etc&#x2F;containerd&#x2F;config.toml。
-一般而言不鼓励直接修改&#x2F;var&#x2F;lib&#x2F;rancher&#x2F;k3s&#x2F;agent&#x2F;etc&#x2F;containerd&#x2F;config.toml文件，而是通过 &#x2F;etc&#x2F;rancher&#x2F;k3s&#x2F;registries.yaml让k3s自行生成containerd的配置文件。
-mirrors:  &quot;192.168.31.220:5000&quot;:    endpoint:      - &quot;http://192.168.31.220:5000&quot;configs:  &quot;192.168.31.220:5000&quot;:    auth:      username: admin      password: password    tls:      insecure_skip_verify: true
-
-mirrors定义镜像仓库的镜像规则（mirror），用于指定如何访问特定的私有仓库。当容器运行时尝试拉取镜像时，会根据 mirrors 的配置决定从哪个地址拉取。configs定义私有仓库的认证和 TLS 配置。当访问私有仓库时，容器运行时会使用这里配置的用户名、密码和 TLS 设置。
-有的时候k3s不一定能够实时自动监听registries.yaml的改动，所以最好的方式还是重启k3s:
-sudo systemctl restart k3s-agent   # worker 节点# 或者sudo systemctl restart k3s         # server 节点
-
-现在可以通过创建一个pod去测试k3s是否正常访问私有仓库。
-这里推荐使用crictl去直接拉取私有仓库的镜像。
-sudo crictl pull 192.168.31.220:5000/hoteler-api:07e1b87e82ccfc49e5bee7d3d88cf2c304376056
-
-参考资料
-Docker login 登录私服，报错； http: server gave HTTP response to HTTPS client
-Private Registry Configuration
-
-]]></content>
-      <categories>
-        <category>软件</category>
-      </categories>
-      <tags>
-        <tag>k3s</tag>
-        <tag>docker registry</tag>
       </tags>
   </entry>
   <entry>
@@ -3602,6 +3522,40 @@ docker compose up
       </tags>
   </entry>
   <entry>
+    <title>TypeScript中可选链</title>
+    <url>/2021/07/03/front-end/ts-optional-chaining/</url>
+    <content><![CDATA[TypeScript中可选链什么是可选链TypeScript 3.7中一个最引人关注的特性便是可选链(Optional Chaining)。
+所谓可选链，就是当我们试图使用访问对象的字段或者方法时，如果对象为null或者undefined，TypeScript将会自动停止运行的代码，以防止空指针异常。
+可选链的使用首先定义一个接口 A, 有一个字段b，b可能是字符串，也可能是null:
+interface A &#123;    b: string | null&#125;
+
+定义一个变量a:
+const a = &#123;    b: &#x27;c&#x27;&#125;
+
+使用?.来访问字段:
+console.log(a?.b)
+
+如果a为null或者undefined, 将输出undefined
+TypeScript做了什么可选链并不是ts的专利，在js就已经存在了，除了ie,其他现代浏览器最新版本都是支持了，但是一些老版本就不支持，因此ts没有使用js的语法，而是通过三元表达式? :转译。因此上面的代码将会转译成:
+console.log(a === null || a === void 0 ? void 0 : a.b);
+
+但是ts没有判断a是否是undefined, 而是因为在js中， undefined不仅是值，也可能是一个全局变量。直到es5之前，undefined是可以被修改的。我们可以通过下面的代码来修改:
+(function() &#123;  var undefined = 1  console.log(undefined) // 1&#125;)()
+
+参考
+深入理解 TypeScript(可选链（Optional Chaining）)
+JS: The difference between “undefined”, “null” and “void 0”
+可选链操作符
+
+]]></content>
+      <categories>
+        <category>前端</category>
+      </categories>
+      <tags>
+        <tag>typeScript</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>🚀 玩转 Homelab：使用 Helm 在 K3s 中部署 Gitea，并接入外部 PostgreSQL</title>
     <url>/2026/06/14/software/deploy-gitea-in-k3s-on-homelab/</url>
     <content><![CDATA[🚀 玩转 Homelab：使用 Helm 在 K3s 中部署 Gitea，并接入外部 PostgreSQL在自己的内网（Homelab）环境里，拥有一个轻量、好用、全加密（HTTPS）的代码托管系统是每个开发者的梦想。今天这篇博客就带大家复盘，如何利用 K3s、Traefik 网关以及外部自建的 PostgreSQL 数据库，一步步搭建属于自己的 Gitea。
@@ -3719,6 +3673,52 @@ NXDOMAIN 错误：因为是内网域名，公共 DNS 无法解析。解决办法
         <tag>gitea</tag>
         <tag>helm</tag>
         <tag>Kubernetes</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>在k3s中配置私有镜像仓库</title>
+    <url>/2025/03/06/software/connect-to-private-docker-registry-in-k3s/</url>
+    <content><![CDATA[前言本文的目的是实现在k3s中可以访问使用docker部署registry。
+部署registry启动一个一次性容器用于创建账号密码.密码文件路径以&#x2F;root&#x2F;registry&#x2F;htpasswd为例,账号密码以admin和12345678为例.
+docker run --rm --entrypoint \    htpasswd httpd:2 -Bbn \    admin 12345678 &gt; ./registry/htpasswd
+
+编写docker compose的yaml文件用于启动registry。
+services:  registry:    image: registry:2    container_name: registry    volumes:      # - ./config.yml:/etc/docker/registry/config.yml      - ./htpasswd:/auth/htpasswd      - ./registry:/var/lib/registry      - /etc/localtime:/etc/localtime    ports:      - 5000:5000    environment:      - REGISTRY_AUTH=htpasswd      - REGISTRY_AUTH_HTPASSWD_PATH=/auth/htpasswd      - REGISTRY_AUTH_HTPASSWD_REALM=Registry Realm      - REGISTRY_STORAGE_DELETE_ENABLED=true    networks:      - registry-network    restart: always    extra_hosts:      - host.docker.internal:host-gatewaynetworks:  registry-network:    external: false
+
+resistry默认提供web ui使用，我们可以使用docker-registry-ui部署一个web ui。
+registry-ui:image: joxit/docker-registry-ui:maincontainer_name: registry-uirestart: alwaysports:  - 5001:80environment:  - SINGLE_REGISTRY=true  - REGISTRY_TITLE=Docker Registry UI  - DELETE_IMAGES=true  - SHOW_CONTENT_DIGEST=true  - NGINX_PROXY_PASS_URL=http://registry:5000  - SHOW_CATALOG_NB_TAGS=true  - CATALOG_MIN_BRANCHES=1  - CATALOG_MAX_BRANCHES=1  - TAGLIST_PAGE_SIZE=100  - REGISTRY_SECURED=false  - CATALOG_ELEMENTS_LIMIT=1000networks:  - registry-networkextra_hosts:  - host.docker.internal:host-gateway
+
+然后通过·docker compose up -d·就可以启动了。
+docker连接私有仓库docker默认不支持http协议，需要额外配置, 通过在&#x2F;etc&#x2F;docker&#x2F;daemon.json 中将私有仓库地址添加进入就好了。
+&#123;  &quot;insecure-registries&quot;: [&quot;192.168.31.220:5000&quot;]&#125;
+
+然后可以通过docker login去登陆私有仓库。
+docker login 192.168.31.220:5000
+
+k3s连接私有仓库如果k3s使用docker运行时就不需要额外的操作了，就可以操作了应该（没试过）
+如果k3s使用containerd运行时，需要自行配置&#x2F;var&#x2F;lib&#x2F;rancher&#x2F;k3s&#x2F;agent&#x2F;etc&#x2F;containerd&#x2F;config.toml。
+一般而言不鼓励直接修改&#x2F;var&#x2F;lib&#x2F;rancher&#x2F;k3s&#x2F;agent&#x2F;etc&#x2F;containerd&#x2F;config.toml文件，而是通过 &#x2F;etc&#x2F;rancher&#x2F;k3s&#x2F;registries.yaml让k3s自行生成containerd的配置文件。
+mirrors:  &quot;192.168.31.220:5000&quot;:    endpoint:      - &quot;http://192.168.31.220:5000&quot;configs:  &quot;192.168.31.220:5000&quot;:    auth:      username: admin      password: password    tls:      insecure_skip_verify: true
+
+mirrors定义镜像仓库的镜像规则（mirror），用于指定如何访问特定的私有仓库。当容器运行时尝试拉取镜像时，会根据 mirrors 的配置决定从哪个地址拉取。configs定义私有仓库的认证和 TLS 配置。当访问私有仓库时，容器运行时会使用这里配置的用户名、密码和 TLS 设置。
+有的时候k3s不一定能够实时自动监听registries.yaml的改动，所以最好的方式还是重启k3s:
+sudo systemctl restart k3s-agent   # worker 节点# 或者sudo systemctl restart k3s         # server 节点
+
+现在可以通过创建一个pod去测试k3s是否正常访问私有仓库。
+这里推荐使用crictl去直接拉取私有仓库的镜像。
+sudo crictl pull 192.168.31.220:5000/hoteler-api:07e1b87e82ccfc49e5bee7d3d88cf2c304376056
+
+参考资料
+Docker login 登录私服，报错； http: server gave HTTP response to HTTPS client
+Private Registry Configuration
+
+]]></content>
+      <categories>
+        <category>软件</category>
+      </categories>
+      <tags>
+        <tag>k3s</tag>
+        <tag>docker registry</tag>
       </tags>
   </entry>
   <entry>
@@ -3950,32 +3950,6 @@ Hello Gitea Actions! This is a compiled Go binary!
       </tags>
   </entry>
   <entry>
-    <title>使用中国手机号码验证mailgun账号</title>
-    <url>/2025/08/13/software/how-register-mailgun-with-china-mobile-number/</url>
-    <content><![CDATA[前言Mailgun 是一个专为开发者设计的邮件发送平台，支持通过 API 高效、稳定地发送和接收邮件。它广泛用于用户通知、营销邮件、自动化开发信等场景。每个月可免费发送10000封邮件，可以添加1000个域名，每封邮件都有跟踪日志，简单明了的管理界面。
-注册点 mailgun.com 右上角的“start for free“进去是不会给免费版选项的，只有 free trial，而 https://www.mailgun.com/pricing/ 页面则有免费 plan，常规注册即可，无需填写信用卡.
-验证mailgun会发送邮件要求验证号码。在验证页面会要求用户提供手机号验证。但是对中国手机号码来说，可能存在收不到验证码的可能。
-
-解决在mailgun后台，点击右上角的问号❓，点击“Support”按钮。提交一个工单，点击左下方“Open a ticket”的开工单按钮。在开工单页面下拉选择“Account Management”类别，然后输入问题标题和具体内容。
-这是我总结的模版：
-Subject: Unable to Verify Email Due to Excessive VerificationContent:I am unable to complete email verification because I encountered an issue after entering my mobile phone number (+86 xxxxxxxxxxx) and requesting a verification code. The system notified me that I have exceeded the allowed number of attempts, along with other unspecified reminders.
-
-然后大概在24小时内就能解决。(我是40分钟就解决了)。
-其他别相信咸鱼上那帮所谓提供海外手机号码验证服务的那帮垃圾。
-引用
-Mailgun账号注册、域名配置、API开通教程
-Mailgun China
-国外Mailgun邮件服务账号验证不成功怎么办
-
-]]></content>
-      <categories>
-        <category>软件</category>
-      </categories>
-      <tags>
-        <tag>mailgun</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>Grafana UI 部署与技术复盘报告</title>
     <url>/2026/02/22/software/how-to-deploy-grafana-on-k3s-with-ingress/</url>
     <content><![CDATA[Grafana UI 部署与技术复盘报告1. 基础环境
@@ -4024,6 +3998,32 @@ UI 方式: 登录后进入 User Profile -&gt; Change Password 修改。
         <tag>Grafana</tag>
         <tag>Ingress</tag>
         <tag>Gateway Api</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>使用中国手机号码验证mailgun账号</title>
+    <url>/2025/08/13/software/how-register-mailgun-with-china-mobile-number/</url>
+    <content><![CDATA[前言Mailgun 是一个专为开发者设计的邮件发送平台，支持通过 API 高效、稳定地发送和接收邮件。它广泛用于用户通知、营销邮件、自动化开发信等场景。每个月可免费发送10000封邮件，可以添加1000个域名，每封邮件都有跟踪日志，简单明了的管理界面。
+注册点 mailgun.com 右上角的“start for free“进去是不会给免费版选项的，只有 free trial，而 https://www.mailgun.com/pricing/ 页面则有免费 plan，常规注册即可，无需填写信用卡.
+验证mailgun会发送邮件要求验证号码。在验证页面会要求用户提供手机号验证。但是对中国手机号码来说，可能存在收不到验证码的可能。
+
+解决在mailgun后台，点击右上角的问号❓，点击“Support”按钮。提交一个工单，点击左下方“Open a ticket”的开工单按钮。在开工单页面下拉选择“Account Management”类别，然后输入问题标题和具体内容。
+这是我总结的模版：
+Subject: Unable to Verify Email Due to Excessive VerificationContent:I am unable to complete email verification because I encountered an issue after entering my mobile phone number (+86 xxxxxxxxxxx) and requesting a verification code. The system notified me that I have exceeded the allowed number of attempts, along with other unspecified reminders.
+
+然后大概在24小时内就能解决。(我是40分钟就解决了)。
+其他别相信咸鱼上那帮所谓提供海外手机号码验证服务的那帮垃圾。
+引用
+Mailgun账号注册、域名配置、API开通教程
+Mailgun China
+国外Mailgun邮件服务账号验证不成功怎么办
+
+]]></content>
+      <categories>
+        <category>软件</category>
+      </categories>
+      <tags>
+        <tag>mailgun</tag>
       </tags>
   </entry>
   <entry>
@@ -4112,6 +4112,162 @@ Public Image Mirror
       </tags>
   </entry>
   <entry>
+    <title>使用K3s 从零部署 CloudNativePG：打造 Homelab 统一 PostgreSQL 平台</title>
+    <url>/2026/06/12/software/k3s-cloudnativepg-homelab-postgres/</url>
+    <content><![CDATA[K3s 从零部署 CloudNativePG：打造 Homelab 统一 PostgreSQL 平台前言在很多 CloudNativePG 教程中，通常只会介绍如何安装 Operator 并创建一个 PostgreSQL 集群。
+但在实际 Homelab 场景中，我们更希望：
+
+整个 K3s 集群共用一套 PostgreSQL 服务
+支持 Spring Boot 项目
+支持 Gitea
+支持 Immich
+支持未来新增应用
+能够通过固定 IP 从局域网访问数据库
+保留未来扩容多节点 K3s 的能力
+
+因此本文不只是介绍 CloudNativePG 的安装，而是介绍如何将其建设为 Homelab 的统一 PostgreSQL 平台。
+
+环境说明K3s 节点192.168.31.215
+
+路由器小米路由器
+DHCP 配置：
+192.168.31.5 - 192.168.31.229
+
+MetalLB 地址规划192.168.31.230 postgres192.168.31.231 ingress192.168.31.232 gitea192.168.31.233 argocd192.168.31.234 grafana
+
+本文中 PostgreSQL 固定使用：
+192.168.31.230
+
+
+最终架构                   家庭局域网┌──────────────┐│ MacBook      │├──────────────┤│ ThinkPad     │├──────────────┤│ DataGrip     │├──────────────┤│ Spring Boot  │└───────┬──────┘        │        ▼ postgres.home.lab        │        ▼  192.168.31.230        │     MetalLB        │        ▼  postgres-lb        │        ▼  postgres-rw        │        ▼CloudNativePG
+
+集群外通过 LoadBalancer 访问。
+集群内通过 Service DNS 访问。
+
+安装 MetalLB添加 Helm Repo：
+helm repo add metallb https://metallb.github.io/metallbhelm repo update
+
+安装：
+helm install metallb metallb/metallb \  -n metallb-system \  --create-namespace
+
+确认：
+kubectl get pods -n metallb-system
+
+NAME                                            READY   STATUS    RESTARTS   AGEmetallb-controller-55846b4849-t2dr7             1/1     Running   0          18hmetallb-frr-k8s-statuscleaner-8bf664555-52sgc   1/1     Running   0          18hmetallb-frr-k8s-w2n6j                           5/5     Running   0          18hmetallb-speaker-bd4fd                           1/1     Running   0          18h
+
+安装完成后创建地址池：
+apiVersion: metallb.io/v1beta1kind: IPAddressPoolmetadata:  name: homelab-pool  namespace: metallb-systemspec:  addresses:    - 192.168.31.230-192.168.31.239---apiVersion: metallb.io/v1beta1kind: L2Advertisementmetadata:  name: homelab  namespace: metallb-system
+
+
+安装 CloudNativePGCloudNativePG 提供了一个非常强大的 kubectl 插件，可以帮助你轻松查看数据库状态、进行主备切换、查看日志等。
+在你的控制端（或 K3s 节点上）运行以下命令安装：
+curl -sSfL https://github.com/cloudnative-pg/cloudnative-pg/raw/main/hack/install-cnpg-plugin.sh | sudo sh -s -- -b /usr/local/bin
+如果你是中国用户，你可以使用gh-proxy来加速
+curl -sSfL https://gh-proxy.com/https://github.com/cloudnative-pg/cloudnative-pg/raw/main/hack/install-cnpg-plugin.sh | sudo sh -s -- -b /usr/local/bin
+
+验证：
+kubectl cnpg versionBuild: &#123;Version:1.29.1 Commit:a4060c152 Date:2026-05-08&#125;
+
+使用helm来部署CNPG Operator：
+# 添加并更新仓库helm repo add cnpg https://cloudnative-pg.github.io/chartshelm repo update# 安装 1.29 对应的 Operatorhelm install cnpg-operator cnpg/cloudnative-pg \  --namespace cnpg-system \  --create-namespace
+
+
+创建 PostgreSQL 集群]]></content>
+      <categories>
+        <category>软件</category>
+      </categories>
+      <tags>
+        <tag>k3s</tag>
+        <tag>kubernetes</tag>
+        <tag>CloudnativePg</tag>
+        <tag>HomeLab</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>轻量级私有镜像仓库选型——Zot 部署与多工具兼容性实测</title>
+    <url>/2026/02/21/software/lightweight-oci-registry-zot-deployment-guide/</url>
+    <content><![CDATA[技术博客：轻量级私有镜像仓库选型——Zot 部署与多工具兼容性实测1. 选型背景在私有化环境构建容器镜像仓库时，传统的 Docker Registry (V2) 缺乏原生 UI，而 Harbor 架构过于臃肿。经过调研，Zot 表现出了极佳的工业属性：单二进制文件、资源占用极低、完全兼容 OCI 规范。
+2. 环境说明
+部署主机：192.168.0.113
+软件版本：zot-linux-amd64:v2.1.14
+客户端：Docker (24.0.x), Podman (4.x)
+
+3. 部署要点：权限与配置Zot 的权限管理通过 .htpasswd 实现。实测发现，v2.x 版本对加密算法有特定要求，若使用默认的 MD5 格式，日志会抛出 unsupported hash type 警告。
+3.1 权限文件初始化必须使用 Bcrypt 算法生成加密文件，以确保 v2.1.14 能够正确解析。
+# 安装工具链sudo apt-get install apache2-utils -y# 生成 Bcrypt 加密文件 (-B 是核心参数)# 账号：admin，密码：123456htpasswd -bc -B .htpasswd admin 123456
+
+3.2 核心配置 (config.json)需开启 UI 扩展并正确指向权限文件路径。
+&#123;  &quot;distSpecVersion&quot;: &quot;1.1.0&quot;,  &quot;storage&quot;: &#123;    &quot;rootDirectory&quot;: &quot;/var/lib/zot&quot;  &#125;,  &quot;http&quot;: &#123;    &quot;address&quot;: &quot;0.0.0.0&quot;,    &quot;port&quot;: &quot;5000&quot;,    &quot;realm&quot;: &quot;zot&quot;,    &quot;auth&quot;: &#123;      &quot;htpasswd&quot;: &#123; &quot;path&quot;: &quot;/etc/zot/htpasswd&quot; &#125;    &#125;  &#125;,  &quot;extensions&quot;: &#123;    &quot;ui&quot;: &#123; &quot;enable&quot;: true &#125;,    &quot;search&quot;: &#123; &quot;enable&quot;: true &#125;  &#125;&#125;
+
+3.3 服务编排 (docker-compose.yml)services:  zot:    image: ghcr.io/project-zot/zot-linux-amd64:v2.1.14    container_name: zot-registry    ports:      - &quot;5000:5000&quot;    volumes:      - ./data:/var/lib/zot      - ./config.json:/etc/zot/config.json:ro      - ./.htpasswd:/etc/zot/htpasswd:ro    extra_hosts:      - host.docker.internal:host-gateway    restart: always
+
+4. 进阶维护：多用户管理针对多团队或国外客户场景，可通过以下方式维护用户清单：
+# 添加新用户并强制 Bcrypt 加密 (注意：去掉 -c 以免覆盖已有用户)htpasswd -b -B .htpasswd foreigner_user client_password# 重启容器使配置生效docker compose restart zot
+
+5. 跨工具兼容性实测 (核心过程)5.1 Docker 链路验证首先修改 /etc/docker/daemon.json 加入 insecure-registries 并重启 Docker 服务。
+执行登录与推送：
+➜  docker login 192.168.0.113:5000 -u admin -p 123456Login Succeeded# 标签与推送➜  docker tag hello-world 192.168.0.113:5000/my-hello:v1➜  docker push 192.168.0.113:5000/my-hello:v1# 输出结果The push refers to repository [192.168.0.113:5000/my-hello]17eec7bbc9d7: Pushed v1: digest: sha256:2771e37a12... size: 1035
+
+5.2 Podman 链路验证Podman 与 Docker 共享层存储逻辑，但需要显式跳过 TLS 校验（或修改 registries.conf）。
+执行拉取与重定向推送：
+# Podman 登录➜  podman login 192.168.0.113:5000 -u admin -p 123456 --tls-verify=falseLogin Succeeded!# 实测 Podman 标签推送➜  podman pull hello-world➜  podman tag hello-world 192.168.0.113:5000/podman-hello:v1➜  podman push 192.168.0.113:5000/podman-hello:v1 --tls-verify=false# 关键输出Getting image source signaturesCopying blob 17eec7bbc9d7 skipped: already exists  # 触发去重逻辑Writing manifest to image destination
+
+6. 避坑指南：日志诊断调试过程中若返回 401 Unauthorized，应检查容器后端反馈：
+docker logs -f zot-registry&#123;&quot;time&quot;:&quot;2026-02-21T14:52:57.50973439Z&quot;,&quot;level&quot;:&quot;warn&quot;,&quot;message&quot;:&quot;htpasswd entry has unsupported hash type&quot;,&quot;username&quot;:&quot;admin&quot;,&quot;caller&quot;:&quot;zotregistry.dev/zot/v2/pkg/api/htpasswd.go:119&quot;,&quot;func&quot;:&quot;zotregistry.dev/zot/v2/pkg/api.(*HTPasswd).Authenticate&quot;,&quot;goroutine&quot;:75&#125;
+
+
+报错信息：&quot;message&quot;:&quot;htpasswd entry has unsupported hash type&quot;
+根因：使用了 MD5 或其他不支持的加密格式。
+修复：重做 htpasswd -B 流程。
+
+总结Zot 成功通过了 Docker 与 Podman 的交叉测试。其存储去重 (Deduplication) 表现优秀：在处理相同 Layer 的镜像时（如测试中的 hello-world 层），后端仅需存储一份物理文件。对于追求极致轻量、标准化的团队，Zot 是 Harbor 之外的最佳选择。
+]]></content>
+      <categories>
+        <category>软件</category>
+      </categories>
+      <tags>
+        <tag>docker</tag>
+        <tag>docker-compose</tag>
+        <tag>k3s</tag>
+        <tag>podman</tag>
+        <tag>docker compose</tag>
+        <tag>docker registry</tag>
+        <tag>zot</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>学习multipass笔记</title>
+    <url>/2023/12/14/software/multipass-learning/</url>
+    <content><![CDATA[前言Multipass 是一个轻量虚拟机管理器，是由 Ubuntu 运营公司 Canonical 所推出的开源项目。运行环境支持 Linux、Windows、macOS。在不同的操作系统上，使用的是不同的虚拟化技术。在 Linux 上使用的是 KVM、Window 上使用 Hyper-V、macOS 中使用 HyperKit 以最小开销运行 VM，支持在笔记本模拟小型云。
+同时，Multipass 提供了一个命令行界面来启动和管理 Linux 实例。下载一个全新的镜像需要几秒钟的时间，并且在几分钟内就可以启动并运行 VM。
+安装在window环境下进行部署，下载最新安装包：https://github.com/canonical/multipass/releases/
+创建vm创建实例
+multipass launch -n k3s-master -c 2 -m 4G -d 10G
+
+查看实例
+multipass listName                    State             IPv4             Imagek3s-master              Running           172.19.151.166   Ubuntu 22.04 LTS
+
+查看实例状态
+Name:           k3s-masterState:          RunningIPv4:           172.19.151.166Release:        Ubuntu 22.04.3 LTSImage hash:     6d6af17f28c8 (Ubuntu 22.04 LTS)CPU(s):         2Load:           0.00 0.00 0.00Disk usage:     1.6GiB out of 9.6GiBMemory usage:   213.8MiB out of 3.8GiBMounts:         --
+
+进入shell环境
+multipass shell k3s-masteWelcome to Ubuntu 22.04.3 LTS (GNU/Linux 5.15.0-91-generic x86_64) * Documentation:  https://help.ubuntu.com * Management:     https://landscape.canonical.com * Support:        https://ubuntu.com/advantage  System information as of Thu Dec 14 20:45:28 CST 2023  System load:  0.0               Processes:             100  Usage of /:   17.2% of 9.51GB   Users logged in:       1  Memory usage: 6%                IPv4 address for eth0: 172.19.151.166  Swap usage:   0% * Strictly confined Kubernetes makes edge and IoT secure. Learn how MicroK8s   just raised the bar for easy, resilient and secure K8s cluster deployment.   https://ubuntu.com/engage/secure-kubernetes-at-the-edgeExpanded Security Maintenance for Applications is not enabled.0 updates can be applied immediately.Enable ESM Apps to receive additional future security updates.See https://ubuntu.com/esm or run: sudo pro statusLast login: Thu Dec 14 20:26:30 2023 from 172.19.144.1To run a command as administrator (user &quot;root&quot;), use &quot;sudo &lt;command&gt;&quot;.See &quot;man sudo_root&quot; for details.
+
+
+引用
+【工具系列】轻量级虚拟机 Multipass 使用教程
+轻量虚拟机 Multipass 的部署和使用
+Multipass - 如 Docker 般的虛擬機
+
+]]></content>
+      <categories>
+        <category>软件</category>
+      </categories>
+      <tags>
+        <tag>multipass</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>从 Demo 到生产级：Kite 在 K3s 上的 PostgreSQL 与 Ingress 部署实战</title>
     <url>/2026/04/05/software/kite-production-setup-with-external-postgres-and-ingress/</url>
     <content><![CDATA[从 Demo 到生产级：Kite 在 K3s 上的高可用数据库与 HTTPS 部署实践引言在之前的文章 《玩转 K8s 面板：轻量级 Kite 安装全记录 (K3s 篇)》 中，我们快速搭建了测试环境。但随着使用深入，原方案的局限性开始显现。今天我们将进行一次彻头彻尾的“生产级”改造。
@@ -4167,90 +4323,6 @@ Readiness Probe 假死：Pod 启动后显示 0/1 READY，通常是正在执行�
         <tag>k3s</tag>
         <tag>kubernetes</tag>
         <tag>kite</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>轻量级私有镜像仓库选型——Zot 部署与多工具兼容性实测</title>
-    <url>/2026/02/21/software/lightweight-oci-registry-zot-deployment-guide/</url>
-    <content><![CDATA[技术博客：轻量级私有镜像仓库选型——Zot 部署与多工具兼容性实测1. 选型背景在私有化环境构建容器镜像仓库时，传统的 Docker Registry (V2) 缺乏原生 UI，而 Harbor 架构过于臃肿。经过调研，Zot 表现出了极佳的工业属性：单二进制文件、资源占用极低、完全兼容 OCI 规范。
-2. 环境说明
-部署主机：192.168.0.113
-软件版本：zot-linux-amd64:v2.1.14
-客户端：Docker (24.0.x), Podman (4.x)
-
-3. 部署要点：权限与配置Zot 的权限管理通过 .htpasswd 实现。实测发现，v2.x 版本对加密算法有特定要求，若使用默认的 MD5 格式，日志会抛出 unsupported hash type 警告。
-3.1 权限文件初始化必须使用 Bcrypt 算法生成加密文件，以确保 v2.1.14 能够正确解析。
-# 安装工具链sudo apt-get install apache2-utils -y# 生成 Bcrypt 加密文件 (-B 是核心参数)# 账号：admin，密码：123456htpasswd -bc -B .htpasswd admin 123456
-
-3.2 核心配置 (config.json)需开启 UI 扩展并正确指向权限文件路径。
-&#123;  &quot;distSpecVersion&quot;: &quot;1.1.0&quot;,  &quot;storage&quot;: &#123;    &quot;rootDirectory&quot;: &quot;/var/lib/zot&quot;  &#125;,  &quot;http&quot;: &#123;    &quot;address&quot;: &quot;0.0.0.0&quot;,    &quot;port&quot;: &quot;5000&quot;,    &quot;realm&quot;: &quot;zot&quot;,    &quot;auth&quot;: &#123;      &quot;htpasswd&quot;: &#123; &quot;path&quot;: &quot;/etc/zot/htpasswd&quot; &#125;    &#125;  &#125;,  &quot;extensions&quot;: &#123;    &quot;ui&quot;: &#123; &quot;enable&quot;: true &#125;,    &quot;search&quot;: &#123; &quot;enable&quot;: true &#125;  &#125;&#125;
-
-3.3 服务编排 (docker-compose.yml)services:  zot:    image: ghcr.io/project-zot/zot-linux-amd64:v2.1.14    container_name: zot-registry    ports:      - &quot;5000:5000&quot;    volumes:      - ./data:/var/lib/zot      - ./config.json:/etc/zot/config.json:ro      - ./.htpasswd:/etc/zot/htpasswd:ro    extra_hosts:      - host.docker.internal:host-gateway    restart: always
-
-4. 进阶维护：多用户管理针对多团队或国外客户场景，可通过以下方式维护用户清单：
-# 添加新用户并强制 Bcrypt 加密 (注意：去掉 -c 以免覆盖已有用户)htpasswd -b -B .htpasswd foreigner_user client_password# 重启容器使配置生效docker compose restart zot
-
-5. 跨工具兼容性实测 (核心过程)5.1 Docker 链路验证首先修改 /etc/docker/daemon.json 加入 insecure-registries 并重启 Docker 服务。
-执行登录与推送：
-➜  docker login 192.168.0.113:5000 -u admin -p 123456Login Succeeded# 标签与推送➜  docker tag hello-world 192.168.0.113:5000/my-hello:v1➜  docker push 192.168.0.113:5000/my-hello:v1# 输出结果The push refers to repository [192.168.0.113:5000/my-hello]17eec7bbc9d7: Pushed v1: digest: sha256:2771e37a12... size: 1035
-
-5.2 Podman 链路验证Podman 与 Docker 共享层存储逻辑，但需要显式跳过 TLS 校验（或修改 registries.conf）。
-执行拉取与重定向推送：
-# Podman 登录➜  podman login 192.168.0.113:5000 -u admin -p 123456 --tls-verify=falseLogin Succeeded!# 实测 Podman 标签推送➜  podman pull hello-world➜  podman tag hello-world 192.168.0.113:5000/podman-hello:v1➜  podman push 192.168.0.113:5000/podman-hello:v1 --tls-verify=false# 关键输出Getting image source signaturesCopying blob 17eec7bbc9d7 skipped: already exists  # 触发去重逻辑Writing manifest to image destination
-
-6. 避坑指南：日志诊断调试过程中若返回 401 Unauthorized，应检查容器后端反馈：
-docker logs -f zot-registry&#123;&quot;time&quot;:&quot;2026-02-21T14:52:57.50973439Z&quot;,&quot;level&quot;:&quot;warn&quot;,&quot;message&quot;:&quot;htpasswd entry has unsupported hash type&quot;,&quot;username&quot;:&quot;admin&quot;,&quot;caller&quot;:&quot;zotregistry.dev/zot/v2/pkg/api/htpasswd.go:119&quot;,&quot;func&quot;:&quot;zotregistry.dev/zot/v2/pkg/api.(*HTPasswd).Authenticate&quot;,&quot;goroutine&quot;:75&#125;
-
-
-报错信息：&quot;message&quot;:&quot;htpasswd entry has unsupported hash type&quot;
-根因：使用了 MD5 或其他不支持的加密格式。
-修复：重做 htpasswd -B 流程。
-
-总结Zot 成功通过了 Docker 与 Podman 的交叉测试。其存储去重 (Deduplication) 表现优秀：在处理相同 Layer 的镜像时（如测试中的 hello-world 层），后端仅需存储一份物理文件。对于追求极致轻量、标准化的团队，Zot 是 Harbor 之外的最佳选择。
-]]></content>
-      <categories>
-        <category>软件</category>
-      </categories>
-      <tags>
-        <tag>docker</tag>
-        <tag>docker-compose</tag>
-        <tag>k3s</tag>
-        <tag>podman</tag>
-        <tag>docker registry</tag>
-        <tag>docker compose</tag>
-        <tag>zot</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>学习multipass笔记</title>
-    <url>/2023/12/14/software/multipass-learning/</url>
-    <content><![CDATA[前言Multipass 是一个轻量虚拟机管理器，是由 Ubuntu 运营公司 Canonical 所推出的开源项目。运行环境支持 Linux、Windows、macOS。在不同的操作系统上，使用的是不同的虚拟化技术。在 Linux 上使用的是 KVM、Window 上使用 Hyper-V、macOS 中使用 HyperKit 以最小开销运行 VM，支持在笔记本模拟小型云。
-同时，Multipass 提供了一个命令行界面来启动和管理 Linux 实例。下载一个全新的镜像需要几秒钟的时间，并且在几分钟内就可以启动并运行 VM。
-安装在window环境下进行部署，下载最新安装包：https://github.com/canonical/multipass/releases/
-创建vm创建实例
-multipass launch -n k3s-master -c 2 -m 4G -d 10G
-
-查看实例
-multipass listName                    State             IPv4             Imagek3s-master              Running           172.19.151.166   Ubuntu 22.04 LTS
-
-查看实例状态
-Name:           k3s-masterState:          RunningIPv4:           172.19.151.166Release:        Ubuntu 22.04.3 LTSImage hash:     6d6af17f28c8 (Ubuntu 22.04 LTS)CPU(s):         2Load:           0.00 0.00 0.00Disk usage:     1.6GiB out of 9.6GiBMemory usage:   213.8MiB out of 3.8GiBMounts:         --
-
-进入shell环境
-multipass shell k3s-masteWelcome to Ubuntu 22.04.3 LTS (GNU/Linux 5.15.0-91-generic x86_64) * Documentation:  https://help.ubuntu.com * Management:     https://landscape.canonical.com * Support:        https://ubuntu.com/advantage  System information as of Thu Dec 14 20:45:28 CST 2023  System load:  0.0               Processes:             100  Usage of /:   17.2% of 9.51GB   Users logged in:       1  Memory usage: 6%                IPv4 address for eth0: 172.19.151.166  Swap usage:   0% * Strictly confined Kubernetes makes edge and IoT secure. Learn how MicroK8s   just raised the bar for easy, resilient and secure K8s cluster deployment.   https://ubuntu.com/engage/secure-kubernetes-at-the-edgeExpanded Security Maintenance for Applications is not enabled.0 updates can be applied immediately.Enable ESM Apps to receive additional future security updates.See https://ubuntu.com/esm or run: sudo pro statusLast login: Thu Dec 14 20:26:30 2023 from 172.19.144.1To run a command as administrator (user &quot;root&quot;), use &quot;sudo &lt;command&gt;&quot;.See &quot;man sudo_root&quot; for details.
-
-
-引用
-【工具系列】轻量级虚拟机 Multipass 使用教程
-轻量虚拟机 Multipass 的部署和使用
-Multipass - 如 Docker 般的虛擬機
-
-]]></content>
-      <categories>
-        <category>软件</category>
-      </categories>
-      <tags>
-        <tag>multipass</tag>
       </tags>
   </entry>
   <entry>
@@ -4540,6 +4612,50 @@ sudo tailscale up --advertise-routes=192.168.31.0/24 --accept-dns=false
       </tags>
   </entry>
   <entry>
+    <title>2022年度总结</title>
+    <url>/2021/12/31/summary/2022/</url>
+    <content><![CDATA[2022年度总结2022年真的是一个让人难以忘怀的年份，尤其在先后经历了上海封城、老丈人去世、领证结婚。
+疫情还记得2020年疫情刚开始的时候，那时侯自己一个人开车回上海，路上的车辆非常少，开车的感觉真的可以说非常爽，完全可以闭着眼开车，反正看不到车，即使进了上海市区。那个时候单纯的想，少则三个月，多则半年，疫情就会自然而然的过去，到时候我们该吃吃该喝喝。虽然这个判断翻车了，但是2021年也是对国内疫情还是比较乐观。但是2022年的上海封城打破了我所有的幻想。我从来没想过上海居然玩砸了“动态清理”，从华亭宾馆开始，上海的疫情持续不断，感染人数死活都下不去。
+3月份我刚搬到南翔就被封控了，但是我刚开始还好，虽然什么吃的都没有，但是只要封控时间到了就能出去买点东西。但遗憾的是，从4月份开始，上海开始静默了，我足足封在家里差不多两个月。我本来是不反对封城的，但是上海市政府真的很让人失望，疫情两年了，市政府似乎没有做好任何相关封城的预案。而且总感觉可能涉及到二十大的高层安排，市政府决策层应该是存在分歧的，并且和医疗系统的人也存在一定的隔阂。由于上层的问题，基层机构出现各种乱七八糟的事儿那也能理解了。
+在经过了白纸运动之后，我们的防疫政策从一个极端走向另外一个极端。我们彻底放开了，让80%以上的人感染了一遍。我不是反对放开，但是我比较反对如此毫无征兆的放开，没有准备好各种的退烧药，没有准备好口罩。
+技术今年继续做一个web2.5的项目，就是web2.0 + 区块链，不能算得上正宗的web3.0。其核心就是将部分原来放在数据库的数据放在区块链里。所以我们一般自称为web2.5。
+目前部门想全力押宝·web3·，希望能和审计部门能够做好技术服务，所以未来对区块链的研究大概率是会集中中DeFi(去中心化金融)。对我来说，金融是一个毫无头绪的东西，之前并没有接触过，没有一个良好的业务场景可以让我研究，导致对我来说DeFi可能只是一个比较空泛的名词。
+过去的一年，对以太坊还是比较浅显的，同时将也做了一些简单的demo。总的来说，也算简单的入门学了点皮毛，但是对智能合约的开发还是基本上一窍不通的。希望接下来的一年可以深入研究智能合约，可以独立开发智能合约并部署到一个测试网络。solana也会是一个比较重要的关注方向，但是考虑到solana的东家出点事儿，可能不太会重心在这个方面，不过rust语言还是会尽量深挖一下，这是一个很有挑战性的方向
+今年应该很少写angular了，更多开始写react。从我个人的角度来说，jsx和react hook对写一些组件来说确实是一把利器，但是对于如何做好一个完整的、强大的前端web应用来说，react的生态是不足的，太碎裂了，导致在接手不同的项目的时候总是能看到不同的react写法和工程组织形式。最近在react-mobile-picker做一个重构。一个方面是想改成通用的monorepo的组织形式，另外一个方面是需要升级核心依赖并使用typescript重写。目前这个工作还在努力中。 angular方面更多的专注于ngx-dom-confetti, 目前仅仅是对dom-confetti的angular封装，将来的计划是参考ripple的代码设计，将来可以好好的重构这个项目。hoteler-web是我一直会维护的angular的项目。
+今天在google domains买了个域名，然后尝试使用k3s的ingress部署了[https://hoteler.damingerdai.com/]。感觉使用k3s部署一些简单的应用基本上问题不大了。[hoteler](https://github.com/damingerdai/hoteler)已经是一个很稳定的demo，大概率是不会进行大规模的重构了。所以目前只有一个很简单的想法那就是使用spring cloud进行重写，这个是不太能自己部署到线上环境了，毕竟服务器资源就那么点，跑不起那么多的资源。
+针对golang的话，我目前私下的在做一个关于健康的demo，目前还在开发中，前端使用react，后端使用golang。目前希望在技术上的突破是使用loki做日志管理，Jaeger用于链路追踪，这是1.0的计划。2.0的话（如果有时间的话），希望可以加入区块链的一些元素，至少能做成个·web2.5·。
+今年其实还是探索了很多的技术。比如minio, harbor, drone, gogs和gitea。
+个人生活今天对我最大的事儿就是结婚了，没有比举办婚礼更重要的事儿了。本来由于收到上半年疫情的影响，原来不指望今年结婚的。本来定的日子是明年的正月办酒席，但是丈母娘觉得今年的夏天那么热，冬天一定很会冷，希望我们今年就是把事儿办了。所以婚期提前到11月份举行，本来日子选的好好的，也没啥好纠结的，毕竟妹子是自己谈的。但是明天和意外你永远都不知道哪个先来，我老丈人在婚礼的前两天去世了。在婚礼前的几个礼拜，我老丈人生病了，是便秘导致的肠梗阻。在医院治疗了一段时间本来已经治好了，但是不知道是医院的水平问题还是我老丈人本身的问题，在治疗过程中可能没有控制好糖尿病导致肺部感染， 在icu躺了几天之后终究将抢救无效去世，年仅50岁。在殡仪馆里，我看到同批火化的人中就属我老丈人最年轻。有的时间真的感觉世事无常，国庆节回去的时候，老丈人还好好的，结果才过去一个月不到，人就没了。
+展望未来对2023年这个经济判断是真的不太好说，谁也不知道明年会怎么想，我也不敢瞎说，我只能我大概率会重点关注·DeFi·。然后希望能够保住就业，保住现金流。
+]]></content>
+  </entry>
+  <entry>
+    <title>2023年度总结</title>
+    <url>/2024/01/06/summary/2023/</url>
+    <content><![CDATA[2023年度总结2023年就这样子莫名其妙的过了，又是稀里糊涂的一年。这一年，和最爱的人去了一趟西藏，圆了她心心念念的梦想；这一年，坐了30多小时的火车，跨越千里去见证一段美好的爱情；这一年，参加了加入PWC以来第二次的线下年会，疫情总算是过去了。
+美好的西藏其实是先从上海到成都出发，在成都带了两天，陪她那只叫做花花的大熊猫。 其实19年时候我去过成都大熊貓繁育研究基地，那个时候还没有花花，也没有那么多的游客，当然也有可能我去的是淡季，不过总算是满足她的心愿了。吃了当地的特色，三大炮，鸡豆花，兔腿，麻婆豆腐，其实那个陈麻婆的那个夫妻肺片还是很有特色的，不辣，有点甜，和紫燕百味鸡的那个压根就不一样的。
+我们是报了一个旅行团，四个人，一个司机。除了我们之外，还有一个山东小哥，一个四川小伙。山东小哥是真的很社牛，和什么人都能聊起来，喜欢旅游，朋友圈三天两头出去玩，晒各地的美景。四川小伙是拿到美国一家博士的offer了，想在出国前能够好好放松一下。四个人一个司机，就这样子从成都沿着318国道出发了。
+去了很多地方，但是我没记住，因为这不是我热爱的，吃了很多美食，我记住了它们的味道，永远不会忘记。
+到了拉萨，我们去看了小昭寺，布达拉宫。吃了当地牦牛肉，喝了当地的牦牛奶做的奶茶。真的是美滋滋的日子啊。
+
+
+
+
+
+
+PWC线下年会我是19年加入PWC的。PWC的年会其实是财年的意思，所以通常是5月份办年会。20年收到疫情的影响，此后的年会都是线上举行的，虽然有元宇宙的等加持，但是对我来而已其实并没有参与感的。收到疫情的影响，很多同事已经没有来公司面对面办公了，曾经的团队早就各奔东西，甚至都不在一个部门的了。
+终于，口罩没了，在加入PWC的第四年中，迎来的第二次线下年会。酒店更高级了，吃的很好，食物也精致，但是呢，我还是感觉19年那次年会吃的更惬意点。
+
+嘉峪关之行嘉峪关之行单纯的是因为大学同学结婚，便选择坐了30多小时的火车，先去西安和好友会和，再去嘉峪关。嘉峪关风景不错，可惜很难再有机会去了。
+
+其他我们还去来了迪士尼
+
+参加她的大学同学的婚礼
+
+最后Time files over us, but leaves its shadow behind.
+]]></content>
+  </entry>
+  <entry>
     <title>内网环境 K3s 部署实战：从 Zot OCI 托管到 HTTPS 域名解析全记录</title>
     <url>/2026/03/01/software/uss-zot-push-and-pull-helm-charts/</url>
     <content><![CDATA[前言在内网环境下搭建云原生基础设施时，镜像仓库的认证、OCI 协议的适配以及 Ingress 的路由转发通常是最容易卡壳的地方。本文记录了将应用部署至 K3s 集群，并通过自定义域名实现 HTTPS 访问的全过程。
@@ -4608,71 +4724,6 @@ API 陷阱：旧版教程常用 traefik.containo.us&#x2F;v1alpha1，新版 K3s �
       </tags>
   </entry>
   <entry>
-    <title>记录一些测试币的水龙头</title>
-    <url>/2023/01/07/web3/some-token-faucet/</url>
-    <content><![CDATA[记录一些测试币的水龙头记录一些常用的区块链水龙头，以防忘记
-GoerliGoerli Testnet Faucet: 不太记得当初是怎么知道了，但是似乎永远失败…
-GOERLI FAUCET, 每天可以获取0.1 ETH(以前是可以每天领取0.25ETH), 需要使用Alchemy账号.
-Mining Faucet, 使用cpu的算力去挖矿，问题不大，可以使用。
-polygonpolygon faucet, 支持多个测试网络，但是Goerli的ETH没拿到
-参考资料
-免費取得Goerli測試幣
-
-]]></content>
-      <categories>
-        <category>web3</category>
-      </categories>
-      <tags>
-        <tag>web3</tag>
-        <tag>Goerli</tag>
-        <tag>polygon</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>2022年度总结</title>
-    <url>/2021/12/31/summary/2022/</url>
-    <content><![CDATA[2022年度总结2022年真的是一个让人难以忘怀的年份，尤其在先后经历了上海封城、老丈人去世、领证结婚。
-疫情还记得2020年疫情刚开始的时候，那时侯自己一个人开车回上海，路上的车辆非常少，开车的感觉真的可以说非常爽，完全可以闭着眼开车，反正看不到车，即使进了上海市区。那个时候单纯的想，少则三个月，多则半年，疫情就会自然而然的过去，到时候我们该吃吃该喝喝。虽然这个判断翻车了，但是2021年也是对国内疫情还是比较乐观。但是2022年的上海封城打破了我所有的幻想。我从来没想过上海居然玩砸了“动态清理”，从华亭宾馆开始，上海的疫情持续不断，感染人数死活都下不去。
-3月份我刚搬到南翔就被封控了，但是我刚开始还好，虽然什么吃的都没有，但是只要封控时间到了就能出去买点东西。但遗憾的是，从4月份开始，上海开始静默了，我足足封在家里差不多两个月。我本来是不反对封城的，但是上海市政府真的很让人失望，疫情两年了，市政府似乎没有做好任何相关封城的预案。而且总感觉可能涉及到二十大的高层安排，市政府决策层应该是存在分歧的，并且和医疗系统的人也存在一定的隔阂。由于上层的问题，基层机构出现各种乱七八糟的事儿那也能理解了。
-在经过了白纸运动之后，我们的防疫政策从一个极端走向另外一个极端。我们彻底放开了，让80%以上的人感染了一遍。我不是反对放开，但是我比较反对如此毫无征兆的放开，没有准备好各种的退烧药，没有准备好口罩。
-技术今年继续做一个web2.5的项目，就是web2.0 + 区块链，不能算得上正宗的web3.0。其核心就是将部分原来放在数据库的数据放在区块链里。所以我们一般自称为web2.5。
-目前部门想全力押宝·web3·，希望能和审计部门能够做好技术服务，所以未来对区块链的研究大概率是会集中中DeFi(去中心化金融)。对我来说，金融是一个毫无头绪的东西，之前并没有接触过，没有一个良好的业务场景可以让我研究，导致对我来说DeFi可能只是一个比较空泛的名词。
-过去的一年，对以太坊还是比较浅显的，同时将也做了一些简单的demo。总的来说，也算简单的入门学了点皮毛，但是对智能合约的开发还是基本上一窍不通的。希望接下来的一年可以深入研究智能合约，可以独立开发智能合约并部署到一个测试网络。solana也会是一个比较重要的关注方向，但是考虑到solana的东家出点事儿，可能不太会重心在这个方面，不过rust语言还是会尽量深挖一下，这是一个很有挑战性的方向
-今年应该很少写angular了，更多开始写react。从我个人的角度来说，jsx和react hook对写一些组件来说确实是一把利器，但是对于如何做好一个完整的、强大的前端web应用来说，react的生态是不足的，太碎裂了，导致在接手不同的项目的时候总是能看到不同的react写法和工程组织形式。最近在react-mobile-picker做一个重构。一个方面是想改成通用的monorepo的组织形式，另外一个方面是需要升级核心依赖并使用typescript重写。目前这个工作还在努力中。 angular方面更多的专注于ngx-dom-confetti, 目前仅仅是对dom-confetti的angular封装，将来的计划是参考ripple的代码设计，将来可以好好的重构这个项目。hoteler-web是我一直会维护的angular的项目。
-今天在google domains买了个域名，然后尝试使用k3s的ingress部署了[https://hoteler.damingerdai.com/]。感觉使用k3s部署一些简单的应用基本上问题不大了。[hoteler](https://github.com/damingerdai/hoteler)已经是一个很稳定的demo，大概率是不会进行大规模的重构了。所以目前只有一个很简单的想法那就是使用spring cloud进行重写，这个是不太能自己部署到线上环境了，毕竟服务器资源就那么点，跑不起那么多的资源。
-针对golang的话，我目前私下的在做一个关于健康的demo，目前还在开发中，前端使用react，后端使用golang。目前希望在技术上的突破是使用loki做日志管理，Jaeger用于链路追踪，这是1.0的计划。2.0的话（如果有时间的话），希望可以加入区块链的一些元素，至少能做成个·web2.5·。
-今年其实还是探索了很多的技术。比如minio, harbor, drone, gogs和gitea。
-个人生活今天对我最大的事儿就是结婚了，没有比举办婚礼更重要的事儿了。本来由于收到上半年疫情的影响，原来不指望今年结婚的。本来定的日子是明年的正月办酒席，但是丈母娘觉得今年的夏天那么热，冬天一定很会冷，希望我们今年就是把事儿办了。所以婚期提前到11月份举行，本来日子选的好好的，也没啥好纠结的，毕竟妹子是自己谈的。但是明天和意外你永远都不知道哪个先来，我老丈人在婚礼的前两天去世了。在婚礼前的几个礼拜，我老丈人生病了，是便秘导致的肠梗阻。在医院治疗了一段时间本来已经治好了，但是不知道是医院的水平问题还是我老丈人本身的问题，在治疗过程中可能没有控制好糖尿病导致肺部感染， 在icu躺了几天之后终究将抢救无效去世，年仅50岁。在殡仪馆里，我看到同批火化的人中就属我老丈人最年轻。有的时间真的感觉世事无常，国庆节回去的时候，老丈人还好好的，结果才过去一个月不到，人就没了。
-展望未来对2023年这个经济判断是真的不太好说，谁也不知道明年会怎么想，我也不敢瞎说，我只能我大概率会重点关注·DeFi·。然后希望能够保住就业，保住现金流。
-]]></content>
-  </entry>
-  <entry>
-    <title>2023年度总结</title>
-    <url>/2024/01/06/summary/2023/</url>
-    <content><![CDATA[2023年度总结2023年就这样子莫名其妙的过了，又是稀里糊涂的一年。这一年，和最爱的人去了一趟西藏，圆了她心心念念的梦想；这一年，坐了30多小时的火车，跨越千里去见证一段美好的爱情；这一年，参加了加入PWC以来第二次的线下年会，疫情总算是过去了。
-美好的西藏其实是先从上海到成都出发，在成都带了两天，陪她那只叫做花花的大熊猫。 其实19年时候我去过成都大熊貓繁育研究基地，那个时候还没有花花，也没有那么多的游客，当然也有可能我去的是淡季，不过总算是满足她的心愿了。吃了当地的特色，三大炮，鸡豆花，兔腿，麻婆豆腐，其实那个陈麻婆的那个夫妻肺片还是很有特色的，不辣，有点甜，和紫燕百味鸡的那个压根就不一样的。
-我们是报了一个旅行团，四个人，一个司机。除了我们之外，还有一个山东小哥，一个四川小伙。山东小哥是真的很社牛，和什么人都能聊起来，喜欢旅游，朋友圈三天两头出去玩，晒各地的美景。四川小伙是拿到美国一家博士的offer了，想在出国前能够好好放松一下。四个人一个司机，就这样子从成都沿着318国道出发了。
-去了很多地方，但是我没记住，因为这不是我热爱的，吃了很多美食，我记住了它们的味道，永远不会忘记。
-到了拉萨，我们去看了小昭寺，布达拉宫。吃了当地牦牛肉，喝了当地的牦牛奶做的奶茶。真的是美滋滋的日子啊。
-
-
-
-
-
-
-PWC线下年会我是19年加入PWC的。PWC的年会其实是财年的意思，所以通常是5月份办年会。20年收到疫情的影响，此后的年会都是线上举行的，虽然有元宇宙的等加持，但是对我来而已其实并没有参与感的。收到疫情的影响，很多同事已经没有来公司面对面办公了，曾经的团队早就各奔东西，甚至都不在一个部门的了。
-终于，口罩没了，在加入PWC的第四年中，迎来的第二次线下年会。酒店更高级了，吃的很好，食物也精致，但是呢，我还是感觉19年那次年会吃的更惬意点。
-
-嘉峪关之行嘉峪关之行单纯的是因为大学同学结婚，便选择坐了30多小时的火车，先去西安和好友会和，再去嘉峪关。嘉峪关风景不错，可惜很难再有机会去了。
-
-其他我们还去来了迪士尼
-
-参加她的大学同学的婚礼
-
-最后Time files over us, but leaves its shadow behind.
-]]></content>
-  </entry>
-  <entry>
     <title>2024年度总结</title>
     <url>/2025/01/13/summary/2024/</url>
     <content><![CDATA[2024年度总结对我来说，2024年是一个特别有意义的一年。8月24号，我美丽又可爱的宝宝出生了，体验到了初为人父的喜悦；10月7号，国庆节刚过，公司人事就开邮件通知我我的岗位被取消了。
@@ -4727,6 +4778,27 @@ PWC线下年会我是19年加入PWC的。PWC的年会其实是财年的意思，
 愿 2026，不是简单的“更忙”，而是“更好”。
 持续学习，持续创造，持续成为更清醒的自己。
 ]]></content>
+  </entry>
+  <entry>
+    <title>记录一些测试币的水龙头</title>
+    <url>/2023/01/07/web3/some-token-faucet/</url>
+    <content><![CDATA[记录一些测试币的水龙头记录一些常用的区块链水龙头，以防忘记
+GoerliGoerli Testnet Faucet: 不太记得当初是怎么知道了，但是似乎永远失败…
+GOERLI FAUCET, 每天可以获取0.1 ETH(以前是可以每天领取0.25ETH), 需要使用Alchemy账号.
+Mining Faucet, 使用cpu的算力去挖矿，问题不大，可以使用。
+polygonpolygon faucet, 支持多个测试网络，但是Goerli的ETH没拿到
+参考资料
+免費取得Goerli測試幣
+
+]]></content>
+      <categories>
+        <category>web3</category>
+      </categories>
+      <tags>
+        <tag>web3</tag>
+        <tag>Goerli</tag>
+        <tag>polygon</tag>
+      </tags>
   </entry>
   <entry>
     <title>drone + gogs + docker实现持续自动化部署</title>
@@ -4841,36 +4913,6 @@ Android SDK使用http://ping.chinaz.com获取dl.google.com的大陆响应时间�
       </tags>
   </entry>
   <entry>
-    <title>在armbian上使用snap安装neovim</title>
-    <url>/2025/02/14/software/install/use-snap-to-install-neovim-on-armbian/</url>
-    <content><![CDATA[概述最近搞了一台armbian的机子，想在上面安装neovim，但是发现apt上的nvim版本太低了，只有0.4.0好像。经过一番的搜索，发现Snaps可以满足我的要求。
-Snaps介绍Snaps是由Canonical提供的跨分发包管理系统的工具.Snaps 基本上是一个与其依赖项和库一起编译的应用程序——为应用程序运行提供了一个沙盒环境。它们安装起来更容易、更快捷，可以接收最新更新，并且不受操作系统和其他应用程序的限制。
-安装Snaps使用apt安装Snap；
-sudo apt install snapd
-
-安装neovim使用snap安装neovim:
-sudo snap install --classic nvim
-
-检查一下noevim的版本：
-nvim --version
-
-输出如下：
-NVIM v0.10.4Build type: RelWithDebInfoLuaJIT 2.1.1713484068Run &quot;nvim -V1 -v&quot; for more info
-
-参考资料
-如何在各种 Linux 发行版中安装和使用 Snap
-
-]]></content>
-      <categories>
-        <category>软件</category>
-      </categories>
-      <tags>
-        <tag>neovim</tag>
-        <tag>snap</tag>
-        <tag>armbian</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>Homebrew安装笔记</title>
     <url>/2021/07/31/software/install/how-to-install-homebrew/</url>
     <content><![CDATA[Homebrew安装笔记简单记录一下Homebrew安装
@@ -4945,6 +4987,36 @@ kubectl patch svc skooner -n kube-system --type=&#x27;json&#x27; -p=&#x27;[&#123
         <tag>k3s</tag>
         <tag>kubernetes</tag>
         <tag>skooner</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>在armbian上使用snap安装neovim</title>
+    <url>/2025/02/14/software/install/use-snap-to-install-neovim-on-armbian/</url>
+    <content><![CDATA[概述最近搞了一台armbian的机子，想在上面安装neovim，但是发现apt上的nvim版本太低了，只有0.4.0好像。经过一番的搜索，发现Snaps可以满足我的要求。
+Snaps介绍Snaps是由Canonical提供的跨分发包管理系统的工具.Snaps 基本上是一个与其依赖项和库一起编译的应用程序——为应用程序运行提供了一个沙盒环境。它们安装起来更容易、更快捷，可以接收最新更新，并且不受操作系统和其他应用程序的限制。
+安装Snaps使用apt安装Snap；
+sudo apt install snapd
+
+安装neovim使用snap安装neovim:
+sudo snap install --classic nvim
+
+检查一下noevim的版本：
+nvim --version
+
+输出如下：
+NVIM v0.10.4Build type: RelWithDebInfoLuaJIT 2.1.1713484068Run &quot;nvim -V1 -v&quot; for more info
+
+参考资料
+如何在各种 Linux 发行版中安装和使用 Snap
+
+]]></content>
+      <categories>
+        <category>软件</category>
+      </categories>
+      <tags>
+        <tag>neovim</tag>
+        <tag>snap</tag>
+        <tag>armbian</tag>
       </tags>
   </entry>
   <entry>
@@ -5091,6 +5163,26 @@ Minikube - Kubernetes本地实验环境
       </tags>
   </entry>
   <entry>
+    <title>K3S安装的时候默认使用docker</title>
+    <url>/2022/05/15/software/k8s/k3s-install-with-docker/</url>
+    <content><![CDATA[K3S安装的时候默认使用docker问题k8s在1.20之后就弃用docker的运行时了，所以k3s也开始默认使用containerd作为默认的运行时。这导致一个问题。那就是k3s无法访问本地docker镜像。
+解决方案一种解决方案就是使用containerd的镜像，而不是docker。还有一种方式是在安装时就指定k3s使用docker作为运行环境。
+/usr/local/bin/k3s-uninstall.shcurl -sfL https://get.k3s.io | sh -s - server --docker
+
+国内用户，可以使用以下方法加速安装：
+curl -sfL https://rancher-mirror.rancher.cn/k3s/k3s-install.sh | INSTALL_K3S_MIRROR=cn sh -s - server --docker
+]]></content>
+      <categories>
+        <category>软件</category>
+      </categories>
+      <tags>
+        <tag>k8s</tag>
+        <tag>docker</tag>
+        <tag>k3s</tag>
+        <tag>kubernetes</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>在Ubuntu 18.04.5 LTS上安装minkube</title>
     <url>/2021/01/01/software/k8s/how-to-install-minkube/</url>
     <content><![CDATA[在Ubuntu 18.04.5 LTS上安装minkube要求
@@ -5143,26 +5235,6 @@ eyJhbGciOiJSUzI1NiIsImtpZCI6Imk0TWpNeGM3SWVrMHllMVphM0FPVFZIZ2RIaXZIbll2UzZObkJS
         <tag>minikube</tag>
         <tag>kubernetes</tag>
         <tag>Ubuntu</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>K3S安装的时候默认使用docker</title>
-    <url>/2022/05/15/software/k8s/k3s-install-with-docker/</url>
-    <content><![CDATA[K3S安装的时候默认使用docker问题k8s在1.20之后就弃用docker的运行时了，所以k3s也开始默认使用containerd作为默认的运行时。这导致一个问题。那就是k3s无法访问本地docker镜像。
-解决方案一种解决方案就是使用containerd的镜像，而不是docker。还有一种方式是在安装时就指定k3s使用docker作为运行环境。
-/usr/local/bin/k3s-uninstall.shcurl -sfL https://get.k3s.io | sh -s - server --docker
-
-国内用户，可以使用以下方法加速安装：
-curl -sfL https://rancher-mirror.rancher.cn/k3s/k3s-install.sh | INSTALL_K3S_MIRROR=cn sh -s - server --docker
-]]></content>
-      <categories>
-        <category>软件</category>
-      </categories>
-      <tags>
-        <tag>k8s</tag>
-        <tag>docker</tag>
-        <tag>k3s</tag>
-        <tag>kubernetes</tag>
       </tags>
   </entry>
 </search>
