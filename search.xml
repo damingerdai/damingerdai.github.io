@@ -149,6 +149,20 @@ docker-compose exec postgres psql -f /backup/dump_xxx.sql postgres -U postgres
       </tags>
   </entry>
   <entry>
+    <title>Spring Security 中基于用户信息的动态密码加密</title>
+    <url>/2025/02/08/back-end/dynamic-password-encryption-based-on-user-information-in-spring-security/</url>
+    <content><![CDATA[Spring Security 中基于用户信息的动态密码加密前言通过自定义 Spring Security 的 DaoAuthenticationProvider，可以实现根据用户信息的不同，动态切换不同的密码加密方式。这种方法允许您根据用户的角色、组或其他属性，选择最合适的加密算法，从而提高安全性或满足特定的业务需求。
+DaoAuthenticationProviderDaoAuthenticationProvider是用于实现用户名密码的登陆AuthenticationProvider，通过自定义实现additionalAuthenticationChecks方法可以实现从UserDetails获取一个字段从而动态获取密码加密服务。
+实现自定义DaoAuthenticationProvider：
+@Componentpublic class HotelerAuthenticationProvider extends DaoAuthenticationProvider implements AuthenticationProvider, ApplicationContextAware &#123;    private ApplicationContext applicationContext;    protected void additionalAuthenticationChecks(UserDetails userDetails, UsernamePasswordAuthenticationToken authentication) throws AuthenticationException &#123;        if (authentication.getCredentials() == null) &#123;            this.logger.debug(&quot;Failed to authenticate since no credentials provided&quot;);            throw new BadCredentialsException(this.messages.getMessage(&quot;AbstractUserDetailsAuthenticationProvider.badCredentials&quot;, &quot;Bad credentials&quot;));        &#125;        var user =  (User)userDetails;        var passwordType = CommonUtils.isNotEmpty(user.getPasswordType()) ? user.getPasswordType() : &quot;noop&quot;;        var passwordService = this.getPasswordService(passwordType);        var presentedPassword = authentication.getCredentials().toString();        if (!user.getPassword().equals(passwordService.encodePassword(presentedPassword))) &#123;            this.logger.debug(&quot;Failed to authenticate since password does not match stored value&quot;);            throw new BadCredentialsException(this.messages.getMessage(&quot;AbstractUserDetailsAuthenticationProvider.badCredentials&quot;, &quot;Bad credentials&quot;));        &#125;    &#125;    @Override    public void setApplicationContext(ApplicationContext applicationContext) throws BeansException &#123;        this.applicationContext = applicationContext;    &#125;    @Override    protected void doAfterPropertiesSet() &#123;        super.doAfterPropertiesSet();        Assert.notNull(this.applicationContext, &quot;A applicationContext must be set&quot;);    &#125;    protected IPasswordService getPasswordService(String passwordType) &#123;        return Objects.requireNonNull(this.applicationContext).getBean(passwordType + &quot;PasswordService&quot;, IPasswordService.class);    &#125;    public HotelerAuthenticationProvider(UserDetailsService userDetailsService) &#123;        super();        this.setUserDetailsService(userDetailsService);    &#125;&#125;
+
+将HotelerAuthenticationProvider注入到AuthenticationManager中：
+@Beanpublic AuthenticationManager authenticationManager(HotelerAuthenticationProvider authenticationProvider) &#123;;    ProviderManager pm = new ProviderManager(authenticationProvider);    return pm;&#125;]]></content>
+      <tags>
+        <tag>Spring Security</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>Bazel 8 Bzlmod 迁移记录：从 WORKSPACE 到 MODULE.bazel</title>
     <url>/2025/11/03/back-end/bazel8-bzlmod-migration/</url>
     <content><![CDATA[Bazel 8 Bzlmod 迁移记录：从 WORKSPACE 到 MODULE.bazel本文档记录了项目 hoteler 从 Bazel 旧版 WORKSPACE 机制迁移到 Bazel 8 Bzlmod（Bazel 模块系统）的完整过程，重点记录了在迁移 Java 和 Maven 依赖时遇到的关键问题及其解决方案。
@@ -194,17 +208,35 @@ module(    name = &quot;hoteler&quot;,    compatibility_level = 1,)bazel_dep(   
       </tags>
   </entry>
   <entry>
-    <title>Spring Security 中基于用户信息的动态密码加密</title>
-    <url>/2025/02/08/back-end/dynamic-password-encryption-based-on-user-information-in-spring-security/</url>
-    <content><![CDATA[Spring Security 中基于用户信息的动态密码加密前言通过自定义 Spring Security 的 DaoAuthenticationProvider，可以实现根据用户信息的不同，动态切换不同的密码加密方式。这种方法允许您根据用户的角色、组或其他属性，选择最合适的加密算法，从而提高安全性或满足特定的业务需求。
-DaoAuthenticationProviderDaoAuthenticationProvider是用于实现用户名密码的登陆AuthenticationProvider，通过自定义实现additionalAuthenticationChecks方法可以实现从UserDetails获取一个字段从而动态获取密码加密服务。
-实现自定义DaoAuthenticationProvider：
-@Componentpublic class HotelerAuthenticationProvider extends DaoAuthenticationProvider implements AuthenticationProvider, ApplicationContextAware &#123;    private ApplicationContext applicationContext;    protected void additionalAuthenticationChecks(UserDetails userDetails, UsernamePasswordAuthenticationToken authentication) throws AuthenticationException &#123;        if (authentication.getCredentials() == null) &#123;            this.logger.debug(&quot;Failed to authenticate since no credentials provided&quot;);            throw new BadCredentialsException(this.messages.getMessage(&quot;AbstractUserDetailsAuthenticationProvider.badCredentials&quot;, &quot;Bad credentials&quot;));        &#125;        var user =  (User)userDetails;        var passwordType = CommonUtils.isNotEmpty(user.getPasswordType()) ? user.getPasswordType() : &quot;noop&quot;;        var passwordService = this.getPasswordService(passwordType);        var presentedPassword = authentication.getCredentials().toString();        if (!user.getPassword().equals(passwordService.encodePassword(presentedPassword))) &#123;            this.logger.debug(&quot;Failed to authenticate since password does not match stored value&quot;);            throw new BadCredentialsException(this.messages.getMessage(&quot;AbstractUserDetailsAuthenticationProvider.badCredentials&quot;, &quot;Bad credentials&quot;));        &#125;    &#125;    @Override    public void setApplicationContext(ApplicationContext applicationContext) throws BeansException &#123;        this.applicationContext = applicationContext;    &#125;    @Override    protected void doAfterPropertiesSet() &#123;        super.doAfterPropertiesSet();        Assert.notNull(this.applicationContext, &quot;A applicationContext must be set&quot;);    &#125;    protected IPasswordService getPasswordService(String passwordType) &#123;        return Objects.requireNonNull(this.applicationContext).getBean(passwordType + &quot;PasswordService&quot;, IPasswordService.class);    &#125;    public HotelerAuthenticationProvider(UserDetailsService userDetailsService) &#123;        super();        this.setUserDetailsService(userDetailsService);    &#125;&#125;
+    <title>使用github action推送到docker的镜像仓库</title>
+    <url>/2022/04/16/back-end/github-action-push-docker-image-to-github-packages/</url>
+    <content><![CDATA[准备请在github的设置页面上创建一个token，并确保有以下的权限：
 
-将HotelerAuthenticationProvider注入到AuthenticationManager中：
-@Beanpublic AuthenticationManager authenticationManager(HotelerAuthenticationProvider authenticationProvider) &#123;;    ProviderManager pm = new ProviderManager(authenticationProvider);    return pm;&#125;]]></content>
+repo
+read:packages
+write:packages
+
+
+请保存好该token，因为github将隐藏该值
+
+在github的仓库的secrets设置页面(例：https://github.com/{your_username}/{your_repository_name}/settings/secrets/actions)里创建一个名为GHCR_PAT的secrets
+
+创建GitHub Action文件在.github/workflow中创建一个build-and-publish.yml:
+name: Build and Publishon:  push:    branches: [ master ]jobs:  build-and-push-docker-image:    name: Build Docker image and push to repositories    runs-on: ubuntu-latest    steps:      - name: Checkout code        uses: actions/checkout@v2      - name: Set up Docker Buildx        id: buildx        uses: docker/setup-buildx-action@v1      - name: Login to Github Packages        uses: docker/login-action@v1        with:          registry: ghcr.io          username: $&#123;&#123; github.actor &#125;&#125;          password: $&#123;&#123; secrets.GHCR_PAT &#125;&#125;      - name: Build image and push to GitHub Container Registry        uses: docker/build-push-action@v2        id: docker_build        with:          context: .          tags: |            # 将usernmae和repository改成你自己的github账号和仓库名            ghcr.io/&#123;usernmae&#125;/&#123;repository&#125;:$&#123;&#123; github.sha &#125;&#125;            # 当且只有运行在master分支时才需要推送到github容器仓库          push: $&#123;&#123; github.ref == &#x27;refs/heads/master&#x27; &#125;&#125;      - name: Image digest        run: echo $&#123;&#123; steps.docker_build.outputs.digest &#125;&#125;
+
+默认推送的镜像是私有，想要公开，可以在https://github.com/users/&#123;your_username&#125;/packages/container/&#123;your_repository_name&#125;/settings下面的Danger Zone中的Change package visibility设置成public还是private。
+参考资料
+How to build and push Docker image with GitHub actions?
+Hoteler
+
+]]></content>
+      <categories>
+        <category>后端</category>
+      </categories>
       <tags>
-        <tag>Spring Security</tag>
+        <tag>docker</tag>
+        <tag>github</tag>
+        <tag>github action</tag>
       </tags>
   </entry>
   <entry>
@@ -269,38 +301,6 @@ Code Review 后的重构 TODO 列表以下是目前首版代码里暴露出来�
         <tag>nextjs</tag>
         <tag>2fa</tag>
         <tag>totp</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>使用github action推送到docker的镜像仓库</title>
-    <url>/2022/04/16/back-end/github-action-push-docker-image-to-github-packages/</url>
-    <content><![CDATA[准备请在github的设置页面上创建一个token，并确保有以下的权限：
-
-repo
-read:packages
-write:packages
-
-
-请保存好该token，因为github将隐藏该值
-
-在github的仓库的secrets设置页面(例：https://github.com/{your_username}/{your_repository_name}/settings/secrets/actions)里创建一个名为GHCR_PAT的secrets
-
-创建GitHub Action文件在.github/workflow中创建一个build-and-publish.yml:
-name: Build and Publishon:  push:    branches: [ master ]jobs:  build-and-push-docker-image:    name: Build Docker image and push to repositories    runs-on: ubuntu-latest    steps:      - name: Checkout code        uses: actions/checkout@v2      - name: Set up Docker Buildx        id: buildx        uses: docker/setup-buildx-action@v1      - name: Login to Github Packages        uses: docker/login-action@v1        with:          registry: ghcr.io          username: $&#123;&#123; github.actor &#125;&#125;          password: $&#123;&#123; secrets.GHCR_PAT &#125;&#125;      - name: Build image and push to GitHub Container Registry        uses: docker/build-push-action@v2        id: docker_build        with:          context: .          tags: |            # 将usernmae和repository改成你自己的github账号和仓库名            ghcr.io/&#123;usernmae&#125;/&#123;repository&#125;:$&#123;&#123; github.sha &#125;&#125;            # 当且只有运行在master分支时才需要推送到github容器仓库          push: $&#123;&#123; github.ref == &#x27;refs/heads/master&#x27; &#125;&#125;      - name: Image digest        run: echo $&#123;&#123; steps.docker_build.outputs.digest &#125;&#125;
-
-默认推送的镜像是私有，想要公开，可以在https://github.com/users/&#123;your_username&#125;/packages/container/&#123;your_repository_name&#125;/settings下面的Danger Zone中的Change package visibility设置成public还是private。
-参考资料
-How to build and push Docker image with GitHub actions?
-Hoteler
-
-]]></content>
-      <categories>
-        <category>后端</category>
-      </categories>
-      <tags>
-        <tag>docker</tag>
-        <tag>github</tag>
-        <tag>github action</tag>
       </tags>
   </entry>
   <entry>
@@ -1185,6 +1185,67 @@ org.quartz.SchedulerConfigException: No local DataSource found for configuration
       </tags>
   </entry>
   <entry>
+    <title>在 Spring WebFlux 中实现文件上传到本地</title>
+    <url>/2025/09/08/back-end/upload-file-into-local-in-spring-webflux/</url>
+    <content><![CDATA[在 Spring WebFlux 中实现文件上传到本地引言本文旨在介绍如何在 Spring WebFlux 框架下，实现将文件上传至本地服务器的功能。虽然目前的代码示例侧重于本地存储，但其设计思路也为未来扩展至对象存储服务（如 MinIO）奠定了基础。通过本文的学习，您将掌握在响应式编程模型下处理文件上传的关键技术。
+
+具体实现过程1. 项目搭建与依赖引入首先，您需要一个基于 Spring Boot 3.5.0 的项目。如果您使用 Gradle 作为构建工具，可以在 build.gradle 文件中添加以下依赖：
+dependencies &#123;    // ... 其他 Spring Boot 依赖    implementation &#x27;org.springframework.boot:spring-boot-starter-webflux&#x27;    // Swagger UI 依赖    implementation &#x27;org.springdoc:springdoc-openapi-starter-webflux-ui:2.8.6&#x27; // 请检查最新版本    // ...&#125;
+
+spring-boot-starter-webflux 提供了构建响应式 Web 应用所需的核心功能，springdoc-openapi-starter-webfluxui 则是集成 Swagger UI 所需的依赖。
+2. 编写 Controller接下来，我们将编写 FileController 来处理文件上传请求。
+import org.springframework.core.io.buffer.DataBufferUtils;import org.springframework.http.codec.multipart.FilePart;import org.springframework.web.bind.annotation.PostMapping;import org.springframework.web.bind.annotation.RequestPart;import org.springframework.web.bind.annotation.RestController;import reactor.core.publisher.Mono;import java.nio.file.Files;import java.nio.file.Paths;import java.io.IOException;Controllerpublic class FileController &#123;    @PostMapping(&quot;/file&quot;)    public Mono&lt;String&gt; uploadFile(@RequestPart(&quot;file&quot;) Mono&lt;FilePart&gt; filePartMono) &#123;        return filePartMono.flatMap(filePart -&gt; &#123;            // 获取用户目录            var userDir = System.getProperty(&quot;user.dir&quot;);            // 构建文件保存路径，这里假设保存在项目根目录下的 nfs 文件夹中            // 您可以根据实际需求修改路径            var path = Paths.get(userDir, &quot;nfs&quot;, filePart.filename());            // 确保 nfs 目录存在，如果不存在则创建            try &#123;                Files.createDirectories(path.getParent());            &#125; catch (IOException e) &#123;                return Mono.error(new RuntimeException(&quot;Failed to create upload directory&quot;, e));            &#125;            // 使用 transferTo 将文件内容写入到指定路径            // transferTo 方法返回一个 Mono&lt;Void&gt;，表示操作的完成            return filePart.transferTo(path)                    // then 方法用于在前一个 Mono 完成后执行下一个操作                    // 这里我们返回一个包含成功消息的 Mono&lt;String&gt;                    .then(Mono.just(&quot;File uploaded successfully: &quot; + filePart.filename()));        &#125;);    &#125;&#125;
+
+关键点解析：
+
+@PostMapping(&quot;/file&quot;): 指定该方法处理 HTTP POST 请求到 /file 路径。
+@RequestPart(&quot;file&quot;) Mono&lt;FilePart&gt; filePartMono:
+@RequestPart 注解用于接收 multipart/form-data 请求中的部分。这里的 &quot;file&quot; 对应 HTML form 表单中 &lt;input type=&quot;file&quot; name=&quot;file&quot;&gt; 的 name 属性。
+Mono&lt;FilePart&gt; 表示这是一个异步的、最多包含一个元素的发布者，代表上传的文件。Spring WebFlux 使用 Reactor 库进行响应式编程，Mono 是其核心组件之一。
+
+
+filePart.transferTo(path):
+这是 Spring WebFlux 提供的用于将上传的文件内容 直接传输 到指定 Path 的方法。
+它返回一个 Mono&lt;Void&gt;，表示文件传输操作的完成，但不会返回任何数据。在响应式流中，Void 表示一个操作的完成信号。
+
+
+.then(...):
+then() 操作符用于在源 Mono（在这里是 filePart.transferTo(path)）完成（发出完成信号）后，执行另一个 Mono。
+Mono.just(&quot;File uploaded successfully: &quot; + filePart.filename()) 创建了一个新的 Mono，它会发出一个包含成功消息的字符串。
+因此，.then(...) 确保了文件传输完成后，再发出成功上传的消息。
+
+
+
+3. 使用 cURL 调用您可以使用 curl 命令来测试这个上传接口：
+curl -X &#x27;POST&#x27; \  &#x27;http://localhost:8080/file&#x27; \  -H &#x27;accept: application/json&#x27; \  -H &#x27;Content-Type: multipart/form-data&#x27; \  -F &#x27;file=@Arthur-Ming-FlowCV-Resume-20241101.pdf;type=application/pdf&#x27;
+
+将Arthur-Ming-FlowCV-Resume-20241101.pdf改成实际文件路径就即可
+
+Swagger UI 支持为了方便 API 的可视化和测试，我们可以为其添加 Swagger UI 支持。
+1. 添加依赖如前所述，在 build.gradle 中添加 springdoc-openapi-starter-webfluxui 依赖：
+dependencies &#123;    // ...    implementation &#x27;org.springdoc:springdoc-openapi-starter-webflux-ui:2.8.6&#x27; // 请检查最新版本    // ...&#125;
+
+2. 配置 Controller 注解springdoc-openapi 库会自动扫描带有 Spring MVC 或 Spring WebFlux 注解的 Controller。您只需要确保您的 Controller 和方法使用了标准的 Spring WebFlux 注解（如 @RestController, @PostMapping, @RequestPart 等），springdoc-openapi 就会自动为您生成 OpenAPI 文档，并在启动后通过访问 /swagger-ui.html （或其他默认路径，具体取决于版本和配置）来查看。
+@Operation(    summary = &quot;Upload a single file&quot;,    description = &quot;Uploads a single file to the server&#x27;s NFS directory.&quot;,    requestBody = @RequestBody(            description = &quot;File to upload&quot;,            required = true,            content = @Content(                    mediaType = &quot;multipart/form-data&quot;,                    schema = @Schema(implementation = FileUploadRequest.class) // Use a custom schema            )    ),    responses = &#123;            @ApiResponse(responseCode = &quot;200&quot;, description = &quot;File uploaded successfully&quot;,                    content = @Content(mediaType = &quot;application/json&quot;, schema = @Schema(type = &quot;string&quot;))),            @ApiResponse(responseCode = &quot;400&quot;, description = &quot;Bad Request&quot;),            @ApiResponse(responseCode = &quot;500&quot;, description = &quot;Internal Server Error&quot;)    &#125;)
+
+FileUploadRequest定义如下：
+import io.swagger.v3.oas.annotations.media.Schema;import org.springframework.http.codec.multipart.FilePart;public class FileUploadRequest &#123;    @Schema(type = &quot;string&quot;, format = &quot;binary&quot;, description = &quot;The file to be uploaded&quot;)    private FilePart file; // The name &quot;file&quot; here should match the @RequestPart name in your controller    // Getters and setters are not strictly necessary for springdoc to pick up the schema,    // but it&#x27;s good practice if you were to use this class for other purposes.    public FilePart getFile() &#123;        return file;    &#125;    public void setFile(FilePart file) &#123;        this.file = file;    &#125;&#125;
+
+在项目启动后，访问 http://localhost:8080/swagger-ui.html （假设您的应用运行在 8080 端口），您就可以看到文件上传接口的 Swagger UI 界面了。
+
+通过以上步骤，您就成功地在 Spring WebFlux 中实现了一个文件上传到本地的功能，并为其添加了 Swagger UI 支持。您可以基于此进一步扩展，例如添加文件类型校验、大小限制，以及将文件存储目标切换为 MinIO 等对象存储服务。
+]]></content>
+      <categories>
+        <category>后端</category>
+      </categories>
+      <tags>
+        <tag>spring boot</tag>
+        <tag>gradle</tag>
+        <tag>spring webflux</tag>
+        <tag>文件上传</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>两种在Minikube中运行本地Docker镜像的简单方式</title>
     <url>/2022/03/23/back-end/two-easy-ways-to-use-local-docker-images-in-minikube/</url>
     <content><![CDATA[两种在Minikube中运行本地Docker镜像的简单方式前言本文将分享两种在Minikube中运行本地Docker镜像的简单方式
@@ -1255,67 +1316,6 @@ kubectl port-forward deployment/myapp 8080:8080
         <tag>k8s</tag>
         <tag>docker</tag>
         <tag>minikube</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>在 Spring WebFlux 中实现文件上传到本地</title>
-    <url>/2025/09/08/back-end/upload-file-into-local-in-spring-webflux/</url>
-    <content><![CDATA[在 Spring WebFlux 中实现文件上传到本地引言本文旨在介绍如何在 Spring WebFlux 框架下，实现将文件上传至本地服务器的功能。虽然目前的代码示例侧重于本地存储，但其设计思路也为未来扩展至对象存储服务（如 MinIO）奠定了基础。通过本文的学习，您将掌握在响应式编程模型下处理文件上传的关键技术。
-
-具体实现过程1. 项目搭建与依赖引入首先，您需要一个基于 Spring Boot 3.5.0 的项目。如果您使用 Gradle 作为构建工具，可以在 build.gradle 文件中添加以下依赖：
-dependencies &#123;    // ... 其他 Spring Boot 依赖    implementation &#x27;org.springframework.boot:spring-boot-starter-webflux&#x27;    // Swagger UI 依赖    implementation &#x27;org.springdoc:springdoc-openapi-starter-webflux-ui:2.8.6&#x27; // 请检查最新版本    // ...&#125;
-
-spring-boot-starter-webflux 提供了构建响应式 Web 应用所需的核心功能，springdoc-openapi-starter-webfluxui 则是集成 Swagger UI 所需的依赖。
-2. 编写 Controller接下来，我们将编写 FileController 来处理文件上传请求。
-import org.springframework.core.io.buffer.DataBufferUtils;import org.springframework.http.codec.multipart.FilePart;import org.springframework.web.bind.annotation.PostMapping;import org.springframework.web.bind.annotation.RequestPart;import org.springframework.web.bind.annotation.RestController;import reactor.core.publisher.Mono;import java.nio.file.Files;import java.nio.file.Paths;import java.io.IOException;Controllerpublic class FileController &#123;    @PostMapping(&quot;/file&quot;)    public Mono&lt;String&gt; uploadFile(@RequestPart(&quot;file&quot;) Mono&lt;FilePart&gt; filePartMono) &#123;        return filePartMono.flatMap(filePart -&gt; &#123;            // 获取用户目录            var userDir = System.getProperty(&quot;user.dir&quot;);            // 构建文件保存路径，这里假设保存在项目根目录下的 nfs 文件夹中            // 您可以根据实际需求修改路径            var path = Paths.get(userDir, &quot;nfs&quot;, filePart.filename());            // 确保 nfs 目录存在，如果不存在则创建            try &#123;                Files.createDirectories(path.getParent());            &#125; catch (IOException e) &#123;                return Mono.error(new RuntimeException(&quot;Failed to create upload directory&quot;, e));            &#125;            // 使用 transferTo 将文件内容写入到指定路径            // transferTo 方法返回一个 Mono&lt;Void&gt;，表示操作的完成            return filePart.transferTo(path)                    // then 方法用于在前一个 Mono 完成后执行下一个操作                    // 这里我们返回一个包含成功消息的 Mono&lt;String&gt;                    .then(Mono.just(&quot;File uploaded successfully: &quot; + filePart.filename()));        &#125;);    &#125;&#125;
-
-关键点解析：
-
-@PostMapping(&quot;/file&quot;): 指定该方法处理 HTTP POST 请求到 /file 路径。
-@RequestPart(&quot;file&quot;) Mono&lt;FilePart&gt; filePartMono:
-@RequestPart 注解用于接收 multipart/form-data 请求中的部分。这里的 &quot;file&quot; 对应 HTML form 表单中 &lt;input type=&quot;file&quot; name=&quot;file&quot;&gt; 的 name 属性。
-Mono&lt;FilePart&gt; 表示这是一个异步的、最多包含一个元素的发布者，代表上传的文件。Spring WebFlux 使用 Reactor 库进行响应式编程，Mono 是其核心组件之一。
-
-
-filePart.transferTo(path):
-这是 Spring WebFlux 提供的用于将上传的文件内容 直接传输 到指定 Path 的方法。
-它返回一个 Mono&lt;Void&gt;，表示文件传输操作的完成，但不会返回任何数据。在响应式流中，Void 表示一个操作的完成信号。
-
-
-.then(...):
-then() 操作符用于在源 Mono（在这里是 filePart.transferTo(path)）完成（发出完成信号）后，执行另一个 Mono。
-Mono.just(&quot;File uploaded successfully: &quot; + filePart.filename()) 创建了一个新的 Mono，它会发出一个包含成功消息的字符串。
-因此，.then(...) 确保了文件传输完成后，再发出成功上传的消息。
-
-
-
-3. 使用 cURL 调用您可以使用 curl 命令来测试这个上传接口：
-curl -X &#x27;POST&#x27; \  &#x27;http://localhost:8080/file&#x27; \  -H &#x27;accept: application/json&#x27; \  -H &#x27;Content-Type: multipart/form-data&#x27; \  -F &#x27;file=@Arthur-Ming-FlowCV-Resume-20241101.pdf;type=application/pdf&#x27;
-
-将Arthur-Ming-FlowCV-Resume-20241101.pdf改成实际文件路径就即可
-
-Swagger UI 支持为了方便 API 的可视化和测试，我们可以为其添加 Swagger UI 支持。
-1. 添加依赖如前所述，在 build.gradle 中添加 springdoc-openapi-starter-webfluxui 依赖：
-dependencies &#123;    // ...    implementation &#x27;org.springdoc:springdoc-openapi-starter-webflux-ui:2.8.6&#x27; // 请检查最新版本    // ...&#125;
-
-2. 配置 Controller 注解springdoc-openapi 库会自动扫描带有 Spring MVC 或 Spring WebFlux 注解的 Controller。您只需要确保您的 Controller 和方法使用了标准的 Spring WebFlux 注解（如 @RestController, @PostMapping, @RequestPart 等），springdoc-openapi 就会自动为您生成 OpenAPI 文档，并在启动后通过访问 /swagger-ui.html （或其他默认路径，具体取决于版本和配置）来查看。
-@Operation(    summary = &quot;Upload a single file&quot;,    description = &quot;Uploads a single file to the server&#x27;s NFS directory.&quot;,    requestBody = @RequestBody(            description = &quot;File to upload&quot;,            required = true,            content = @Content(                    mediaType = &quot;multipart/form-data&quot;,                    schema = @Schema(implementation = FileUploadRequest.class) // Use a custom schema            )    ),    responses = &#123;            @ApiResponse(responseCode = &quot;200&quot;, description = &quot;File uploaded successfully&quot;,                    content = @Content(mediaType = &quot;application/json&quot;, schema = @Schema(type = &quot;string&quot;))),            @ApiResponse(responseCode = &quot;400&quot;, description = &quot;Bad Request&quot;),            @ApiResponse(responseCode = &quot;500&quot;, description = &quot;Internal Server Error&quot;)    &#125;)
-
-FileUploadRequest定义如下：
-import io.swagger.v3.oas.annotations.media.Schema;import org.springframework.http.codec.multipart.FilePart;public class FileUploadRequest &#123;    @Schema(type = &quot;string&quot;, format = &quot;binary&quot;, description = &quot;The file to be uploaded&quot;)    private FilePart file; // The name &quot;file&quot; here should match the @RequestPart name in your controller    // Getters and setters are not strictly necessary for springdoc to pick up the schema,    // but it&#x27;s good practice if you were to use this class for other purposes.    public FilePart getFile() &#123;        return file;    &#125;    public void setFile(FilePart file) &#123;        this.file = file;    &#125;&#125;
-
-在项目启动后，访问 http://localhost:8080/swagger-ui.html （假设您的应用运行在 8080 端口），您就可以看到文件上传接口的 Swagger UI 界面了。
-
-通过以上步骤，您就成功地在 Spring WebFlux 中实现了一个文件上传到本地的功能，并为其添加了 Swagger UI 支持。您可以基于此进一步扩展，例如添加文件类型校验、大小限制，以及将文件存储目标切换为 MinIO 等对象存储服务。
-]]></content>
-      <categories>
-        <category>后端</category>
-      </categories>
-      <tags>
-        <tag>spring boot</tag>
-        <tag>gradle</tag>
-        <tag>spring webflux</tag>
-        <tag>文件上传</tag>
       </tags>
   </entry>
   <entry>
@@ -1533,64 +1533,6 @@ dism.exe /Online /Enable-Feature:Microsoft-Hyper-V /All
       </tags>
   </entry>
   <entry>
-    <title>2026年5月8号面试总结</title>
-    <url>/2026/05/08/front-end/2026-0508-interview/</url>
-    <content><![CDATA[前言2026年5月8号有一场面试，是对方架构师来面试的我。总的来说，面试的效果不是很好。面试的岗位是前端岗位，但是问的很多是后端架构的设计，我认为我的准备不是很好，我需要继续努力补全自己。
-问题Java的虚拟线程问题：Java的虚拟线程是什么，怎么创建？
-回答如下：
-在Java 21中，引入了虚拟线程（Virtual Threads）来简化和增强并发性，这使得在Java中编程并发程序更容易、更高效。
-虚拟线程，也称为“用户模式线程（user-mode threads）”或“纤程（fibers）”。该功能旨在简化并发编程并提供更好的可扩展性。虚拟线程是轻量级的，这意味着它们可以比传统线程创建更多数量，并且开销要少得多。这使得在自己的线程中运行单独任务或请求变得更加实用，即使在高吞吐量的程序中也是如此。
-在Java 21中创建和使用虚拟线程有多种方法：
-1. 使用静态构建器方法Thread.startVirtualThread方法将可运行对象作为参数来创建，并立即启动虚拟线程，具体如下代码：
-Runnable runnable = () -&gt; &#123;    System.out.println(&quot;Hello, www.didispace.com&quot;);&#125;;// 使用静态构建器方法Thread virtualThread = Thread.startVirtualThread(runnable);
-
-也可以使用Thread.ofVirtual()来创建，这里还可以设置一些属性，比如：线程名称。具体如下代码：
-Thread.ofVirtual()        .name(&quot;didispace-virtual-thread&quot;)        .start(runnable);
-
-2. 与ExecutorService结合使用从Java 5开始，就推荐开发人员使用ExecutorServices而不是直接使用Thread类了。现在，Java 21中引入了使用虚拟线程，所以也有了新的ExecutorService来适配，看看下面的例子：
-Runnable runnable = () -&gt; &#123;    System.out.println(&quot;Hello, www.didispace.com&quot;);&#125;;try (ExecutorService executorService = Executors.newVirtualThreadPerTaskExecutor()) &#123;    for (int i = 0; i &lt; 100; i++) &#123;        executorService.submit(runnable);    &#125;&#125;
-
-3. 使用虚拟线程工厂开发者还可以创建一个生成虚拟线程的工厂来管理，具体看下面的例子例子：
-Runnable runnable = () -&gt; &#123;    System.out.println(&quot;Hello, www.didispace.com&quot;);&#125;;ThreadFactory virtualThreadFactory = Thread.ofVirtual()        .name(&quot;didispace&quot;, 0)        .factory();Thread factoryThread = virtualThreadFactory.newThread(runnable);factoryThread.start;
-
-对于虚拟线程的概念，你只需要有一个基本的认识。
-
-虚拟线程是由JVM管理的轻量级线程。
-虚拟线程不需要任何显式分配或调度。
-虚拟线程非常适合I&#x2F;O密集型任务或需要大量并行性的任务。
-虚拟线程也可以用来实现异步操作。
-
-Golang的cmp模型GMP 是 Go 运行时（Runtime）层面的调度模型，它实现了用户态线程（Goroutine）与内核态线程（M）之间的多对多复用，是 Go 能够支持高并发的核心原因
-
-G (Goroutine): 协程。它是待执行的任务，存储了协程的栈、状态及指向任务函数的指针。G 的体积很小（初始仅 2KB），由 Go 运行时管理。
-M (Machine): 操作系统的物理线程。协程最终必须绑定到 M 上才能在 CPU 上运行。M 并不保存状态，它只是一个执行体。
-P (Processor): 逻辑处理器。它是 G 和 M 之间的“中介”或“本地资源池”。P 维护着一个本地就绪队列（Local Runqueue）。M 必须获取到 P 才能执行 G。
-在早期（Go 1.1 之前）只有 GM 模型，由于所有 M 都要抢夺全局队列的锁来获取 G，导致严重的锁竞争。引入 P 后，每个 P 都有本地队列，减少了锁竞争，并实现了 Work Stealing 和 Hand Off 机制，大大提升了效率
-
-
-gemini帮我回答的
-
-MySQL 事务隔离级别SQL:1992 标准定义了四种事务隔离级别，分别是读未提交（Read Uncommitted）、读已提交（Read Committed）、可重复读（Repeatable Read）和串行化（Serializable）。不同的隔离级别下会产生脏读、幻读、不可重复读等相关问题，因此在选择隔离级别的时候要根据应用场景来决定，使用合适的隔离级别。MySQL 中的 InnoDB 存储引擎提供了 SQL 标准所描述的四种事务隔离级别，默认事务隔离级别是可重复读（Repeatable Read）。
-
-读未提交（Read Uncommitted）允许脏读，就是在该隔离级别下，可能读到其他会话未提交事务修改的数据，存在脏读、不可重读读、幻读的问题。
-读已提交（Read Committed）只能查询到已提交的数据。这是 Oracle 数据库默认的事务隔离级别。存在不可重读读、幻读的问题。
-可重复读（Repeatable Read）就是在一个事务里相同条件下，无论何时查到的数据都和第一次查到的数据一致。这是 MySQL 数据库 InnoDB 引擎默认的事务隔离级别。在范围查询时存在幻读的问题。
-串行化（Serializable）是最高的事务隔离级别，它严格服从 ACID 特性的隔离级别。所有的事务依次逐个执行，事务之间互不干扰，该级别可以防止脏读、不可重复读以及幻读。但每个事务读数据时都需要获取表级的共享锁，导致读和写都会阻塞，性能极低。
-
-参考资料
-Java 21 新特性：虚拟线程（Virtual Threads）
-MySQL | 事务隔离级别详解
-
-]]></content>
-      <categories>
-        <category>前端</category>
-      </categories>
-      <tags>
-        <tag>高级前端工程师</tag>
-        <tag>面试</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>2026年5月7号面试总结</title>
     <url>/2026/05/08/front-end/2026-0507-interview/</url>
     <content><![CDATA[前言2026年5月7号有两场面试，本文记录了自己预先准备面试题和面试中遇到的问题。
@@ -1730,54 +1672,61 @@ GSS Data Store使用Podman部署问题：你提到在虚拟机上通过 Podman s
       </tags>
   </entry>
   <entry>
-    <title>为 Angular Material 应用添加完美深色模式支持</title>
-    <url>/2025/09/28/front-end/angular-material-perfect-dark-mode/</url>
-    <content><![CDATA[💡 为 Angular Material 应用添加完美深色模式支持深色模式（Dark Mode）是现代应用不可或缺的功能。它不仅能提升用户在低光环境下的舒适度，还能让应用看起来更专业、更时尚。
-如果你正在使用 Angular Material，实现深色模式可以非常优雅和高效。本文将分享我如何通过一个独立的 ThemePickerComponent，结合 Angular Signals 和 系统偏好检测，为我的应用添加深色模式的完整过程。
-🛠️ 核心思路概览我的深色模式解决方案基于以下几个关键机制：
+    <title>2026年5月8号面试总结</title>
+    <url>/2026/05/08/front-end/2026-0508-interview/</url>
+    <content><![CDATA[前言2026年5月8号有一场面试，是对方架构师来面试的我。总的来说，面试的效果不是很好。面试的岗位是前端岗位，但是问的很多是后端架构的设计，我认为我的准备不是很好，我需要继续努力补全自己。
+问题Java的虚拟线程问题：Java的虚拟线程是什么，怎么创建？
+回答如下：
+在Java 21中，引入了虚拟线程（Virtual Threads）来简化和增强并发性，这使得在Java中编程并发程序更容易、更高效。
+虚拟线程，也称为“用户模式线程（user-mode threads）”或“纤程（fibers）”。该功能旨在简化并发编程并提供更好的可扩展性。虚拟线程是轻量级的，这意味着它们可以比传统线程创建更多数量，并且开销要少得多。这使得在自己的线程中运行单独任务或请求变得更加实用，即使在高吞吐量的程序中也是如此。
+在Java 21中创建和使用虚拟线程有多种方法：
+1. 使用静态构建器方法Thread.startVirtualThread方法将可运行对象作为参数来创建，并立即启动虚拟线程，具体如下代码：
+Runnable runnable = () -&gt; &#123;    System.out.println(&quot;Hello, www.didispace.com&quot;);&#125;;// 使用静态构建器方法Thread virtualThread = Thread.startVirtualThread(runnable);
 
-CSS 变量与 color-scheme: 利用 Angular Material 基于 CSS 变量的主题机制，并通过在 &lt;html&gt; 标签上切换 color-scheme 属性来控制主题。
-Angular Signals: 使用 signal() 存储和管理当前的主题模式 (&#39;light&#39; 或 &#39;dark&#39;)。
-持久化与偏好: 通过 localStorage 记住用户的选择，同时使用 window.matchMedia 监听用户操作系统的偏好设置。
+也可以使用Thread.ofVirtual()来创建，这里还可以设置一些属性，比如：线程名称。具体如下代码：
+Thread.ofVirtual()        .name(&quot;didispace-virtual-thread&quot;)        .start(runnable);
 
-💻 关键代码解析与实现步骤1. 配置主题和 color-scheme (styles.scss)在全局样式文件中，我们确保应用能响应 color-scheme 变化，并设置 Material 主题。
-/* ui/src/styles.scss */@use &#x27;@angular/material&#x27; as mat;html, body &#123;  font-family: Roboto, &quot;Helvetica Neue&quot;, sans-serif;&#125;html &#123;  background-color: var(--mat-sys-surface);  color: var(--mat-sys-on-surface);  // ✨ 关键：允许浏览器知道页面支持两种颜色方案  color-scheme: light dark;  @include mat.theme((        color: (          // Material 会根据 color-scheme 自动应用 light/dark 调色板          primary: mat.$rose-palette,           tertiary: mat.$red-palette,      ),      typography: Roboto,      density: 0,  ));&#125;
+2. 与ExecutorService结合使用从Java 5开始，就推荐开发人员使用ExecutorServices而不是直接使用Thread类了。现在，Java 21中引入了使用虚拟线程，所以也有了新的ExecutorService来适配，看看下面的例子：
+Runnable runnable = () -&gt; &#123;    System.out.println(&quot;Hello, www.didispace.com&quot;);&#125;;try (ExecutorService executorService = Executors.newVirtualThreadPerTaskExecutor()) &#123;    for (int i = 0; i &lt; 100; i++) &#123;        executorService.submit(runnable);    &#125;&#125;
 
-我们通过 background-color: var(--mat-sys-surface) 来使用 Material 系统级 CSS 变量，确保背景颜色随着主题切换而正确变化。
-2. ThemePickerComponent：主题切换器这是整个功能的核心。它负责初始化、监听和切换主题。
-A. HTML 模板：根据模式切换图标我们使用 mat-icon-button 和 @if 语法根据 mode() 的值显示太阳或月亮图标。
-&lt;button class=&quot;theme-button&quot; mat-icon-button    [matTooltip]=&quot;&#x27;Change Theme&#x27;&quot;    (click)=&quot;changeMode()&quot;  &gt;     @if (mode() === &#x27;dark&#x27;) &#123;       &lt;mat-icon&gt;dark_mode&lt;/mat-icon&gt;     &#125; @else &#123;       &lt;mat-icon&gt;light_mode&lt;/mat-icon&gt;     &#125;&lt;/button&gt;
+3. 使用虚拟线程工厂开发者还可以创建一个生成虚拟线程的工厂来管理，具体看下面的例子例子：
+Runnable runnable = () -&gt; &#123;    System.out.println(&quot;Hello, www.didispace.com&quot;);&#125;;ThreadFactory virtualThreadFactory = Thread.ofVirtual()        .name(&quot;didispace&quot;, 0)        .factory();Thread factoryThread = virtualThreadFactory.newThread(runnable);factoryThread.start;
 
-B. TypeScript 逻辑：Signals, Effects, 和持久化// ui/src/app/components/theme-picker/theme-picker.component.tsimport &#123; afterNextRender, Component, effect, inject, OnInit, Renderer2, signal &#125; from &#x27;@angular/core&#x27;;// ... 导入 MatButtonModule, MatIconModule, MatTooltipModule@Component(&#123;...&#125;)export class ThemePickerComponent implements OnInit &#123;  static storageKey = &#x27;batcher-ui-theme&#x27;;  mode = signal(&#x27;light&#x27;);  private renderer = inject(Renderer2);  constructor() &#123;    // 1. 响应式更新：当 mode() 变化时，更新 &lt;html&gt; 元素的 color-scheme    effect(() =&gt; &#123;      const mode = this.mode();      this.renderer.setStyle(document.documentElement, &#x27;color-scheme&#x27;, mode);    &#125;);    // 2. 初始化：客户端渲染后，加载存储或系统偏好    afterNextRender(() =&gt; &#123;      // 优先加载 localStorage 存储的模式，否则检测系统偏好      const systemPreference = window.matchMedia(&#x27;(prefers-color-scheme: dark)&#x27;).matches ? &#x27;dark&#x27; : &#x27;light&#x27;;      const storedMode = this.getStoredMode() || systemPreference;            if (storedMode) &#123;        this.mode.set(storedMode);      &#125;    &#125;);  &#125;  ngOnInit(): void &#123;    // 3. 实时监听：如果用户未设置过偏好，跟随系统主题的实时变化    window.matchMedia(&#x27;(prefers-color-scheme: dark)&#x27;).addEventListener(&#x27;change&#x27;, e =&gt; &#123;      const storedMode = this.getStoredMode();      if (!storedMode) &#123;        this.mode.set(e.matches ? &#x27;dark&#x27; : &#x27;light&#x27;);      &#125;    &#125;);  &#125;  changeMode(): void &#123;    const newMode = this.mode() === &#x27;light&#x27; ? &#x27;dark&#x27; : &#x27;light&#x27;;    this.mode.set(newMode);    this.storeMode(newMode);  &#125;  // 4. 持久化方法 (storeMode, getStoredMode)  storeMode(mode: string): void &#123;    try &#123;      localStorage.setItem(ThemePickerComponent.storageKey, mode);    &#125; catch &#123; /* ignore */ &#125;  &#125;  getStoredMode(): string | null &#123;    try &#123;      return localStorage.getItem(ThemePickerComponent.storageKey);    &#125; catch &#123; return null; &#125;  &#125;&#125;
+对于虚拟线程的概念，你只需要有一个基本的认识。
 
-C. SCSS处理(可选)修改icon的颜色去适配material 3的配色
-.theme-button &#123;    color: var(--mat-primary);&#125;
+虚拟线程是由JVM管理的轻量级线程。
+虚拟线程不需要任何显式分配或调度。
+虚拟线程非常适合I&#x2F;O密集型任务或需要大量并行性的任务。
+虚拟线程也可以用来实现异步操作。
 
-3. 集成到导航栏 (navigation.component.html)我们将 app-theme-picker 组件放置在应用导航栏（mat-toolbar）的右侧。
-&lt;mat-toolbar&gt;    &lt;div class=&quot;flex-grow-1&quot;&gt;&lt;/div&gt;    &lt;app-theme-picker class=&quot;theme-picker&quot;&gt;&lt;/app-theme-picker&gt;&lt;/mat-toolbar&gt;
+Golang的cmp模型GMP 是 Go 运行时（Runtime）层面的调度模型，它实现了用户态线程（Goroutine）与内核态线程（M）之间的多对多复用，是 Go 能够支持高并发的核心原因
 
-导航栏样式调整
-我们还调整了导航栏的背景色，使其使用更适合作为容器背景的 Material 系统变量。
-/* ui/src/app/components/navigation/navigation.component.scss */:host &#123;  color: var(--mat-sys-primary);  // 更改为使用 surface-container-low，这通常更适合作为页面/容器的背景  background: var(--mat-sys-surface-container-low);&#125;// ... 省略其他样式.flex-grow-1 &#123;  flex-grow: 1;&#125;
+G (Goroutine): 协程。它是待执行的任务，存储了协程的栈、状态及指向任务函数的指针。G 的体积很小（初始仅 2KB），由 Go 运行时管理。
+M (Machine): 操作系统的物理线程。协程最终必须绑定到 M 上才能在 CPU 上运行。M 并不保存状态，它只是一个执行体。
+P (Processor): 逻辑处理器。它是 G 和 M 之间的“中介”或“本地资源池”。P 维护着一个本地就绪队列（Local Runqueue）。M 必须获取到 P 才能执行 G。
+在早期（Go 1.1 之前）只有 GM 模型，由于所有 M 都要抢夺全局队列的锁来获取 G，导致严重的锁竞争。引入 P 后，每个 P 都有本地队列，减少了锁竞争，并实现了 Work Stealing 和 Hand Off 机制，大大提升了效率
 
 
-✨ 总结通过上述实现，我们的 Angular Material 应用获得了：
+gemini帮我回答的
 
-用户自定义: 用户可以随时通过点击按钮切换光亮&#x2F;深色模式。
-偏好记忆: 应用会记住用户的选择，即使重新打开浏览器也不会丢失。
-尊重系统设置: 如果用户从未手动切换过主题，应用会默认跟随操作系统的偏好设置。
+MySQL 事务隔离级别SQL:1992 标准定义了四种事务隔离级别，分别是读未提交（Read Uncommitted）、读已提交（Read Committed）、可重复读（Repeatable Read）和串行化（Serializable）。不同的隔离级别下会产生脏读、幻读、不可重复读等相关问题，因此在选择隔离级别的时候要根据应用场景来决定，使用合适的隔离级别。MySQL 中的 InnoDB 存储引擎提供了 SQL 标准所描述的四种事务隔离级别，默认事务隔离级别是可重复读（Repeatable Read）。
 
-使用 Angular Signals 和 Effects 极大地简化了状态管理和响应式更新，让深色模式的实现既强大又简洁！
-🔗 完整的代码变更你可以查看这个 GitHub Commit 来了解所有相关的代码修改：
-fix(ui): add dark mode
+读未提交（Read Uncommitted）允许脏读，就是在该隔离级别下，可能读到其他会话未提交事务修改的数据，存在脏读、不可重读读、幻读的问题。
+读已提交（Read Committed）只能查询到已提交的数据。这是 Oracle 数据库默认的事务隔离级别。存在不可重读读、幻读的问题。
+可重复读（Repeatable Read）就是在一个事务里相同条件下，无论何时查到的数据都和第一次查到的数据一致。这是 MySQL 数据库 InnoDB 引擎默认的事务隔离级别。在范围查询时存在幻读的问题。
+串行化（Serializable）是最高的事务隔离级别，它严格服从 ACID 特性的隔离级别。所有的事务依次逐个执行，事务之间互不干扰，该级别可以防止脏读、不可重复读以及幻读。但每个事务读数据时都需要获取表级的共享锁，导致读和写都会阻塞，性能极低。
+
+参考资料
+Java 21 新特性：虚拟线程（Virtual Threads）
+MySQL | 事务隔离级别详解
+
 ]]></content>
       <categories>
         <category>前端</category>
       </categories>
       <tags>
-        <tag>angular</tag>
-        <tag>angular material</tag>
-        <tag>dark mode</tag>
+        <tag>高级前端工程师</tag>
+        <tag>面试</tag>
       </tags>
   </entry>
   <entry>
@@ -1968,8 +1917,59 @@ Sprint 周期：通常为 1 到 4 周，2 周为常见做法。
       </categories>
       <tags>
         <tag>面试</tag>
-        <tag>angular</tag>
         <tag>css</tag>
+        <tag>angular</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>为 Angular Material 应用添加完美深色模式支持</title>
+    <url>/2025/09/28/front-end/angular-material-perfect-dark-mode/</url>
+    <content><![CDATA[💡 为 Angular Material 应用添加完美深色模式支持深色模式（Dark Mode）是现代应用不可或缺的功能。它不仅能提升用户在低光环境下的舒适度，还能让应用看起来更专业、更时尚。
+如果你正在使用 Angular Material，实现深色模式可以非常优雅和高效。本文将分享我如何通过一个独立的 ThemePickerComponent，结合 Angular Signals 和 系统偏好检测，为我的应用添加深色模式的完整过程。
+🛠️ 核心思路概览我的深色模式解决方案基于以下几个关键机制：
+
+CSS 变量与 color-scheme: 利用 Angular Material 基于 CSS 变量的主题机制，并通过在 &lt;html&gt; 标签上切换 color-scheme 属性来控制主题。
+Angular Signals: 使用 signal() 存储和管理当前的主题模式 (&#39;light&#39; 或 &#39;dark&#39;)。
+持久化与偏好: 通过 localStorage 记住用户的选择，同时使用 window.matchMedia 监听用户操作系统的偏好设置。
+
+💻 关键代码解析与实现步骤1. 配置主题和 color-scheme (styles.scss)在全局样式文件中，我们确保应用能响应 color-scheme 变化，并设置 Material 主题。
+/* ui/src/styles.scss */@use &#x27;@angular/material&#x27; as mat;html, body &#123;  font-family: Roboto, &quot;Helvetica Neue&quot;, sans-serif;&#125;html &#123;  background-color: var(--mat-sys-surface);  color: var(--mat-sys-on-surface);  // ✨ 关键：允许浏览器知道页面支持两种颜色方案  color-scheme: light dark;  @include mat.theme((        color: (          // Material 会根据 color-scheme 自动应用 light/dark 调色板          primary: mat.$rose-palette,           tertiary: mat.$red-palette,      ),      typography: Roboto,      density: 0,  ));&#125;
+
+我们通过 background-color: var(--mat-sys-surface) 来使用 Material 系统级 CSS 变量，确保背景颜色随着主题切换而正确变化。
+2. ThemePickerComponent：主题切换器这是整个功能的核心。它负责初始化、监听和切换主题。
+A. HTML 模板：根据模式切换图标我们使用 mat-icon-button 和 @if 语法根据 mode() 的值显示太阳或月亮图标。
+&lt;button class=&quot;theme-button&quot; mat-icon-button    [matTooltip]=&quot;&#x27;Change Theme&#x27;&quot;    (click)=&quot;changeMode()&quot;  &gt;     @if (mode() === &#x27;dark&#x27;) &#123;       &lt;mat-icon&gt;dark_mode&lt;/mat-icon&gt;     &#125; @else &#123;       &lt;mat-icon&gt;light_mode&lt;/mat-icon&gt;     &#125;&lt;/button&gt;
+
+B. TypeScript 逻辑：Signals, Effects, 和持久化// ui/src/app/components/theme-picker/theme-picker.component.tsimport &#123; afterNextRender, Component, effect, inject, OnInit, Renderer2, signal &#125; from &#x27;@angular/core&#x27;;// ... 导入 MatButtonModule, MatIconModule, MatTooltipModule@Component(&#123;...&#125;)export class ThemePickerComponent implements OnInit &#123;  static storageKey = &#x27;batcher-ui-theme&#x27;;  mode = signal(&#x27;light&#x27;);  private renderer = inject(Renderer2);  constructor() &#123;    // 1. 响应式更新：当 mode() 变化时，更新 &lt;html&gt; 元素的 color-scheme    effect(() =&gt; &#123;      const mode = this.mode();      this.renderer.setStyle(document.documentElement, &#x27;color-scheme&#x27;, mode);    &#125;);    // 2. 初始化：客户端渲染后，加载存储或系统偏好    afterNextRender(() =&gt; &#123;      // 优先加载 localStorage 存储的模式，否则检测系统偏好      const systemPreference = window.matchMedia(&#x27;(prefers-color-scheme: dark)&#x27;).matches ? &#x27;dark&#x27; : &#x27;light&#x27;;      const storedMode = this.getStoredMode() || systemPreference;            if (storedMode) &#123;        this.mode.set(storedMode);      &#125;    &#125;);  &#125;  ngOnInit(): void &#123;    // 3. 实时监听：如果用户未设置过偏好，跟随系统主题的实时变化    window.matchMedia(&#x27;(prefers-color-scheme: dark)&#x27;).addEventListener(&#x27;change&#x27;, e =&gt; &#123;      const storedMode = this.getStoredMode();      if (!storedMode) &#123;        this.mode.set(e.matches ? &#x27;dark&#x27; : &#x27;light&#x27;);      &#125;    &#125;);  &#125;  changeMode(): void &#123;    const newMode = this.mode() === &#x27;light&#x27; ? &#x27;dark&#x27; : &#x27;light&#x27;;    this.mode.set(newMode);    this.storeMode(newMode);  &#125;  // 4. 持久化方法 (storeMode, getStoredMode)  storeMode(mode: string): void &#123;    try &#123;      localStorage.setItem(ThemePickerComponent.storageKey, mode);    &#125; catch &#123; /* ignore */ &#125;  &#125;  getStoredMode(): string | null &#123;    try &#123;      return localStorage.getItem(ThemePickerComponent.storageKey);    &#125; catch &#123; return null; &#125;  &#125;&#125;
+
+C. SCSS处理(可选)修改icon的颜色去适配material 3的配色
+.theme-button &#123;    color: var(--mat-primary);&#125;
+
+3. 集成到导航栏 (navigation.component.html)我们将 app-theme-picker 组件放置在应用导航栏（mat-toolbar）的右侧。
+&lt;mat-toolbar&gt;    &lt;div class=&quot;flex-grow-1&quot;&gt;&lt;/div&gt;    &lt;app-theme-picker class=&quot;theme-picker&quot;&gt;&lt;/app-theme-picker&gt;&lt;/mat-toolbar&gt;
+
+导航栏样式调整
+我们还调整了导航栏的背景色，使其使用更适合作为容器背景的 Material 系统变量。
+/* ui/src/app/components/navigation/navigation.component.scss */:host &#123;  color: var(--mat-sys-primary);  // 更改为使用 surface-container-low，这通常更适合作为页面/容器的背景  background: var(--mat-sys-surface-container-low);&#125;// ... 省略其他样式.flex-grow-1 &#123;  flex-grow: 1;&#125;
+
+
+✨ 总结通过上述实现，我们的 Angular Material 应用获得了：
+
+用户自定义: 用户可以随时通过点击按钮切换光亮&#x2F;深色模式。
+偏好记忆: 应用会记住用户的选择，即使重新打开浏览器也不会丢失。
+尊重系统设置: 如果用户从未手动切换过主题，应用会默认跟随操作系统的偏好设置。
+
+使用 Angular Signals 和 Effects 极大地简化了状态管理和响应式更新，让深色模式的实现既强大又简洁！
+🔗 完整的代码变更你可以查看这个 GitHub Commit 来了解所有相关的代码修改：
+fix(ui): add dark mode
+]]></content>
+      <categories>
+        <category>前端</category>
+      </categories>
+      <tags>
+        <tag>angular</tag>
+        <tag>angular material</tag>
+        <tag>dark mode</tag>
       </tags>
   </entry>
   <entry>
@@ -2927,20 +2927,6 @@ Resend 发送失败？ 确保你的发件域名在 Resend 后台已通过 DNS �
       </tags>
   </entry>
   <entry>
-    <title>Nodejs项目的Dockerfile模版</title>
-    <url>/2021/10/20/front-end/node-docker-template/</url>
-    <content><![CDATA[Nodejs项目的Dockerfile模版基于YarnFROM node:14.17.6-alpine3.14 as build# 取消对https的证书限制# ENV SELF_SIGNED_CERT_IN_CHAIN=true# ENV NODE_TLS_REJECT_UNAUTHORIZED=0# RUN npm config set strict-ssl false# RUN yarn config set strict-ssl falseRUN apk update &amp;&amp; apk add bashCOPY package.json yarn.lock .npmrc /tmp/RUN cd /tmp &amp;&amp; yarn install --frozen-lockfile --non-interactiveRUN mkdir -p /app &amp;&amp; cp -a /tmp/node_modules /app/WORKDIR /appCOPY . /appRUN yarn buildFROM build AS ciWORKDIR /appRUN yarn run test:ci &amp;&amp; yarn install --frozen-lockfile --non-interactive --productionFROM node:14.17.6-alpine3.14 as releaseRUN mkdir -p /app &amp;&amp; \	addgroup -S daminggroup &amp;&amp; \	adduser -S -h /app -G daminggroup daminguser &amp;&amp; \	chown -R daminguser:daminggroup /appWORKDIR /appCOPY --from=ci --chown=daminguser:daminggroup /app/dist ./distCOPY --from=ci --chown=daminguser:daminggroup /app/node_modules ./node_modulesCOPY --from=ci --chown=daminguser:daminggroup /app/package.json .HEALTHCHECK --interval=30s --timeout=30s CMD curl -f http://localhost:3978/ping || exit 1EXPOSE 3978CMD [&quot;sh&quot;, &quot;-c&quot;, &quot;node dist/index.js&quot;]
-
-基于NPMFROM node:14.17.6-alpine3.14 as build# pwc network limit# ENV SELF_SIGNED_CERT_IN_CHAIN=true# ENV NODE_TLS_REJECT_UNAUTHORIZED=0# RUN npm config set strict-ssl false# RUN yarn config set strict-ssl falseRUN apk update &amp;&amp; apk add bashCOPY package.json package-lock.json .npmrc /tmp/RUN cd /tmp &amp;&amp; npm installRUN mkdir -p /app &amp;&amp; cp -a /tmp/node_modules /app/WORKDIR /appCOPY . /appRUN npm run buildFROM build AS ciWORKDIR /appRUN npm run test:ci &amp;&amp; npm install --production --ignore-scripts trueFROM node:14.17.6-alpine3.14 as releaseRUN mkdir -p /app &amp;&amp; \	addgroup -S daminggroup &amp;&amp; \	adduser -S -h /app -G daminggroup daminguser &amp;&amp; \	chown -R daminguser:daminggroup /appWORKDIR /appCOPY --from=ci --chown=daminguser:daminggroup /app/dist ./distCOPY --from=ci --chown=daminguser:daminggroup /app/node_modules ./node_modulesCOPY --from=ci --chown=daminguser:daminggroup /app/package.json .HEALTHCHECK --interval=30s --timeout=30s CMD curl -f http://localhost:3978/ping || exit 1EXPOSE 3978CMD [&quot;sh&quot;, &quot;-c&quot;, &quot;node dist/index.js&quot;]]]></content>
-      <categories>
-        <category>前端</category>
-      </categories>
-      <tags>
-        <tag>docker</tag>
-        <tag>nodejs</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>在 Next.js 16 (Turbopack) 中集成 RDKit.js 渲染 SMILES 的工程实践与踩坑指南</title>
     <url>/2026/06/16/front-end/nextjs16-rdkitjs-smiles/</url>
     <content><![CDATA[在 Next.js 16 (Turbopack) 中集成 RDKit.js 渲染 SMILES 的工程实践与踩坑指南前言在生物制药数字化（AIDD、LIMS 等系统）的前端开发中，SMILES（简化分子线性输入规范）是表示分子结构最常用的文本格式。为了在前端实现“输入文本，实时预览 2D 分子结构”，我们需要引入化学信息学界的工业级开源工具包：RDKit.js。
@@ -2989,6 +2975,20 @@ Module not found: Can&#x27;t resolve &#x27;fs&#x27;./node_modules/@rdkit/rdkit/d
         <tag>nexjts</tag>
         <tag>rdkitjs</tag>
         <tag>smiles</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Nodejs项目的Dockerfile模版</title>
+    <url>/2021/10/20/front-end/node-docker-template/</url>
+    <content><![CDATA[Nodejs项目的Dockerfile模版基于YarnFROM node:14.17.6-alpine3.14 as build# 取消对https的证书限制# ENV SELF_SIGNED_CERT_IN_CHAIN=true# ENV NODE_TLS_REJECT_UNAUTHORIZED=0# RUN npm config set strict-ssl false# RUN yarn config set strict-ssl falseRUN apk update &amp;&amp; apk add bashCOPY package.json yarn.lock .npmrc /tmp/RUN cd /tmp &amp;&amp; yarn install --frozen-lockfile --non-interactiveRUN mkdir -p /app &amp;&amp; cp -a /tmp/node_modules /app/WORKDIR /appCOPY . /appRUN yarn buildFROM build AS ciWORKDIR /appRUN yarn run test:ci &amp;&amp; yarn install --frozen-lockfile --non-interactive --productionFROM node:14.17.6-alpine3.14 as releaseRUN mkdir -p /app &amp;&amp; \	addgroup -S daminggroup &amp;&amp; \	adduser -S -h /app -G daminggroup daminguser &amp;&amp; \	chown -R daminguser:daminggroup /appWORKDIR /appCOPY --from=ci --chown=daminguser:daminggroup /app/dist ./distCOPY --from=ci --chown=daminguser:daminggroup /app/node_modules ./node_modulesCOPY --from=ci --chown=daminguser:daminggroup /app/package.json .HEALTHCHECK --interval=30s --timeout=30s CMD curl -f http://localhost:3978/ping || exit 1EXPOSE 3978CMD [&quot;sh&quot;, &quot;-c&quot;, &quot;node dist/index.js&quot;]
+
+基于NPMFROM node:14.17.6-alpine3.14 as build# pwc network limit# ENV SELF_SIGNED_CERT_IN_CHAIN=true# ENV NODE_TLS_REJECT_UNAUTHORIZED=0# RUN npm config set strict-ssl false# RUN yarn config set strict-ssl falseRUN apk update &amp;&amp; apk add bashCOPY package.json package-lock.json .npmrc /tmp/RUN cd /tmp &amp;&amp; npm installRUN mkdir -p /app &amp;&amp; cp -a /tmp/node_modules /app/WORKDIR /appCOPY . /appRUN npm run buildFROM build AS ciWORKDIR /appRUN npm run test:ci &amp;&amp; npm install --production --ignore-scripts trueFROM node:14.17.6-alpine3.14 as releaseRUN mkdir -p /app &amp;&amp; \	addgroup -S daminggroup &amp;&amp; \	adduser -S -h /app -G daminggroup daminguser &amp;&amp; \	chown -R daminguser:daminggroup /appWORKDIR /appCOPY --from=ci --chown=daminguser:daminggroup /app/dist ./distCOPY --from=ci --chown=daminguser:daminggroup /app/node_modules ./node_modulesCOPY --from=ci --chown=daminguser:daminggroup /app/package.json .HEALTHCHECK --interval=30s --timeout=30s CMD curl -f http://localhost:3978/ping || exit 1EXPOSE 3978CMD [&quot;sh&quot;, &quot;-c&quot;, &quot;node dist/index.js&quot;]]]></content>
+      <categories>
+        <category>前端</category>
+      </categories>
+      <tags>
+        <tag>docker</tag>
+        <tag>nodejs</tag>
       </tags>
   </entry>
   <entry>
@@ -3175,6 +3175,32 @@ exports只是module.exports的引用，主要用于辅助导出属性或方法�
       </tags>
   </entry>
   <entry>
+    <title>Performance Fix for Stripe.js Script Loading</title>
+    <url>/2025/11/16/front-end/performance-fix-for-stripejs-scripts-loading/</url>
+    <content><![CDATA[Technical SummaryThis summary details a refactoring effort aimed at preventing the premature loading of the Stripe payment script, a common cause of degraded initial page load performance in applications that integrate third-party libraries.
+The ObjectiveThe primary goal was to ensure that the core Stripe JavaScript file (e.g., https://m.stripe.com/6 or https://js.stripe.com/v3/) is only requested and downloaded when a user actually enters a payment-required context, facilitating true lazy loading.
+The Problem: Immediate Execution on Module ImportIn the original code structure, the Stripe initialization was handled in a shared service file as follows:
+// src/shared/service/stripe.ts (Old Code)import &#123; loadStripe &#125; from &#x27;@stripe/stripe-js&#x27;;// The issue lies here: loadStripe is executed immediately in the top-level scope.export const stripePromise = loadStripe(    import.meta.env.VITE_STRIPE_PRIVATE_API_KEY).then(stripe =&gt; &#123;    // ...    return stripe;&#125;);
+
+Because the expression loadStripe(...) was immediately executed and its resulting Promise was exported (export const stripePromise = ...), any component that imported this file—even if it was a component on a non-payment page—would trigger the synchronous execution of this module. This instantly called loadStripe(), initiating the network request for the Stripe script, regardless of the component’s render state.
+The Solution: Wrapping Initialization in an Exported FunctionThe fix involved decoupling the loadStripe call from the module’s initial execution flow by wrapping it inside an exported function, getStripePromise().
+1. Refactoring the Stripe Service FileThe stripe.ts file was changed to export a function instead of an eagerly evaluated Promise:
+// src/shared/service/stripe.ts (New Code)import &#123; loadStripe &#125; from &#x27;@stripe/stripe-js&#x27;;export const getStripePromise = () =&gt; &#123;    console.warn(&#x27;Stripe load function called.&#x27;);    return loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY).then(stripe =&gt; &#123;        console.warn(&#x27;Stripe script downloaded and loaded.&#x27;);        return stripe;    &#125;);&#125;;// The immediate export of the promise was removed:// //export const stripePromise = getStripePromise(); 
+
+2. Local Initialization in Consumer ComponentsThe components that utilize the Stripe context (e.g., paymentMethod/index.tsx, setupChecker/index.tsx) were updated to call this function locally within their own module scope:
+// src/components/stripe/paymentMethod/index.tsx (New Code)import &#123; getStripePromise &#125; from &#x27;@/shared/service/stripe&#x27;;// The promise is now initialized here, within the specific payment module.const stripePromise = getStripePromise(); // This module is expected to be loaded via React.lazy() in a parent component.
+
+ConclusionThis refactoring successfully shifts the responsibility for initiating the Stripe script download from the application’s core bundle to the specific, smaller JavaScript chunk of the payment module. By ensuring the loadStripe() function is only executed when the payment component is mounted and its module is finally loaded (typically via a React.lazy trigger), we eliminate unnecessary network requests on initial page loads, contributing to a better user experience and improved performance metrics.
+]]></content>
+      <categories>
+        <category>前端</category>
+      </categories>
+      <tags>
+        <tag>react</tag>
+        <tag>stripe</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>基于 Microsoft Graph API 与 React Email 构建现代化邮件发送系统</title>
     <url>/2025/12/27/front-end/react-email-ms-graph-nodemailer/</url>
     <content><![CDATA[背景在传统的 Node.js 服务端开发中，使用 Nodemailer 配合 SMTP 协议是发送邮件的标准做法。然而，随着安全标准的提升，微软已宣布将在 2026 年彻底停止 Outlook&#x2F;Microsoft 365 对 SMTP 基础身份验证（Basic Auth）的支持。
@@ -3221,84 +3247,6 @@ Sending Emails via Outlook with Nodemailer and Microsoft Graph
         <tag>react-email</tag>
         <tag>Microsoft Graph API</tag>
         <tag>nodemailer</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>Performance Fix for Stripe.js Script Loading</title>
-    <url>/2025/11/16/front-end/performance-fix-for-stripejs-scripts-loading/</url>
-    <content><![CDATA[Technical SummaryThis summary details a refactoring effort aimed at preventing the premature loading of the Stripe payment script, a common cause of degraded initial page load performance in applications that integrate third-party libraries.
-The ObjectiveThe primary goal was to ensure that the core Stripe JavaScript file (e.g., https://m.stripe.com/6 or https://js.stripe.com/v3/) is only requested and downloaded when a user actually enters a payment-required context, facilitating true lazy loading.
-The Problem: Immediate Execution on Module ImportIn the original code structure, the Stripe initialization was handled in a shared service file as follows:
-// src/shared/service/stripe.ts (Old Code)import &#123; loadStripe &#125; from &#x27;@stripe/stripe-js&#x27;;// The issue lies here: loadStripe is executed immediately in the top-level scope.export const stripePromise = loadStripe(    import.meta.env.VITE_STRIPE_PRIVATE_API_KEY).then(stripe =&gt; &#123;    // ...    return stripe;&#125;);
-
-Because the expression loadStripe(...) was immediately executed and its resulting Promise was exported (export const stripePromise = ...), any component that imported this file—even if it was a component on a non-payment page—would trigger the synchronous execution of this module. This instantly called loadStripe(), initiating the network request for the Stripe script, regardless of the component’s render state.
-The Solution: Wrapping Initialization in an Exported FunctionThe fix involved decoupling the loadStripe call from the module’s initial execution flow by wrapping it inside an exported function, getStripePromise().
-1. Refactoring the Stripe Service FileThe stripe.ts file was changed to export a function instead of an eagerly evaluated Promise:
-// src/shared/service/stripe.ts (New Code)import &#123; loadStripe &#125; from &#x27;@stripe/stripe-js&#x27;;export const getStripePromise = () =&gt; &#123;    console.warn(&#x27;Stripe load function called.&#x27;);    return loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY).then(stripe =&gt; &#123;        console.warn(&#x27;Stripe script downloaded and loaded.&#x27;);        return stripe;    &#125;);&#125;;// The immediate export of the promise was removed:// //export const stripePromise = getStripePromise(); 
-
-2. Local Initialization in Consumer ComponentsThe components that utilize the Stripe context (e.g., paymentMethod/index.tsx, setupChecker/index.tsx) were updated to call this function locally within their own module scope:
-// src/components/stripe/paymentMethod/index.tsx (New Code)import &#123; getStripePromise &#125; from &#x27;@/shared/service/stripe&#x27;;// The promise is now initialized here, within the specific payment module.const stripePromise = getStripePromise(); // This module is expected to be loaded via React.lazy() in a parent component.
-
-ConclusionThis refactoring successfully shifts the responsibility for initiating the Stripe script download from the application’s core bundle to the specific, smaller JavaScript chunk of the payment module. By ensuring the loadStripe() function is only executed when the payment component is mounted and its module is finally loaded (typically via a React.lazy trigger), we eliminate unnecessary network requests on initial page loads, contributing to a better user experience and improved performance metrics.
-]]></content>
-      <categories>
-        <category>前端</category>
-      </categories>
-      <tags>
-        <tag>react</tag>
-        <tag>stripe</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>React 路由跳转：从 a 标签到编程式导航</title>
-    <url>/2025/12/21/front-end/react-router-link-vs-anchor/</url>
-    <content><![CDATA[React 路由跳转：从 a 标签到编程式导航在 React 应用开发中，正确处理页面跳转是确保应用性能和用户体验的关键。本文将对比传统的 &lt;a&gt; 标签与 React Router 提供的导航方式。
-1. 为什么不推荐使用  标签？标准的 &lt;a&gt; 标签通过 href 属性进行跳转时，会触发浏览器的全页刷新。
-
-状态丢失：应用内存中的所有 State（如登录信息、表单输入）都会被重置。
-加载冗余：浏览器会重新请求所有资源（JS, CSS），失去了单页应用（SPA）的性能优势。
-
-2. 声明式导航：Link 组件对于普通的导航链接，应当使用 react-router-dom 提供的 &lt;Link&gt; 组件。它通过拦截点击事件并使用 History API 来更新 URL，从而实现无刷新跳转。
-import &#123; Link &#125; from &#x27;react-router-dom&#x27;;// 基础用法&lt;Link to=&quot;/reset-password&quot;&gt;Forgot password?&lt;/Link&gt;
-
-结合 MUI (Material UI) 使用： 为了保持 MUI 的样式，可以通过 component 属性进行组合：
-import &#123; Link as RouterLink &#125; from &#x27;react-router-dom&#x27;;import &#123; Link &#125; from &#x27;@mui/material&#x27;;&lt;Link component=&#123;RouterLink&#125; to=&quot;/reset-password&quot;&gt;  Forgot password?&lt;/Link&gt;
-
-3. 编程式导航：useNavigate在某些场景下，我们需要在执行完特定逻辑（如：表单提交、权限验证）后再进行跳转，这时就需要使用 useNavigate 钩子。
-import &#123; useNavigate &#125; from &#x27;react-router-dom&#x27;;function LoginPage() &#123;  const navigate = useNavigate();  const handleLogin = async () =&gt; &#123;    // 假设这里有一段异步登录逻辑    const success = await loginApi();        if (success) &#123;      // 逻辑完成后跳转      navigate(&#x27;/dashboard&#x27;);    &#125;  &#125;;  return &lt;button onClick=&#123;handleLogin&#125;&gt;Login&lt;/button&gt;;&#125;
-
-总结
-
-
-使用场景
-推荐实现方式
-
-
-
-普通的文字链接
-&lt;Link to=&quot;...&quot;&gt;
-
-
-需要 UI 框架样式 (如 MUI)
-&lt;MuiLink component=&#123;RouterLink&#125; to=&quot;...&quot; /&gt;
-
-
-逻辑处理（如提交表单）后跳转
-const navigate = useNavigate(); navigate(...)
-
-
-跳转到外部网站（非本应用页面）
-&lt;a href=&quot;...&quot;&gt;
-
-
-通过合理使用这些工具，可以确保 React 应用在提供丝滑交互的同时，维持应用状态的连续性
-]]></content>
-      <categories>
-        <category>前端</category>
-      </categories>
-      <tags>
-        <tag>react</tag>
-        <tag>react-router</tag>
       </tags>
   </entry>
   <entry>
@@ -3399,6 +3347,116 @@ JS: The difference between “undefined”, “null” and “void 0”
       <tags>
         <tag>typeScript</tag>
       </tags>
+  </entry>
+  <entry>
+    <title>React 路由跳转：从 a 标签到编程式导航</title>
+    <url>/2025/12/21/front-end/react-router-link-vs-anchor/</url>
+    <content><![CDATA[React 路由跳转：从 a 标签到编程式导航在 React 应用开发中，正确处理页面跳转是确保应用性能和用户体验的关键。本文将对比传统的 &lt;a&gt; 标签与 React Router 提供的导航方式。
+1. 为什么不推荐使用  标签？标准的 &lt;a&gt; 标签通过 href 属性进行跳转时，会触发浏览器的全页刷新。
+
+状态丢失：应用内存中的所有 State（如登录信息、表单输入）都会被重置。
+加载冗余：浏览器会重新请求所有资源（JS, CSS），失去了单页应用（SPA）的性能优势。
+
+2. 声明式导航：Link 组件对于普通的导航链接，应当使用 react-router-dom 提供的 &lt;Link&gt; 组件。它通过拦截点击事件并使用 History API 来更新 URL，从而实现无刷新跳转。
+import &#123; Link &#125; from &#x27;react-router-dom&#x27;;// 基础用法&lt;Link to=&quot;/reset-password&quot;&gt;Forgot password?&lt;/Link&gt;
+
+结合 MUI (Material UI) 使用： 为了保持 MUI 的样式，可以通过 component 属性进行组合：
+import &#123; Link as RouterLink &#125; from &#x27;react-router-dom&#x27;;import &#123; Link &#125; from &#x27;@mui/material&#x27;;&lt;Link component=&#123;RouterLink&#125; to=&quot;/reset-password&quot;&gt;  Forgot password?&lt;/Link&gt;
+
+3. 编程式导航：useNavigate在某些场景下，我们需要在执行完特定逻辑（如：表单提交、权限验证）后再进行跳转，这时就需要使用 useNavigate 钩子。
+import &#123; useNavigate &#125; from &#x27;react-router-dom&#x27;;function LoginPage() &#123;  const navigate = useNavigate();  const handleLogin = async () =&gt; &#123;    // 假设这里有一段异步登录逻辑    const success = await loginApi();        if (success) &#123;      // 逻辑完成后跳转      navigate(&#x27;/dashboard&#x27;);    &#125;  &#125;;  return &lt;button onClick=&#123;handleLogin&#125;&gt;Login&lt;/button&gt;;&#125;
+
+总结
+
+
+使用场景
+推荐实现方式
+
+
+
+普通的文字链接
+&lt;Link to=&quot;...&quot;&gt;
+
+
+需要 UI 框架样式 (如 MUI)
+&lt;MuiLink component=&#123;RouterLink&#125; to=&quot;...&quot; /&gt;
+
+
+逻辑处理（如提交表单）后跳转
+const navigate = useNavigate(); navigate(...)
+
+
+跳转到外部网站（非本应用页面）
+&lt;a href=&quot;...&quot;&gt;
+
+
+通过合理使用这些工具，可以确保 React 应用在提供丝滑交互的同时，维持应用状态的连续性
+]]></content>
+      <categories>
+        <category>前端</category>
+      </categories>
+      <tags>
+        <tag>react</tag>
+        <tag>react-router</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>2022年度总结</title>
+    <url>/2021/12/31/summary/2022/</url>
+    <content><![CDATA[2022年度总结2022年真的是一个让人难以忘怀的年份，尤其在先后经历了上海封城、老丈人去世、领证结婚。
+疫情还记得2020年疫情刚开始的时候，那时侯自己一个人开车回上海，路上的车辆非常少，开车的感觉真的可以说非常爽，完全可以闭着眼开车，反正看不到车，即使进了上海市区。那个时候单纯的想，少则三个月，多则半年，疫情就会自然而然的过去，到时候我们该吃吃该喝喝。虽然这个判断翻车了，但是2021年也是对国内疫情还是比较乐观。但是2022年的上海封城打破了我所有的幻想。我从来没想过上海居然玩砸了“动态清理”，从华亭宾馆开始，上海的疫情持续不断，感染人数死活都下不去。
+3月份我刚搬到南翔就被封控了，但是我刚开始还好，虽然什么吃的都没有，但是只要封控时间到了就能出去买点东西。但遗憾的是，从4月份开始，上海开始静默了，我足足封在家里差不多两个月。我本来是不反对封城的，但是上海市政府真的很让人失望，疫情两年了，市政府似乎没有做好任何相关封城的预案。而且总感觉可能涉及到二十大的高层安排，市政府决策层应该是存在分歧的，并且和医疗系统的人也存在一定的隔阂。由于上层的问题，基层机构出现各种乱七八糟的事儿那也能理解了。
+在经过了白纸运动之后，我们的防疫政策从一个极端走向另外一个极端。我们彻底放开了，让80%以上的人感染了一遍。我不是反对放开，但是我比较反对如此毫无征兆的放开，没有准备好各种的退烧药，没有准备好口罩。
+技术今年继续做一个web2.5的项目，就是web2.0 + 区块链，不能算得上正宗的web3.0。其核心就是将部分原来放在数据库的数据放在区块链里。所以我们一般自称为web2.5。
+目前部门想全力押宝·web3·，希望能和审计部门能够做好技术服务，所以未来对区块链的研究大概率是会集中中DeFi(去中心化金融)。对我来说，金融是一个毫无头绪的东西，之前并没有接触过，没有一个良好的业务场景可以让我研究，导致对我来说DeFi可能只是一个比较空泛的名词。
+过去的一年，对以太坊还是比较浅显的，同时将也做了一些简单的demo。总的来说，也算简单的入门学了点皮毛，但是对智能合约的开发还是基本上一窍不通的。希望接下来的一年可以深入研究智能合约，可以独立开发智能合约并部署到一个测试网络。solana也会是一个比较重要的关注方向，但是考虑到solana的东家出点事儿，可能不太会重心在这个方面，不过rust语言还是会尽量深挖一下，这是一个很有挑战性的方向
+今年应该很少写angular了，更多开始写react。从我个人的角度来说，jsx和react hook对写一些组件来说确实是一把利器，但是对于如何做好一个完整的、强大的前端web应用来说，react的生态是不足的，太碎裂了，导致在接手不同的项目的时候总是能看到不同的react写法和工程组织形式。最近在react-mobile-picker做一个重构。一个方面是想改成通用的monorepo的组织形式，另外一个方面是需要升级核心依赖并使用typescript重写。目前这个工作还在努力中。 angular方面更多的专注于ngx-dom-confetti, 目前仅仅是对dom-confetti的angular封装，将来的计划是参考ripple的代码设计，将来可以好好的重构这个项目。hoteler-web是我一直会维护的angular的项目。
+今天在google domains买了个域名，然后尝试使用k3s的ingress部署了[https://hoteler.damingerdai.com/]。感觉使用k3s部署一些简单的应用基本上问题不大了。[hoteler](https://github.com/damingerdai/hoteler)已经是一个很稳定的demo，大概率是不会进行大规模的重构了。所以目前只有一个很简单的想法那就是使用spring cloud进行重写，这个是不太能自己部署到线上环境了，毕竟服务器资源就那么点，跑不起那么多的资源。
+针对golang的话，我目前私下的在做一个关于健康的demo，目前还在开发中，前端使用react，后端使用golang。目前希望在技术上的突破是使用loki做日志管理，Jaeger用于链路追踪，这是1.0的计划。2.0的话（如果有时间的话），希望可以加入区块链的一些元素，至少能做成个·web2.5·。
+今年其实还是探索了很多的技术。比如minio, harbor, drone, gogs和gitea。
+个人生活今天对我最大的事儿就是结婚了，没有比举办婚礼更重要的事儿了。本来由于收到上半年疫情的影响，原来不指望今年结婚的。本来定的日子是明年的正月办酒席，但是丈母娘觉得今年的夏天那么热，冬天一定很会冷，希望我们今年就是把事儿办了。所以婚期提前到11月份举行，本来日子选的好好的，也没啥好纠结的，毕竟妹子是自己谈的。但是明天和意外你永远都不知道哪个先来，我老丈人在婚礼的前两天去世了。在婚礼前的几个礼拜，我老丈人生病了，是便秘导致的肠梗阻。在医院治疗了一段时间本来已经治好了，但是不知道是医院的水平问题还是我老丈人本身的问题，在治疗过程中可能没有控制好糖尿病导致肺部感染， 在icu躺了几天之后终究将抢救无效去世，年仅50岁。在殡仪馆里，我看到同批火化的人中就属我老丈人最年轻。有的时间真的感觉世事无常，国庆节回去的时候，老丈人还好好的，结果才过去一个月不到，人就没了。
+展望未来对2023年这个经济判断是真的不太好说，谁也不知道明年会怎么想，我也不敢瞎说，我只能我大概率会重点关注·DeFi·。然后希望能够保住就业，保住现金流。
+]]></content>
+  </entry>
+  <entry>
+    <title>2023年度总结</title>
+    <url>/2024/01/06/summary/2023/</url>
+    <content><![CDATA[2023年度总结2023年就这样子莫名其妙的过了，又是稀里糊涂的一年。这一年，和最爱的人去了一趟西藏，圆了她心心念念的梦想；这一年，坐了30多小时的火车，跨越千里去见证一段美好的爱情；这一年，参加了加入PWC以来第二次的线下年会，疫情总算是过去了。
+美好的西藏其实是先从上海到成都出发，在成都带了两天，陪她那只叫做花花的大熊猫。 其实19年时候我去过成都大熊貓繁育研究基地，那个时候还没有花花，也没有那么多的游客，当然也有可能我去的是淡季，不过总算是满足她的心愿了。吃了当地的特色，三大炮，鸡豆花，兔腿，麻婆豆腐，其实那个陈麻婆的那个夫妻肺片还是很有特色的，不辣，有点甜，和紫燕百味鸡的那个压根就不一样的。
+我们是报了一个旅行团，四个人，一个司机。除了我们之外，还有一个山东小哥，一个四川小伙。山东小哥是真的很社牛，和什么人都能聊起来，喜欢旅游，朋友圈三天两头出去玩，晒各地的美景。四川小伙是拿到美国一家博士的offer了，想在出国前能够好好放松一下。四个人一个司机，就这样子从成都沿着318国道出发了。
+去了很多地方，但是我没记住，因为这不是我热爱的，吃了很多美食，我记住了它们的味道，永远不会忘记。
+到了拉萨，我们去看了小昭寺，布达拉宫。吃了当地牦牛肉，喝了当地的牦牛奶做的奶茶。真的是美滋滋的日子啊。
+
+
+
+
+
+
+PWC线下年会我是19年加入PWC的。PWC的年会其实是财年的意思，所以通常是5月份办年会。20年收到疫情的影响，此后的年会都是线上举行的，虽然有元宇宙的等加持，但是对我来而已其实并没有参与感的。收到疫情的影响，很多同事已经没有来公司面对面办公了，曾经的团队早就各奔东西，甚至都不在一个部门的了。
+终于，口罩没了，在加入PWC的第四年中，迎来的第二次线下年会。酒店更高级了，吃的很好，食物也精致，但是呢，我还是感觉19年那次年会吃的更惬意点。
+
+嘉峪关之行嘉峪关之行单纯的是因为大学同学结婚，便选择坐了30多小时的火车，先去西安和好友会和，再去嘉峪关。嘉峪关风景不错，可惜很难再有机会去了。
+
+其他我们还去来了迪士尼
+
+参加她的大学同学的婚礼
+
+最后Time files over us, but leaves its shadow behind.
+]]></content>
+  </entry>
+  <entry>
+    <title>2024年度总结</title>
+    <url>/2025/01/13/summary/2024/</url>
+    <content><![CDATA[2024年度总结对我来说，2024年是一个特别有意义的一年。8月24号，我美丽又可爱的宝宝出生了，体验到了初为人父的喜悦；10月7号，国庆节刚过，公司人事就开邮件通知我我的岗位被取消了。
+初为人父的喜悦孩子的出生时间其实挺意外的。由于老婆在9月初有一场很重要的考试，所以不能耽搁，所以原来计划在20号去医院打催产素的，结果因为报告晚了一天，然后就被通知不用打催产素，已经开始见红了。不过开宫口的速度很慢，过两天还是上催产素了。我记得那个时候我在家里呆着，医院我有丈母娘陪着，反正又不可能那么急着生出来，我就回家先好好休息，打算第二天过去。结果第二天我丈母娘就通知我让我赶紧过去签字给我老婆打催产素。一波三折，到最后这个催产素还是打上去了。在6号待产室，晚上6点06分，7斤2两，我可爱的儿子就这样子平平安安的出生了。说实话，我并没有在第一时间听到孩子的哭声，相反这个小家伙睡的死死的。我伸过去看看了他，第一感觉他好丑啊，头型怪怪的，有点拉长的样子。听医生说，刚出生的小宝宝通常产道的挤压，出来的时候头多多少少会有点拉长的样子，等长大点就好了。
+孩子的出生，对我来说是一个特殊的人生里程碑，从这一刻开始，我不仅仅是一个普通的牛马，更是一个上有老下有小的天选牛马。就这样一下子，感觉身上的责任明显重了很多。算了一下孩子的奶粉钱，尿不湿的钱，将来休学的钱，以后娶老婆的钱和彩礼，还有供养老婆大人吃喝玩乐的钱。处处都是钱，处处都是压力。我也不知道将来孩子会活成什么样子，但是我不奢望他能出人头地，只希望平平安安的长大；不期待他将来学业有成，事业非凡，只希望他能过的自在安心。
+裁员其实裁员是有点风声的，但是一直都是狼来的状态。在国庆节，部门领导就私下的就透露过每个leader都需要上交一份裁员名单，更上级的领导会根据这份名单裁员。对于我这种干活儿的小喽啰，大概率是可以保住饭碗的，毕竟我还是比较能干活儿的，最近做的项目也是比较有钱的其实。
+但是非常尴尬的是，确实是裁员了，但是不是上海发起的裁员，是美国发起的裁员。美国最高层决定全球裁员好几千人，预计涉及美国，墨西哥，印度和上海几个地方的office。
+这次裁员主要是我们P &amp; T部门，其他部门似乎还好好的。P &amp; T由Labs和Digital两个小部门，我们labs这边十分平静的接受了这次裁员，大家虽然都不太能接受，但是普遍选择认命，大家该吃吃该喝喝，好聚好散。但是隔壁部门是有人闹了下，但是很快就没下文了。后来我听说出头闹事的人第一个找到工作之后就不出头了，结果也就没人闹事了。
+找工作找工作挺难的，基本上都是外包。没做面试的记录，就随便回忆一下吧。面试PayPal外包, 二面和三面一起面的，挂了，感觉二面和三面都不是很好。面试VOA2(一家不错的法资小公司)，因为英语和岗位不合适挂。面试迪士尼外包，一面挂了，搞笑的是又一家外包来邀请我去面试，主要是迪士尼的技术栈是Angular+Graphql，比较小众，但是我都用过，我不太想去，但是对方劝了我好几次，最后还是在二面挂了（面试三次，挂了两次，挺好玩的经历）。面试花旗外包，二面挂了，其实本来是挺有机会的，但是二面就27分钟，还算上我问的问题，只能被挂了。面试华钦（华钦是外包公司，但是这个岗位不是外包），我明明面试的是前端，面试官是后端的，道不同。面试摩根士丹利外包，二面过了，感觉比较水，相对好近。
+摩根士丹利进入摩根士丹利之后其实有段时间是不太适应的，习惯了普华永道这种混合办公和不定时工作制，不太能接受摩根士丹利这种965的风格，不过还好，两周就适应了，发了工资就更加适应，没有必要和钱过不去。摩根士丹利里面什么情况我不方便多说，但是根据工作安排来看，坚持到2026年底问题不大，以后就再说吧。
+总结如果没有裁员这回事儿，那么2024年对我还是一个挺不错的年份。涨点工资（普华永道每年7月调薪），有个儿子，本来就可以这样子过去了。可惜没有如果，现在在摩根做外包也能接受，毕竟正式员工对我们算得上非常nice了。希望2025年可以平平安安，保住工作，少点个人消费，多点留给家人。技术也没有什么大的想法，保住工作就行，苟活到经济能够真的复苏吧。
+]]></content>
   </entry>
   <entry>
     <title>无 Docker Desktop + Colima + Docker Compose v2 标准化方案</title>
@@ -3556,6 +3614,48 @@ docker compose up
       </tags>
   </entry>
   <entry>
+    <title>2025年度总结</title>
+    <url>/2026/02/24/summary/2025/</url>
+    <content><![CDATA[2025年度总结对我来说，2025年其实又是一个特别有意义的一年。3月初陪老婆去了一次她心心念念的日本，11月的最后一天，在中介第二次带看的情况，匆匆忙忙的买下上海一套二手房，圆了老婆又一个心愿。
+日本之行日本原计划是24年底就去的，但是因为失业，只关心找工作就放弃了。我本身去日本的兴趣不大，但是老婆非常想去就很仓促的时间定下去日本。我们去的是大阪，大概还有一个月的时候就是大阪世博会了，3月份初去还是还好，要是晚了估计人就太多了。
+大阪
+
+
+
+
+在大阪玩的很开心，感觉大阪是一个很国际化的大都市，不少西方和东南亚的面孔。就算看上去东亚面孔，也有很大的可能是中国人。我真的在大阪的地铁里听两个中国人可能是仗着日本人听不懂中国话说着非常非常虎狼的词儿。
+
+
+在大阪住的酒店有个温泉，可以免费去泡澡，没有国内那种搓澡等服务，就是纯粹的泡澡。 水很温和，不是十分烫人，让人感觉到十分舒服，感觉真的可以吸取洗去一声的疲惫。看了酒店的说明，估计这个温泉真的是从山里拉来的真的地下水，比国内所谓温泉但是就是自己烧开水强多了。
+
+
+在大阪，环球影城应该算得上必打卡点了，加上有一个马里奥馆，还是很值得去的。个人比较推荐的是水世界的表演，真的是非常的精彩，特技效果很好，有时间还是很推荐去看看的。
+宇治
+
+
+
+
+老婆是抹茶的超级粉丝，想去宇治。虽然我对此不是很感兴趣，更想去奈良。可惜行程有限，奈良和宇治只能二选一，所以最后是花了一天的时间去宇治。宇治是一个很不错的小城，但是去宇治的电车就不如大阪友好了。大阪的轨道交通都是日，中，英，韩四种语言，而去宇治的电车就日英两种选择了。
+城市不大，但是风景很不错，可能是淡季，游客不算多，但是还好。抹茶嘛，毫无兴趣，不做评价。
+买房老婆买房的想法其实很久了，24年就开始在网上看房了。不知道为什么，25年下半年就特别积极，我本来想着要不26、27年买房吧，要是房价涨了就算自己倒霉。我老婆的意思就先看看，可以考虑一下。可能是被当时租住的小区9月初卖了一套275万刺激，她觉得差不多了，想线下先看看，然后当月底约了一次中介去看过一次房。本来想着下次看房就要26年了，但是不知道老婆是怎么想的，想再看看，然后11月30号，我也没啥事儿，就一起去看看房子。我们这次看了四套房子，其中第四套有点大，价格超过预算，只是中介带我们去看看90平的房子大概是什么布局，估计他没想法当天他就成了一单。
+其实第一套和第二套我不是很满意，第一套价格低点，但是维护很差，重新装修需要花费很大的精力；第二套价格贵点，地段稍微好点，层楼好点，但装修也很一般，大概率还是重新装修。第三套的装修很好，17年的装修到现在都不过时，整体的设计很好的考虑到家里有小宝宝的情况，边边角角都做了圆角设计，材料可以看得出很明显是非常不错的，没有使用比较次的材料，保养也很好，听中介说房东是拿来自住的，没出租过。可能唯一的缺点就是在5楼，爬楼梯有点困难。
+11月30号，上午看房，下午带我妈妈和小宝宝也看了下，宝宝好像挺喜欢的，东看看西看看，应该也看上了吧。然后就宝山链家的中心就和房东谈判了，经过中介的谈判，我们最后还是拿下了这套房。挺快的，也很幸运，就这个装修，其实有不少人在抢，听中介说，上次就有人看上了，可惜约时间的时候不是房东没时间就是购房人没时间，我们去看房的时候，其实还有一个小姐姐也去看了，好像也有兴趣，可惜被我们抢先了。
+很开心能够在上海这个繁华的都市能够拥有一套自己的房子，感谢我老婆，没有她，我大概率不会留在上海，感谢我的孩子，没有他，我压根就没有留下的动力。
+技术摩根士丹利的工作没有可以值得说道的，没有太大的价值，但是我也学到很多东西，我第一次接触到了gitops，现在也在私下的学习这套概念。
+利用春节假期，尝试部署了一套自己的部署体系（kite,prometheus&#x2F;grafana, zot registry），尝试使用helm部署项目，感觉还不错。
+
+
+
+2026 · 向上生长2025 是沉淀与思考的一年。有探索，也有试错；有不确定，也有新的方向。
+2026，希望自己——
+在技术上，更专注本质。少一些浮躁，多一些深度；少一些追逐热点，多一些长期主义。
+在工作上，更从容坚定。把复杂问题拆解清楚，把系统设计得更优雅；让每一行代码，都对得起时间。
+在生活里，更有温度。给家人更多陪伴，给自己更多耐心，在快节奏里守住节奏。
+愿 2026，不是简单的“更忙”，而是“更好”。
+持续学习，持续创造，持续成为更清醒的自己。
+]]></content>
+  </entry>
+  <entry>
     <title>在k3s中配置私有镜像仓库</title>
     <url>/2025/03/06/software/connect-to-private-docker-registry-in-k3s/</url>
     <content><![CDATA[前言本文的目的是实现在k3s中可以访问使用docker部署registry。
@@ -3599,6 +3699,501 @@ Private Registry Configuration
       <tags>
         <tag>k3s</tag>
         <tag>docker registry</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>在内网 Kubernetes 集群上使用 Helm 安装 Rancher 并支持域名访问</title>
+    <url>/2025/08/17/software/deploying-rancher-via-helm-in-rrivate-kubernetes-with-custom-domain-configuration/</url>
+    <content><![CDATA[前言本指南将帮助您在 192.168.31.222 的内网服务器上，使用 Helm 安装 Rancher，并通过域名 rancher.damingerdaiinternal.com 访问。  
+1. 前提条件✅ 已部署 Kubernetes 集群（单节点或多节点均可）✅ 已安装 kubectl 和 Helm 3✅ 已配置 DNS 或 Hosts 解析（确保 rancher.damingerdaiinternal.com 指向 192.168.31.222）✅ 服务器开放 80 和 443 端口  
+2. 安装 cert-manager（用于证书管理）Rancher 依赖 cert-manager 管理 TLS 证书。
+2.1 安装 cert-manager CRDkubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.11.0/cert-manager.crds.yaml
+
+
+2.2 添加 Helm 仓库并安装 cert-managerhelm repo add jetstack https://charts.jetstack.iohelm repo updatehelm install cert-manager jetstack/cert-manager \  --namespace cert-manager \  --create-namespace \  --version v1.11.0
+
+2.3 验证 cert-manager 是否运行kubectl -n cert-manager get pods预期输出：NAME                                       READY   STATUS    RESTARTS   AGEcert-manager-7dd5554b4-abc12               1/1     Running   0          1mcert-manager-cainjector-64dc9f6bff-xyz45   1/1     Running   0          1mcert-manager-webhook-5f4d8b7b8d-pqr78      1/1     Running   0          1m
+
+3. 生成自签名证书（适用于内网）由于是内网环境，我们使用自签名证书。
+3.1 生成 CA 根证书openssl req -x509 -newkey rsa:4096 -sha256 -days 3650 -nodes \  -keyout ca.key -out ca.crt -subj &quot;/CN=damingerdaiinternal.com CA&quot;
+
+3.2 生成服务器证书openssl req -newkey rsa:4096 -sha256 -nodes \  -keyout tls.key -out tls.csr -subj &quot;/CN=rancher.damingerdaiinternal.com&quot;
+
+
+3.3 使用 CA 签名服务器证书openssl x509 -req -sha256 -days 3650 \  -in tls.csr -CA ca.crt -CAkey ca.key -CAcreateserial \  -out tls.crt -extfile &lt;(echo &quot;subjectAltName=DNS:rancher.damingerdaiinternal.com&quot;)
+
+4. 安装 Rancher4.1 创建命名空间kubectl create namespace cattle-system
+
+4.2 创建 Kubernetes Secret 存储证书kubectl -n cattle-system create secret tls tls-rancher-ingress \  --cert=tls.crt --key=tls.keykubectl -n cattle-system create secret generic tls-ca \  --from-file=ca.crt
+
+4.3 添加 Rancher Helm 仓库helm repo add rancher-stable https://releases.rancher.com/server-charts/stablehelm repo update
+
+4.4 使用 Helm 安装 Rancherhelm install rancher rancher-stable/rancher \  --namespace cattle-system \  --set hostname=rancher.damingerdaiinternal.com \  --set bootstrapPassword=admin \  --set ingress.tls.source=secret \  --set privateCA=true \  --set replicas=1
+
+输出：
+NAME: rancherLAST DEPLOYED: Sun Aug 17 14:37:32 2025NAMESPACE: cattle-systemSTATUS: deployedREVISION: 1TEST SUITE: NoneNOTES:Rancher Server has been installed.NOTE: Rancher may take several minutes to fully initialize. Please standby while Certificates are being issued, Containers are started and the Ingress rule comes up.Check out our docs at https://rancher.com/docs/If you provided your own bootstrap password during installation, browse to https://rancher.damingerdaiinternal.com to get started.If this is the first time you installed Rancher, get started by running this command and clicking the URL it generates: echo https://rancher.damingerdaiinternal.com/dashboard/?setup=$(kubectl get secret --namespace cattle-system bootstrap-secret -o go-template=&#x27;&#123;&#123;.data.bootstrapPassword|base64decode&#125;&#125;&#x27;) To get just the bootstrap password on its own, run: kubectl get secret --namespace cattle-system bootstrap-secret -o go-template=&#x27;&#123;&#123;.data.bootstrapPassword|base64decode&#125;&#125;&#123;&#123; &quot;\n&quot; &#125;&#125;&#x27;
+
+5. 配置 DNS &#x2F; Hosts 解析5.1 方案 A：内网 DNS 服务器在 DNS 服务器（如 Bind、Windows DNS）中添加：
+rancher.damingerdaiinternal.com. IN A 192.168.31.222
+
+5.2 方案 B：客户端 Hosts 文件在需要访问的电脑上修改 &#x2F;etc&#x2F;hosts（Linux&#x2F;macOS）或 C:\Windows\System32\drivers\etc\hosts（Windows）：
+192.168.31.222 rancher.damingerdaiinternal.com
+
+
+6. 验证安装6.1 检查 Rancher Pod 状态kubectl -n cattle-system get pods -l app=rancher预期输出：NAME                      READY   STATUS    RESTARTS   AGErancher-5d8f6c9b8-abc12   1/1     Running   0          2m
+
+6.2 查看 Ingress 配置kubectl -n cattle-system get ingress预期输出：NAME      HOSTS                              ADDRESS        PORTSrancher   rancher.damingerdaiinternal.com    192.168.31.222 80, 443
+
+
+6.3 访问 Rancher UI在浏览器打开：
+https://rancher.damingerdaiinternal.com
+• 首次登录：用户名 admin，密码 admin  
+• 证书警告：由于是自签名证书，浏览器会提示不安全，手动信任即可  
+7. 卸载 Rancherhelm uninstall rancher -n cattle-systemkubectl delete namespace cattle-systemkubectl delete -f https://github.com/cert-manager/cert-manager/releases/download/v1.11.0/cert-manager.crds.yaml
+
+8. 常见问题Q1: 访问时提示 “证书不受信任”✅ 解决方案：• Windows：双击 ca.crt 并安装到 “受信任的根证书颁发机构”  
+• Linux&#x2F;macOS：  sudo cp ca.crt &#x2F;usr&#x2F;local&#x2F;share&#x2F;ca-certificates&#x2F;  sudo update-ca-certificates
+Q2: Rancher Pod 无法启动✅ 检查日志：kubectl -n cattle-system logs -f deployment&#x2F;rancher
+✅ 检查资源是否足够（Rancher 至少需要 2GB 内存）：kubectl describe nodes
+Q3: 外网无法访问✅ 检查防火墙：sudo ufw allow 80&#x2F;tcpsudo ufw allow 443&#x2F;tcp
+✅ 如果是云服务器，检查安全组规则  
+总结✅ 已完成：• 使用 Helm 安装 Rancher  
+• 配置自签名证书  
+• 支持域名 rancher.damingerdaiinternal.com 访问  
+• 验证 HTTPS 安全性  
+现在，您可以通过 https://rancher.damingerdaiinternal.com 访问 Rancher 管理 Kubernetes 集群！ 🎉
+]]></content>
+      <categories>
+        <category>软件</category>
+      </categories>
+      <tags>
+        <tag>Kubernetes</tag>
+        <tag>Helm</tag>
+        <tag>Rancher</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>在 Minikube 上部署 Rancher：避坑指南与实战教程</title>
+    <url>/2026/01/20/software/deploy-rancher-on-minikube-guide/</url>
+    <content><![CDATA[前言在本地环境（如 Minikube）部署 Rancher 时，最常见的两个问题是资源分配不足和证书签发卡死。本文将记录如何通过宿主机 IP（192.168.31.133）和固定 NodePort（30081）成功搭建 Rancher。
+一、 环境准备
+宿主机 IP: 192.168.31.133
+目标访问端口: 30081
+
+1. 启动 Minikube (关键参数)在 Docker 驱动下，Minikube 运行在容器内。为了让宿主机能直接访问 NodePort，必须在启动时通过 --ports 参数建立隧道映射。
+# 建议先清理旧环境minikube delete# 启动并映射 30081 端口，分配至少 8GB 内存（Rancher 较重，建议给足）minikube start --cpus 4 --memory 8192 --driver=docker --ports=30081:30081
+
+2. 安装 Helmcurl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+
+
+二、 部署 cert-manager (证书基础)Rancher 依赖 cert-manager 来处理 SSL 证书。请确保组件完全运行后再进行下一步。
+helm repo add jetstack https://charts.jetstack.iohelm repo update# 安装 CRDskubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.13.0/cert-manager.crds.yaml# 安装组件helm install cert-manager jetstack/cert-manager \  --namespace cert-manager \  --create-namespace \  --version v1.13.0
+
+三、 安装 Rancher 与 sslip.io 的秘密1. 执行安装命令helm repo add rancher-stable https://releases.rancher.com/server-charts/stablehelm repo updatehelm install rancher rancher-stable/rancher \  --namespace cattle-system \  --create-namespace \  --set hostname=rancher.192.168.31.133.sslip.io \  --set bootstrapPassword=admin \  --set service.type=NodePort
+
+2. 深度解析：为什么用 sslip.io？在命令中我们设置了 hostname=rancher.192.168.31.133.sslip.io。
+
+为什么填它？ Rancher 强制要求一个域名来生成证书和配置内部路由。sslip.io 是一个免费服务，它会自动将 192.168.31.133.sslip.io 解析到你的宿主机 IP。
+为什么实际没用到？ 虽然证书是发给这个域名的，但我们通过 NodePort 直接访问 IP 也能打开页面。不过，强烈建议保留此设置，因为后续 Rancher 纳管其他集群时，会使用这个域名生成注册 URL。
+
+四、 性能优化与网络微调 (避坑核心)1. 缩减副本数：解决启动卡死Rancher 默认启动 3 个副本，在单机 Minikube 上会造成严重的资源竞争，导致 Pod 长期处于 0/1 Ready。初始化时请务必缩减为 1 个：
+kubectl scale deploy rancher -n cattle-system --replicas=1
+
+2. 固定 NodePort 端口默认端口是随机的，我们需要手动将其固定为映射好的 30081：
+kubectl patch svc rancher -n cattle-system -p &#x27;&#123;&quot;spec&quot;:&#123;&quot;ports&quot;:[&#123;&quot;port&quot;:443,&quot;targetPort&quot;:443,&quot;nodePort&quot;:30081,&quot;name&quot;:&quot;https-internal&quot;&#125;]&#125;&#125;&#x27;
+
+五、 状态排查运行 kubectl get certificate -n cattle-system。如果 READY 为 True，说明证书签发成功。此时只需静候 2 分钟，Pod 就会变为 1/1 Ready。
+附录：Rancher 健康检查脚本为了方便大家快速定位部署问题，可以保存以下脚本 check_rancher.sh：
+#!/bin/bashecho &quot;===== 1. 检查 Cert-Manager 状态 =====&quot;kubectl get pods -n cert-managerecho -e &quot;\n===== 2. 检查证书签发状态 =====&quot;kubectl get certificate -n cattle-systemecho -e &quot;\n===== 3. 检查 Rancher Pod 运行状态 =====&quot;kubectl get pods -n cattle-system -l app=rancherecho -e &quot;\n===== 4. 检查服务端口映射 =====&quot;kubectl get svc -n cattle-system rancherecho -e &quot;\n===== 5. 获取初始登录密码 =====&quot;kubectl get secret --namespace cattle-system bootstrap-secret -o jsonpath=&#123;.data.bootstrapPassword&#125; | base64 --decode &amp;&amp; echo &quot;&quot;echo -e &quot;\n[提示] 请访问: https://192.168.31.133:30081&quot;
+
+使用方法：chmod +x check_rancher.sh &amp;&amp; ./check_rancher.sh
+
+博主结语：在 Minikube 上跑 Rancher 是一件很酷的事，但一定要给够内存并手动控制副本数。希望这篇教程能让你少走弯路！
+]]></content>
+      <categories>
+        <category>软件</category>
+      </categories>
+      <tags>
+        <tag>minikube</tag>
+        <tag>kubernetes</tag>
+        <tag>rancher</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>吃了：一次 172.18 网段冲突的完整复盘</title>
+    <url>/2026/07/07/software/docker-network-conflict-172-18-repair/</url>
+    <content><![CDATA[Docker 把我宿主机网络”吃”了：一次 172.18 网段冲突的完整复盘
+摘要：本文记录了一起由 Docker 自定义网络自动分配网段引发的宿主机网络故障。现象是宿主机无法访问内网某台服务器，报错 From 172.18.0.1 Destination Host Unreachable。最终定位到是 docker-compose 中的 pg-network 抢占了 172.18.0.0/16，并给出了不丢数据、不卸载 Docker 的最终解决方案。
+
+
+一、问题现象某台物理服务器（宿主机 A），需要访问内网另一台服务器（目标机器 B）。
+执行 ping 命令：
+ping 172.18.1.10
+
+返回结果：
+From 172.18.0.1 icmp_seq=1 Destination Host Unreachable
+
+令人困惑的点：
+
+✅ 目标机器在线（其他机器可正常访问）
+✅ 交换机、VLAN 配置近期未变更
+✅ 防火墙策略已排查，无异常
+
+更诡异的是：
+
+❌ 停止 docker.service 后问题依旧
+❌ 停止 docker.socket 后问题依旧
+
+仿佛 Docker 已经”阴魂不散”地占据了网络通道……
+
+二、排查过程（关键线索）1️⃣ 检查宿主机网卡信息执行命令：
+ip addr show
+
+发现一个可疑接口：
+5664: br-9159e3498b65: &lt;BROADCAST,MULTICAST,UP,LOWER_UP&gt;    inet 172.18.0.1/16 brd 172.18.255.255 scope global br-9159e3498b65
+
+⚠️ 注意两个关键点：
+
+172.18.0.1/16 正好覆盖了目标地址 172.18.1.10 所在的网段
+这是一个 Linux bridge，不是物理网卡
+
+2️⃣ 查看路由表验证执行命令：
+ip route
+
+存在这条路由：
+172.18.0.0/16 dev br-9159e3498b65 scope link src 172.18.0.1
+
+Linux 内核路由优先级规则：
+直连路由 &gt; 默认路由
+
+因此访问流程变成了：
+
+访问 172.18.1.10
+内核匹配到 172.18.0.0/16 直连路由
+认为目标在本地 bridge br-9159e3498b65 上
+实际 bridge 中不存在该 IP
+返回 Destination Host Unreachable
+
+3️⃣ 确认 bridge 归属执行命令：
+docker network ls
+
+输出结果：
+9159e3498b65   postgresql_pg-network   bridge    local
+
+Docker 命名规则：
+br-&lt;NETWORK_ID_PREFIX&gt;
+
+✅ 实锤确认：br-9159e3498b65 就是 Docker 为 pg-network 创建的虚拟网桥。
+
+三、根因分析（核心教训）问题出在这个 docker-compose.yaml 配置：
+networks:  pg-network:    external: false
+
+致命缺陷：
+
+❌ 没有指定 ipam 配置
+❌ 没有指定 subnet 子网段
+✅ Docker 自动从 172.17.0.0/16 起始的网段中挑选
+✅ 本次自动选中了 172.18.0.0/16
+✅ 恰好覆盖了物理网络中的 172.18.1.0/24 网段
+
+结果：Docker 的虚拟网桥”鸠占鹊巢”，宿主机访问物理网段时被错误引流到虚拟 bridge，导致网络中断。
+
+四、为什么停止 Docker 服务没用？很多人（包括当时的我）会本能地执行：
+systemctl stop docker
+
+但 Docker 的行为逻辑是：
+
+
+
+操作
+是否清理 bridge
+是否清理路由
+
+
+
+systemctl stop docker
+❌ 不会
+❌ 不会
+
+
+systemctl stop docker.socket
+❌ 不会
+❌ 不会
+
+
+docker compose down
+✅ 会
+✅ 会
+
+
+原因：
+
+docker.service 停止 ≠ 删除已创建的 bridge
+docker.socket 仍在监听
+自定义 bridge 网络默认不会自动删除
+路由表条目仍然存在，内核继续使用
+
+直到执行：
+docker compose down
+bridge 才会被清理，路由表才会恢复。
+
+五、数据安全澄清（非常重要）在整个排查过程中，我始终担心一个问题：
+
+会不会误删 PostgreSQL 数据？
+
+答案是：不会。
+
+
+
+操作
+是否影响容器数据
+说明
+
+
+
+docker compose down
+❌ 不影响
+仅停止容器，不删除 volumes
+
+
+ip link delete br-*
+❌ 不影响
+仅删除虚拟网桥
+
+
+ip route del
+❌ 不影响
+仅删除路由条目
+
+
+修改 daemon.json
+❌ 不影响
+仅修改 Docker 配置
+
+
+重启 Docker
+❌ 不影响
+容器数据保存在 volumes 中
+
+
+⚠️ 唯一危险的操作：
+rm -rf /var/lib/docker   # 千万不要执行！
+而我们从未执行它。
+✅ PostgreSQL 数据目录完好无损（如 ./pg-data）✅ 其他 volume 数据全部完好
+
+六、最终解决方案（推荐）针对这类问题，我提供两种解决方案，你可以根据实际情况选择：
+
+方案一：项目级修复（推荐用于单个项目）修改 docker-compose.yaml，为当前项目显式指定 subnet。
+✅ 修复 docker-compose.yaml修改前：
+networks:  pg-network:    external: false
+
+修改后：
+networks:  pg-network:    driver: bridge    ipam:      config:        - subnet: 192.168.211.0/24
+
+✅ 执行修复流程# 1. 停止 compose（不删数据）docker compose down# 2. 清理残留 bridge（如果还存在）sudo ip link set br-9159e3498b65 downsudo ip link delete br-9159e3498b65sudo ip route del 172.18.0.0/16# 3. 重新启动docker compose up -d
+
+
+方案二：全局禁用风险网段（生产级推荐） ⭐
+这是 Docker 官方支持的方案，专门解决”企业内网大量使用 172.16–172.31”的场景。
+
+🔧 操作步骤1. 编辑 Docker 配置文件
+sudo vim /etc/docker/daemon.json
+
+如果文件不存在，直接创建即可。
+2. 写入配置
+&#123;  &quot;default-address-pools&quot;: [    &#123; &quot;base&quot;: &quot;192.168.200.0/20&quot;, &quot;size&quot;: 24 &#125;  ]&#125;
+
+配置说明：
+
+base: 指定 Docker 自动分配网段的总池子
+size: 每个 Docker 网络分配的子网掩码
+
+实际效果：
+192.168.200.0/20  →  包含 192.168.200.0 ~ 192.168.215.255                    →  可划分为 16 个 /24 子网                    →  Docker 自动从这些子网中分配
+
+3. 重启 Docker 服务
+sudo systemctl restart docker
+
+4. 验证生效
+docker network lsdocker network inspect &lt;network_name&gt; | grep Subnet
+
+
+📊 两种方案对比
+
+
+对比维度
+方案一：项目级修复
+方案二：全局配置 ⭐
+
+
+
+适用范围
+单个项目
+所有 Docker 网络
+
+
+配置位置
+docker-compose.yaml
+&#x2F;etc&#x2F;docker&#x2F;daemon.json
+
+
+是否需要修改项目
+✅ 需要
+❌ 不需要
+
+
+一次性配置
+❌ 每个项目都要改
+✅ 全局生效
+
+
+适合场景
+已上线的项目快速修复
+新环境&#x2F;DevOps 标准化
+
+
+维护成本
+高（项目多时重复劳动）
+低（一劳永逸）
+
+
+我的建议：
+
+紧急修复 → 先用方案一
+长期治理 → 落地方案二，后续所有项目自动规避风险网段
+
+
+✅ 避坑指南：如何选择安全的 subnet❌ 绝对避免的网段
+
+
+网段
+原因
+
+
+
+172.16.0.0/12
+Docker 默认首选，企业内网重灾区
+
+
+192.168.0.0/24
+家用路由器默认，极易冲突
+
+
+192.168.1.0/24
+同左，最常用的默认网段
+
+
+10.0.0.0/8
+部分企业内部使用，需谨慎
+
+
+✅ 推荐使用的网段
+
+
+方案
+网段
+说明
+
+
+
+项目级
+10.200.0.0/24
+10.x 中不常用的子段
+
+
+项目级
+192.168.200.0/24
+避开 0、1 这些常见段
+
+
+全局配置
+192.168.200.0/20
+可划分 16 个 &#x2F;24 子网，足够使用
+
+
+全局配置
+10.233.0.0/16
+Kubernetes 常用，避开主流段
+
+
+💡 全局配置的高级用法如果企业内网同时使用了多个网段，可以这样配置：
+&#123;  &quot;default-address-pools&quot;: [    &#123; &quot;base&quot;: &quot;192.168.200.0/20&quot;, &quot;size&quot;: 24 &#125;,    &#123; &quot;base&quot;: &quot;10.233.0.0/16&quot;, &quot;size&quot;: 24 &#125;  ]&#125;
+
+Docker 会按照配置顺序依次分配，第一个池子用完后再用第二个。
+
+验证结果方案一验证# 测试网络连通性ping 172.18.1.10# 检查 Docker 网络配置docker network inspect postgresql_pg-network | grep Subnet# 检查路由表ip route | grep 172.18
+
+预期结果：
+
+✅ ping 通目标机器
+✅ subnet 变为 192.168.211.0/24
+✅ 不再存在 172.18.0.0/16 路由
+
+方案二验证# 创建一个测试网络docker network create test-net# 查看分配的 subnetdocker network inspect test-net | grep Subnet# 清理测试网络docker network rm test-net
+
+预期结果：
+
+✅ 分配的子网在 192.168.200.0/20 范围内
+✅ 不再出现 172.17.0.0/16、172.18.0.0/16 等网段
+
+
+七、最佳实践总结（经验沉淀）✅ Docker 网络配置三原则
+永远不要相信 Docker 的自动网段分配
+
+开发环境可能侥幸避开，生产环境必踩坑
+
+
+生产环境必须显式声明 subnet（项目级）或配置全局地址池
+
+不要给 Docker “自由发挥”的空间
+方案二更适合 DevOps 标准化环境
+
+
+避开 172.16.0.0&#x2F;12 和 192.168.0.0&#x2F;24 等常见冲突段
+
+这些是企业内网和 Docker 默认的”兵家必争之地”
+
+
+
+✅ 容器内访问宿主机的最佳方式❌ 不推荐：
+extra_hosts:  - &quot;host:172.18.1.10&quot;   # 硬编码 IP，换环境就挂
+
+✅ 推荐：
+extra_hosts:  - &quot;host.docker.internal:host-gateway&quot;
+
+容器内统一使用：
+host.docker.internal
+
+✅ 排查 Docker 网络问题的黄金命令# 查看网卡接口ip addr show# 查看路由表ip route# 列出 Docker 网络docker network ls# 查看网络详情docker network inspect &lt;network&gt;# 查看 bridge 详细信息bridge link# 查看 Docker 全局配置docker info | grep -A 5 &quot;Default Address Pools&quot;
+
+
+八、写在最后这次故障让我深刻意识到：
+
+Docker 的”自动化”在开发环境是便利，在生产环境是陷阱。
+
+尤其是：
+
+企业内网大量使用 172.16.0.0/12 网段
+Docker 默认也偏爱这个区间
+一旦冲突，宿主机网络直接被静默劫持，毫无预警
+
+两个层面的教训：
+
+项目层面：每个 compose 项目都要显式声明网络配置
+基础设施层面：在 daemon.json 中全局禁用风险网段，一劳永逸
+
+如果你也在用 Docker Compose 管理数据库、中间件，现在就去检查你的配置：
+# 检查当前 Docker 网络分配情况docker network ls | xargs -I &#123;&#125; docker network inspect &#123;&#125; | grep -E &quot;Subnet|Name&quot;
+
+别等到 ping 不通的时候，才想起这篇博客。
+
+📅 记录于 2026 年 7 月🔧 希望这篇文章能帮你避免一次深夜 OnCall
+]]></content>
+      <categories>
+        <category>软件</category>
+      </categories>
+      <tags>
+        <tag>Docker 网络冲突、172.18 网段、Destination Host Unreachable、docker-compose、bridge、生产环境踩坑、容器网络排障、daemon.json、default-address-pools</tag>
       </tags>
   </entry>
   <entry>
@@ -3716,80 +4311,9 @@ NXDOMAIN 错误：因为是内网域名，公共 DNS 无法解析。解决办法
       </categories>
       <tags>
         <tag>k3s</tag>
+        <tag>Kubernetes</tag>
         <tag>gitea</tag>
         <tag>helm</tag>
-        <tag>Kubernetes</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>在内网 Kubernetes 集群上使用 Helm 安装 Rancher 并支持域名访问</title>
-    <url>/2025/08/17/software/deploying-rancher-via-helm-in-rrivate-kubernetes-with-custom-domain-configuration/</url>
-    <content><![CDATA[前言本指南将帮助您在 192.168.31.222 的内网服务器上，使用 Helm 安装 Rancher，并通过域名 rancher.damingerdaiinternal.com 访问。  
-1. 前提条件✅ 已部署 Kubernetes 集群（单节点或多节点均可）✅ 已安装 kubectl 和 Helm 3✅ 已配置 DNS 或 Hosts 解析（确保 rancher.damingerdaiinternal.com 指向 192.168.31.222）✅ 服务器开放 80 和 443 端口  
-2. 安装 cert-manager（用于证书管理）Rancher 依赖 cert-manager 管理 TLS 证书。
-2.1 安装 cert-manager CRDkubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.11.0/cert-manager.crds.yaml
-
-
-2.2 添加 Helm 仓库并安装 cert-managerhelm repo add jetstack https://charts.jetstack.iohelm repo updatehelm install cert-manager jetstack/cert-manager \  --namespace cert-manager \  --create-namespace \  --version v1.11.0
-
-2.3 验证 cert-manager 是否运行kubectl -n cert-manager get pods预期输出：NAME                                       READY   STATUS    RESTARTS   AGEcert-manager-7dd5554b4-abc12               1/1     Running   0          1mcert-manager-cainjector-64dc9f6bff-xyz45   1/1     Running   0          1mcert-manager-webhook-5f4d8b7b8d-pqr78      1/1     Running   0          1m
-
-3. 生成自签名证书（适用于内网）由于是内网环境，我们使用自签名证书。
-3.1 生成 CA 根证书openssl req -x509 -newkey rsa:4096 -sha256 -days 3650 -nodes \  -keyout ca.key -out ca.crt -subj &quot;/CN=damingerdaiinternal.com CA&quot;
-
-3.2 生成服务器证书openssl req -newkey rsa:4096 -sha256 -nodes \  -keyout tls.key -out tls.csr -subj &quot;/CN=rancher.damingerdaiinternal.com&quot;
-
-
-3.3 使用 CA 签名服务器证书openssl x509 -req -sha256 -days 3650 \  -in tls.csr -CA ca.crt -CAkey ca.key -CAcreateserial \  -out tls.crt -extfile &lt;(echo &quot;subjectAltName=DNS:rancher.damingerdaiinternal.com&quot;)
-
-4. 安装 Rancher4.1 创建命名空间kubectl create namespace cattle-system
-
-4.2 创建 Kubernetes Secret 存储证书kubectl -n cattle-system create secret tls tls-rancher-ingress \  --cert=tls.crt --key=tls.keykubectl -n cattle-system create secret generic tls-ca \  --from-file=ca.crt
-
-4.3 添加 Rancher Helm 仓库helm repo add rancher-stable https://releases.rancher.com/server-charts/stablehelm repo update
-
-4.4 使用 Helm 安装 Rancherhelm install rancher rancher-stable/rancher \  --namespace cattle-system \  --set hostname=rancher.damingerdaiinternal.com \  --set bootstrapPassword=admin \  --set ingress.tls.source=secret \  --set privateCA=true \  --set replicas=1
-
-输出：
-NAME: rancherLAST DEPLOYED: Sun Aug 17 14:37:32 2025NAMESPACE: cattle-systemSTATUS: deployedREVISION: 1TEST SUITE: NoneNOTES:Rancher Server has been installed.NOTE: Rancher may take several minutes to fully initialize. Please standby while Certificates are being issued, Containers are started and the Ingress rule comes up.Check out our docs at https://rancher.com/docs/If you provided your own bootstrap password during installation, browse to https://rancher.damingerdaiinternal.com to get started.If this is the first time you installed Rancher, get started by running this command and clicking the URL it generates: echo https://rancher.damingerdaiinternal.com/dashboard/?setup=$(kubectl get secret --namespace cattle-system bootstrap-secret -o go-template=&#x27;&#123;&#123;.data.bootstrapPassword|base64decode&#125;&#125;&#x27;) To get just the bootstrap password on its own, run: kubectl get secret --namespace cattle-system bootstrap-secret -o go-template=&#x27;&#123;&#123;.data.bootstrapPassword|base64decode&#125;&#125;&#123;&#123; &quot;\n&quot; &#125;&#125;&#x27;
-
-5. 配置 DNS &#x2F; Hosts 解析5.1 方案 A：内网 DNS 服务器在 DNS 服务器（如 Bind、Windows DNS）中添加：
-rancher.damingerdaiinternal.com. IN A 192.168.31.222
-
-5.2 方案 B：客户端 Hosts 文件在需要访问的电脑上修改 &#x2F;etc&#x2F;hosts（Linux&#x2F;macOS）或 C:\Windows\System32\drivers\etc\hosts（Windows）：
-192.168.31.222 rancher.damingerdaiinternal.com
-
-
-6. 验证安装6.1 检查 Rancher Pod 状态kubectl -n cattle-system get pods -l app=rancher预期输出：NAME                      READY   STATUS    RESTARTS   AGErancher-5d8f6c9b8-abc12   1/1     Running   0          2m
-
-6.2 查看 Ingress 配置kubectl -n cattle-system get ingress预期输出：NAME      HOSTS                              ADDRESS        PORTSrancher   rancher.damingerdaiinternal.com    192.168.31.222 80, 443
-
-
-6.3 访问 Rancher UI在浏览器打开：
-https://rancher.damingerdaiinternal.com
-• 首次登录：用户名 admin，密码 admin  
-• 证书警告：由于是自签名证书，浏览器会提示不安全，手动信任即可  
-7. 卸载 Rancherhelm uninstall rancher -n cattle-systemkubectl delete namespace cattle-systemkubectl delete -f https://github.com/cert-manager/cert-manager/releases/download/v1.11.0/cert-manager.crds.yaml
-
-8. 常见问题Q1: 访问时提示 “证书不受信任”✅ 解决方案：• Windows：双击 ca.crt 并安装到 “受信任的根证书颁发机构”  
-• Linux&#x2F;macOS：  sudo cp ca.crt &#x2F;usr&#x2F;local&#x2F;share&#x2F;ca-certificates&#x2F;  sudo update-ca-certificates
-Q2: Rancher Pod 无法启动✅ 检查日志：kubectl -n cattle-system logs -f deployment&#x2F;rancher
-✅ 检查资源是否足够（Rancher 至少需要 2GB 内存）：kubectl describe nodes
-Q3: 外网无法访问✅ 检查防火墙：sudo ufw allow 80&#x2F;tcpsudo ufw allow 443&#x2F;tcp
-✅ 如果是云服务器，检查安全组规则  
-总结✅ 已完成：• 使用 Helm 安装 Rancher  
-• 配置自签名证书  
-• 支持域名 rancher.damingerdaiinternal.com 访问  
-• 验证 HTTPS 安全性  
-现在，您可以通过 https://rancher.damingerdaiinternal.com 访问 Rancher 管理 Kubernetes 集群！ 🎉
-]]></content>
-      <categories>
-        <category>软件</category>
-      </categories>
-      <tags>
-        <tag>Kubernetes</tag>
-        <tag>Helm</tag>
-        <tag>Rancher</tag>
       </tags>
   </entry>
   <entry>
@@ -3829,50 +4353,29 @@ Workspaces/├── personal/  # 存放个人项目└── company/   # 存�
       </tags>
   </entry>
   <entry>
-    <title>在 Minikube 上部署 Rancher：避坑指南与实战教程</title>
-    <url>/2026/01/20/software/deploy-rancher-on-minikube-guide/</url>
-    <content><![CDATA[前言在本地环境（如 Minikube）部署 Rancher 时，最常见的两个问题是资源分配不足和证书签发卡死。本文将记录如何通过宿主机 IP（192.168.31.133）和固定 NodePort（30081）成功搭建 Rancher。
-一、 环境准备
-宿主机 IP: 192.168.31.133
-目标访问端口: 30081
+    <title>使用中国手机号码验证mailgun账号</title>
+    <url>/2025/08/13/software/how-register-mailgun-with-china-mobile-number/</url>
+    <content><![CDATA[前言Mailgun 是一个专为开发者设计的邮件发送平台，支持通过 API 高效、稳定地发送和接收邮件。它广泛用于用户通知、营销邮件、自动化开发信等场景。每个月可免费发送10000封邮件，可以添加1000个域名，每封邮件都有跟踪日志，简单明了的管理界面。
+注册点 mailgun.com 右上角的“start for free“进去是不会给免费版选项的，只有 free trial，而 https://www.mailgun.com/pricing/ 页面则有免费 plan，常规注册即可，无需填写信用卡.
+验证mailgun会发送邮件要求验证号码。在验证页面会要求用户提供手机号验证。但是对中国手机号码来说，可能存在收不到验证码的可能。
 
-1. 启动 Minikube (关键参数)在 Docker 驱动下，Minikube 运行在容器内。为了让宿主机能直接访问 NodePort，必须在启动时通过 --ports 参数建立隧道映射。
-# 建议先清理旧环境minikube delete# 启动并映射 30081 端口，分配至少 8GB 内存（Rancher 较重，建议给足）minikube start --cpus 4 --memory 8192 --driver=docker --ports=30081:30081
+解决在mailgun后台，点击右上角的问号❓，点击“Support”按钮。提交一个工单，点击左下方“Open a ticket”的开工单按钮。在开工单页面下拉选择“Account Management”类别，然后输入问题标题和具体内容。
+这是我总结的模版：
+Subject: Unable to Verify Email Due to Excessive VerificationContent:I am unable to complete email verification because I encountered an issue after entering my mobile phone number (+86 xxxxxxxxxxx) and requesting a verification code. The system notified me that I have exceeded the allowed number of attempts, along with other unspecified reminders.
 
-2. 安装 Helmcurl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+然后大概在24小时内就能解决。(我是40分钟就解决了)。
+其他别相信咸鱼上那帮所谓提供海外手机号码验证服务的那帮垃圾。
+引用
+Mailgun账号注册、域名配置、API开通教程
+Mailgun China
+国外Mailgun邮件服务账号验证不成功怎么办
 
-
-二、 部署 cert-manager (证书基础)Rancher 依赖 cert-manager 来处理 SSL 证书。请确保组件完全运行后再进行下一步。
-helm repo add jetstack https://charts.jetstack.iohelm repo update# 安装 CRDskubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.13.0/cert-manager.crds.yaml# 安装组件helm install cert-manager jetstack/cert-manager \  --namespace cert-manager \  --create-namespace \  --version v1.13.0
-
-三、 安装 Rancher 与 sslip.io 的秘密1. 执行安装命令helm repo add rancher-stable https://releases.rancher.com/server-charts/stablehelm repo updatehelm install rancher rancher-stable/rancher \  --namespace cattle-system \  --create-namespace \  --set hostname=rancher.192.168.31.133.sslip.io \  --set bootstrapPassword=admin \  --set service.type=NodePort
-
-2. 深度解析：为什么用 sslip.io？在命令中我们设置了 hostname=rancher.192.168.31.133.sslip.io。
-
-为什么填它？ Rancher 强制要求一个域名来生成证书和配置内部路由。sslip.io 是一个免费服务，它会自动将 192.168.31.133.sslip.io 解析到你的宿主机 IP。
-为什么实际没用到？ 虽然证书是发给这个域名的，但我们通过 NodePort 直接访问 IP 也能打开页面。不过，强烈建议保留此设置，因为后续 Rancher 纳管其他集群时，会使用这个域名生成注册 URL。
-
-四、 性能优化与网络微调 (避坑核心)1. 缩减副本数：解决启动卡死Rancher 默认启动 3 个副本，在单机 Minikube 上会造成严重的资源竞争，导致 Pod 长期处于 0/1 Ready。初始化时请务必缩减为 1 个：
-kubectl scale deploy rancher -n cattle-system --replicas=1
-
-2. 固定 NodePort 端口默认端口是随机的，我们需要手动将其固定为映射好的 30081：
-kubectl patch svc rancher -n cattle-system -p &#x27;&#123;&quot;spec&quot;:&#123;&quot;ports&quot;:[&#123;&quot;port&quot;:443,&quot;targetPort&quot;:443,&quot;nodePort&quot;:30081,&quot;name&quot;:&quot;https-internal&quot;&#125;]&#125;&#125;&#x27;
-
-五、 状态排查运行 kubectl get certificate -n cattle-system。如果 READY 为 True，说明证书签发成功。此时只需静候 2 分钟，Pod 就会变为 1/1 Ready。
-附录：Rancher 健康检查脚本为了方便大家快速定位部署问题，可以保存以下脚本 check_rancher.sh：
-#!/bin/bashecho &quot;===== 1. 检查 Cert-Manager 状态 =====&quot;kubectl get pods -n cert-managerecho -e &quot;\n===== 2. 检查证书签发状态 =====&quot;kubectl get certificate -n cattle-systemecho -e &quot;\n===== 3. 检查 Rancher Pod 运行状态 =====&quot;kubectl get pods -n cattle-system -l app=rancherecho -e &quot;\n===== 4. 检查服务端口映射 =====&quot;kubectl get svc -n cattle-system rancherecho -e &quot;\n===== 5. 获取初始登录密码 =====&quot;kubectl get secret --namespace cattle-system bootstrap-secret -o jsonpath=&#123;.data.bootstrapPassword&#125; | base64 --decode &amp;&amp; echo &quot;&quot;echo -e &quot;\n[提示] 请访问: https://192.168.31.133:30081&quot;
-
-使用方法：chmod +x check_rancher.sh &amp;&amp; ./check_rancher.sh
-
-博主结语：在 Minikube 上跑 Rancher 是一件很酷的事，但一定要给够内存并手动控制副本数。希望这篇教程能让你少走弯路！
 ]]></content>
       <categories>
         <category>软件</category>
       </categories>
       <tags>
-        <tag>minikube</tag>
-        <tag>kubernetes</tag>
-        <tag>rancher</tag>
+        <tag>mailgun</tag>
       </tags>
   </entry>
   <entry>
@@ -3947,32 +4450,6 @@ Hello Gitea Actions! This is a compiled Go binary!
         <tag>git</tag>
         <tag>gitea action</tag>
         <tag>CI/CD</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>使用中国手机号码验证mailgun账号</title>
-    <url>/2025/08/13/software/how-register-mailgun-with-china-mobile-number/</url>
-    <content><![CDATA[前言Mailgun 是一个专为开发者设计的邮件发送平台，支持通过 API 高效、稳定地发送和接收邮件。它广泛用于用户通知、营销邮件、自动化开发信等场景。每个月可免费发送10000封邮件，可以添加1000个域名，每封邮件都有跟踪日志，简单明了的管理界面。
-注册点 mailgun.com 右上角的“start for free“进去是不会给免费版选项的，只有 free trial，而 https://www.mailgun.com/pricing/ 页面则有免费 plan，常规注册即可，无需填写信用卡.
-验证mailgun会发送邮件要求验证号码。在验证页面会要求用户提供手机号验证。但是对中国手机号码来说，可能存在收不到验证码的可能。
-
-解决在mailgun后台，点击右上角的问号❓，点击“Support”按钮。提交一个工单，点击左下方“Open a ticket”的开工单按钮。在开工单页面下拉选择“Account Management”类别，然后输入问题标题和具体内容。
-这是我总结的模版：
-Subject: Unable to Verify Email Due to Excessive VerificationContent:I am unable to complete email verification because I encountered an issue after entering my mobile phone number (+86 xxxxxxxxxxx) and requesting a verification code. The system notified me that I have exceeded the allowed number of attempts, along with other unspecified reminders.
-
-然后大概在24小时内就能解决。(我是40分钟就解决了)。
-其他别相信咸鱼上那帮所谓提供海外手机号码验证服务的那帮垃圾。
-引用
-Mailgun账号注册、域名配置、API开通教程
-Mailgun China
-国外Mailgun邮件服务账号验证不成功怎么办
-
-]]></content>
-      <categories>
-        <category>软件</category>
-      </categories>
-      <tags>
-        <tag>mailgun</tag>
       </tags>
   </entry>
   <entry>
@@ -4516,6 +4993,56 @@ sudo tailscale downsudo tailscale up --reset
       </tags>
   </entry>
   <entry>
+    <title>玩转 K8s 面板：轻量级 Kite 安装全记录 (K3s 篇)</title>
+    <url>/2026/01/25/software/setup-kite-with-prometheus-on-k3s/</url>
+    <content><![CDATA[前言在 Kubernetes 运维中，官方的 Dashboard 虽然功能齐全但显得有些沉重。如果你正在寻找一款轻量、现代化、且安装简单的监控面板，Kite 绝对是一个惊喜。本文将详细记录如何在 K3s 环境下安装 Kite，并配置 Ingress 域名访问以及集成 Prometheus 历史监控。
+一、 环境准备
+集群环境：K3s (自带 Traefik Ingress Controller)
+节点 IP：192.168.31.222
+目标域名：kite.damingerdaiinternal.com
+
+二、 部署 Kite 核心组件首先，我们直接使用官方提供的清单将 Kite 安装到 kube-system 命名空间下：
+kubectl apply -f https://raw.githubusercontent.com/zxh326/kite/refs/heads/main/deploy/install.yaml
+
+1. 修改服务为 NodePort (可选)为了方便最初的调试，我们可以将 Service 类型修改为 NodePort 并指定端口 32008：
+kubectl patch svc kite -n kube-system -p &#x27;&#123;&quot;spec&quot;:&#123;&quot;type&quot;:&quot;NodePort&quot;,&quot;ports&quot;:[&#123;&quot;port&quot;:8080,&quot;targetPort&quot;:8080,&quot;nodePort&quot;:32008&#125;]&#125;&#125;&#x27;
+
+2. 重置管理员密码Kite 默认通过环境变量管理账户。如果你需要自定义或重置密码，可以执行：
+kubectl set env deployment/kite KITE_ADMIN_USER=admin KITE_ADMIN_PASSWORD=your_new_password -n kube-system
+
+三、 配置 Ingress 域名访问 (HTTPS)由于 K3s 默认使用 Traefik，我们使用现代化的 ingressClassName 语法进行配置。
+1. 创建自签名证书 Secret为了支持 HTTPS，我们先为域名创建一个证书：
+openssl req -x509 -nodes -days 365 -newkey rsa:2048 \  -keyout tls.key -out tls.crt \  -subj &quot;/CN=kite.damingerdaiinternal.com&quot;kubectl create secret tls kite-tls --cert=tls.crt --key=tls.key -n kube-system
+
+2. 应用 Ingress 规则创建 kite-ingress.yaml：
+apiVersion: networking.k8s.io/v1kind: Ingressmetadata:  name: kite-ingress  namespace: kube-systemspec:  ingressClassName: traefik  tls:    - hosts: [&quot;kite.damingerdaiinternal.com&quot;]      secretName: kite-tls  rules:    - host: kite.damingerdaiinternal.com      http:        paths:          - path: /            pathType: Prefix            backend:              service:                name: kite                port:                  number: 8080
+
+应用配置：kubectl apply -f kite-ingress.yaml。随后在本地 hosts 文件中添加 192.168.31.222 kite.damingerdaiinternal.com 即可访问。
+
+四、 集成 Prometheus 开启历史监控Kite 默认只显示来自 metrics-server 的实时数据，无法看到历史趋势。我们需要接入 Prometheus。
+1. 安装 kube-prometheus-stack使用 Helm 快速部署全套监控栈：
+helm repo add prometheus-community https://prometheus-community.github.io/helm-chartshelm repo updatehelm install prometheus prometheus-community/kube-prometheus-stack --namespace monitoring --create-namespace
+
+2. 配置 Kite 连接 Prometheus找到 Prometheus 在集群内的 DNS 地址，并将其注入 Kite 的环境变量：
+# DNS地址通常为：http://[服务名].[命名空间].svc.cluster.local:9090kubectl set env deployment/kite PROMETHEUS_URL=http://prometheus-kube-prometheus-prometheus.monitoring.svc.cluster.local:9090 -n kube-system
+
+五、 总结稍等几分钟，待 Prometheus 完成指标抓取后，刷新 Kite 界面，你就会发现原先的 “Limited historical data” 提示消失了，取而代之的是精美的 CPU 和内存历史曲线图。
+Kite + K3s + Traefik + Prometheus 的组合，既保证了监控的深度，又维持了极低的资源消耗，非常适合中小规模集群或边缘计算场景。
+💡 小贴士
+如果发现 Ingress 无法解析，请检查 kubectl get ingress -n kube-system 的 ADDRESS 列。
+如果图表长时间不出数据，请确认 kube-state-metrics 是否在 monitoring 命名空间下正常运行。
+
+]]></content>
+      <categories>
+        <category>软件</category>
+      </categories>
+      <tags>
+        <tag>k3s</tag>
+        <tag>kubernetes</tag>
+        <tag>kite</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>🚀 零公网 IP 实现内网穿透：Tailscale 安装与多端互联异地访问指南</title>
     <url>//tailscale-zero-config-intranet-penetration-guide/</url>
     <content><![CDATA[🚀 零公网 IP 实现内网穿透：Tailscale 安装与多端互联异地访问指南📡 什么是 Tailscale？在日常折腾 HomeLab、NAS 或者远程办公时，我们经常需要在外网访问家里的设备。传统的方案要么需要运营商提供公网 IP（配合 DDNS），要么需要使用带有中心服务器的内网穿透工具（如 Frp、Nps），但这两种方案要么门槛高，要么受限于中心服务器的带宽。
@@ -4623,74 +5150,6 @@ sudo tailscale up --advertise-routes=192.168.31.0/24 --accept-dns=false
       </tags>
   </entry>
   <entry>
-    <title>玩转 K8s 面板：轻量级 Kite 安装全记录 (K3s 篇)</title>
-    <url>/2026/01/25/software/setup-kite-with-prometheus-on-k3s/</url>
-    <content><![CDATA[前言在 Kubernetes 运维中，官方的 Dashboard 虽然功能齐全但显得有些沉重。如果你正在寻找一款轻量、现代化、且安装简单的监控面板，Kite 绝对是一个惊喜。本文将详细记录如何在 K3s 环境下安装 Kite，并配置 Ingress 域名访问以及集成 Prometheus 历史监控。
-一、 环境准备
-集群环境：K3s (自带 Traefik Ingress Controller)
-节点 IP：192.168.31.222
-目标域名：kite.damingerdaiinternal.com
-
-二、 部署 Kite 核心组件首先，我们直接使用官方提供的清单将 Kite 安装到 kube-system 命名空间下：
-kubectl apply -f https://raw.githubusercontent.com/zxh326/kite/refs/heads/main/deploy/install.yaml
-
-1. 修改服务为 NodePort (可选)为了方便最初的调试，我们可以将 Service 类型修改为 NodePort 并指定端口 32008：
-kubectl patch svc kite -n kube-system -p &#x27;&#123;&quot;spec&quot;:&#123;&quot;type&quot;:&quot;NodePort&quot;,&quot;ports&quot;:[&#123;&quot;port&quot;:8080,&quot;targetPort&quot;:8080,&quot;nodePort&quot;:32008&#125;]&#125;&#125;&#x27;
-
-2. 重置管理员密码Kite 默认通过环境变量管理账户。如果你需要自定义或重置密码，可以执行：
-kubectl set env deployment/kite KITE_ADMIN_USER=admin KITE_ADMIN_PASSWORD=your_new_password -n kube-system
-
-三、 配置 Ingress 域名访问 (HTTPS)由于 K3s 默认使用 Traefik，我们使用现代化的 ingressClassName 语法进行配置。
-1. 创建自签名证书 Secret为了支持 HTTPS，我们先为域名创建一个证书：
-openssl req -x509 -nodes -days 365 -newkey rsa:2048 \  -keyout tls.key -out tls.crt \  -subj &quot;/CN=kite.damingerdaiinternal.com&quot;kubectl create secret tls kite-tls --cert=tls.crt --key=tls.key -n kube-system
-
-2. 应用 Ingress 规则创建 kite-ingress.yaml：
-apiVersion: networking.k8s.io/v1kind: Ingressmetadata:  name: kite-ingress  namespace: kube-systemspec:  ingressClassName: traefik  tls:    - hosts: [&quot;kite.damingerdaiinternal.com&quot;]      secretName: kite-tls  rules:    - host: kite.damingerdaiinternal.com      http:        paths:          - path: /            pathType: Prefix            backend:              service:                name: kite                port:                  number: 8080
-
-应用配置：kubectl apply -f kite-ingress.yaml。随后在本地 hosts 文件中添加 192.168.31.222 kite.damingerdaiinternal.com 即可访问。
-
-四、 集成 Prometheus 开启历史监控Kite 默认只显示来自 metrics-server 的实时数据，无法看到历史趋势。我们需要接入 Prometheus。
-1. 安装 kube-prometheus-stack使用 Helm 快速部署全套监控栈：
-helm repo add prometheus-community https://prometheus-community.github.io/helm-chartshelm repo updatehelm install prometheus prometheus-community/kube-prometheus-stack --namespace monitoring --create-namespace
-
-2. 配置 Kite 连接 Prometheus找到 Prometheus 在集群内的 DNS 地址，并将其注入 Kite 的环境变量：
-# DNS地址通常为：http://[服务名].[命名空间].svc.cluster.local:9090kubectl set env deployment/kite PROMETHEUS_URL=http://prometheus-kube-prometheus-prometheus.monitoring.svc.cluster.local:9090 -n kube-system
-
-五、 总结稍等几分钟，待 Prometheus 完成指标抓取后，刷新 Kite 界面，你就会发现原先的 “Limited historical data” 提示消失了，取而代之的是精美的 CPU 和内存历史曲线图。
-Kite + K3s + Traefik + Prometheus 的组合，既保证了监控的深度，又维持了极低的资源消耗，非常适合中小规模集群或边缘计算场景。
-💡 小贴士
-如果发现 Ingress 无法解析，请检查 kubectl get ingress -n kube-system 的 ADDRESS 列。
-如果图表长时间不出数据，请确认 kube-state-metrics 是否在 monitoring 命名空间下正常运行。
-
-]]></content>
-      <categories>
-        <category>软件</category>
-      </categories>
-      <tags>
-        <tag>k3s</tag>
-        <tag>kubernetes</tag>
-        <tag>kite</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>2022年度总结</title>
-    <url>/2021/12/31/summary/2022/</url>
-    <content><![CDATA[2022年度总结2022年真的是一个让人难以忘怀的年份，尤其在先后经历了上海封城、老丈人去世、领证结婚。
-疫情还记得2020年疫情刚开始的时候，那时侯自己一个人开车回上海，路上的车辆非常少，开车的感觉真的可以说非常爽，完全可以闭着眼开车，反正看不到车，即使进了上海市区。那个时候单纯的想，少则三个月，多则半年，疫情就会自然而然的过去，到时候我们该吃吃该喝喝。虽然这个判断翻车了，但是2021年也是对国内疫情还是比较乐观。但是2022年的上海封城打破了我所有的幻想。我从来没想过上海居然玩砸了“动态清理”，从华亭宾馆开始，上海的疫情持续不断，感染人数死活都下不去。
-3月份我刚搬到南翔就被封控了，但是我刚开始还好，虽然什么吃的都没有，但是只要封控时间到了就能出去买点东西。但遗憾的是，从4月份开始，上海开始静默了，我足足封在家里差不多两个月。我本来是不反对封城的，但是上海市政府真的很让人失望，疫情两年了，市政府似乎没有做好任何相关封城的预案。而且总感觉可能涉及到二十大的高层安排，市政府决策层应该是存在分歧的，并且和医疗系统的人也存在一定的隔阂。由于上层的问题，基层机构出现各种乱七八糟的事儿那也能理解了。
-在经过了白纸运动之后，我们的防疫政策从一个极端走向另外一个极端。我们彻底放开了，让80%以上的人感染了一遍。我不是反对放开，但是我比较反对如此毫无征兆的放开，没有准备好各种的退烧药，没有准备好口罩。
-技术今年继续做一个web2.5的项目，就是web2.0 + 区块链，不能算得上正宗的web3.0。其核心就是将部分原来放在数据库的数据放在区块链里。所以我们一般自称为web2.5。
-目前部门想全力押宝·web3·，希望能和审计部门能够做好技术服务，所以未来对区块链的研究大概率是会集中中DeFi(去中心化金融)。对我来说，金融是一个毫无头绪的东西，之前并没有接触过，没有一个良好的业务场景可以让我研究，导致对我来说DeFi可能只是一个比较空泛的名词。
-过去的一年，对以太坊还是比较浅显的，同时将也做了一些简单的demo。总的来说，也算简单的入门学了点皮毛，但是对智能合约的开发还是基本上一窍不通的。希望接下来的一年可以深入研究智能合约，可以独立开发智能合约并部署到一个测试网络。solana也会是一个比较重要的关注方向，但是考虑到solana的东家出点事儿，可能不太会重心在这个方面，不过rust语言还是会尽量深挖一下，这是一个很有挑战性的方向
-今年应该很少写angular了，更多开始写react。从我个人的角度来说，jsx和react hook对写一些组件来说确实是一把利器，但是对于如何做好一个完整的、强大的前端web应用来说，react的生态是不足的，太碎裂了，导致在接手不同的项目的时候总是能看到不同的react写法和工程组织形式。最近在react-mobile-picker做一个重构。一个方面是想改成通用的monorepo的组织形式，另外一个方面是需要升级核心依赖并使用typescript重写。目前这个工作还在努力中。 angular方面更多的专注于ngx-dom-confetti, 目前仅仅是对dom-confetti的angular封装，将来的计划是参考ripple的代码设计，将来可以好好的重构这个项目。hoteler-web是我一直会维护的angular的项目。
-今天在google domains买了个域名，然后尝试使用k3s的ingress部署了[https://hoteler.damingerdai.com/]。感觉使用k3s部署一些简单的应用基本上问题不大了。[hoteler](https://github.com/damingerdai/hoteler)已经是一个很稳定的demo，大概率是不会进行大规模的重构了。所以目前只有一个很简单的想法那就是使用spring cloud进行重写，这个是不太能自己部署到线上环境了，毕竟服务器资源就那么点，跑不起那么多的资源。
-针对golang的话，我目前私下的在做一个关于健康的demo，目前还在开发中，前端使用react，后端使用golang。目前希望在技术上的突破是使用loki做日志管理，Jaeger用于链路追踪，这是1.0的计划。2.0的话（如果有时间的话），希望可以加入区块链的一些元素，至少能做成个·web2.5·。
-今年其实还是探索了很多的技术。比如minio, harbor, drone, gogs和gitea。
-个人生活今天对我最大的事儿就是结婚了，没有比举办婚礼更重要的事儿了。本来由于收到上半年疫情的影响，原来不指望今年结婚的。本来定的日子是明年的正月办酒席，但是丈母娘觉得今年的夏天那么热，冬天一定很会冷，希望我们今年就是把事儿办了。所以婚期提前到11月份举行，本来日子选的好好的，也没啥好纠结的，毕竟妹子是自己谈的。但是明天和意外你永远都不知道哪个先来，我老丈人在婚礼的前两天去世了。在婚礼前的几个礼拜，我老丈人生病了，是便秘导致的肠梗阻。在医院治疗了一段时间本来已经治好了，但是不知道是医院的水平问题还是我老丈人本身的问题，在治疗过程中可能没有控制好糖尿病导致肺部感染， 在icu躺了几天之后终究将抢救无效去世，年仅50岁。在殡仪馆里，我看到同批火化的人中就属我老丈人最年轻。有的时间真的感觉世事无常，国庆节回去的时候，老丈人还好好的，结果才过去一个月不到，人就没了。
-展望未来对2023年这个经济判断是真的不太好说，谁也不知道明年会怎么想，我也不敢瞎说，我只能我大概率会重点关注·DeFi·。然后希望能够保住就业，保住现金流。
-]]></content>
-  </entry>
-  <entry>
     <title>内网环境 K3s 部署实战：从 Zot OCI 托管到 HTTPS 域名解析全记录</title>
     <url>/2026/03/01/software/uss-zot-push-and-pull-helm-charts/</url>
     <content><![CDATA[前言在内网环境下搭建云原生基础设施时，镜像仓库的认证、OCI 协议的适配以及 Ingress 的路由转发通常是最容易卡壳的地方。本文记录了将应用部署至 K3s 集群，并通过自定义域名实现 HTTPS 访问的全过程。
@@ -4752,51 +5211,11 @@ API 陷阱：旧版教程常用 traefik.containo.us&#x2F;v1alpha1，新版 K3s �
       <tags>
         <tag>ingress</tag>
         <tag>k3s</tag>
-        <tag>helm</tag>
         <tag>kubernetes</tag>
+        <tag>helm</tag>
         <tag>kite</tag>
         <tag>traefik</tag>
       </tags>
-  </entry>
-  <entry>
-    <title>2023年度总结</title>
-    <url>/2024/01/06/summary/2023/</url>
-    <content><![CDATA[2023年度总结2023年就这样子莫名其妙的过了，又是稀里糊涂的一年。这一年，和最爱的人去了一趟西藏，圆了她心心念念的梦想；这一年，坐了30多小时的火车，跨越千里去见证一段美好的爱情；这一年，参加了加入PWC以来第二次的线下年会，疫情总算是过去了。
-美好的西藏其实是先从上海到成都出发，在成都带了两天，陪她那只叫做花花的大熊猫。 其实19年时候我去过成都大熊貓繁育研究基地，那个时候还没有花花，也没有那么多的游客，当然也有可能我去的是淡季，不过总算是满足她的心愿了。吃了当地的特色，三大炮，鸡豆花，兔腿，麻婆豆腐，其实那个陈麻婆的那个夫妻肺片还是很有特色的，不辣，有点甜，和紫燕百味鸡的那个压根就不一样的。
-我们是报了一个旅行团，四个人，一个司机。除了我们之外，还有一个山东小哥，一个四川小伙。山东小哥是真的很社牛，和什么人都能聊起来，喜欢旅游，朋友圈三天两头出去玩，晒各地的美景。四川小伙是拿到美国一家博士的offer了，想在出国前能够好好放松一下。四个人一个司机，就这样子从成都沿着318国道出发了。
-去了很多地方，但是我没记住，因为这不是我热爱的，吃了很多美食，我记住了它们的味道，永远不会忘记。
-到了拉萨，我们去看了小昭寺，布达拉宫。吃了当地牦牛肉，喝了当地的牦牛奶做的奶茶。真的是美滋滋的日子啊。
-
-
-
-
-
-
-PWC线下年会我是19年加入PWC的。PWC的年会其实是财年的意思，所以通常是5月份办年会。20年收到疫情的影响，此后的年会都是线上举行的，虽然有元宇宙的等加持，但是对我来而已其实并没有参与感的。收到疫情的影响，很多同事已经没有来公司面对面办公了，曾经的团队早就各奔东西，甚至都不在一个部门的了。
-终于，口罩没了，在加入PWC的第四年中，迎来的第二次线下年会。酒店更高级了，吃的很好，食物也精致，但是呢，我还是感觉19年那次年会吃的更惬意点。
-
-嘉峪关之行嘉峪关之行单纯的是因为大学同学结婚，便选择坐了30多小时的火车，先去西安和好友会和，再去嘉峪关。嘉峪关风景不错，可惜很难再有机会去了。
-
-其他我们还去来了迪士尼
-
-参加她的大学同学的婚礼
-
-最后Time files over us, but leaves its shadow behind.
-]]></content>
-  </entry>
-  <entry>
-    <title>2024年度总结</title>
-    <url>/2025/01/13/summary/2024/</url>
-    <content><![CDATA[2024年度总结对我来说，2024年是一个特别有意义的一年。8月24号，我美丽又可爱的宝宝出生了，体验到了初为人父的喜悦；10月7号，国庆节刚过，公司人事就开邮件通知我我的岗位被取消了。
-初为人父的喜悦孩子的出生时间其实挺意外的。由于老婆在9月初有一场很重要的考试，所以不能耽搁，所以原来计划在20号去医院打催产素的，结果因为报告晚了一天，然后就被通知不用打催产素，已经开始见红了。不过开宫口的速度很慢，过两天还是上催产素了。我记得那个时候我在家里呆着，医院我有丈母娘陪着，反正又不可能那么急着生出来，我就回家先好好休息，打算第二天过去。结果第二天我丈母娘就通知我让我赶紧过去签字给我老婆打催产素。一波三折，到最后这个催产素还是打上去了。在6号待产室，晚上6点06分，7斤2两，我可爱的儿子就这样子平平安安的出生了。说实话，我并没有在第一时间听到孩子的哭声，相反这个小家伙睡的死死的。我伸过去看看了他，第一感觉他好丑啊，头型怪怪的，有点拉长的样子。听医生说，刚出生的小宝宝通常产道的挤压，出来的时候头多多少少会有点拉长的样子，等长大点就好了。
-孩子的出生，对我来说是一个特殊的人生里程碑，从这一刻开始，我不仅仅是一个普通的牛马，更是一个上有老下有小的天选牛马。就这样一下子，感觉身上的责任明显重了很多。算了一下孩子的奶粉钱，尿不湿的钱，将来休学的钱，以后娶老婆的钱和彩礼，还有供养老婆大人吃喝玩乐的钱。处处都是钱，处处都是压力。我也不知道将来孩子会活成什么样子，但是我不奢望他能出人头地，只希望平平安安的长大；不期待他将来学业有成，事业非凡，只希望他能过的自在安心。
-裁员其实裁员是有点风声的，但是一直都是狼来的状态。在国庆节，部门领导就私下的就透露过每个leader都需要上交一份裁员名单，更上级的领导会根据这份名单裁员。对于我这种干活儿的小喽啰，大概率是可以保住饭碗的，毕竟我还是比较能干活儿的，最近做的项目也是比较有钱的其实。
-但是非常尴尬的是，确实是裁员了，但是不是上海发起的裁员，是美国发起的裁员。美国最高层决定全球裁员好几千人，预计涉及美国，墨西哥，印度和上海几个地方的office。
-这次裁员主要是我们P &amp; T部门，其他部门似乎还好好的。P &amp; T由Labs和Digital两个小部门，我们labs这边十分平静的接受了这次裁员，大家虽然都不太能接受，但是普遍选择认命，大家该吃吃该喝喝，好聚好散。但是隔壁部门是有人闹了下，但是很快就没下文了。后来我听说出头闹事的人第一个找到工作之后就不出头了，结果也就没人闹事了。
-找工作找工作挺难的，基本上都是外包。没做面试的记录，就随便回忆一下吧。面试PayPal外包, 二面和三面一起面的，挂了，感觉二面和三面都不是很好。面试VOA2(一家不错的法资小公司)，因为英语和岗位不合适挂。面试迪士尼外包，一面挂了，搞笑的是又一家外包来邀请我去面试，主要是迪士尼的技术栈是Angular+Graphql，比较小众，但是我都用过，我不太想去，但是对方劝了我好几次，最后还是在二面挂了（面试三次，挂了两次，挺好玩的经历）。面试花旗外包，二面挂了，其实本来是挺有机会的，但是二面就27分钟，还算上我问的问题，只能被挂了。面试华钦（华钦是外包公司，但是这个岗位不是外包），我明明面试的是前端，面试官是后端的，道不同。面试摩根士丹利外包，二面过了，感觉比较水，相对好近。
-摩根士丹利进入摩根士丹利之后其实有段时间是不太适应的，习惯了普华永道这种混合办公和不定时工作制，不太能接受摩根士丹利这种965的风格，不过还好，两周就适应了，发了工资就更加适应，没有必要和钱过不去。摩根士丹利里面什么情况我不方便多说，但是根据工作安排来看，坚持到2026年底问题不大，以后就再说吧。
-总结如果没有裁员这回事儿，那么2024年对我还是一个挺不错的年份。涨点工资（普华永道每年7月调薪），有个儿子，本来就可以这样子过去了。可惜没有如果，现在在摩根做外包也能接受，毕竟正式员工对我们算得上非常nice了。希望2025年可以平平安安，保住工作，少点个人消费，多点留给家人。技术也没有什么大的想法，保住工作就行，苟活到经济能够真的复苏吧。
-]]></content>
   </entry>
   <entry>
     <title>记录一些测试币的水龙头</title>
@@ -4818,48 +5237,6 @@ polygonpolygon faucet, 支持多个测试网络，但是Goerli的ETH没拿到
         <tag>Goerli</tag>
         <tag>polygon</tag>
       </tags>
-  </entry>
-  <entry>
-    <title>2025年度总结</title>
-    <url>/2026/02/24/summary/2025/</url>
-    <content><![CDATA[2025年度总结对我来说，2025年其实又是一个特别有意义的一年。3月初陪老婆去了一次她心心念念的日本，11月的最后一天，在中介第二次带看的情况，匆匆忙忙的买下上海一套二手房，圆了老婆又一个心愿。
-日本之行日本原计划是24年底就去的，但是因为失业，只关心找工作就放弃了。我本身去日本的兴趣不大，但是老婆非常想去就很仓促的时间定下去日本。我们去的是大阪，大概还有一个月的时候就是大阪世博会了，3月份初去还是还好，要是晚了估计人就太多了。
-大阪
-
-
-
-
-在大阪玩的很开心，感觉大阪是一个很国际化的大都市，不少西方和东南亚的面孔。就算看上去东亚面孔，也有很大的可能是中国人。我真的在大阪的地铁里听两个中国人可能是仗着日本人听不懂中国话说着非常非常虎狼的词儿。
-
-
-在大阪住的酒店有个温泉，可以免费去泡澡，没有国内那种搓澡等服务，就是纯粹的泡澡。 水很温和，不是十分烫人，让人感觉到十分舒服，感觉真的可以吸取洗去一声的疲惫。看了酒店的说明，估计这个温泉真的是从山里拉来的真的地下水，比国内所谓温泉但是就是自己烧开水强多了。
-
-
-在大阪，环球影城应该算得上必打卡点了，加上有一个马里奥馆，还是很值得去的。个人比较推荐的是水世界的表演，真的是非常的精彩，特技效果很好，有时间还是很推荐去看看的。
-宇治
-
-
-
-
-老婆是抹茶的超级粉丝，想去宇治。虽然我对此不是很感兴趣，更想去奈良。可惜行程有限，奈良和宇治只能二选一，所以最后是花了一天的时间去宇治。宇治是一个很不错的小城，但是去宇治的电车就不如大阪友好了。大阪的轨道交通都是日，中，英，韩四种语言，而去宇治的电车就日英两种选择了。
-城市不大，但是风景很不错，可能是淡季，游客不算多，但是还好。抹茶嘛，毫无兴趣，不做评价。
-买房老婆买房的想法其实很久了，24年就开始在网上看房了。不知道为什么，25年下半年就特别积极，我本来想着要不26、27年买房吧，要是房价涨了就算自己倒霉。我老婆的意思就先看看，可以考虑一下。可能是被当时租住的小区9月初卖了一套275万刺激，她觉得差不多了，想线下先看看，然后当月底约了一次中介去看过一次房。本来想着下次看房就要26年了，但是不知道老婆是怎么想的，想再看看，然后11月30号，我也没啥事儿，就一起去看看房子。我们这次看了四套房子，其中第四套有点大，价格超过预算，只是中介带我们去看看90平的房子大概是什么布局，估计他没想法当天他就成了一单。
-其实第一套和第二套我不是很满意，第一套价格低点，但是维护很差，重新装修需要花费很大的精力；第二套价格贵点，地段稍微好点，层楼好点，但装修也很一般，大概率还是重新装修。第三套的装修很好，17年的装修到现在都不过时，整体的设计很好的考虑到家里有小宝宝的情况，边边角角都做了圆角设计，材料可以看得出很明显是非常不错的，没有使用比较次的材料，保养也很好，听中介说房东是拿来自住的，没出租过。可能唯一的缺点就是在5楼，爬楼梯有点困难。
-11月30号，上午看房，下午带我妈妈和小宝宝也看了下，宝宝好像挺喜欢的，东看看西看看，应该也看上了吧。然后就宝山链家的中心就和房东谈判了，经过中介的谈判，我们最后还是拿下了这套房。挺快的，也很幸运，就这个装修，其实有不少人在抢，听中介说，上次就有人看上了，可惜约时间的时候不是房东没时间就是购房人没时间，我们去看房的时候，其实还有一个小姐姐也去看了，好像也有兴趣，可惜被我们抢先了。
-很开心能够在上海这个繁华的都市能够拥有一套自己的房子，感谢我老婆，没有她，我大概率不会留在上海，感谢我的孩子，没有他，我压根就没有留下的动力。
-技术摩根士丹利的工作没有可以值得说道的，没有太大的价值，但是我也学到很多东西，我第一次接触到了gitops，现在也在私下的学习这套概念。
-利用春节假期，尝试部署了一套自己的部署体系（kite,prometheus&#x2F;grafana, zot registry），尝试使用helm部署项目，感觉还不错。
-
-
-
-2026 · 向上生长2025 是沉淀与思考的一年。有探索，也有试错；有不确定，也有新的方向。
-2026，希望自己——
-在技术上，更专注本质。少一些浮躁，多一些深度；少一些追逐热点，多一些长期主义。
-在工作上，更从容坚定。把复杂问题拆解清楚，把系统设计得更优雅；让每一行代码，都对得起时间。
-在生活里，更有温度。给家人更多陪伴，给自己更多耐心，在快节奏里守住节奏。
-愿 2026，不是简单的“更忙”，而是“更好”。
-持续学习，持续创造，持续成为更清醒的自己。
-]]></content>
   </entry>
   <entry>
     <title>drone + gogs + docker实现持续自动化部署</title>
@@ -4954,26 +5331,6 @@ Drone 教程
       </tags>
   </entry>
   <entry>
-    <title>Android Studio安装笔记</title>
-    <url>/2021/01/01/software/install/how-to-install-android-studio/</url>
-    <content><![CDATA[Android Studio安装笔记简单记录一下Android Studio安装
-下载从官网安装Android Studio,
-然后点击安装。
-Android SDK使用http://ping.chinaz.com获取dl.google.com的大陆响应时间最短的IP地址。
-以我为例：180.163.151.161
-将其写入hosts文件(C:\WINDOWS\System32\drivers\etc\hosts)
-180.163.151.161 dl.google.com
-
-参考资料在Android Studio中下载Android SDK的两种方式（Android Studio3.0、windows
-]]></content>
-      <categories>
-        <category>软件</category>
-      </categories>
-      <tags>
-        <tag>Android Studio</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>Homebrew安装笔记</title>
     <url>/2021/07/31/software/install/how-to-install-homebrew/</url>
     <content><![CDATA[Homebrew安装笔记简单记录一下Homebrew安装
@@ -5005,6 +5362,26 @@ cd &quot;$(brew --repo)/Library/Taps/homebrew/homebrew-core&quot; &amp;&amp; git
       <tags>
         <tag>mac</tag>
         <tag>homebew</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Android Studio安装笔记</title>
+    <url>/2021/01/01/software/install/how-to-install-android-studio/</url>
+    <content><![CDATA[Android Studio安装笔记简单记录一下Android Studio安装
+下载从官网安装Android Studio,
+然后点击安装。
+Android SDK使用http://ping.chinaz.com获取dl.google.com的大陆响应时间最短的IP地址。
+以我为例：180.163.151.161
+将其写入hosts文件(C:\WINDOWS\System32\drivers\etc\hosts)
+180.163.151.161 dl.google.com
+
+参考资料在Android Studio中下载Android SDK的两种方式（Android Studio3.0、windows
+]]></content>
+      <categories>
+        <category>软件</category>
+      </categories>
+      <tags>
+        <tag>Android Studio</tag>
       </tags>
   </entry>
   <entry>

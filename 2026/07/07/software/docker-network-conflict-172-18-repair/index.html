@@ -1,0 +1,944 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="dark"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1.0,viewport-fit=cover"><title>吃了：一次 172.18 网段冲突的完整复盘 | Damingerdai's Blog</title><meta name="author" content="Arthur Ming"><meta name="copyright" content="Arthur Ming"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#0d0d0d"><meta name="description" content="Docker 把我宿主机网络”吃”了：一次 172.18 网段冲突的完整复盘 摘要：本文记录了一起由 Docker 自定义网络自动分配网段引发的宿主机网络故障。现象是宿主机无法访问内网某台服务器，报错 From 172.18.0.1 Destination Host Unreachable。最终定位到是 docker-compose 中的 pg-network 抢占了 172.18.0.0&#x2F;16，">
+<meta property="og:type" content="website">
+<meta property="og:title" content="吃了：一次 172.18 网段冲突的完整复盘">
+<meta property="og:url" content="http://blog.damingerdai.com/2026/07/07/software/docker-network-conflict-172-18-repair/index.html">
+<meta property="og:site_name" content="Damingerdai&#39;s Blog">
+<meta property="og:description" content="Docker 把我宿主机网络”吃”了：一次 172.18 网段冲突的完整复盘 摘要：本文记录了一起由 Docker 自定义网络自动分配网段引发的宿主机网络故障。现象是宿主机无法访问内网某台服务器，报错 From 172.18.0.1 Destination Host Unreachable。最终定位到是 docker-compose 中的 pg-network 抢占了 172.18.0.0&#x2F;16，">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg">
+<meta property="article:published_time" content="2026-07-07T06:33:21.000Z">
+<meta property="article:modified_time" content="2026-07-07T06:43:14.120Z">
+<meta property="article:author" content="Arthur Ming">
+<meta property="article:tag" content="Docker 网络冲突、172.18 网段、Destination Host Unreachable、docker-compose、bridge、生产环境踩坑、容器网络排障、daemon.json、default-address-pools">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg"><script type="application/ld+json"></script><link rel="shortcut icon" href="/img/avatar.png"><link rel="canonical" href="http://blog.damingerdai.com/2026/07/07/software/docker-network-conflict-172-18-repair/index.html"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><link rel="stylesheet" href="/css/index.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free/css/all.min.css"><script>
+    (() => {
+      
+    const saveToLocal = {
+      set: (key, value, ttl) => {
+        if (!ttl) return
+        const expiry = Date.now() + ttl * 86400000
+        localStorage.setItem(key, JSON.stringify({ value, expiry }))
+      },
+      get: key => {
+        const itemStr = localStorage.getItem(key)
+        if (!itemStr) return undefined
+        const { value, expiry } = JSON.parse(itemStr)
+        if (Date.now() > expiry) {
+          localStorage.removeItem(key)
+          return undefined
+        }
+        return value
+      }
+    }
+
+    window.btf = {
+      saveToLocal,
+      getScript: (url, attr = {}) => new Promise((resolve, reject) => {
+        const script = document.createElement('script')
+        script.src = url
+        script.async = true
+        Object.entries(attr).forEach(([key, val]) => script.setAttribute(key, val))
+        script.onload = script.onreadystatechange = () => {
+          if (!script.readyState || /loaded|complete/.test(script.readyState)) resolve()
+        }
+        script.onerror = reject
+        document.head.appendChild(script)
+      }),
+      getCSS: (url, id) => new Promise((resolve, reject) => {
+        const link = document.createElement('link')
+        link.rel = 'stylesheet'
+        link.href = url
+        if (id) link.id = id
+        link.onload = link.onreadystatechange = () => {
+          if (!link.readyState || /loaded|complete/.test(link.readyState)) resolve()
+        }
+        link.onerror = reject
+        document.head.appendChild(link)
+      }),
+      addGlobalFn: (key, fn, name = false, parent = window) => {
+        if (!false && key.startsWith('pjax')) return
+        const globalFn = parent.globalFn || {}
+        globalFn[key] = globalFn[key] || {}
+        globalFn[key][name || Object.keys(globalFn[key]).length] = fn
+        parent.globalFn = globalFn
+      }
+    }
+  
+      
+      const activateDarkMode = () => {
+        document.documentElement.setAttribute('data-theme', 'dark')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+        }
+      }
+      const activateLightMode = () => {
+        document.documentElement.setAttribute('data-theme', 'light')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#ffffff')
+        }
+      }
+
+      btf.activateDarkMode = activateDarkMode
+      btf.activateLightMode = activateLightMode
+
+      const theme = saveToLocal.get('theme')
+    
+          const mediaQueryDark = window.matchMedia('(prefers-color-scheme: dark)')
+          const mediaQueryLight = window.matchMedia('(prefers-color-scheme: light)')
+
+          if (theme === undefined) {
+            if (mediaQueryLight.matches) activateLightMode()
+            else if (mediaQueryDark.matches) activateDarkMode()
+            else {
+              const hour = new Date().getHours()
+              const isNight = hour <= 6 || hour >= 18
+              isNight ? activateDarkMode() : activateLightMode()
+            }
+            mediaQueryDark.addEventListener('change', () => {
+              if (saveToLocal.get('theme') === undefined) {
+                e.matches ? activateDarkMode() : activateLightMode()
+              }
+            })
+          } else {
+            theme === 'light' ? activateLightMode() : activateDarkMode()
+          }
+        
+      
+      const asideStatus = saveToLocal.get('aside-status')
+      if (asideStatus !== undefined) {
+        document.documentElement.classList.toggle('hide-aside', asideStatus === 'hide')
+      }
+    
+      
+    const detectApple = () => {
+      if (/iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent)) {
+        document.documentElement.classList.add('apple')
+      }
+    }
+    detectApple()
+  
+    })()
+  </script><script>const GLOBAL_CONFIG = {
+  root: '/',
+  algolia: undefined,
+  localSearch: undefined,
+  translate: undefined,
+  highlight: {"plugin":"highlight.js","highlightCopy":true,"highlightLang":true,"highlightHeightLimit":false,"highlightFullpage":false,"highlightMacStyle":false},
+  copy: {
+    success: '复制成功',
+    error: '复制失败',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '',
+  dateSuffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: undefined,
+  lightbox: 'null',
+  Snackbar: undefined,
+  infinitegrid: {
+    js: 'https://cdn.jsdelivr.net/npm/@egjs/infinitegrid/dist/infinitegrid.min.js',
+    buttonText: '加载更多'
+  },
+  isPhotoFigcaption: false,
+  islazyloadPlugin: false,
+  isAnchor: false,
+  percent: {
+    toc: true,
+    rightside: false,
+  },
+  autoDarkmode: true
+}</script><script id="config-diff">var GLOBAL_CONFIG_SITE = {
+  title: '吃了：一次 172.18 网段冲突的完整复盘',
+  isHighlightShrink: false,
+  isToc: false,
+  pageType: 'docker 把我宿主机网络'
+}</script><link rel="stylesheet" href="/css/styles.css"><meta name="generator" content="Hexo 7.3.0"></head><body><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="avatar-img text-center"><img src="/img/avatar.png" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="site-data text-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">91</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">133</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">8</div></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归类</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><span class="site-page group"><i class="fa-fw fas fa-list"></i><span> 其他</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><li><a class="site-page child" href="/others/learning"><i class="fa-fw fas fa-graduation-cap"></i><span> 学习课程</span></a></li><li><a class="site-page child" href="/others/link/"><i class="fa-fw fas fa-link"></i><span> 链接</span></a></li><li><a class="site-page child" href="/others/interview/"><i class="fa-fw fas fa-glide"></i><span> 面试</span></a></li></ul></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于</span></a></div></div></div></div><div class="page" id="body-wrap"><header class="not-home-page" id="page-header" style="background-image: url(https://raw.githubusercontent.com/damingerdai/damingerdai-homepage/main/public/damingerdai.webp);"><nav id="nav"><span id="blog-info"><a class="nav-site-title" href="/"><span class="site-name">Damingerdai's Blog</span></a></span><div id="menus"><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归类</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><span class="site-page group"><i class="fa-fw fas fa-list"></i><span> 其他</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><li><a class="site-page child" href="/others/learning"><i class="fa-fw fas fa-graduation-cap"></i><span> 学习课程</span></a></li><li><a class="site-page child" href="/others/link/"><i class="fa-fw fas fa-link"></i><span> 链接</span></a></li><li><a class="site-page child" href="/others/interview/"><i class="fa-fw fas fa-glide"></i><span> 面试</span></a></li></ul></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于</span></a></div></div><div id="toggle-menu"><span class="site-page"><i class="fas fa-bars fa-fw"></i></span></div></div></nav><div id="page-site-info"><h1 id="site-title">吃了：一次 172.18 网段冲突的完整复盘</h1></div></header><main class="layout" id="content-inner"><div id="post"><article class="container post-content" id="article-container"><h1 id="Docker-把我宿主机网络”吃”了：一次-172-18-网段冲突的完整复盘"><a href="#Docker-把我宿主机网络”吃”了：一次-172-18-网段冲突的完整复盘" class="headerlink" title="Docker 把我宿主机网络”吃”了：一次 172.18 网段冲突的完整复盘"></a>Docker 把我宿主机网络”吃”了：一次 172.18 网段冲突的完整复盘</h1><blockquote>
+<p><strong>摘要</strong>：本文记录了一起由 Docker 自定义网络自动分配网段引发的宿主机网络故障。现象是宿主机无法访问内网某台服务器，报错 <code>From 172.18.0.1 Destination Host Unreachable</code>。最终定位到是 docker-compose 中的 <code>pg-network</code> 抢占了 <code>172.18.0.0/16</code>，并给出了不丢数据、不卸载 Docker 的最终解决方案。</p>
+</blockquote>
+<hr>
+<h2 id="一、问题现象"><a href="#一、问题现象" class="headerlink" title="一、问题现象"></a>一、问题现象</h2><p>某台物理服务器（<strong>宿主机 A</strong>），需要访问内网另一台服务器（<strong>目标机器 B</strong>）。</p>
+<p>执行 ping 命令：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">ping 172.18.1.10</span><br></pre></td></tr></table></figure>
+
+<p>返回结果：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">From 172.18.0.1 icmp_seq=1 Destination Host Unreachable</span><br></pre></td></tr></table></figure>
+
+<p><strong>令人困惑的点：</strong></p>
+<ul>
+<li>✅ 目标机器在线（其他机器可正常访问）</li>
+<li>✅ 交换机、VLAN 配置近期未变更</li>
+<li>✅ 防火墙策略已排查，无异常</li>
+</ul>
+<p><strong>更诡异的是：</strong></p>
+<ul>
+<li>❌ 停止 <code>docker.service</code> 后问题依旧</li>
+<li>❌ 停止 <code>docker.socket</code> 后问题依旧</li>
+</ul>
+<p>仿佛 Docker 已经”阴魂不散”地占据了网络通道……</p>
+<hr>
+<h2 id="二、排查过程（关键线索）"><a href="#二、排查过程（关键线索）" class="headerlink" title="二、排查过程（关键线索）"></a>二、排查过程（关键线索）</h2><h3 id="1️⃣-检查宿主机网卡信息"><a href="#1️⃣-检查宿主机网卡信息" class="headerlink" title="1️⃣ 检查宿主机网卡信息"></a>1️⃣ 检查宿主机网卡信息</h3><p>执行命令：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">ip addr show</span><br></pre></td></tr></table></figure>
+
+<p>发现一个<strong>可疑接口</strong>：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">5664: br-9159e3498b65: &lt;BROADCAST,MULTICAST,UP,LOWER_UP&gt;</span><br><span class="line">    inet 172.18.0.1/16 brd 172.18.255.255 scope global br-9159e3498b65</span><br></pre></td></tr></table></figure>
+
+<p>⚠️ <strong>注意两个关键点：</strong></p>
+<ul>
+<li><code>172.18.0.1/16</code> 正好覆盖了目标地址 <code>172.18.1.10</code> 所在的网段</li>
+<li>这是一个 <strong>Linux bridge</strong>，不是物理网卡</li>
+</ul>
+<h3 id="2️⃣-查看路由表验证"><a href="#2️⃣-查看路由表验证" class="headerlink" title="2️⃣ 查看路由表验证"></a>2️⃣ 查看路由表验证</h3><p>执行命令：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">ip route</span><br></pre></td></tr></table></figure>
+
+<p>存在这条路由：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">172.18.0.0/16 dev br-9159e3498b65 scope link src 172.18.0.1</span><br></pre></td></tr></table></figure>
+
+<p><strong>Linux 内核路由优先级规则：</strong></p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">直连路由 &gt; 默认路由</span><br></pre></td></tr></table></figure>
+
+<p>因此访问流程变成了：</p>
+<ol>
+<li>访问 <code>172.18.1.10</code></li>
+<li>内核匹配到 <code>172.18.0.0/16</code> 直连路由</li>
+<li>认为目标在本地 bridge <code>br-9159e3498b65</code> 上</li>
+<li>实际 bridge 中不存在该 IP</li>
+<li>返回 <code>Destination Host Unreachable</code></li>
+</ol>
+<h3 id="3️⃣-确认-bridge-归属"><a href="#3️⃣-确认-bridge-归属" class="headerlink" title="3️⃣ 确认 bridge 归属"></a>3️⃣ 确认 bridge 归属</h3><p>执行命令：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">docker network <span class="built_in">ls</span></span><br></pre></td></tr></table></figure>
+
+<p>输出结果：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">9159e3498b65   postgresql_pg-network   bridge    local</span><br></pre></td></tr></table></figure>
+
+<p><strong>Docker 命名规则：</strong></p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">br-&lt;NETWORK_ID_PREFIX&gt;</span><br></pre></td></tr></table></figure>
+
+<p>✅ <strong>实锤确认</strong>：<code>br-9159e3498b65</code> 就是 Docker 为 <code>pg-network</code> 创建的虚拟网桥。</p>
+<hr>
+<h2 id="三、根因分析（核心教训）"><a href="#三、根因分析（核心教训）" class="headerlink" title="三、根因分析（核心教训）"></a>三、根因分析（核心教训）</h2><p>问题出在这个 <strong>docker-compose.yaml</strong> 配置：</p>
+<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">networks:</span></span><br><span class="line">  <span class="attr">pg-network:</span></span><br><span class="line">    <span class="attr">external:</span> <span class="literal">false</span></span><br></pre></td></tr></table></figure>
+
+<p><strong>致命缺陷：</strong></p>
+<ul>
+<li>❌ 没有指定 <code>ipam</code> 配置</li>
+<li>❌ 没有指定 <code>subnet</code> 子网段</li>
+<li>✅ Docker 自动从 <code>172.17.0.0/16</code> 起始的网段中挑选</li>
+<li>✅ 本次自动选中了 <code>172.18.0.0/16</code></li>
+<li>✅ 恰好覆盖了物理网络中的 <code>172.18.1.0/24</code> 网段</li>
+</ul>
+<p><strong>结果：</strong><br>Docker 的虚拟网桥”鸠占鹊巢”，宿主机访问物理网段时被错误引流到虚拟 bridge，导致网络中断。</p>
+<hr>
+<h2 id="四、为什么停止-Docker-服务没用？"><a href="#四、为什么停止-Docker-服务没用？" class="headerlink" title="四、为什么停止 Docker 服务没用？"></a>四、为什么停止 Docker 服务没用？</h2><p>很多人（包括当时的我）会本能地执行：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">systemctl stop docker</span><br></pre></td></tr></table></figure>
+
+<p>但 Docker 的行为逻辑是：</p>
+<table>
+<thead>
+<tr>
+<th>操作</th>
+<th>是否清理 bridge</th>
+<th>是否清理路由</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>systemctl stop docker</code></td>
+<td>❌ 不会</td>
+<td>❌ 不会</td>
+</tr>
+<tr>
+<td><code>systemctl stop docker.socket</code></td>
+<td>❌ 不会</td>
+<td>❌ 不会</td>
+</tr>
+<tr>
+<td><code>docker compose down</code></td>
+<td>✅ 会</td>
+<td>✅ 会</td>
+</tr>
+</tbody></table>
+<p><strong>原因：</strong></p>
+<ul>
+<li><code>docker.service</code> 停止 ≠ 删除已创建的 bridge</li>
+<li><code>docker.socket</code> 仍在监听</li>
+<li><strong>自定义 bridge 网络默认不会自动删除</strong></li>
+<li>路由表条目仍然存在，内核继续使用</li>
+</ul>
+<p><strong>直到执行：</strong></p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">docker compose down</span><br></pre></td></tr></table></figure>
+<p>bridge 才会被清理，路由表才会恢复。</p>
+<hr>
+<h2 id="五、数据安全澄清（非常重要）"><a href="#五、数据安全澄清（非常重要）" class="headerlink" title="五、数据安全澄清（非常重要）"></a>五、数据安全澄清（非常重要）</h2><p>在整个排查过程中，我始终担心一个问题：</p>
+<blockquote>
+<p><strong>会不会误删 PostgreSQL 数据？</strong></p>
+</blockquote>
+<p><strong>答案是：不会。</strong></p>
+<table>
+<thead>
+<tr>
+<th>操作</th>
+<th>是否影响容器数据</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>docker compose down</code></td>
+<td>❌ 不影响</td>
+<td>仅停止容器，不删除 volumes</td>
+</tr>
+<tr>
+<td><code>ip link delete br-*</code></td>
+<td>❌ 不影响</td>
+<td>仅删除虚拟网桥</td>
+</tr>
+<tr>
+<td><code>ip route del</code></td>
+<td>❌ 不影响</td>
+<td>仅删除路由条目</td>
+</tr>
+<tr>
+<td>修改 <code>daemon.json</code></td>
+<td>❌ 不影响</td>
+<td>仅修改 Docker 配置</td>
+</tr>
+<tr>
+<td>重启 Docker</td>
+<td>❌ 不影响</td>
+<td>容器数据保存在 volumes 中</td>
+</tr>
+</tbody></table>
+<p><strong>⚠️ 唯一危险的操作：</strong></p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">rm</span> -rf /var/lib/docker   <span class="comment"># 千万不要执行！</span></span><br></pre></td></tr></table></figure>
+<p>而我们<strong>从未执行</strong>它。</p>
+<p>✅ PostgreSQL 数据目录完好无损（如 <code>./pg-data</code>）<br>✅ 其他 volume 数据全部完好</p>
+<hr>
+<h2 id="六、最终解决方案（推荐）"><a href="#六、最终解决方案（推荐）" class="headerlink" title="六、最终解决方案（推荐）"></a>六、最终解决方案（推荐）</h2><p>针对这类问题，我提供<strong>两种解决方案</strong>，你可以根据实际情况选择：</p>
+<hr>
+<h3 id="方案一：项目级修复（推荐用于单个项目）"><a href="#方案一：项目级修复（推荐用于单个项目）" class="headerlink" title="方案一：项目级修复（推荐用于单个项目）"></a>方案一：项目级修复（推荐用于单个项目）</h3><p>修改 <code>docker-compose.yaml</code>，为当前项目显式指定 subnet。</p>
+<h4 id="✅-修复-docker-compose-yaml"><a href="#✅-修复-docker-compose-yaml" class="headerlink" title="✅ 修复 docker-compose.yaml"></a>✅ 修复 docker-compose.yaml</h4><p><strong>修改前：</strong></p>
+<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">networks:</span></span><br><span class="line">  <span class="attr">pg-network:</span></span><br><span class="line">    <span class="attr">external:</span> <span class="literal">false</span></span><br></pre></td></tr></table></figure>
+
+<p><strong>修改后：</strong></p>
+<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">networks:</span></span><br><span class="line">  <span class="attr">pg-network:</span></span><br><span class="line">    <span class="attr">driver:</span> <span class="string">bridge</span></span><br><span class="line">    <span class="attr">ipam:</span></span><br><span class="line">      <span class="attr">config:</span></span><br><span class="line">        <span class="bullet">-</span> <span class="attr">subnet:</span> <span class="number">192.168</span><span class="number">.211</span><span class="number">.0</span><span class="string">/24</span></span><br></pre></td></tr></table></figure>
+
+<h4 id="✅-执行修复流程"><a href="#✅-执行修复流程" class="headerlink" title="✅ 执行修复流程"></a>✅ 执行修复流程</h4><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 1. 停止 compose（不删数据）</span></span><br><span class="line">docker compose down</span><br><span class="line"></span><br><span class="line"><span class="comment"># 2. 清理残留 bridge（如果还存在）</span></span><br><span class="line">sudo ip <span class="built_in">link</span> <span class="built_in">set</span> br-9159e3498b65 down</span><br><span class="line">sudo ip <span class="built_in">link</span> delete br-9159e3498b65</span><br><span class="line">sudo ip route del 172.18.0.0/16</span><br><span class="line"></span><br><span class="line"><span class="comment"># 3. 重新启动</span></span><br><span class="line">docker compose up -d</span><br></pre></td></tr></table></figure>
+
+<hr>
+<h3 id="方案二：全局禁用风险网段（生产级推荐）-⭐"><a href="#方案二：全局禁用风险网段（生产级推荐）-⭐" class="headerlink" title="方案二：全局禁用风险网段（生产级推荐） ⭐"></a>方案二：全局禁用风险网段（生产级推荐） ⭐</h3><blockquote>
+<p><strong>这是 Docker 官方支持的方案，专门解决”企业内网大量使用 172.16–172.31”的场景。</strong></p>
+</blockquote>
+<h4 id="🔧-操作步骤"><a href="#🔧-操作步骤" class="headerlink" title="🔧 操作步骤"></a>🔧 操作步骤</h4><p><strong>1. 编辑 Docker 配置文件</strong></p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">sudo vim /etc/docker/daemon.json</span><br></pre></td></tr></table></figure>
+
+<p>如果文件不存在，直接创建即可。</p>
+<p><strong>2. 写入配置</strong></p>
+<figure class="highlight json"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="punctuation">&#123;</span></span><br><span class="line">  <span class="attr">&quot;default-address-pools&quot;</span><span class="punctuation">:</span> <span class="punctuation">[</span></span><br><span class="line">    <span class="punctuation">&#123;</span> <span class="attr">&quot;base&quot;</span><span class="punctuation">:</span> <span class="string">&quot;192.168.200.0/20&quot;</span><span class="punctuation">,</span> <span class="attr">&quot;size&quot;</span><span class="punctuation">:</span> <span class="number">24</span> <span class="punctuation">&#125;</span></span><br><span class="line">  <span class="punctuation">]</span></span><br><span class="line"><span class="punctuation">&#125;</span></span><br></pre></td></tr></table></figure>
+
+<p><strong>配置说明：</strong></p>
+<ul>
+<li><code>base</code>: 指定 Docker 自动分配网段的<strong>总池子</strong></li>
+<li><code>size</code>: 每个 Docker 网络分配的子网掩码</li>
+</ul>
+<p><strong>实际效果：</strong></p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">192.168.200.0/20  →  包含 192.168.200.0 ~ 192.168.215.255</span><br><span class="line">                    →  可划分为 16 个 /24 子网</span><br><span class="line">                    →  Docker 自动从这些子网中分配</span><br></pre></td></tr></table></figure>
+
+<p><strong>3. 重启 Docker 服务</strong></p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">sudo systemctl restart docker</span><br></pre></td></tr></table></figure>
+
+<p><strong>4. 验证生效</strong></p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">docker network <span class="built_in">ls</span></span><br><span class="line">docker network inspect &lt;network_name&gt; | grep Subnet</span><br></pre></td></tr></table></figure>
+
+<hr>
+<h3 id="📊-两种方案对比"><a href="#📊-两种方案对比" class="headerlink" title="📊 两种方案对比"></a>📊 两种方案对比</h3><table>
+<thead>
+<tr>
+<th>对比维度</th>
+<th>方案一：项目级修复</th>
+<th>方案二：全局配置 ⭐</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>适用范围</strong></td>
+<td>单个项目</td>
+<td>所有 Docker 网络</td>
+</tr>
+<tr>
+<td><strong>配置位置</strong></td>
+<td>docker-compose.yaml</td>
+<td>&#x2F;etc&#x2F;docker&#x2F;daemon.json</td>
+</tr>
+<tr>
+<td><strong>是否需要修改项目</strong></td>
+<td>✅ 需要</td>
+<td>❌ 不需要</td>
+</tr>
+<tr>
+<td><strong>一次性配置</strong></td>
+<td>❌ 每个项目都要改</td>
+<td>✅ 全局生效</td>
+</tr>
+<tr>
+<td><strong>适合场景</strong></td>
+<td>已上线的项目快速修复</td>
+<td>新环境&#x2F;DevOps 标准化</td>
+</tr>
+<tr>
+<td><strong>维护成本</strong></td>
+<td>高（项目多时重复劳动）</td>
+<td>低（一劳永逸）</td>
+</tr>
+</tbody></table>
+<p><strong>我的建议：</strong></p>
+<ul>
+<li><strong>紧急修复</strong> → 先用方案一</li>
+<li><strong>长期治理</strong> → 落地方案二，后续所有项目自动规避风险网段</li>
+</ul>
+<hr>
+<h3 id="✅-避坑指南：如何选择安全的-subnet"><a href="#✅-避坑指南：如何选择安全的-subnet" class="headerlink" title="✅ 避坑指南：如何选择安全的 subnet"></a>✅ 避坑指南：如何选择安全的 subnet</h3><h4 id="❌-绝对避免的网段"><a href="#❌-绝对避免的网段" class="headerlink" title="❌ 绝对避免的网段"></a>❌ 绝对避免的网段</h4><table>
+<thead>
+<tr>
+<th>网段</th>
+<th>原因</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>172.16.0.0/12</code></td>
+<td>Docker 默认首选，企业内网重灾区</td>
+</tr>
+<tr>
+<td><code>192.168.0.0/24</code></td>
+<td>家用路由器默认，极易冲突</td>
+</tr>
+<tr>
+<td><code>192.168.1.0/24</code></td>
+<td>同左，最常用的默认网段</td>
+</tr>
+<tr>
+<td><code>10.0.0.0/8</code></td>
+<td>部分企业内部使用，需谨慎</td>
+</tr>
+</tbody></table>
+<h4 id="✅-推荐使用的网段"><a href="#✅-推荐使用的网段" class="headerlink" title="✅ 推荐使用的网段"></a>✅ 推荐使用的网段</h4><table>
+<thead>
+<tr>
+<th>方案</th>
+<th>网段</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>项目级</strong></td>
+<td><code>10.200.0.0/24</code></td>
+<td>10.x 中不常用的子段</td>
+</tr>
+<tr>
+<td><strong>项目级</strong></td>
+<td><code>192.168.200.0/24</code></td>
+<td>避开 0、1 这些常见段</td>
+</tr>
+<tr>
+<td><strong>全局配置</strong></td>
+<td><code>192.168.200.0/20</code></td>
+<td>可划分 16 个 &#x2F;24 子网，足够使用</td>
+</tr>
+<tr>
+<td><strong>全局配置</strong></td>
+<td><code>10.233.0.0/16</code></td>
+<td>Kubernetes 常用，避开主流段</td>
+</tr>
+</tbody></table>
+<h4 id="💡-全局配置的高级用法"><a href="#💡-全局配置的高级用法" class="headerlink" title="💡 全局配置的高级用法"></a>💡 全局配置的高级用法</h4><p>如果企业内网同时使用了多个网段，可以这样配置：</p>
+<figure class="highlight json"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="punctuation">&#123;</span></span><br><span class="line">  <span class="attr">&quot;default-address-pools&quot;</span><span class="punctuation">:</span> <span class="punctuation">[</span></span><br><span class="line">    <span class="punctuation">&#123;</span> <span class="attr">&quot;base&quot;</span><span class="punctuation">:</span> <span class="string">&quot;192.168.200.0/20&quot;</span><span class="punctuation">,</span> <span class="attr">&quot;size&quot;</span><span class="punctuation">:</span> <span class="number">24</span> <span class="punctuation">&#125;</span><span class="punctuation">,</span></span><br><span class="line">    <span class="punctuation">&#123;</span> <span class="attr">&quot;base&quot;</span><span class="punctuation">:</span> <span class="string">&quot;10.233.0.0/16&quot;</span><span class="punctuation">,</span> <span class="attr">&quot;size&quot;</span><span class="punctuation">:</span> <span class="number">24</span> <span class="punctuation">&#125;</span></span><br><span class="line">  <span class="punctuation">]</span></span><br><span class="line"><span class="punctuation">&#125;</span></span><br></pre></td></tr></table></figure>
+
+<p>Docker 会按照配置顺序依次分配，第一个池子用完后再用第二个。</p>
+<hr>
+<h3 id="验证结果"><a href="#验证结果" class="headerlink" title="验证结果"></a>验证结果</h3><h4 id="方案一验证"><a href="#方案一验证" class="headerlink" title="方案一验证"></a>方案一验证</h4><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 测试网络连通性</span></span><br><span class="line">ping 172.18.1.10</span><br><span class="line"></span><br><span class="line"><span class="comment"># 检查 Docker 网络配置</span></span><br><span class="line">docker network inspect postgresql_pg-network | grep Subnet</span><br><span class="line"></span><br><span class="line"><span class="comment"># 检查路由表</span></span><br><span class="line">ip route | grep 172.18</span><br></pre></td></tr></table></figure>
+
+<p><strong>预期结果：</strong></p>
+<ul>
+<li>✅ <code>ping</code> 通目标机器</li>
+<li>✅ subnet 变为 <code>192.168.211.0/24</code></li>
+<li>✅ 不再存在 <code>172.18.0.0/16</code> 路由</li>
+</ul>
+<h4 id="方案二验证"><a href="#方案二验证" class="headerlink" title="方案二验证"></a>方案二验证</h4><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 创建一个测试网络</span></span><br><span class="line">docker network create test-net</span><br><span class="line"></span><br><span class="line"><span class="comment"># 查看分配的 subnet</span></span><br><span class="line">docker network inspect test-net | grep Subnet</span><br><span class="line"></span><br><span class="line"><span class="comment"># 清理测试网络</span></span><br><span class="line">docker network <span class="built_in">rm</span> test-net</span><br></pre></td></tr></table></figure>
+
+<p><strong>预期结果：</strong></p>
+<ul>
+<li>✅ 分配的子网在 <code>192.168.200.0/20</code> 范围内</li>
+<li>✅ 不再出现 <code>172.17.0.0/16</code>、<code>172.18.0.0/16</code> 等网段</li>
+</ul>
+<hr>
+<h2 id="七、最佳实践总结（经验沉淀）"><a href="#七、最佳实践总结（经验沉淀）" class="headerlink" title="七、最佳实践总结（经验沉淀）"></a>七、最佳实践总结（经验沉淀）</h2><h3 id="✅-Docker-网络配置三原则"><a href="#✅-Docker-网络配置三原则" class="headerlink" title="✅ Docker 网络配置三原则"></a>✅ Docker 网络配置三原则</h3><ol>
+<li><p><strong>永远不要相信 Docker 的自动网段分配</strong></p>
+<ul>
+<li>开发环境可能侥幸避开，生产环境必踩坑</li>
+</ul>
+</li>
+<li><p><strong>生产环境必须显式声明 subnet（项目级）或配置全局地址池</strong></p>
+<ul>
+<li>不要给 Docker “自由发挥”的空间</li>
+<li>方案二更适合 DevOps 标准化环境</li>
+</ul>
+</li>
+<li><p><strong>避开 172.16.0.0&#x2F;12 和 192.168.0.0&#x2F;24 等常见冲突段</strong></p>
+<ul>
+<li>这些是企业内网和 Docker 默认的”兵家必争之地”</li>
+</ul>
+</li>
+</ol>
+<h3 id="✅-容器内访问宿主机的最佳方式"><a href="#✅-容器内访问宿主机的最佳方式" class="headerlink" title="✅ 容器内访问宿主机的最佳方式"></a>✅ 容器内访问宿主机的最佳方式</h3><p><strong>❌ 不推荐：</strong></p>
+<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">extra_hosts:</span></span><br><span class="line">  <span class="bullet">-</span> <span class="string">&quot;host:172.18.1.10&quot;</span>   <span class="comment"># 硬编码 IP，换环境就挂</span></span><br></pre></td></tr></table></figure>
+
+<p><strong>✅ 推荐：</strong></p>
+<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">extra_hosts:</span></span><br><span class="line">  <span class="bullet">-</span> <span class="string">&quot;host.docker.internal:host-gateway&quot;</span></span><br></pre></td></tr></table></figure>
+
+<p>容器内统一使用：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">host.docker.internal</span><br></pre></td></tr></table></figure>
+
+<h3 id="✅-排查-Docker-网络问题的黄金命令"><a href="#✅-排查-Docker-网络问题的黄金命令" class="headerlink" title="✅ 排查 Docker 网络问题的黄金命令"></a>✅ 排查 Docker 网络问题的黄金命令</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 查看网卡接口</span></span><br><span class="line">ip addr show</span><br><span class="line"></span><br><span class="line"><span class="comment"># 查看路由表</span></span><br><span class="line">ip route</span><br><span class="line"></span><br><span class="line"><span class="comment"># 列出 Docker 网络</span></span><br><span class="line">docker network <span class="built_in">ls</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 查看网络详情</span></span><br><span class="line">docker network inspect &lt;network&gt;</span><br><span class="line"></span><br><span class="line"><span class="comment"># 查看 bridge 详细信息</span></span><br><span class="line">bridge <span class="built_in">link</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 查看 Docker 全局配置</span></span><br><span class="line">docker info | grep -A 5 <span class="string">&quot;Default Address Pools&quot;</span></span><br></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="八、写在最后"><a href="#八、写在最后" class="headerlink" title="八、写在最后"></a>八、写在最后</h2><p>这次故障让我深刻意识到：</p>
+<blockquote>
+<p><strong>Docker 的”自动化”在开发环境是便利，在生产环境是陷阱。</strong></p>
+</blockquote>
+<p>尤其是：</p>
+<ul>
+<li>企业内网大量使用 <code>172.16.0.0/12</code> 网段</li>
+<li>Docker 默认也偏爱这个区间</li>
+<li>一旦冲突，宿主机网络直接被静默劫持，毫无预警</li>
+</ul>
+<p><strong>两个层面的教训：</strong></p>
+<ol>
+<li><strong>项目层面</strong>：每个 compose 项目都要显式声明网络配置</li>
+<li><strong>基础设施层面</strong>：在 <code>daemon.json</code> 中全局禁用风险网段，一劳永逸</li>
+</ol>
+<p><strong>如果你也在用 Docker Compose 管理数据库、中间件，现在就去检查你的配置：</strong></p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 检查当前 Docker 网络分配情况</span></span><br><span class="line">docker network <span class="built_in">ls</span> | xargs -I &#123;&#125; docker network inspect &#123;&#125; | grep -E <span class="string">&quot;Subnet|Name&quot;</span></span><br></pre></td></tr></table></figure>
+
+<p>别等到 <code>ping</code> 不通的时候，才想起这篇博客。</p>
+<hr>
+<p><em>📅 记录于 2026 年 7 月</em><br><em>🔧 希望这篇文章能帮你避免一次深夜 OnCall</em></p>
+</article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta"><i class="fas fa-circle-user fa-fw"></i>文章作者: </span><span class="post-copyright-info"><a href="http://blog.damingerdai.com">Arthur Ming</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta"><i class="fas fa-square-arrow-up-right fa-fw"></i>文章链接: </span><span class="post-copyright-info"><a href="http://blog.damingerdai.com/2026/07/07/software/docker-network-conflict-172-18-repair/">http://blog.damingerdai.com/2026/07/07/software/docker-network-conflict-172-18-repair/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta"><i class="fas fa-circle-exclamation fa-fw"></i>版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来源 <a href="http://blog.damingerdai.com" target="_blank">Damingerdai's Blog</a>！</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/Docker-%E7%BD%91%E7%BB%9C%E5%86%B2%E7%AA%81%E3%80%81172-18-%E7%BD%91%E6%AE%B5%E3%80%81Destination-Host-Unreachable%E3%80%81docker-compose%E3%80%81bridge%E3%80%81%E7%94%9F%E4%BA%A7%E7%8E%AF%E5%A2%83%E8%B8%A9%E5%9D%91%E3%80%81%E5%AE%B9%E5%99%A8%E7%BD%91%E7%BB%9C%E6%8E%92%E9%9A%9C%E3%80%81daemon-json%E3%80%81default-address-pools/">Docker 网络冲突、172.18 网段、Destination Host Unreachable、docker-compose、bridge、生产环境踩坑、容器网络排障、daemon.json、default-address-pools</a></div><div class="post-share"><div class="social-share" data-image="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" data-sites="facebook,x,wechat,weibo,qq"></div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/butterfly-extsrc/sharejs/dist/css/share.min.css" media="print" onload="this.media='all'"><script src="https://cdn.jsdelivr.net/npm/butterfly-extsrc/sharejs/dist/js/social-share.min.js" defer></script></div></div><nav id="pagination"><div class="pagination"></div></nav></div><div class="aside-content" id="aside-content"><div class="card-widget card-info text-center"><div class="avatar-img"><img src="/img/avatar.png" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="author-info-name">Arthur Ming</div><div class="author-info-description">大明二代的博客</div><div class="site-data"><a href="/archives/"><div class="headline">文章</div><div class="length-num">91</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">133</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">8</div></a></div><a id="card-info-btn" target="_blank" rel="noopener" href="https://github.com/damingerdai"><i class="fab fa-github"></i><span>Follow Me</span></a><div class="card-info-social-icons"><a class="social-icon" href="https://github.com/damingerdai" target="_blank" title="Github"><i class="fab fa-github" style="color: #24292e;"></i></a><a class="social-icon" href="mailto:mingguobin@live.com" target="_blank" title="Email"><i class="fas fa-envelope" style="color: #4a7dbe;"></i></a></div></div><div class="card-widget card-announcement"><div class="item-headline"><i class="fas fa-bullhorn fa-shake"></i><span>公告</span></div><div class="announcement_content">大家好，我是大明二代</div></div><div class="sticky_layout"><div class="card-widget card-recent-post"><div class="item-headline"><i class="fas fa-history"></i><span>最新文章</span></div><div class="aside-list"><div class="aside-list-item"><a class="thumbnail" href="/2026/07/07/software/docker-network-conflict-172-18-repair/" title="吃了：一次 172.18 网段冲突的完整复盘"><img src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="吃了：一次 172.18 网段冲突的完整复盘"/></a><div class="content"><a class="title" href="/2026/07/07/software/docker-network-conflict-172-18-repair/" title="吃了：一次 172.18 网段冲突的完整复盘">吃了：一次 172.18 网段冲突的完整复盘</a><time datetime="2026-07-07T06:33:21.000Z" title="发表于 2026-07-07 14:33:21">2026-07-07</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2026/07/05/software/self-host-tailscale-derp-with-docker-acme-sh/" title="Docker + acme.sh 搭建 Tailscale 自建 DERP 中继节点完整记录"><img src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="Docker + acme.sh 搭建 Tailscale 自建 DERP 中继节点完整记录"/></a><div class="content"><a class="title" href="/2026/07/05/software/self-host-tailscale-derp-with-docker-acme-sh/" title="Docker + acme.sh 搭建 Tailscale 自建 DERP 中继节点完整记录">Docker + acme.sh 搭建 Tailscale 自建 DERP 中继节点完整记录</a><time datetime="2026-07-05T07:22:32.000Z" title="发表于 2026-07-05 15:22:32">2026-07-05</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2026/07/03/back-end/go-nextjs-2fa-totp-review/" title="Go + Next.js 实现 2FA (TOTP) 的踩坑记录与架构复盘"><img src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="Go + Next.js 实现 2FA (TOTP) 的踩坑记录与架构复盘"/></a><div class="content"><a class="title" href="/2026/07/03/back-end/go-nextjs-2fa-totp-review/" title="Go + Next.js 实现 2FA (TOTP) 的踩坑记录与架构复盘">Go + Next.js 实现 2FA (TOTP) 的踩坑记录与架构复盘</a><time datetime="2026-07-03T15:04:38.000Z" title="发表于 2026-07-03 23:04:38">2026-07-03</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/tailscale-zero-config-intranet-penetration-guide/" title="🚀 零公网 IP 实现内网穿透：Tailscale 安装与多端互联异地访问指南"><img src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="🚀 零公网 IP 实现内网穿透：Tailscale 安装与多端互联异地访问指南"/></a><div class="content"><a class="title" href="/tailscale-zero-config-intranet-penetration-guide/" title="🚀 零公网 IP 实现内网穿透：Tailscale 安装与多端互联异地访问指南">🚀 零公网 IP 实现内网穿透：Tailscale 安装与多端互联异地访问指南</a><time datetime="2026-06-29T04:32:17.000Z" title="发表于 2026-06-29 12:32:17">2026-06-29</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2026/06/16/front-end/nextjs16-rdkitjs-smiles/" title="在 Next.js 16 (Turbopack) 中集成 RDKit.js 渲染 SMILES 的工程实践与踩坑指南"><img src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="在 Next.js 16 (Turbopack) 中集成 RDKit.js 渲染 SMILES 的工程实践与踩坑指南"/></a><div class="content"><a class="title" href="/2026/06/16/front-end/nextjs16-rdkitjs-smiles/" title="在 Next.js 16 (Turbopack) 中集成 RDKit.js 渲染 SMILES 的工程实践与踩坑指南">在 Next.js 16 (Turbopack) 中集成 RDKit.js 渲染 SMILES 的工程实践与踩坑指南</a><time datetime="2026-06-16T12:54:34.000Z" title="发表于 2026-06-16 20:54:34">2026-06-16</time></div></div></div></div><div class="card-widget card-categories"><div class="item-headline">
+            <i class="fas fa-folder-open"></i>
+            <span>分类</span>
+            
+          </div>
+          <ul class="card-category-list" id="aside-cat-list">
+            <li class="card-category-list-item "><a class="card-category-list-link" href="/categories/AI/"><span class="card-category-list-name">AI</span><span class="card-category-list-count">1</span></a></li><li class="card-category-list-item "><a class="card-category-list-link" href="/categories/web3/"><span class="card-category-list-name">web3</span><span class="card-category-list-count">1</span></a></li><li class="card-category-list-item "><a class="card-category-list-link" href="/categories/%E5%89%8D%E7%AB%AF/"><span class="card-category-list-name">前端</span><span class="card-category-list-count">24</span></a><ul class="card-category-list child"><li class="card-category-list-item "><a class="card-category-list-link" href="/categories/%E5%89%8D%E7%AB%AF/nodejs/"><span class="card-category-list-name">nodejs</span><span class="card-category-list-count">1</span></a><ul class="card-category-list child"><li class="card-category-list-item "><a class="card-category-list-link" href="/categories/%E5%89%8D%E7%AB%AF/nodejs/%E6%95%8F%E6%8D%B7%E5%BC%80%E5%8F%91/"><span class="card-category-list-name">敏捷开发</span><span class="card-category-list-count">1</span></a><ul class="card-category-list child"><li class="card-category-list-item "><a class="card-category-list-link" href="/categories/%E5%89%8D%E7%AB%AF/nodejs/%E6%95%8F%E6%8D%B7%E5%BC%80%E5%8F%91/%E9%9D%A2%E8%AF%95/"><span class="card-category-list-name">面试</span><span class="card-category-list-count">1</span></a></li></ul></li></ul></li></ul></li><li class="card-category-list-item "><a class="card-category-list-link" href="/categories/%E5%90%8E%E7%AB%AF/"><span class="card-category-list-name">后端</span><span class="card-category-list-count">26</span></a></li><li class="card-category-list-item "><a class="card-category-list-link" href="/categories/%E8%BD%AF%E4%BB%B6/"><span class="card-category-list-name">软件</span><span class="card-category-list-count">32</span></a></li>
+          </ul></div><div class="card-widget card-tags"><div class="item-headline"><i class="fas fa-tags"></i><span>标签</span></div><div class="card-tag-cloud"><a href="/tags/web3/" style="font-size: 1.1em; color: #999">web3</a> <a href="/tags/systemd/" style="font-size: 1.1em; color: #999">systemd</a> <a href="/tags/email/" style="font-size: 1.1em; color: #999">email</a> <a href="/tags/nextjs/" style="font-size: 1.1em; color: #999">nextjs</a> <a href="/tags/Ingress/" style="font-size: 1.1em; color: #999">Ingress</a> <a href="/tags/%E8%87%AA%E5%BB%BAderp/" style="font-size: 1.1em; color: #999">自建derp</a> <a href="/tags/podman/" style="font-size: 1.27em; color: #99a0a9">podman</a> <a href="/tags/postgres18/" style="font-size: 1.1em; color: #999">postgres18</a> <a href="/tags/k3s/" style="font-size: 1.5em; color: #99a9bf">k3s</a> <a href="/tags/kubernetes/" style="font-size: 1.44em; color: #99a7ba">kubernetes</a> <a href="/tags/spring-cloud-gateway/" style="font-size: 1.1em; color: #999">spring cloud gateway</a> <a href="/tags/acme-sh/" style="font-size: 1.1em; color: #999">acme.sh</a> <a href="/tags/resend/" style="font-size: 1.16em; color: #999b9e">resend</a> <a href="/tags/%E9%9D%A2%E8%AF%95/" style="font-size: 1.33em; color: #99a2af">面试</a> <a href="/tags/Mac/" style="font-size: 1.1em; color: #999">Mac</a> <a href="/tags/Spring-Security/" style="font-size: 1.1em; color: #999">Spring Security</a> <a href="/tags/react/" style="font-size: 1.27em; color: #99a0a9">react</a> <a href="/tags/Chrome/" style="font-size: 1.1em; color: #999">Chrome</a> <a href="/tags/docker-compose/" style="font-size: 1.21em; color: #999ea4">docker compose</a> <a href="/tags/NAS/" style="font-size: 1.1em; color: #999">NAS</a> <a href="/tags/github/" style="font-size: 1.1em; color: #999">github</a> <a href="/tags/bazel/" style="font-size: 1.39em; color: #99a4b4">bazel</a> <a href="/tags/typeScript/" style="font-size: 1.1em; color: #999">typeScript</a> <a href="/tags/Grafana/" style="font-size: 1.1em; color: #999">Grafana</a> <a href="/tags/javascript/" style="font-size: 1.21em; color: #999ea4">javascript</a> <a href="/tags/dark-mode/" style="font-size: 1.1em; color: #999">dark mode</a> <a href="/tags/react-email/" style="font-size: 1.1em; color: #999">react-email</a> <a href="/tags/Rancher/" style="font-size: 1.1em; color: #999">Rancher</a> <a href="/tags/apollo/" style="font-size: 1.1em; color: #999">apollo</a> <a href="/tags/smiles/" style="font-size: 1.1em; color: #999">smiles</a> <a href="/tags/github-action/" style="font-size: 1.1em; color: #999">github action</a> <a href="/tags/css/" style="font-size: 1.16em; color: #999b9e">css</a> <a href="/tags/Docker-Desktop/" style="font-size: 1.16em; color: #999b9e">Docker Desktop</a> <a href="/tags/2fa/" style="font-size: 1.1em; color: #999">2fa</a> <a href="/tags/spring-webflux/" style="font-size: 1.21em; color: #999ea4">spring webflux</a> <a href="/tags/oauth2/" style="font-size: 1.1em; color: #999">oauth2</a> <a href="/tags/PostgreSQ/" style="font-size: 1.1em; color: #999">PostgreSQ</a> <a href="/tags/totp/" style="font-size: 1.1em; color: #999">totp</a> <a href="/tags/%E7%99%BD%E5%B1%8F/" style="font-size: 1.1em; color: #999">白屏</a> <a href="/tags/neovim/" style="font-size: 1.16em; color: #999b9e">neovim</a></div></div><div class="card-widget card-archives">
+    <div class="item-headline">
+      <i class="fas fa-archive"></i>
+      <span>归档</span>
+      <a class="card-more-btn" href="/archives/"
+            title="查看更多">
+            <i class="fas fa-angle-right"></i>
+          </a>
+    </div>
+  
+    <ul class="card-archive-list">
+      
+        <li class="card-archive-list-item">
+          <a class="card-archive-list-link" href="/archives/2026/07/">
+            <span class="card-archive-list-date">
+              七月 2026
+            </span>
+            <span class="card-archive-list-count">3</span>
+          </a>
+        </li>
+      
+        <li class="card-archive-list-item">
+          <a class="card-archive-list-link" href="/archives/2026/06/">
+            <span class="card-archive-list-date">
+              六月 2026
+            </span>
+            <span class="card-archive-list-count">6</span>
+          </a>
+        </li>
+      
+        <li class="card-archive-list-item">
+          <a class="card-archive-list-link" href="/archives/2026/05/">
+            <span class="card-archive-list-date">
+              五月 2026
+            </span>
+            <span class="card-archive-list-count">3</span>
+          </a>
+        </li>
+      
+        <li class="card-archive-list-item">
+          <a class="card-archive-list-link" href="/archives/2026/04/">
+            <span class="card-archive-list-date">
+              四月 2026
+            </span>
+            <span class="card-archive-list-count">4</span>
+          </a>
+        </li>
+      
+        <li class="card-archive-list-item">
+          <a class="card-archive-list-link" href="/archives/2026/03/">
+            <span class="card-archive-list-date">
+              三月 2026
+            </span>
+            <span class="card-archive-list-count">2</span>
+          </a>
+        </li>
+      
+        <li class="card-archive-list-item">
+          <a class="card-archive-list-link" href="/archives/2026/02/">
+            <span class="card-archive-list-date">
+              二月 2026
+            </span>
+            <span class="card-archive-list-count">5</span>
+          </a>
+        </li>
+      
+        <li class="card-archive-list-item">
+          <a class="card-archive-list-link" href="/archives/2026/01/">
+            <span class="card-archive-list-date">
+              一月 2026
+            </span>
+            <span class="card-archive-list-count">5</span>
+          </a>
+        </li>
+      
+        <li class="card-archive-list-item">
+          <a class="card-archive-list-link" href="/archives/2025/12/">
+            <span class="card-archive-list-date">
+              十二月 2025
+            </span>
+            <span class="card-archive-list-count">2</span>
+          </a>
+        </li>
+      
+    </ul>
+  </div><div class="card-widget card-webinfo"><div class="item-headline"><i class="fas fa-chart-line"></i><span>网站信息</span></div><div class="webinfo"><div class="webinfo-item"><div class="item-name">文章数目 :</div><div class="item-count">91</div></div><div class="webinfo-item"><div class="item-name">本站访客数 :</div><div class="item-count" id="busuanzi_value_site_uv"><i class="fa-solid fa-spinner fa-spin"></i></div></div><div class="webinfo-item"><div class="item-name">本站总浏览量 :</div><div class="item-count" id="busuanzi_value_site_pv"><i class="fa-solid fa-spinner fa-spin"></i></div></div><div class="webinfo-item"><div class="item-name">最后更新时间 :</div><div class="item-count" id="last-push-date" data-lastPushDate="2026-07-07T06:43:25.207Z"><i class="fa-solid fa-spinner fa-spin"></i></div></div></div></div></div></div></main><footer id="footer"><div class="footer-other"><div class="footer-copyright"><span class="copyright">&copy;&nbsp;2020 - 2026 By Arthur Ming</span></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="darkmode" type="button" title="日间和夜间模式切换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside-config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button id="go-up" type="button" title="回到顶部"><span class="scroll-percent"></span><i class="fas fa-arrow-up"></i></button></div></div><div><script src="/js/utils.js"></script><script src="/js/main.js"></script><div class="js-pjax"><script>(() => {
+  const parseViewBox = viewBox => {
+    if (!viewBox) return null
+    const parts = viewBox.trim().split(/[\s,]+/).map(n => Number(n))
+    if (parts.length !== 4 || parts.some(n => Number.isNaN(n))) return null
+    return parts
+  }
+
+  const getSvgViewBox = svg => {
+    const attr = parseViewBox(svg.getAttribute('viewBox'))
+    if (attr) return attr
+
+    // Fallback: use bbox to build a viewBox
+    try {
+      const bbox = svg.getBBox()
+      if (bbox && bbox.width && bbox.height) return [bbox.x, bbox.y, bbox.width, bbox.height]
+    } catch (e) {
+      // getBBox may fail on some edge cases; ignore
+    }
+
+    const w = Number(svg.getAttribute('width')) || 0
+    const h = Number(svg.getAttribute('height')) || 0
+    if (w > 0 && h > 0) return [0, 0, w, h]
+    return [0, 0, 100, 100]
+  }
+
+  const setSvgViewBox = (svg, vb) => {
+    svg.setAttribute('viewBox', `${vb[0]} ${vb[1]} ${vb[2]} ${vb[3]}`)
+  }
+
+  const clamp = (v, min, max) => Math.max(min, Math.min(max, v))
+
+  const openSvgInNewTab = ({ source, initViewBox }) => {
+    const getClonedSvg = () => {
+      if (typeof source === 'string') {
+        const template = document.createElement('template')
+        template.innerHTML = source.trim()
+        const svg = template.content.querySelector('svg')
+        return svg ? svg.cloneNode(true) : null
+      }
+      if (source && typeof source.cloneNode === 'function') {
+        return source.cloneNode(true)
+      }
+      return null
+    }
+
+    const clone = getClonedSvg()
+    if (!clone) return
+    if (initViewBox && initViewBox.length === 4) {
+      clone.setAttribute('viewBox', initViewBox.join(' '))
+    }
+    if (!clone.getAttribute('xmlns')) clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg')
+    if (!clone.getAttribute('xmlns:xlink') && clone.outerHTML.includes('xlink:')) {
+      clone.setAttribute('xmlns:xlink', 'http://www.w3.org/1999/xlink')
+    }
+    // inject background to match current theme
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark'
+    const bg = getComputedStyle(document.body).backgroundColor || (isDark ? '#1e1e1e' : '#ffffff')
+    if (!clone.style.background) clone.style.background = bg
+
+    const serializer = new XMLSerializer()
+    const svgSource = serializer.serializeToString(clone)
+    const htmlSource = `<!doctype html><html><head><meta charset="utf-8" />
+      <style>
+        html, body { width: 100%; height: 100%; margin: 0; display: flex; align-items: center; justify-content: center; background: ${bg}; }
+        svg { max-width: 100%; max-height: 100%; height: auto; width: auto; }
+      </style>
+      </head><body>${svgSource}</body></html>`
+    const blob = new Blob([htmlSource], { type: 'text/html;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    window.open(url, '_blank', 'noopener')
+    setTimeout(() => URL.revokeObjectURL(url), 30000)
+  }
+
+  const attachMermaidViewerButton = wrap => {
+    let btn = wrap.querySelector('.mermaid-open-btn')
+    if (!btn) {
+      btn = document.createElement('button')
+      btn.type = 'button'
+      btn.className = 'mermaid-open-btn'
+      wrap.appendChild(btn)
+    }
+
+    btn.innerHTML = '<i class="fa fa-search fa-fw" aria-hidden="true"></i>'
+
+    if (!btn.__mermaidViewerBound) {
+      btn.addEventListener('click', e => {
+        e.preventDefault()
+        e.stopPropagation()
+        const svg = wrap.__mermaidOriginalSvg || wrap.querySelector('svg')
+        if (!svg) return
+        const initViewBox = wrap.__mermaidInitViewBox
+        if (typeof svg === 'string') {
+          openSvgInNewTab({ source: svg, initViewBox })
+          return
+        }
+        openSvgInNewTab({ source: svg, initViewBox })
+      })
+      btn.__mermaidViewerBound = true
+    }
+  }
+
+  // Zoom around a point (px, py) in the SVG viewport (in viewBox coordinates)
+  const zoomAtPoint = (vb, factor, px, py) => {
+    const w = vb[2] * factor
+    const h = vb[3] * factor
+    const nx = px - (px - vb[0]) * factor
+    const ny = py - (py - vb[1]) * factor
+    return [nx, ny, w, h]
+  }
+
+  const initMermaidGestures = wrap => {
+    const svg = wrap.querySelector('svg')
+    if (!svg) return
+
+    // Ensure viewBox exists so gestures always work
+    const initVb = getSvgViewBox(svg)
+    wrap.__mermaidInitViewBox = initVb
+    wrap.__mermaidCurViewBox = initVb.slice()
+    setSvgViewBox(svg, initVb)
+
+    // Avoid binding multiple times on themeChange/pjax
+    if (wrap.__mermaidGestureBound) return
+    wrap.__mermaidGestureBound = true
+
+    // Helper: map client (viewport) coordinate -> viewBox coordinate
+    const clientToViewBox = (clientX, clientY) => {
+      const rect = svg.getBoundingClientRect()
+      const vb = wrap.__mermaidCurViewBox || getSvgViewBox(svg)
+      const x = vb[0] + (clientX - rect.left) * (vb[2] / rect.width)
+      const y = vb[1] + (clientY - rect.top) * (vb[3] / rect.height)
+      return { x, y, rect, vb }
+    }
+
+    const state = {
+      pointers: new Map(),
+      startVb: null,
+      startDist: 0,
+      startCenter: null
+    }
+
+    const clampVb = vb => {
+      const init = wrap.__mermaidInitViewBox || vb
+      const minW = init[2] * 0.1
+      const maxW = init[2] * 10
+      const minH = init[3] * 0.1
+      const maxH = init[3] * 10
+      vb[2] = clamp(vb[2], minW, maxW)
+      vb[3] = clamp(vb[3], minH, maxH)
+      return vb
+    }
+
+    const setCurVb = vb => {
+      vb = clampVb(vb)
+      wrap.__mermaidCurViewBox = vb
+      setSvgViewBox(svg, vb)
+    }
+
+    const onPointerDown = e => {
+      // Allow only primary button for mouse
+      if (e.pointerType === 'mouse' && e.button !== 0) return
+      svg.setPointerCapture(e.pointerId)
+      state.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY })
+
+      if (state.pointers.size === 1) {
+        state.startVb = (wrap.__mermaidCurViewBox || getSvgViewBox(svg)).slice()
+      } else if (state.pointers.size === 2) {
+        const pts = [...state.pointers.values()]
+        const dx = pts[0].x - pts[1].x
+        const dy = pts[0].y - pts[1].y
+        state.startDist = Math.hypot(dx, dy)
+        state.startVb = (wrap.__mermaidCurViewBox || getSvgViewBox(svg)).slice()
+        state.startCenter = { x: (pts[0].x + pts[1].x) / 2, y: (pts[0].y + pts[1].y) / 2 }
+      }
+    }
+
+    const onPointerMove = e => {
+      if (!state.pointers.has(e.pointerId)) return
+      state.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY })
+
+      // Pan with 1 pointer
+      if (state.pointers.size === 1 && state.startVb) {
+        const p = [...state.pointers.values()][0]
+        const prev = { x: e.clientX - e.movementX, y: e.clientY - e.movementY }
+        // movementX/Y unreliable on touch, compute from stored last position
+        const last = wrap.__mermaidLastSinglePointer || p
+        const dxClient = p.x - last.x
+        const dyClient = p.y - last.y
+        wrap.__mermaidLastSinglePointer = p
+
+        const { rect } = clientToViewBox(p.x, p.y)
+        const vb = (wrap.__mermaidCurViewBox || getSvgViewBox(svg)).slice()
+        const dx = dxClient * (vb[2] / rect.width)
+        const dy = dyClient * (vb[3] / rect.height)
+        setCurVb([vb[0] - dx, vb[1] - dy, vb[2], vb[3]])
+        return
+      }
+
+      // Pinch zoom with 2 pointers
+      if (state.pointers.size === 2 && state.startVb && state.startDist > 0) {
+        const pts = [...state.pointers.values()]
+        const dx = pts[0].x - pts[1].x
+        const dy = pts[0].y - pts[1].y
+        const dist = Math.hypot(dx, dy)
+        if (!dist) return
+        const factor = state.startDist / dist // dist bigger => zoom in (viewBox smaller)
+
+        const cx = (pts[0].x + pts[1].x) / 2
+        const cy = (pts[0].y + pts[1].y) / 2
+        const centerClient = { x: cx, y: cy }
+
+        const pxy = clientToViewBox(centerClient.x, centerClient.y)
+        const cpx = pxy.x
+        const cpy = pxy.y
+
+        const vb = zoomAtPoint(state.startVb, factor, cpx, cpy)
+        setCurVb(vb)
+      }
+    }
+
+    const onPointerUpOrCancel = e => {
+      state.pointers.delete(e.pointerId)
+      if (state.pointers.size === 0) {
+        state.startVb = null
+        state.startDist = 0
+        state.startCenter = null
+        wrap.__mermaidLastSinglePointer = null
+      } else if (state.pointers.size === 1) {
+        // reset single pointer baseline to avoid jump
+        wrap.__mermaidLastSinglePointer = [...state.pointers.values()][0]
+      }
+    }
+
+    // Wheel zoom (mouse/trackpad)
+    const onWheel = e => {
+      // ctrlKey on mac trackpad pinch; we treat both as zoom
+      e.preventDefault()
+      const delta = e.deltaY
+      const zoomFactor = delta > 0 ? 1.1 : 0.9
+      const { x, y } = clientToViewBox(e.clientX, e.clientY)
+      const vb = (wrap.__mermaidCurViewBox || getSvgViewBox(svg)).slice()
+      setCurVb(zoomAtPoint(vb, zoomFactor, x, y))
+    }
+
+    const onDblClick = () => {
+      const init = wrap.__mermaidInitViewBox
+      if (!init) return
+      wrap.__mermaidCurViewBox = init.slice()
+      setSvgViewBox(svg, init)
+    }
+
+    svg.addEventListener('pointerdown', onPointerDown)
+    svg.addEventListener('pointermove', onPointerMove)
+    svg.addEventListener('pointerup', onPointerUpOrCancel)
+    svg.addEventListener('pointercancel', onPointerUpOrCancel)
+    svg.addEventListener('wheel', onWheel, { passive: false })
+    svg.addEventListener('dblclick', onDblClick)
+  }
+
+  const runMermaid = ele => {
+    window.loadMermaid = true
+    const theme = document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'default'
+
+    ele.forEach((item, index) => {
+      const mermaidSrc = item.firstElementChild
+
+      // Clear old render (themeChange/pjax will rerun)
+      const oldSvg = item.querySelector('svg')
+      if (oldSvg) oldSvg.remove()
+      item.__mermaidGestureBound = false
+
+      const config = mermaidSrc.dataset.config ? JSON.parse(mermaidSrc.dataset.config) : {}
+      if (!config.theme) {
+        config.theme = theme
+      }
+      const mermaidThemeConfig = `%%{init: ${JSON.stringify(config)}}%%\n`
+      const mermaidID = `mermaid-${index}`
+      const mermaidDefinition = mermaidThemeConfig + mermaidSrc.textContent
+
+      const renderFn = mermaid.render(mermaidID, mermaidDefinition)
+      const renderMermaid = svg => {
+        mermaidSrc.insertAdjacentHTML('afterend', svg)
+        if (true) initMermaidGestures(item)
+        item.__mermaidOriginalSvg = svg
+        if (true) attachMermaidViewerButton(item)
+      }
+
+
+      // mermaid v9 and v10 compatibility
+      typeof renderFn === 'string' ? renderMermaid(renderFn) : renderFn.then(({ svg }) => renderMermaid(svg))
+    })
+  }
+
+  const codeToMermaid = () => {
+    const codeMermaidEle = document.querySelectorAll('pre > code.mermaid')
+    if (codeMermaidEle.length === 0) return
+
+    codeMermaidEle.forEach(ele => {
+      const preEle = document.createElement('pre')
+      preEle.className = 'mermaid-src'
+      preEle.hidden = true
+      preEle.textContent = ele.textContent
+      const newEle = document.createElement('div')
+      newEle.className = 'mermaid-wrap'
+      newEle.appendChild(preEle)
+      ele.parentNode.replaceWith(newEle)
+    })
+  }
+
+  const loadMermaid = () => {
+    if (true) codeToMermaid()
+    const $mermaid = document.querySelectorAll('#article-container .mermaid-wrap')
+    if ($mermaid.length === 0) return
+
+    const runMermaidFn = () => runMermaid($mermaid)
+    btf.addGlobalFn('themeChange', runMermaidFn, 'mermaid')
+    window.loadMermaid ? runMermaidFn() : btf.getScript('https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js').then(runMermaidFn)
+  }
+
+  btf.addGlobalFn('encrypt', loadMermaid, 'mermaid')
+  window.pjax ? loadMermaid() : document.addEventListener('DOMContentLoaded', loadMermaid)
+})()</script></div><script defer="defer" id="ribbon" src="https://cdn.jsdelivr.net/npm/butterfly-extsrc/dist/canvas-ribbon.min.js" size="150" alpha="0.6" zIndex="-1" mobile="false" data-click="true"></script><script async data-pjax src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script></div></body></html>
