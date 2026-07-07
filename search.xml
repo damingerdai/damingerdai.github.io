@@ -149,6 +149,20 @@ docker-compose exec postgres psql -f /backup/dump_xxx.sql postgres -U postgres
       </tags>
   </entry>
   <entry>
+    <title>Spring Security 中基于用户信息的动态密码加密</title>
+    <url>/2025/02/08/back-end/dynamic-password-encryption-based-on-user-information-in-spring-security/</url>
+    <content><![CDATA[Spring Security 中基于用户信息的动态密码加密前言通过自定义 Spring Security 的 DaoAuthenticationProvider，可以实现根据用户信息的不同，动态切换不同的密码加密方式。这种方法允许您根据用户的角色、组或其他属性，选择最合适的加密算法，从而提高安全性或满足特定的业务需求。
+DaoAuthenticationProviderDaoAuthenticationProvider是用于实现用户名密码的登陆AuthenticationProvider，通过自定义实现additionalAuthenticationChecks方法可以实现从UserDetails获取一个字段从而动态获取密码加密服务。
+实现自定义DaoAuthenticationProvider：
+@Componentpublic class HotelerAuthenticationProvider extends DaoAuthenticationProvider implements AuthenticationProvider, ApplicationContextAware &#123;    private ApplicationContext applicationContext;    protected void additionalAuthenticationChecks(UserDetails userDetails, UsernamePasswordAuthenticationToken authentication) throws AuthenticationException &#123;        if (authentication.getCredentials() == null) &#123;            this.logger.debug(&quot;Failed to authenticate since no credentials provided&quot;);            throw new BadCredentialsException(this.messages.getMessage(&quot;AbstractUserDetailsAuthenticationProvider.badCredentials&quot;, &quot;Bad credentials&quot;));        &#125;        var user =  (User)userDetails;        var passwordType = CommonUtils.isNotEmpty(user.getPasswordType()) ? user.getPasswordType() : &quot;noop&quot;;        var passwordService = this.getPasswordService(passwordType);        var presentedPassword = authentication.getCredentials().toString();        if (!user.getPassword().equals(passwordService.encodePassword(presentedPassword))) &#123;            this.logger.debug(&quot;Failed to authenticate since password does not match stored value&quot;);            throw new BadCredentialsException(this.messages.getMessage(&quot;AbstractUserDetailsAuthenticationProvider.badCredentials&quot;, &quot;Bad credentials&quot;));        &#125;    &#125;    @Override    public void setApplicationContext(ApplicationContext applicationContext) throws BeansException &#123;        this.applicationContext = applicationContext;    &#125;    @Override    protected void doAfterPropertiesSet() &#123;        super.doAfterPropertiesSet();        Assert.notNull(this.applicationContext, &quot;A applicationContext must be set&quot;);    &#125;    protected IPasswordService getPasswordService(String passwordType) &#123;        return Objects.requireNonNull(this.applicationContext).getBean(passwordType + &quot;PasswordService&quot;, IPasswordService.class);    &#125;    public HotelerAuthenticationProvider(UserDetailsService userDetailsService) &#123;        super();        this.setUserDetailsService(userDetailsService);    &#125;&#125;
+
+将HotelerAuthenticationProvider注入到AuthenticationManager中：
+@Beanpublic AuthenticationManager authenticationManager(HotelerAuthenticationProvider authenticationProvider) &#123;;    ProviderManager pm = new ProviderManager(authenticationProvider);    return pm;&#125;]]></content>
+      <tags>
+        <tag>Spring Security</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>Bazel 8 Bzlmod 迁移记录：从 WORKSPACE 到 MODULE.bazel</title>
     <url>/2025/11/03/back-end/bazel8-bzlmod-migration/</url>
     <content><![CDATA[Bazel 8 Bzlmod 迁移记录：从 WORKSPACE 到 MODULE.bazel本文档记录了项目 hoteler 从 Bazel 旧版 WORKSPACE 机制迁移到 Bazel 8 Bzlmod（Bazel 模块系统）的完整过程，重点记录了在迁移 Java 和 Maven 依赖时遇到的关键问题及其解决方案。
@@ -191,20 +205,6 @@ module(    name = &quot;hoteler&quot;,    compatibility_level = 1,)bazel_dep(   
         <tag>spring boot</tag>
         <tag>bazel</tag>
         <tag>bzlmod</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>Spring Security 中基于用户信息的动态密码加密</title>
-    <url>/2025/02/08/back-end/dynamic-password-encryption-based-on-user-information-in-spring-security/</url>
-    <content><![CDATA[Spring Security 中基于用户信息的动态密码加密前言通过自定义 Spring Security 的 DaoAuthenticationProvider，可以实现根据用户信息的不同，动态切换不同的密码加密方式。这种方法允许您根据用户的角色、组或其他属性，选择最合适的加密算法，从而提高安全性或满足特定的业务需求。
-DaoAuthenticationProviderDaoAuthenticationProvider是用于实现用户名密码的登陆AuthenticationProvider，通过自定义实现additionalAuthenticationChecks方法可以实现从UserDetails获取一个字段从而动态获取密码加密服务。
-实现自定义DaoAuthenticationProvider：
-@Componentpublic class HotelerAuthenticationProvider extends DaoAuthenticationProvider implements AuthenticationProvider, ApplicationContextAware &#123;    private ApplicationContext applicationContext;    protected void additionalAuthenticationChecks(UserDetails userDetails, UsernamePasswordAuthenticationToken authentication) throws AuthenticationException &#123;        if (authentication.getCredentials() == null) &#123;            this.logger.debug(&quot;Failed to authenticate since no credentials provided&quot;);            throw new BadCredentialsException(this.messages.getMessage(&quot;AbstractUserDetailsAuthenticationProvider.badCredentials&quot;, &quot;Bad credentials&quot;));        &#125;        var user =  (User)userDetails;        var passwordType = CommonUtils.isNotEmpty(user.getPasswordType()) ? user.getPasswordType() : &quot;noop&quot;;        var passwordService = this.getPasswordService(passwordType);        var presentedPassword = authentication.getCredentials().toString();        if (!user.getPassword().equals(passwordService.encodePassword(presentedPassword))) &#123;            this.logger.debug(&quot;Failed to authenticate since password does not match stored value&quot;);            throw new BadCredentialsException(this.messages.getMessage(&quot;AbstractUserDetailsAuthenticationProvider.badCredentials&quot;, &quot;Bad credentials&quot;));        &#125;    &#125;    @Override    public void setApplicationContext(ApplicationContext applicationContext) throws BeansException &#123;        this.applicationContext = applicationContext;    &#125;    @Override    protected void doAfterPropertiesSet() &#123;        super.doAfterPropertiesSet();        Assert.notNull(this.applicationContext, &quot;A applicationContext must be set&quot;);    &#125;    protected IPasswordService getPasswordService(String passwordType) &#123;        return Objects.requireNonNull(this.applicationContext).getBean(passwordType + &quot;PasswordService&quot;, IPasswordService.class);    &#125;    public HotelerAuthenticationProvider(UserDetailsService userDetailsService) &#123;        super();        this.setUserDetailsService(userDetailsService);    &#125;&#125;
-
-将HotelerAuthenticationProvider注入到AuthenticationManager中：
-@Beanpublic AuthenticationManager authenticationManager(HotelerAuthenticationProvider authenticationProvider) &#123;;    ProviderManager pm = new ProviderManager(authenticationProvider);    return pm;&#125;]]></content>
-      <tags>
-        <tag>Spring Security</tag>
       </tags>
   </entry>
   <entry>
@@ -444,6 +444,43 @@ task checkDependencies &#123;    doLast &#123;        configurations.compileClas
       </tags>
   </entry>
   <entry>
+    <title>在k8s中如何强制删除处于Terminating状态的namesapce</title>
+    <url>/2025/02/13/back-end/how-to-forcefully-delete-a-namespace-that-is-stuck-in-the-Terminating-state/</url>
+    <content><![CDATA[概述在k3s中删除一个namespace十分简单，就是一个命令的事儿：
+kubectl delete ns $&#123;namespace&#125;
+
+但是可能存在删除失败或者namespace一直处于Terminating状态的话，那么上面的命令可能行不通。这里介绍两种实用的解决方案去帮助我们解决。
+注意: 这两种方案可能存在错误删除的情况，请谨慎操作。
+强制删除kubectl提供force和grace-period&#x3D;0两个参数帮助我们强制删除namespace：
+kubectl delete ns $&#123;namespace&#125; --force --grace-period=0
+
+说明：
+
+–force：强制删除资源，跳过正常的删除流程。
+
+–grace-period&#x3D;0：立即删除资源，不等待任何清理操作。
+
+
+使用Kubernetes API 删除获取处于Terminating状态的namespace：
+kubectl get ns |grep Terminating |awk &#123;&#x27;print $1&#x27;&#125;
+
+调用Kubernetes API 删除指定的namespace
+kubectl get ns $&#123;namespace&#125; -o json &gt;$&#123;namespace&#125;.jsonsed -i &#x27;/&quot;kubernetes&quot;/d&#x27; $&#123;namespace&#125;.jsonkubectl replace --raw &quot;/api/v1/namespaces/$&#123;namespace&#125;/finalize&quot; -f $&#123;namespace&#125;.json
+
+参考资料
+Kubernetes 的 NameSpace 无法删除应该怎么办
+kubernetes批量删除长期处于Terminating状态的namespace
+
+]]></content>
+      <categories>
+        <category>后端</category>
+      </categories>
+      <tags>
+        <tag>k8s</tag>
+        <tag>k3s</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>用k3s部署PostgreSQL用于开发</title>
     <url>/2023/04/14/back-end/how-to-user-k3s-deploy-postgresql-for-dev/</url>
     <content><![CDATA[前言PostgreSQL是世界上最先进的开源数据库。本文的目的是使用k3s本地部署PostgreSQL用于本地开发使用，不具备直接上生产的能力。
@@ -575,43 +612,6 @@ Documenting “context deadline exceeded” errors relating to the webhook
       </tags>
   </entry>
   <entry>
-    <title>在k8s中如何强制删除处于Terminating状态的namesapce</title>
-    <url>/2025/02/13/back-end/how-to-forcefully-delete-a-namespace-that-is-stuck-in-the-Terminating-state/</url>
-    <content><![CDATA[概述在k3s中删除一个namespace十分简单，就是一个命令的事儿：
-kubectl delete ns $&#123;namespace&#125;
-
-但是可能存在删除失败或者namespace一直处于Terminating状态的话，那么上面的命令可能行不通。这里介绍两种实用的解决方案去帮助我们解决。
-注意: 这两种方案可能存在错误删除的情况，请谨慎操作。
-强制删除kubectl提供force和grace-period&#x3D;0两个参数帮助我们强制删除namespace：
-kubectl delete ns $&#123;namespace&#125; --force --grace-period=0
-
-说明：
-
-–force：强制删除资源，跳过正常的删除流程。
-
-–grace-period&#x3D;0：立即删除资源，不等待任何清理操作。
-
-
-使用Kubernetes API 删除获取处于Terminating状态的namespace：
-kubectl get ns |grep Terminating |awk &#123;&#x27;print $1&#x27;&#125;
-
-调用Kubernetes API 删除指定的namespace
-kubectl get ns $&#123;namespace&#125; -o json &gt;$&#123;namespace&#125;.jsonsed -i &#x27;/&quot;kubernetes&quot;/d&#x27; $&#123;namespace&#125;.jsonkubectl replace --raw &quot;/api/v1/namespaces/$&#123;namespace&#125;/finalize&quot; -f $&#123;namespace&#125;.json
-
-参考资料
-Kubernetes 的 NameSpace 无法删除应该怎么办
-kubernetes批量删除长期处于Terminating状态的namespace
-
-]]></content>
-      <categories>
-        <category>后端</category>
-      </categories>
-      <tags>
-        <tag>k8s</tag>
-        <tag>k3s</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>从springfox迁移到springdoc</title>
     <url>/2021/11/29/back-end/migrate-springdoc-from-springfox/</url>
     <content><![CDATA[前言之所以考虑从springfox迁移到springdoc是因为我的开源项目hoteler在升级到spring boot 2.6之后，UT的CI&#x2F;CD挂了：
@@ -726,98 +726,6 @@ SSL error unsafe legacy renegotiation disabled
         <tag>ssl</tag>
         <tag>pg_dump</tag>
         <tag>postgresql</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>podman登录非https的私有仓库</title>
-    <url>/2025/08/11/back-end/podman-login-nohttps-private-registery/</url>
-    <content><![CDATA[前言本文的目的是为了解决podman登陆非https的私有仓库。这里使用192.168.31.220:5000威力
-方案1：禁用 TLS 验证（临时解决方案）对于测试环境或内部信任的网络，可以临时禁用 TLS 验证：
-podman login --tls-verify=false 192.168.31.220:5000
-
-
-注意：生产环境不建议禁用 TLS 验证，这会降低安全性。
-
-方案2: 配置仓库为不安全仓库编辑 &#x2F;etc&#x2F;containers&#x2F;registries.conf文件，添加以下内容：
-[[registry]]location = &quot;192.168.31.220:5000&quot;insecure = true
-
-方案3：正确配置 HTTPS（生产环境推荐）如果这是生产环境，建议为您的私有仓库配置正确的 HTTPS。
-]]></content>
-      <categories>
-        <category>后端</category>
-      </categories>
-      <tags>
-        <tag>podman</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>在windows系统中如何给rust如何配置字节源</title>
-    <url>/2025/04/30/back-end/rust-bytedance-mirror-windows/</url>
-    <content><![CDATA[rust中如何配置字节源前言本文的目的是在windows上安装或更新rust的时候通过配置字节的国内源来提高安装&#x2F;更新速度。非windows系统就可以直接参考rsproxy
-配置说明在powershell中设置 Rustup 镜像
-$ENV:RUSTUP_DIST_SERVER=&#x27;https://rsproxy.cn&#x27;$ENV:RUSTUP_UPDATE_ROOT=&#x27;https://rsproxy.cn/rustup&#x27;
-
-安装或者更新Rust
-如果是安装rust，直接点击rust-init.exe
-如果是更新rust，直接运行rustup update命令
-rustup update
-
-设置 crates.io 镜像在当前用户的主目录（以我本地为例：D:\Users\daming）下的.cargo文件夹中创建config文件。
-[source.crates-io]replace-with = &#x27;rsproxy-sparse&#x27;[source.rsproxy]registry = &quot;https://rsproxy.cn/crates.io-index&quot;[source.rsproxy-sparse]registry = &quot;sparse+https://rsproxy.cn/index/&quot;[registries.rsproxy]index = &quot;https://rsproxy.cn/crates.io-index&quot;[net]git-fetch-with-cli = true
-
-
-参考资料
-rsproxy
-Windows 11 上通过国内源安装 Rust
-rustup-init.exe 安装失败及其解决方案
-
-]]></content>
-      <categories>
-        <category>后端</category>
-      </categories>
-      <tags>
-        <tag>windows</tag>
-        <tag>rustl</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>在spring中使用gmail发送邮件</title>
-    <url>/2025/06/22/back-end/send-mail-with-gmail-and-spring/</url>
-    <content><![CDATA[申请gmail的应用专用密码首先你需要一个gmail账号，然后才能申请gmail的应用专用密码。
-想要申请应用专用密码必须开启两步验证：
-
-google似乎默认并不想让用户直接创建应用专用密码，需要通过右上角搜索框输入“应用专用密码”才能进入相关页面。如果使用英文页面则搜索“App Password”。
-
-然后你就可以创建“应用专用密码”
-
-保存密码，gmail仅仅会显示这一次。
-使用spring发送邮件这里实际使用的是spring boot。
-导入spring-boot-starter-mail:
-对于maven用户：
-&lt;dependency&gt;    &lt;groupId&gt;org.springframework.boot&lt;/groupId&gt;    &lt;artifactId&gt;spring-boot-starter-mail&lt;/artifactId&gt;    &lt;version&gt;$&#123;spring-boot-version&#125;&lt;/version&gt;&lt;/dependency&gt;
-
-对于gradle用户：
-implementation &#x27;org.springframework.boot:spring-boot-starter-mail:$&#123;spring-boot-version&#125;&#x27;
-
-添加配置：
-spring:  mail:    host: smtp.gmail.com    port: 587    username: pollardsmithal899@gmail.com    password: &#x27;your app password&#x27;    properties:      mail:        smtp:          auth: true          starttls:            enable: true
-
-最后可以使用JavaMailSenderImpl发送邮件了；
- dvar message = javaMailSender.createMimeMessage();var helper = new MimeMessageHelper(message, true);helper.setTo(&quot;mingguobin@live.com&quot;);helper.setSubject(&quot;batcher support&quot;);helper.setText(&quot;hello, this is batcher&quot;);javaMailSender.send(message);
-
-参考
-使用应用专用密码登录
-Gmail with an App Password
-Guide to Spring Email
-使用 Google 作为邮件服务器从 Spring Boot 应用程序发送邮件的技巧
-
-]]></content>
-      <categories>
-        <category>后端</category>
-      </categories>
-      <tags>
-        <tag>spring</tag>
-        <tag>email</tag>
       </tags>
   </entry>
   <entry>
@@ -990,6 +898,98 @@ SMTP 的问题，80% 不是代码问题，而是协议和配置问题。
       <tags>
         <tag>golang</tag>
         <tag>resend</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>podman登录非https的私有仓库</title>
+    <url>/2025/08/11/back-end/podman-login-nohttps-private-registery/</url>
+    <content><![CDATA[前言本文的目的是为了解决podman登陆非https的私有仓库。这里使用192.168.31.220:5000威力
+方案1：禁用 TLS 验证（临时解决方案）对于测试环境或内部信任的网络，可以临时禁用 TLS 验证：
+podman login --tls-verify=false 192.168.31.220:5000
+
+
+注意：生产环境不建议禁用 TLS 验证，这会降低安全性。
+
+方案2: 配置仓库为不安全仓库编辑 &#x2F;etc&#x2F;containers&#x2F;registries.conf文件，添加以下内容：
+[[registry]]location = &quot;192.168.31.220:5000&quot;insecure = true
+
+方案3：正确配置 HTTPS（生产环境推荐）如果这是生产环境，建议为您的私有仓库配置正确的 HTTPS。
+]]></content>
+      <categories>
+        <category>后端</category>
+      </categories>
+      <tags>
+        <tag>podman</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>在spring中使用gmail发送邮件</title>
+    <url>/2025/06/22/back-end/send-mail-with-gmail-and-spring/</url>
+    <content><![CDATA[申请gmail的应用专用密码首先你需要一个gmail账号，然后才能申请gmail的应用专用密码。
+想要申请应用专用密码必须开启两步验证：
+
+google似乎默认并不想让用户直接创建应用专用密码，需要通过右上角搜索框输入“应用专用密码”才能进入相关页面。如果使用英文页面则搜索“App Password”。
+
+然后你就可以创建“应用专用密码”
+
+保存密码，gmail仅仅会显示这一次。
+使用spring发送邮件这里实际使用的是spring boot。
+导入spring-boot-starter-mail:
+对于maven用户：
+&lt;dependency&gt;    &lt;groupId&gt;org.springframework.boot&lt;/groupId&gt;    &lt;artifactId&gt;spring-boot-starter-mail&lt;/artifactId&gt;    &lt;version&gt;$&#123;spring-boot-version&#125;&lt;/version&gt;&lt;/dependency&gt;
+
+对于gradle用户：
+implementation &#x27;org.springframework.boot:spring-boot-starter-mail:$&#123;spring-boot-version&#125;&#x27;
+
+添加配置：
+spring:  mail:    host: smtp.gmail.com    port: 587    username: pollardsmithal899@gmail.com    password: &#x27;your app password&#x27;    properties:      mail:        smtp:          auth: true          starttls:            enable: true
+
+最后可以使用JavaMailSenderImpl发送邮件了；
+ dvar message = javaMailSender.createMimeMessage();var helper = new MimeMessageHelper(message, true);helper.setTo(&quot;mingguobin@live.com&quot;);helper.setSubject(&quot;batcher support&quot;);helper.setText(&quot;hello, this is batcher&quot;);javaMailSender.send(message);
+
+参考
+使用应用专用密码登录
+Gmail with an App Password
+Guide to Spring Email
+使用 Google 作为邮件服务器从 Spring Boot 应用程序发送邮件的技巧
+
+]]></content>
+      <categories>
+        <category>后端</category>
+      </categories>
+      <tags>
+        <tag>spring</tag>
+        <tag>email</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>在windows系统中如何给rust如何配置字节源</title>
+    <url>/2025/04/30/back-end/rust-bytedance-mirror-windows/</url>
+    <content><![CDATA[rust中如何配置字节源前言本文的目的是在windows上安装或更新rust的时候通过配置字节的国内源来提高安装&#x2F;更新速度。非windows系统就可以直接参考rsproxy
+配置说明在powershell中设置 Rustup 镜像
+$ENV:RUSTUP_DIST_SERVER=&#x27;https://rsproxy.cn&#x27;$ENV:RUSTUP_UPDATE_ROOT=&#x27;https://rsproxy.cn/rustup&#x27;
+
+安装或者更新Rust
+如果是安装rust，直接点击rust-init.exe
+如果是更新rust，直接运行rustup update命令
+rustup update
+
+设置 crates.io 镜像在当前用户的主目录（以我本地为例：D:\Users\daming）下的.cargo文件夹中创建config文件。
+[source.crates-io]replace-with = &#x27;rsproxy-sparse&#x27;[source.rsproxy]registry = &quot;https://rsproxy.cn/crates.io-index&quot;[source.rsproxy-sparse]registry = &quot;sparse+https://rsproxy.cn/index/&quot;[registries.rsproxy]index = &quot;https://rsproxy.cn/crates.io-index&quot;[net]git-fetch-with-cli = true
+
+
+参考资料
+rsproxy
+Windows 11 上通过国内源安装 Rust
+rustup-init.exe 安装失败及其解决方案
+
+]]></content>
+      <categories>
+        <category>后端</category>
+      </categories>
+      <tags>
+        <tag>windows</tag>
+        <tag>rustl</tag>
       </tags>
   </entry>
   <entry>
@@ -1391,33 +1391,6 @@ commons-csv mvaen repository.
       </tags>
   </entry>
   <entry>
-    <title>使用systemd部署podman的容器</title>
-    <url>/2025/07/20/back-end/use-systemd-to-deploy-podman-build-by-podman/</url>
-    <content><![CDATA[podman的问题podman是一个容器运行时环境，提供与 Docker 非常相似的功能并不需要在你的系统上运行任何守护进程。没有守护进程就意味着如果你想使用podman部署容器，是没有办法使用类似docker的方式去实现自动重启功能。如果使用k8s部署容器那问题不大，如果就纯容器部署，可以使用podman给出的方案：
-podman generate systemd --help[DEPRECATED] Generate systemd unitsDescription:  Generate systemd units for a pod or container.  The generated units can later be controlled via systemctl(1).DEPRECATED command:It is recommended to use Quadlets for running containers and pods under systemd.Please refer to podman-systemd.unit(5) for details.Usage:  podman generate systemd [options] &#123;CONTAINER|POD&#125;Examples:  podman generate systemd CTR  podman generate systemd --new --time 10 CTR  podman generate systemd --files --name PODOptions:      --after stringArray         Add dependencies order to the generated unit file      --container-prefix string   Systemd unit name prefix for containers (default &quot;container&quot;)  -e, --env stringArray           Set environment variables to the systemd unit files  -f, --files                     Generate .service files instead of printing to stdout      --format string             Print the created units in specified format (json)  -n, --name                      Use container/pod names instead of IDs      --new                       Create a new container or pod instead of starting an existing one      --no-header                 Skip header generation      --pod-prefix string         Systemd unit name prefix for pods (default &quot;pod&quot;)      --requires stringArray      Similar to wants, but declares stronger requirement dependencies      --restart-policy string     Systemd restart-policy (default &quot;on-failure&quot;)      --restart-sec uint          Systemd restart-sec      --separator string          Systemd unit name separator between name/id and prefix (default &quot;-&quot;)      --start-timeout uint        Start timeout override      --stop-timeout uint         Stop timeout override (default 10)      --template                  Make it a template file and use %i and %I specifiers. Working only for containers      --wants stringArray         Add (weak) requirement dependencies to the generated unit file
-
-systemdsystemd是Linux系统的一套基本构建模块。它提供了一个系统和服务管理器，作为PID 1运行并启动系统的其余部分。systemd是在引导期间启动的第一个守护进程，也是在关闭期间终止的最后一个守护进程。利用这个特性，可以使用systemd去监控容器的运行状态
-例子这里使用health-master作为例子。
-# 获取名为 health-master 的容器 IDCONTAINER_ID=$(podman ps -a --filter &quot;name=health-master&quot; --format &quot;&#123;&#123;.ID&#125;&#125;&quot;)if [ -z &quot;$CONTAINER_ID&quot; ]; then  echo &quot;未找到名为 health-master 的容器。&quot; &gt;&amp;2  exit 1fiecho &quot;找到容器 health-master，ID 为 $CONTAINER_ID&quot;# 定义服务文件的存储路径SERVICE_FILE_PATH=&quot;$HOME/.config/systemd/user&quot;SERVICE_NAME=&quot;podman-health-master&quot;# 使用 podman generate systemd 创建服务文件echo &quot;正在生成 systemd 服务文件...&quot;podman generate systemd --name --restart-policy=on-failure -t 10 &quot;$CONTAINER_ID&quot; &gt;&quot;$SERVICE_FILE_PATH/$SERVICE_NAME.service&quot;if [ $? -ne 0 ]; then  echo &quot;错误: 无法生成 $SERVICE_NAME 服务。&quot; &gt;&amp;2  exit 1fi# 修复 SELinux 上下文（如启用 SELinux）restorecon -RvF &quot;$SERVICE_FILE_PATH/$SERVICE_NAME.service&quot;# 启用用户级 systemd 支持（首次需运行）loginctl enable-linger &quot;$USER&quot;# 重新加载 systemd 配置echo &quot;重新加载 systemd 配置...&quot;systemctl --user daemon-reloadif [ $? -ne 0 ]; then  echo &quot;错误: 无法重新加载 systemd 配置。&quot; &gt;&amp;2  exit 1fi# 启用服务echo &quot;启用服务 $SERVICE_NAME...&quot;systemctl --user enable --now &quot;$SERVICE_NAME&quot;if [ $? -ne 0 ]; then  echo &quot;错误: 无法启用服务 $SERVICE_NAME。&quot; &gt;&amp;2  exit 1fi# 启动服务echo &quot;启动服务 $SERVICE_NAME...&quot;systemctl --user start &quot;$SERVICE_NAME&quot;if [ $? -ne 0 ]; then  echo &quot;错误: 无法启动服务 $SERVICE_NAME。&quot; &gt;&amp;2  exit 1fiecho &quot;服务 $SERVICE_NAME 已成功创建并启动。&quot;echo &quot;你现在可以使用以下命令管理服务:&quot;echo &quot;  systemctl --user status $SERVICE_NAME  # 查看服务状态&quot;echo &quot;  systemctl --user stop $SERVICE_NAME    # 停止服务&quot;echo &quot;  systemctl --user restart $SERVICE_NAME # 重启服务&quot;
-
-问题podman generate systemd在podman 4.4的时候就已经弃用了，目前推荐使用Quadlet
-引用
-使用 Podman 以非 root 用户身份运行 Linux 容器
-System and Service Manager
-Linux Systemd基础教程
-How to replace the “podman generate systemd” command since its deprecated
-
-]]></content>
-      <categories>
-        <category>后端</category>
-      </categories>
-      <tags>
-        <tag>podman</tag>
-        <tag>容器</tag>
-        <tag>systemd</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>使用bazel构建spring boot项目</title>
     <url>/2024/02/11/back-end/use-bazel-build-and-run-spring-boot/</url>
     <content><![CDATA[前言根据官网的定义，Bazel是类似于Make，Maven和Gradle的开源构建和测试工具。它使用人类可读的高级构建语言Starlark(一种基于python的方言)。 Bazel支持多种语言的项目，并为多种平台构建输出。 
@@ -1493,142 +1466,30 @@ New Java Project With Bazel
       </tags>
   </entry>
   <entry>
-    <title>2026年5月7号面试总结</title>
-    <url>/2026/05/08/front-end/2026-0507-interview/</url>
-    <content><![CDATA[前言2026年5月7号有两场面试，本文记录了自己预先准备面试题和面试中遇到的问题。
-笔试防抖 (Debounce)原理：在事件被触发 $n$ 秒后再执行回调，如果在这 $n$ 秒内又被触发，则重新计时。适用于：搜索框输入、窗口大小调整
-function debounce&lt;T extends (...args: any[]) =&gt; void&gt;(  func: T,  wait: number): (...args: Parameters&lt;T&gt;) =&gt; void &#123;  let timeout: ReturnType&lt;typeof setTimeout&gt; | null = null;  return function (this: any, ...args: Parameters&lt;T&gt;) &#123;    if (timeout) clearTimeout(timeout);    timeout = setTimeout(() =&gt; &#123;      func.apply(this, args);    &#125;, wait);  &#125;;&#125;
+    <title>使用systemd部署podman的容器</title>
+    <url>/2025/07/20/back-end/use-systemd-to-deploy-podman-build-by-podman/</url>
+    <content><![CDATA[podman的问题podman是一个容器运行时环境，提供与 Docker 非常相似的功能并不需要在你的系统上运行任何守护进程。没有守护进程就意味着如果你想使用podman部署容器，是没有办法使用类似docker的方式去实现自动重启功能。如果使用k8s部署容器那问题不大，如果就纯容器部署，可以使用podman给出的方案：
+podman generate systemd --help[DEPRECATED] Generate systemd unitsDescription:  Generate systemd units for a pod or container.  The generated units can later be controlled via systemctl(1).DEPRECATED command:It is recommended to use Quadlets for running containers and pods under systemd.Please refer to podman-systemd.unit(5) for details.Usage:  podman generate systemd [options] &#123;CONTAINER|POD&#125;Examples:  podman generate systemd CTR  podman generate systemd --new --time 10 CTR  podman generate systemd --files --name PODOptions:      --after stringArray         Add dependencies order to the generated unit file      --container-prefix string   Systemd unit name prefix for containers (default &quot;container&quot;)  -e, --env stringArray           Set environment variables to the systemd unit files  -f, --files                     Generate .service files instead of printing to stdout      --format string             Print the created units in specified format (json)  -n, --name                      Use container/pod names instead of IDs      --new                       Create a new container or pod instead of starting an existing one      --no-header                 Skip header generation      --pod-prefix string         Systemd unit name prefix for pods (default &quot;pod&quot;)      --requires stringArray      Similar to wants, but declares stronger requirement dependencies      --restart-policy string     Systemd restart-policy (default &quot;on-failure&quot;)      --restart-sec uint          Systemd restart-sec      --separator string          Systemd unit name separator between name/id and prefix (default &quot;-&quot;)      --start-timeout uint        Start timeout override      --stop-timeout uint         Stop timeout override (default 10)      --template                  Make it a template file and use %i and %I specifiers. Working only for containers      --wants stringArray         Add (weak) requirement dependencies to the generated unit file
 
-节流 (Throttle)原理：规定在一个单位时间内，只能触发一次函数。如果这个单位时间内触发了多次函数，只有一次生效。适用于：滚动事件（scroll）、抢购按钮点击。
-function throttle&lt;T extends (...args: any[]) =&gt; void&gt;(  func: T,  limit: number): (...args: Parameters&lt;T&gt;) =&gt; void &#123;  let lastCall = 0;  return function (this: any, ...args: Parameters&lt;T&gt;) &#123;    const now = Date.now();    if (now - lastCall &gt;= limit) &#123;      lastCall = now;      func.apply(this, args);    &#125;  &#125;;&#125;
+systemdsystemd是Linux系统的一套基本构建模块。它提供了一个系统和服务管理器，作为PID 1运行并启动系统的其余部分。systemd是在引导期间启动的第一个守护进程，也是在关闭期间终止的最后一个守护进程。利用这个特性，可以使用systemd去监控容器的运行状态
+例子这里使用health-master作为例子。
+# 获取名为 health-master 的容器 IDCONTAINER_ID=$(podman ps -a --filter &quot;name=health-master&quot; --format &quot;&#123;&#123;.ID&#125;&#125;&quot;)if [ -z &quot;$CONTAINER_ID&quot; ]; then  echo &quot;未找到名为 health-master 的容器。&quot; &gt;&amp;2  exit 1fiecho &quot;找到容器 health-master，ID 为 $CONTAINER_ID&quot;# 定义服务文件的存储路径SERVICE_FILE_PATH=&quot;$HOME/.config/systemd/user&quot;SERVICE_NAME=&quot;podman-health-master&quot;# 使用 podman generate systemd 创建服务文件echo &quot;正在生成 systemd 服务文件...&quot;podman generate systemd --name --restart-policy=on-failure -t 10 &quot;$CONTAINER_ID&quot; &gt;&quot;$SERVICE_FILE_PATH/$SERVICE_NAME.service&quot;if [ $? -ne 0 ]; then  echo &quot;错误: 无法生成 $SERVICE_NAME 服务。&quot; &gt;&amp;2  exit 1fi# 修复 SELinux 上下文（如启用 SELinux）restorecon -RvF &quot;$SERVICE_FILE_PATH/$SERVICE_NAME.service&quot;# 启用用户级 systemd 支持（首次需运行）loginctl enable-linger &quot;$USER&quot;# 重新加载 systemd 配置echo &quot;重新加载 systemd 配置...&quot;systemctl --user daemon-reloadif [ $? -ne 0 ]; then  echo &quot;错误: 无法重新加载 systemd 配置。&quot; &gt;&amp;2  exit 1fi# 启用服务echo &quot;启用服务 $SERVICE_NAME...&quot;systemctl --user enable --now &quot;$SERVICE_NAME&quot;if [ $? -ne 0 ]; then  echo &quot;错误: 无法启用服务 $SERVICE_NAME。&quot; &gt;&amp;2  exit 1fi# 启动服务echo &quot;启动服务 $SERVICE_NAME...&quot;systemctl --user start &quot;$SERVICE_NAME&quot;if [ $? -ne 0 ]; then  echo &quot;错误: 无法启动服务 $SERVICE_NAME。&quot; &gt;&amp;2  exit 1fiecho &quot;服务 $SERVICE_NAME 已成功创建并启动。&quot;echo &quot;你现在可以使用以下命令管理服务:&quot;echo &quot;  systemctl --user status $SERVICE_NAME  # 查看服务状态&quot;echo &quot;  systemctl --user stop $SERVICE_NAME    # 停止服务&quot;echo &quot;  systemctl --user restart $SERVICE_NAME # 重启服务&quot;
 
-深拷贝（Deep Copy）现代最简法：structuredCloneconst original = &#123; a: 1, b: &#123; c: 2 &#125; &#125;;const copy = structuredClone(original);
-
-优点：原生支持、性能好、支持循环引用、支持 Date, RegExp, Map, Set 等类型。缺点：不支持函数、不可扩展。
-传统最简法：JSON.parse(JSON.stringify())const original = &#123;  name: &quot;Arthur&quot;,  age: 25,  date: new Date(),        // 特殊对象：Date  reg: /abc/g,            // 特殊对象：RegExp  und: undefined,         // 特殊值：undefined  func: () =&gt; &#123; console.log(&quot;hello&quot;) &#125;, // 特殊值：函数  nan: NaN,               // 特殊值：NaN  infinity: Infinity      // 特殊值：正无穷&#125;;// 执行深拷贝const copy = JSON.parse(JSON.stringify(original));console.log(&quot;Original:&quot;, original);console.log(&quot;Copy:&quot;, copy);// 验证独立性copy.name = &quot;Damingerdai&quot;;console.log(original.name); // 输出 &quot;Arthur&quot;，互不影响
-
-优点：一行搞定，兼容性极强。
-缺点：
-丢失数据：会忽略 undefined、函数和 Symbol。
-异常转换：Date 会变成字符串，RegExp 会变成空对象。
-循环引用：如果对象内部自己引用自己，会直接报错
-手写递归实现（面试高频）function deepClone&lt;T&gt;(obj: T, hash = new WeakMap()): T &#123;  // 1. 处理 null 或基本类型  if (obj === null || typeof obj !== &quot;object&quot;) return obj;  // 2. 处理日期和正则  if (obj instanceof Date) return new Date(obj) as any;  if (obj instanceof RegExp) return new RegExp(obj) as any;  // 3. 处理循环引用：如果已经拷贝过，直接返回之前的结果  if (hash.has(obj as object)) return hash.get(obj as object);  // 4. 初始化克隆对象（保留数组或对象的形状）  const result: any = Array.isArray(obj) ? [] : &#123;&#125;;  hash.set(obj as object, result);  // 5. 递归拷贝所有属性  for (const key in obj) &#123;    if (Object.prototype.hasOwnProperty.call(obj, key)) &#123;      result[key] = deepClone(obj[key], hash);    &#125;  &#125;  return result;&#125;
-
-二叉搜索树定义节点类class TreeNode &#123;    val: number;    left: TreeNode | null;    right: TreeNode | null;    constructor(val: number, left: TreeNode | null = null, right: TreeNode | null = null) &#123;        this.val = val;        this.left = left;        this.right = right;    &#125;&#125;
-
-插入节点 (Insert)function insertIntoBST(root: TreeNode | null, val: number): TreeNode &#123;    // 如果当前节点为空，说明找到了插入位置，创建新节点返回    if (!root) &#123;        return new TreeNode(val);    &#125;    if (val &lt; root.val) &#123;        // 递归向左子树插入        root.left = insertIntoBST(root.left, val);    &#125; else &#123;        // 递归向右子树插入        root.right = insertIntoBST(root.right, val);    &#125;    return root;&#125;
-
-删除节点 (Delete)function deleteNode(root: TreeNode | null, key: number): TreeNode | null &#123;    if (!root) return null;    if (key &lt; root.val) &#123;        // 去左子树删除        root.left = deleteNode(root.left, key);    &#125; else if (key &gt; root.val) &#123;        // 去右子树删除        root.right = deleteNode(root.right, key);    &#125; else &#123;        // 命中了要删除的节点        // 情况 1: 叶子节点或只有一个子节点        if (!root.left) return root.right;        if (!root.right) return root.left;        // 情况 2: 有两个子节点        // 找到右子树的最小节点（后继节点）        const minNode = getMin(root.right);        // 用后继节点的值覆盖当前节点        root.val = minNode.val;        // 在右子树中删除那个重复的后继节点        root.right = deleteNode(root.right, minNode.val);    &#125;    return root;&#125;// 辅助函数：获取子树中的最小节点function getMin(node: TreeNode): TreeNode &#123;    let curr = node;    while (curr.left) &#123;        curr = curr.left;    &#125;    return curr;&#125;
-
-
-JavaScript闭包闭包是指一个函数能够记住并访问它的“词法作用域”（Lexical Scope），即使这个函数在它被定义的作用域之外执行。闭包是 JavaScript 静态作用域规则的自然产物。它的本质是函数保存了对创建时作用域的引用
-应用场景：
-
-数据私有化（模拟私有变量）；
-柯里化（Currying）；
-回调函数与异步处理。
-
-代价：
-
-可能会导致内存泄露
-存在一定的性能开销
-
-原型链（Prototype Chain）在 JavaScript 中，原型链（Prototype Chain） 是实现对象之间 属性共享 和 继承 的核心机制
-function Animal(name) &#123;  this.name = name;&#125;Animal.prototype.eat = function() &#123;  console.log(this.name + &quot; is eating.&quot;);&#125;;function Dog(name) &#123;  Animal.call(this, name); // 借用构造函数继承属性&#125;// 核心：原型链继承方法Dog.prototype = Object.create(Animal.prototype); Dog.prototype.constructor = Dog;const myDog = new Dog(&quot;Buddy&quot;);myDog.eat(); // 沿着原型链找到了 Animal.prototype 上的方法
-
-React&#x2F;Nextjs关于 Server Actions 的错误处理在企业内网环境下，稳定性和用户反馈的准确性是第一位的。
-统一响应结构不要让前端直接处理 throw new Error，而是通过 return 返回一个标准对象。这样前端可以使用 useActionState 轻松获取错误信息，并保持 UI 类型安全
-业务级脱敏与捕获在 Action 内部使用 try-catch 包裹数据库（如 Drizzle）操作。
-
-对外： 将原始错误（如 Foreign key constraint failed）转换为用户友好的文案（如“关联数据校验失败”）。
-对内： 同时将原始堆栈信息记录到企业内部监控日志，方便排查由于内网环境特有的网络或权限导致的故障。
-
-全局防御 (error.js)在文件夹中配置 error.js 文件，作为 Server Action 以外的最后防线。
-
-作用： 捕捉那些没被 try-catch 住的致命错误（如数据库连接断开、服务器 OOM）。
-体验： 确保用户看到的是一个带有“重试”按钮的报错页面，而不是浏览器默认的白屏或 JSON 源码。
-
-useTransition 和 useDeferredValue问题：React 18&#x2F;19 中，useTransition 和 useDeferredValue 是如何利用并发特性（Concurrent Mode）来优化长列表或复杂计算的
-回答如下：
-在 React 18&#x2F;19 中，useTransition 和 useDeferredValue 的核心逻辑都是基于 Fiber 架构的可中断渲染（Interruptible Rendering）。它们不再像以前那样“一把梭”更新所有组件，而是将更新分成了高优先级和低优先级。以前 React 的渲染是阻塞式的（Blocking），一旦开始渲染 10000 条数据，浏览器就没法响应用户输入了。引入并发特性后，useTransition 允许我们将渲染任务标记为 Non-urgent（非紧急）。
-React 此时会利用 Fiber 架构进行时间切片：它每计算一小段列表，就停下来看看有没有用户输入。如果有，就先去跑输入的逻辑。这种‘可中断’的特性，让长列表的计算不再导致页面假死。而 useDeferredValue 则是这种机制在数据流层面的应用，它确保了高频变动的值不会立刻触发重型计算，从而保障了主线程的绝对优先权。
-React Fiber保证一致性首先，在架构层面，Fiber 采用了双缓存（Double Buffering）。所有的并发渲染都在内存中的 workInProgress 树上进行，只有当整棵树协调完毕，才会一次性挂载到真实的 DOM 上。这就保证了用户看到的 UI 永远是完整的。
-其次，针对中断期间的状态变化，React 利用了 Lanes 优先级模型。如果一个正在进行的低优先级渲染因为新的状态更新被中断，React 并不会强行接着渲染，而是会根据情况丢弃当前的中间结果。它会重新获取最新的状态快照，从头（或从受影响的节点）开始一轮新的渲染。
-简而言之，Fiber 允许渲染过程‘断断续续’，但它通过**‘丢弃重做’和‘原子提交’**，确保了渲染结果要么不出来，出来就一定是基于当前时刻最新状态的完整镜像。
-useLayoutEffect 和 useEffect问题：useLayoutEffect 和 useEffect有什么区别
-回答如下：
-useEffect 是在屏幕更新后异步执行的，它是非阻塞的，适合处理绝大多数业务逻辑，如 API 请求。
-而 useLayoutEffect 是在 DOM 更新后、浏览器绘图前同步执行的。在我之前的项目中，比如实现一个自动根据内容调整位置的 Tooltip 浮层时，我会选择 useLayoutEffect。因为我需要在渲染的第一时间获取 Tooltip 的物理尺寸，如果不加干预直接渲染，用户会看到浮层先在默认位置闪现，然后才跳到正确位置；而 useLayoutEffect 能确保浏览器在显示第一帧时，浮层就已经在计算好的位置了。
-setState的同步异步问题问题：React的setstate是同步的还是异步的
-回答如下：
-setState 本身的执行过程是同步的，但它触发的状态更新行为在 React 的不同版本和场景下表现不同。在 React 18 之后，为了性能优化，React 引入了自动批处理（Automatic Batching），这使得 setState 在绝大多数场景下看起来都是“异步”的。
-setState 的同步或异步表现，本质上是 React ‘调度（Scheduling）’ 的结果。在 React 18 之后，由于引了 ‘自动批处理（Automatic Batching）’，setState 在所有场景下（包括 Promise 和 setTimeout）都表现为异步。这主要是为了减少不必要的重绘，提升渲染性能。如果我们需要基于当前状态进行多次更新，我会使用函数式更新（updater function）。如果需要在状态更新并渲染完成后执行逻辑，我会将其放在 useEffect 中。值得注意的是，React 18 的 并发模式（Concurrent Mode） 进一步强化了这种‘异步感’，因为它允许 React 根据任务优先级（Lanes 模型）来中断和恢复渲染，从而保证高优先级任务（如用户输入）的即时响应。”
-
-React 为了避免频繁的重新渲染（Re-render），会将同一个事件处理函数中的多个 setState 合并为一个更新任务
-
-React HooksReact Hooks的作用
-在 Hooks 出现之前，React 复用逻辑主要靠 HOC（高阶组件） 和 Render Props。Hooks 允许你在不改变组件结构的情况下，将逻辑提取到可重用的函数（Custom Hooks）中。逻辑变得像插拔式插件一样简单
-在类组件中，同一个业务逻辑的代码往往被拆分在不同的生命周期里，useEffect 允许你根据业务逻辑而不是生命周期来组织代码。你可以把订阅和取消订阅写在同一个 Effect 里，让相关代码“聚合”
-函数组件通过闭包访问状态，彻底抛弃了 this。这更符合函数式编程的直觉，代码也更加简洁易读。
-函数对压缩工具（如 Terser）更友好，更利于减小最终的 Bundle Size，提升首屏加载速度。
-
-React Hooks的顺序问题问题：既然 Hooks 这么完美，那为什么它会有‘不能在条件语句中调用’这种限制？这个限制的背后是怎样的存储数据结构
-回答如下：React 必须依靠 Hook 调用的 “物理顺序” 来确定每个 useState 或 useEffect 对应的是哪一个状态。在 React 内部，每一个组件实例（Fiber 节点）上都有一个属性叫 memoizedState。它并不是一个对象，而是一个按顺序排列的链表。
-
-初次渲染（Mount）： React 按照 Hook 出现的顺序，依次在内存中创建节点。
-后续渲染（Update）： React 再次执行函数组件，它从头开始依次读取链表中的节点
-
-Hooks 必须写在顶层，根本原因在于 React 内部使用 单向链表 来存储 Hook 的状态。每一个 Fiber 节点的 memoizedState 属性记录了这个链表的头节点。由于 React 并不记录 Hook 的名称，它唯一标识 Hook 的方式就是 执行顺序。如果我们在 if 语句中调用 Hook，就会导致在不同次渲染之间，Hook 的调用次数或顺序发生变化。这会造成‘链表索引偏移’，使得 React 无法正确地将之前的状态恢复到对应的变量上。为了保证状态的稳定性（State Stability），React 规定了 Hook 必须在每轮渲染中以相同的顺序被调用
-云原生Docker 镜像体积优化问题：你曾与 DevOps 团队协作将 Docker 镜像体积缩减了 2&#x2F;3 。请分享一下具体的优化策略。
-
-采用多阶段构建 (Multi-stage Builds)：将构建过程分为“构建环境”和“运行环境”，第一阶段（Build） 安装所有依赖（包括 devDependencies），进行 TypeScript 编译、代码混淆或前端构建（如 Angular&#x2F;React 构建）。在 第二阶段（Runtime） 只从第一阶段拷贝编译后的产物（如 dist 文件夹）以及生产环境必需的 node_modules。
-
-精选基础镜像 (Base Image Selection)：切换到 node:alpine：Alpine Linux 极其精简，通常只有 5MB 左右，整个 Node 环境可以控制在 100MB 出头
-
-生产环境依赖瘦身 (Pruning Dependencies)：将node_modules里的markdown文件，测试代码，typescript文件等不需要的文件清除。（实测效果不佳）
-
-优化镜像层 (Layer Optimization)；将多个 RUN 命令合并为一个，并在同一层中清理缓存；合理的 .dockerignore： 确保 .git、本地 node_modules、日志文件和环境配置文件不被复制进镜像镜像，这不仅能缩减体积，还能加速构建。
-
-
-业务WO引入golang技术栈问题：你提到为了处理百万级用户和千万级消息，果断引入了 Go 语言栈 处理异步消息 。请详细聊聊当时 Node.js 遇到了什么样的瓶颈？在引入 Go 之后，你是如何设计跨语言（Node.js 与 Go）的服务通信和数据一致性保障的？
-回答：
-
-Node.js 当时遇到了什么样的瓶颈： 在 Workforce Orchestrator (WO) 项目的早期，我们使用 Node.js 承载了所有的业务逻辑，包括高并发的消息分发和异步数据处理。随着用户量和消息量冲向百万与千万级，Node.js 暴露出以下核心瓶颈：CPU 密集型任务阻塞事件循环（Event Loop）；高并发下的内存暴涨（OOM）。
-
-引入 Go 后，如何设计跨语言服务通信： 我们并没有完全废弃 Node.js，而是采用了 “前轻后重”的微服务架构：Node.js 继续负责面向用户侧、业务逻辑复杂、多变的前端 Portal&#x2F;Admin 服务和 GraphQL BFF 层；而 Go 专门负责高并发、CPU 密集的异步消息处理与数据同步。
-
-
-[前端/客户端]       │ (HTTPS/WSS)      ▼[Node.js BFF (GraphQL/Express)]       │       ├─► (高效数据写入) ──► [PostgreSQL] ◄── (读取/分析) ──┐      │                                                  │      ├─► (发布消息) ──► [Google Pub/Sub 消息队列]          │                                │                        │                                ▼                        │                        [Go 异步数据处理服务] ──────────────┘
-
-
-BCP使用patch-package修改next auth问题：在 BCP 项目中，你提到使用 patch-package 深度定制了 Next-Auth 以解决企业代理环境下的认证问题 。能具体描述一下那个“坑”是什么吗？你是如何定位到 Next-Auth 源码问题的，以及最终的补丁逻辑是如何绕过或兼容代理的
-回答如下：
-在企业内网环境下，所有的外网请求（甚至是部分内网跨域请求）都必须经过 Corporate Proxy（企业代理）。当集成 Next-Auth 进行 Azure AD（或内部 OIDC 服务）认证时，服务端在交换 Token 的阶段（即服务器对服务器的后端通信）出现访问超时的问题。
-定位过程如下：浏览器可以访问 Azure AD的服务 -&gt; 终端不可以ping通Azure AD的服务 -&gt; 配置http_proxy环境变量之后终端可以ping通Azure AD的服务 -&gt; 配置http_proxy环境变量之后next auth还是无法访问配置Azure AD的服务。
-解决思路：使用Add support for HTTP Proxy
-解决方案：为了不破坏项目的整体架构，同时确保 CI&#x2F;CD 流程能自动应用修复，我选择了 patch-package引入对next auth的源代码改动。
-经验：
-
-要迷信流行库的开箱即用。在受限的企业内网（High-Security Environment）中，很多开源库的默认行为（如网络请求、证书校验）都会失效
-平衡‘改源码’与‘可维护性’。直接修改 node_modules 是大忌，但通过 patch-package 将修复作为代码版本的一部分提交，既解决了 BCP PoC 的紧急上线问题，又为团队留下了清晰的文档记录，直到官方在后续版本中通过 httpOptions 彻底修复了这个扩展性问题。
-
-积分引擎无
-GSS Data Store使用Podman部署问题：你提到在虚拟机上通过 Podman systemd 实现了环境的自动化自愈 。在有了 Kubernetes 的情况下，为什么还需要在虚拟机上做这套方案？
-回答如下：
-
-当时公司的 Kubernetes 生产环境还在建设或调优阶段，不具备上生产的能力。
-虚拟机部署经验成熟可靠。
-利用 podman generate systemd 命令将容器的生命周期挂载到系统的 systemd 服务中。
-在 systemd 的配置中设置 Restart&#x3D;always 和 StartLimitInterval。这样即使容器因为宿主机每周末定期重启，宿主机的操作系统内核会自动检测并重新拉起服务。
-相比于简单的脚本，systemctl 提供了成熟的状态检查（Status Check）和日志回溯（Journald），能确保在没有 K8s 控制平面监控的情况下，服务依然具备基本的健壮性
+问题podman generate systemd在podman 4.4的时候就已经弃用了，目前推荐使用Quadlet
+引用
+使用 Podman 以非 root 用户身份运行 Linux 容器
+System and Service Manager
+Linux Systemd基础教程
+How to replace the “podman generate systemd” command since its deprecated
 
 ]]></content>
       <categories>
-        <category>前端</category>
+        <category>后端</category>
       </categories>
       <tags>
-        <tag>高级前端工程师</tag>
-        <tag>面试</tag>
+        <tag>podman</tag>
+        <tag>容器</tag>
+        <tag>systemd</tag>
       </tags>
   </entry>
   <entry>
@@ -1973,6 +1834,145 @@ Sprint 周期：通常为 1 到 4 周，2 周为常见做法。
       </tags>
   </entry>
   <entry>
+    <title>2026年5月7号面试总结</title>
+    <url>/2026/05/08/front-end/2026-0507-interview/</url>
+    <content><![CDATA[前言2026年5月7号有两场面试，本文记录了自己预先准备面试题和面试中遇到的问题。
+笔试防抖 (Debounce)原理：在事件被触发 $n$ 秒后再执行回调，如果在这 $n$ 秒内又被触发，则重新计时。适用于：搜索框输入、窗口大小调整
+function debounce&lt;T extends (...args: any[]) =&gt; void&gt;(  func: T,  wait: number): (...args: Parameters&lt;T&gt;) =&gt; void &#123;  let timeout: ReturnType&lt;typeof setTimeout&gt; | null = null;  return function (this: any, ...args: Parameters&lt;T&gt;) &#123;    if (timeout) clearTimeout(timeout);    timeout = setTimeout(() =&gt; &#123;      func.apply(this, args);    &#125;, wait);  &#125;;&#125;
+
+节流 (Throttle)原理：规定在一个单位时间内，只能触发一次函数。如果这个单位时间内触发了多次函数，只有一次生效。适用于：滚动事件（scroll）、抢购按钮点击。
+function throttle&lt;T extends (...args: any[]) =&gt; void&gt;(  func: T,  limit: number): (...args: Parameters&lt;T&gt;) =&gt; void &#123;  let lastCall = 0;  return function (this: any, ...args: Parameters&lt;T&gt;) &#123;    const now = Date.now();    if (now - lastCall &gt;= limit) &#123;      lastCall = now;      func.apply(this, args);    &#125;  &#125;;&#125;
+
+深拷贝（Deep Copy）现代最简法：structuredCloneconst original = &#123; a: 1, b: &#123; c: 2 &#125; &#125;;const copy = structuredClone(original);
+
+优点：原生支持、性能好、支持循环引用、支持 Date, RegExp, Map, Set 等类型。缺点：不支持函数、不可扩展。
+传统最简法：JSON.parse(JSON.stringify())const original = &#123;  name: &quot;Arthur&quot;,  age: 25,  date: new Date(),        // 特殊对象：Date  reg: /abc/g,            // 特殊对象：RegExp  und: undefined,         // 特殊值：undefined  func: () =&gt; &#123; console.log(&quot;hello&quot;) &#125;, // 特殊值：函数  nan: NaN,               // 特殊值：NaN  infinity: Infinity      // 特殊值：正无穷&#125;;// 执行深拷贝const copy = JSON.parse(JSON.stringify(original));console.log(&quot;Original:&quot;, original);console.log(&quot;Copy:&quot;, copy);// 验证独立性copy.name = &quot;Damingerdai&quot;;console.log(original.name); // 输出 &quot;Arthur&quot;，互不影响
+
+优点：一行搞定，兼容性极强。
+缺点：
+丢失数据：会忽略 undefined、函数和 Symbol。
+异常转换：Date 会变成字符串，RegExp 会变成空对象。
+循环引用：如果对象内部自己引用自己，会直接报错
+手写递归实现（面试高频）function deepClone&lt;T&gt;(obj: T, hash = new WeakMap()): T &#123;  // 1. 处理 null 或基本类型  if (obj === null || typeof obj !== &quot;object&quot;) return obj;  // 2. 处理日期和正则  if (obj instanceof Date) return new Date(obj) as any;  if (obj instanceof RegExp) return new RegExp(obj) as any;  // 3. 处理循环引用：如果已经拷贝过，直接返回之前的结果  if (hash.has(obj as object)) return hash.get(obj as object);  // 4. 初始化克隆对象（保留数组或对象的形状）  const result: any = Array.isArray(obj) ? [] : &#123;&#125;;  hash.set(obj as object, result);  // 5. 递归拷贝所有属性  for (const key in obj) &#123;    if (Object.prototype.hasOwnProperty.call(obj, key)) &#123;      result[key] = deepClone(obj[key], hash);    &#125;  &#125;  return result;&#125;
+
+二叉搜索树定义节点类class TreeNode &#123;    val: number;    left: TreeNode | null;    right: TreeNode | null;    constructor(val: number, left: TreeNode | null = null, right: TreeNode | null = null) &#123;        this.val = val;        this.left = left;        this.right = right;    &#125;&#125;
+
+插入节点 (Insert)function insertIntoBST(root: TreeNode | null, val: number): TreeNode &#123;    // 如果当前节点为空，说明找到了插入位置，创建新节点返回    if (!root) &#123;        return new TreeNode(val);    &#125;    if (val &lt; root.val) &#123;        // 递归向左子树插入        root.left = insertIntoBST(root.left, val);    &#125; else &#123;        // 递归向右子树插入        root.right = insertIntoBST(root.right, val);    &#125;    return root;&#125;
+
+删除节点 (Delete)function deleteNode(root: TreeNode | null, key: number): TreeNode | null &#123;    if (!root) return null;    if (key &lt; root.val) &#123;        // 去左子树删除        root.left = deleteNode(root.left, key);    &#125; else if (key &gt; root.val) &#123;        // 去右子树删除        root.right = deleteNode(root.right, key);    &#125; else &#123;        // 命中了要删除的节点        // 情况 1: 叶子节点或只有一个子节点        if (!root.left) return root.right;        if (!root.right) return root.left;        // 情况 2: 有两个子节点        // 找到右子树的最小节点（后继节点）        const minNode = getMin(root.right);        // 用后继节点的值覆盖当前节点        root.val = minNode.val;        // 在右子树中删除那个重复的后继节点        root.right = deleteNode(root.right, minNode.val);    &#125;    return root;&#125;// 辅助函数：获取子树中的最小节点function getMin(node: TreeNode): TreeNode &#123;    let curr = node;    while (curr.left) &#123;        curr = curr.left;    &#125;    return curr;&#125;
+
+
+JavaScript闭包闭包是指一个函数能够记住并访问它的“词法作用域”（Lexical Scope），即使这个函数在它被定义的作用域之外执行。闭包是 JavaScript 静态作用域规则的自然产物。它的本质是函数保存了对创建时作用域的引用
+应用场景：
+
+数据私有化（模拟私有变量）；
+柯里化（Currying）；
+回调函数与异步处理。
+
+代价：
+
+可能会导致内存泄露
+存在一定的性能开销
+
+原型链（Prototype Chain）在 JavaScript 中，原型链（Prototype Chain） 是实现对象之间 属性共享 和 继承 的核心机制
+function Animal(name) &#123;  this.name = name;&#125;Animal.prototype.eat = function() &#123;  console.log(this.name + &quot; is eating.&quot;);&#125;;function Dog(name) &#123;  Animal.call(this, name); // 借用构造函数继承属性&#125;// 核心：原型链继承方法Dog.prototype = Object.create(Animal.prototype); Dog.prototype.constructor = Dog;const myDog = new Dog(&quot;Buddy&quot;);myDog.eat(); // 沿着原型链找到了 Animal.prototype 上的方法
+
+React&#x2F;Nextjs关于 Server Actions 的错误处理在企业内网环境下，稳定性和用户反馈的准确性是第一位的。
+统一响应结构不要让前端直接处理 throw new Error，而是通过 return 返回一个标准对象。这样前端可以使用 useActionState 轻松获取错误信息，并保持 UI 类型安全
+业务级脱敏与捕获在 Action 内部使用 try-catch 包裹数据库（如 Drizzle）操作。
+
+对外： 将原始错误（如 Foreign key constraint failed）转换为用户友好的文案（如“关联数据校验失败”）。
+对内： 同时将原始堆栈信息记录到企业内部监控日志，方便排查由于内网环境特有的网络或权限导致的故障。
+
+全局防御 (error.js)在文件夹中配置 error.js 文件，作为 Server Action 以外的最后防线。
+
+作用： 捕捉那些没被 try-catch 住的致命错误（如数据库连接断开、服务器 OOM）。
+体验： 确保用户看到的是一个带有“重试”按钮的报错页面，而不是浏览器默认的白屏或 JSON 源码。
+
+useTransition 和 useDeferredValue问题：React 18&#x2F;19 中，useTransition 和 useDeferredValue 是如何利用并发特性（Concurrent Mode）来优化长列表或复杂计算的
+回答如下：
+在 React 18&#x2F;19 中，useTransition 和 useDeferredValue 的核心逻辑都是基于 Fiber 架构的可中断渲染（Interruptible Rendering）。它们不再像以前那样“一把梭”更新所有组件，而是将更新分成了高优先级和低优先级。以前 React 的渲染是阻塞式的（Blocking），一旦开始渲染 10000 条数据，浏览器就没法响应用户输入了。引入并发特性后，useTransition 允许我们将渲染任务标记为 Non-urgent（非紧急）。
+React 此时会利用 Fiber 架构进行时间切片：它每计算一小段列表，就停下来看看有没有用户输入。如果有，就先去跑输入的逻辑。这种‘可中断’的特性，让长列表的计算不再导致页面假死。而 useDeferredValue 则是这种机制在数据流层面的应用，它确保了高频变动的值不会立刻触发重型计算，从而保障了主线程的绝对优先权。
+React Fiber保证一致性首先，在架构层面，Fiber 采用了双缓存（Double Buffering）。所有的并发渲染都在内存中的 workInProgress 树上进行，只有当整棵树协调完毕，才会一次性挂载到真实的 DOM 上。这就保证了用户看到的 UI 永远是完整的。
+其次，针对中断期间的状态变化，React 利用了 Lanes 优先级模型。如果一个正在进行的低优先级渲染因为新的状态更新被中断，React 并不会强行接着渲染，而是会根据情况丢弃当前的中间结果。它会重新获取最新的状态快照，从头（或从受影响的节点）开始一轮新的渲染。
+简而言之，Fiber 允许渲染过程‘断断续续’，但它通过**‘丢弃重做’和‘原子提交’**，确保了渲染结果要么不出来，出来就一定是基于当前时刻最新状态的完整镜像。
+useLayoutEffect 和 useEffect问题：useLayoutEffect 和 useEffect有什么区别
+回答如下：
+useEffect 是在屏幕更新后异步执行的，它是非阻塞的，适合处理绝大多数业务逻辑，如 API 请求。
+而 useLayoutEffect 是在 DOM 更新后、浏览器绘图前同步执行的。在我之前的项目中，比如实现一个自动根据内容调整位置的 Tooltip 浮层时，我会选择 useLayoutEffect。因为我需要在渲染的第一时间获取 Tooltip 的物理尺寸，如果不加干预直接渲染，用户会看到浮层先在默认位置闪现，然后才跳到正确位置；而 useLayoutEffect 能确保浏览器在显示第一帧时，浮层就已经在计算好的位置了。
+setState的同步异步问题问题：React的setstate是同步的还是异步的
+回答如下：
+setState 本身的执行过程是同步的，但它触发的状态更新行为在 React 的不同版本和场景下表现不同。在 React 18 之后，为了性能优化，React 引入了自动批处理（Automatic Batching），这使得 setState 在绝大多数场景下看起来都是“异步”的。
+setState 的同步或异步表现，本质上是 React ‘调度（Scheduling）’ 的结果。在 React 18 之后，由于引了 ‘自动批处理（Automatic Batching）’，setState 在所有场景下（包括 Promise 和 setTimeout）都表现为异步。这主要是为了减少不必要的重绘，提升渲染性能。如果我们需要基于当前状态进行多次更新，我会使用函数式更新（updater function）。如果需要在状态更新并渲染完成后执行逻辑，我会将其放在 useEffect 中。值得注意的是，React 18 的 并发模式（Concurrent Mode） 进一步强化了这种‘异步感’，因为它允许 React 根据任务优先级（Lanes 模型）来中断和恢复渲染，从而保证高优先级任务（如用户输入）的即时响应。”
+
+React 为了避免频繁的重新渲染（Re-render），会将同一个事件处理函数中的多个 setState 合并为一个更新任务
+
+React HooksReact Hooks的作用
+在 Hooks 出现之前，React 复用逻辑主要靠 HOC（高阶组件） 和 Render Props。Hooks 允许你在不改变组件结构的情况下，将逻辑提取到可重用的函数（Custom Hooks）中。逻辑变得像插拔式插件一样简单
+在类组件中，同一个业务逻辑的代码往往被拆分在不同的生命周期里，useEffect 允许你根据业务逻辑而不是生命周期来组织代码。你可以把订阅和取消订阅写在同一个 Effect 里，让相关代码“聚合”
+函数组件通过闭包访问状态，彻底抛弃了 this。这更符合函数式编程的直觉，代码也更加简洁易读。
+函数对压缩工具（如 Terser）更友好，更利于减小最终的 Bundle Size，提升首屏加载速度。
+
+React Hooks的顺序问题问题：既然 Hooks 这么完美，那为什么它会有‘不能在条件语句中调用’这种限制？这个限制的背后是怎样的存储数据结构
+回答如下：React 必须依靠 Hook 调用的 “物理顺序” 来确定每个 useState 或 useEffect 对应的是哪一个状态。在 React 内部，每一个组件实例（Fiber 节点）上都有一个属性叫 memoizedState。它并不是一个对象，而是一个按顺序排列的链表。
+
+初次渲染（Mount）： React 按照 Hook 出现的顺序，依次在内存中创建节点。
+后续渲染（Update）： React 再次执行函数组件，它从头开始依次读取链表中的节点
+
+Hooks 必须写在顶层，根本原因在于 React 内部使用 单向链表 来存储 Hook 的状态。每一个 Fiber 节点的 memoizedState 属性记录了这个链表的头节点。由于 React 并不记录 Hook 的名称，它唯一标识 Hook 的方式就是 执行顺序。如果我们在 if 语句中调用 Hook，就会导致在不同次渲染之间，Hook 的调用次数或顺序发生变化。这会造成‘链表索引偏移’，使得 React 无法正确地将之前的状态恢复到对应的变量上。为了保证状态的稳定性（State Stability），React 规定了 Hook 必须在每轮渲染中以相同的顺序被调用
+云原生Docker 镜像体积优化问题：你曾与 DevOps 团队协作将 Docker 镜像体积缩减了 2&#x2F;3 。请分享一下具体的优化策略。
+
+采用多阶段构建 (Multi-stage Builds)：将构建过程分为“构建环境”和“运行环境”，第一阶段（Build） 安装所有依赖（包括 devDependencies），进行 TypeScript 编译、代码混淆或前端构建（如 Angular&#x2F;React 构建）。在 第二阶段（Runtime） 只从第一阶段拷贝编译后的产物（如 dist 文件夹）以及生产环境必需的 node_modules。
+
+精选基础镜像 (Base Image Selection)：切换到 node:alpine：Alpine Linux 极其精简，通常只有 5MB 左右，整个 Node 环境可以控制在 100MB 出头
+
+生产环境依赖瘦身 (Pruning Dependencies)：将node_modules里的markdown文件，测试代码，typescript文件等不需要的文件清除。（实测效果不佳）
+
+优化镜像层 (Layer Optimization)；将多个 RUN 命令合并为一个，并在同一层中清理缓存；合理的 .dockerignore： 确保 .git、本地 node_modules、日志文件和环境配置文件不被复制进镜像镜像，这不仅能缩减体积，还能加速构建。
+
+
+业务WO引入golang技术栈问题：你提到为了处理百万级用户和千万级消息，果断引入了 Go 语言栈 处理异步消息 。请详细聊聊当时 Node.js 遇到了什么样的瓶颈？在引入 Go 之后，你是如何设计跨语言（Node.js 与 Go）的服务通信和数据一致性保障的？
+回答：
+
+Node.js 当时遇到了什么样的瓶颈： 在 Workforce Orchestrator (WO) 项目的早期，我们使用 Node.js 承载了所有的业务逻辑，包括高并发的消息分发和异步数据处理。随着用户量和消息量冲向百万与千万级，Node.js 暴露出以下核心瓶颈：CPU 密集型任务阻塞事件循环（Event Loop）；高并发下的内存暴涨（OOM）。
+
+引入 Go 后，如何设计跨语言服务通信： 我们并没有完全废弃 Node.js，而是采用了 “前轻后重”的微服务架构：Node.js 继续负责面向用户侧、业务逻辑复杂、多变的前端 Portal&#x2F;Admin 服务和 GraphQL BFF 层；而 Go 专门负责高并发、CPU 密集的异步消息处理与数据同步。
+
+
+[前端/客户端]       │ (HTTPS/WSS)      ▼[Node.js BFF (GraphQL/Express)]       │       ├─► (高效数据写入) ──► [PostgreSQL] ◄── (读取/分析) ──┐      │                                                  │      ├─► (发布消息) ──► [Google Pub/Sub 消息队列]          │                                │                        │                                ▼                        │                        [Go 异步数据处理服务] ──────────────┘
+
+
+BCP使用patch-package修改next auth问题：在 BCP 项目中，你提到使用 patch-package 深度定制了 Next-Auth 以解决企业代理环境下的认证问题 。能具体描述一下那个“坑”是什么吗？你是如何定位到 Next-Auth 源码问题的，以及最终的补丁逻辑是如何绕过或兼容代理的
+回答如下：
+在企业内网环境下，所有的外网请求（甚至是部分内网跨域请求）都必须经过 Corporate Proxy（企业代理）。当集成 Next-Auth 进行 Azure AD（或内部 OIDC 服务）认证时，服务端在交换 Token 的阶段（即服务器对服务器的后端通信）出现访问超时的问题。
+定位过程如下：浏览器可以访问 Azure AD的服务 -&gt; 终端不可以ping通Azure AD的服务 -&gt; 配置http_proxy环境变量之后终端可以ping通Azure AD的服务 -&gt; 配置http_proxy环境变量之后next auth还是无法访问配置Azure AD的服务。
+解决思路：使用Add support for HTTP Proxy
+解决方案：为了不破坏项目的整体架构，同时确保 CI&#x2F;CD 流程能自动应用修复，我选择了 patch-package引入对next auth的源代码改动。
+经验：
+
+要迷信流行库的开箱即用。在受限的企业内网（High-Security Environment）中，很多开源库的默认行为（如网络请求、证书校验）都会失效
+平衡‘改源码’与‘可维护性’。直接修改 node_modules 是大忌，但通过 patch-package 将修复作为代码版本的一部分提交，既解决了 BCP PoC 的紧急上线问题，又为团队留下了清晰的文档记录，直到官方在后续版本中通过 httpOptions 彻底修复了这个扩展性问题。
+
+积分引擎无
+GSS Data Store使用Podman部署问题：你提到在虚拟机上通过 Podman systemd 实现了环境的自动化自愈 。在有了 Kubernetes 的情况下，为什么还需要在虚拟机上做这套方案？
+回答如下：
+
+当时公司的 Kubernetes 生产环境还在建设或调优阶段，不具备上生产的能力。
+虚拟机部署经验成熟可靠。
+利用 podman generate systemd 命令将容器的生命周期挂载到系统的 systemd 服务中。
+在 systemd 的配置中设置 Restart&#x3D;always 和 StartLimitInterval。这样即使容器因为宿主机每周末定期重启，宿主机的操作系统内核会自动检测并重新拉起服务。
+相比于简单的脚本，systemctl 提供了成熟的状态检查（Status Check）和日志回溯（Journald），能确保在没有 K8s 控制平面监控的情况下，服务依然具备基本的健壮性
+
+]]></content>
+      <categories>
+        <category>前端</category>
+      </categories>
+      <tags>
+        <tag>高级前端工程师</tag>
+        <tag>面试</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>Angular独立组件简单体验</title>
     <url>/2022/06/09/front-end/angular-standalone-components-app/</url>
     <content><![CDATA[Angular独立组件简单体验前言Angular 14一项令人兴奋的特性就是Angular的独立组件终于来了。
@@ -2038,6 +2038,46 @@ Angular Material
   </entry>
   <entry>
     <title>在windows上构建angular项目(上)</title>
+    <url>/2021/05/13/front-end/build-angular-on-windows-01/</url>
+    <content><![CDATA[在windows上构建angular项目 (上)前端三大框架( angular, reac, vue )中，angular一直都是一个很独特的存在。首先，angular的概念很多，服务、依赖注入、模块，指令等，都是在前端圈不是很常用的，此外，angular使用了bazel作为构建工具，而react和vue都是使用了rollup，因此在本地编译构建angular将会远远超过react和vue，如果你是用的windows平台，那么一个个坑需要自己慢慢来填。。。
+Bazel是什么？根据官网的定义，Bazel是类似于Make，Maven和Gradle的开源构建和测试工具。它使用人类可读的高级构建语言Starlark(一种基于python的方言)。 Bazel支持多种语言的项目，并为多种平台构建输出。 
+从我个人角度来看，bazel是一个强大且复杂的构建系统，通过build rule的概念，支持多种语言、不同平台，支持构建C&#x2F;C++,Java,Android,IOS,Golang,Nodejs,Docker项目
+安装Bazel官方支持Windows，macOS, Ubuntu Linux三大平台，这也是开发人员比较常用的本地开发平台。
+在社区的支持下，bazel还支持其他平台，具体信息可以看一下官网。这里我仅仅介绍如何在windows上安装。
+安装要求在安装前，请确保你windows系统符合要求：
+
+推荐使用64位的windows10，版本号不能低于1703
+64位的Windows 7以上
+64位的Windows Server 2008 R2以上
+
+此外，请事先安装Visual C++ Redistributable for Visual Studio 2015
+下载安装Bazel我们需要在github选择下载bazel-&lt;version&gt;-windows-x86_64.exe，然后将该文件路径放在path环境变量中。
+在终端中执行
+$ bazel version
+
+显示类似效果就是可以了
+Build label: 4.0.0Build target: bazel-out/x64_windows-opt/bin/src/main/java/com/google/devtools/build/lib/bazel/BazelServer_deploy.jarBuild time: Thu Jan 21 07:39:16 2021 (1611214756)Build timestamp: 1611214756Build timestamp as int: 1611214756
+
+安装编译和语言运行时根据不同语言的编译需要，我们可能需要以下的工具：
+
+MSYS2 x86_64
+Build Tools for Visual Studio 2019
+Java SE Development Kit 11 (JDK) for Windows x64
+Python 3.6 for Windows x86-64
+
+如果你想在window平台编译构建angular，后三者必须的，JDK16和Python 3.9.5也能满足自己的需求。
+总结当完成以上步骤的时候，我们基本上就可以开始尝试在windows本地进行编译angular。
+]]></content>
+      <categories>
+        <category>前端</category>
+      </categories>
+      <tags>
+        <tag>bazel</tag>
+        <tag>angular</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>在windows上构建angular项目(上)</title>
     <url>/2021/05/17/front-end/build-angular-on-windows-02/</url>
     <content><![CDATA[在windows上构建angular项目 (下)当完成bazel的安装之后，我们还需要安装nodejs就可以开始编译angular了。
 Nodejs目前angular仅支持nodejs12和nodejs14这两个版本，推荐使用node14这个版本。
@@ -2079,46 +2119,6 @@ dist\packages-dist目录下便是angular各个模块的代码了；
 dist\zone.js-dist目录下的是zone.js。
 
 总结到此，windows上编译angular就算是完成了。angular使用bazel作为编译工具，确实导致编译的成本高了很多，尤其是在windows平台，但是不停探索的过程，是一个不断学习的过程。这个过程，不挣钱，就是交个朋友。
-]]></content>
-      <categories>
-        <category>前端</category>
-      </categories>
-      <tags>
-        <tag>bazel</tag>
-        <tag>angular</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>在windows上构建angular项目(上)</title>
-    <url>/2021/05/13/front-end/build-angular-on-windows-01/</url>
-    <content><![CDATA[在windows上构建angular项目 (上)前端三大框架( angular, reac, vue )中，angular一直都是一个很独特的存在。首先，angular的概念很多，服务、依赖注入、模块，指令等，都是在前端圈不是很常用的，此外，angular使用了bazel作为构建工具，而react和vue都是使用了rollup，因此在本地编译构建angular将会远远超过react和vue，如果你是用的windows平台，那么一个个坑需要自己慢慢来填。。。
-Bazel是什么？根据官网的定义，Bazel是类似于Make，Maven和Gradle的开源构建和测试工具。它使用人类可读的高级构建语言Starlark(一种基于python的方言)。 Bazel支持多种语言的项目，并为多种平台构建输出。 
-从我个人角度来看，bazel是一个强大且复杂的构建系统，通过build rule的概念，支持多种语言、不同平台，支持构建C&#x2F;C++,Java,Android,IOS,Golang,Nodejs,Docker项目
-安装Bazel官方支持Windows，macOS, Ubuntu Linux三大平台，这也是开发人员比较常用的本地开发平台。
-在社区的支持下，bazel还支持其他平台，具体信息可以看一下官网。这里我仅仅介绍如何在windows上安装。
-安装要求在安装前，请确保你windows系统符合要求：
-
-推荐使用64位的windows10，版本号不能低于1703
-64位的Windows 7以上
-64位的Windows Server 2008 R2以上
-
-此外，请事先安装Visual C++ Redistributable for Visual Studio 2015
-下载安装Bazel我们需要在github选择下载bazel-&lt;version&gt;-windows-x86_64.exe，然后将该文件路径放在path环境变量中。
-在终端中执行
-$ bazel version
-
-显示类似效果就是可以了
-Build label: 4.0.0Build target: bazel-out/x64_windows-opt/bin/src/main/java/com/google/devtools/build/lib/bazel/BazelServer_deploy.jarBuild time: Thu Jan 21 07:39:16 2021 (1611214756)Build timestamp: 1611214756Build timestamp as int: 1611214756
-
-安装编译和语言运行时根据不同语言的编译需要，我们可能需要以下的工具：
-
-MSYS2 x86_64
-Build Tools for Visual Studio 2019
-Java SE Development Kit 11 (JDK) for Windows x64
-Python 3.6 for Windows x86-64
-
-如果你想在window平台编译构建angular，后三者必须的，JDK16和Python 3.9.5也能满足自己的需求。
-总结当完成以上步骤的时候，我们基本上就可以开始尝试在windows本地进行编译angular。
 ]]></content>
       <categories>
         <category>前端</category>
@@ -2528,6 +2528,60 @@ feat: add bazel support
       </tags>
   </entry>
   <entry>
+    <title>JavaScript中的闭包</title>
+    <url>/2024/10/20/front-end/javascript-closure/</url>
+    <content><![CDATA[定义闭包（closure）是一个函数以及其捆绑的周边环境状态（lexical environment，词法环境）的引用的组合。换而言之，闭包让开发者可以从内部函数访问外部函数的作用域。在 JavaScript 中，闭包就是能够读取其他函数内部变量的, 闭包会随着函数的创建而被同时创建。
+作用
+本部分例子来自chatgpt
+
+
+创建私有变量
+
+function createCounter() &#123;    let count = 0;    return function() &#123;        count++;        return count;    &#125;;&#125;const counter = createCounter();console.log(counter()); // 输出 1console.log(counter());
+
+
+保持函数执行上下文
+
+function outer() &#123;    let name = &quot;John&quot;;    return function() &#123;        console.log(name);    &#125;;&#125;const inner = outer();inner(); // 输出 &quot;John&quot;
+
+
+函数柯里化
+
+function add(a) &#123;    return function(b) &#123;        return a + b;    &#125;;&#125;const addFive = add(5);console.log(addFive(10)); // 输出 15
+
+
+延迟执行和异步编程
+
+闭包常用于延迟执行和处理异步操作，因为它能够保存外部函数中的状态。
+function delayedMessage(message, delay) &#123;    setTimeout(function() &#123;        console.log(message);    &#125;, delay);&#125;
+
+
+模拟模块
+
+const module = (function() &#123;    let privateVar = &quot;I&#x27;m private&quot;;    function privateMethod() &#123;        console.log(privateVar);    &#125;    return &#123;        publicMethod: function() &#123;            privateMethod();        &#125;    &#125;;&#125;)();module.publicMethod(); // 输出 &quot;I&#x27;m private&quot;
+
+总结来说，闭包在 JavaScript 中用于数据的封装、状态的保持、异步编程以及提高代码的灵活性与模块化。
+思考题如果你能理解下面两段代码的运行结果，应该就算理解闭包的运行机制了。
+代码片段一：
+var name = &quot;The Window&quot;;var object = &#123;　　name : &quot;My Object&quot;,　　getNameFunc : function()&#123;　　　　return function()&#123;　　　　　　return this.name;　　　　&#125;;　　&#125;&#125;;alert(object.getNameFunc()())
+
+代码二：
+var name = &quot;The Window&quot;;var object = &#123;　　name : &quot;My Object&quot;,　　getNameFunc : function()&#123;        that = this;　　　  return function()&#123;　　　　　  return that.name;　　　  &#125;;　　&#125;&#125;;alert(object.getNameFunc()());
+
+
+参考资料
+闭包
+学习Javascript闭包（Closure）
+
+]]></content>
+      <categories>
+        <category>前端</category>
+      </categories>
+      <tags>
+        <tag>javascript</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>script标签中的defer和async</title>
     <url>/2024/11/04/front-end/html-scripts-defer-async/</url>
     <content><![CDATA[浏览器中script标签中的defer和async有什么区别，优缺点是什么，应用场景是什么？在 HTML 中，&lt;script&gt; 标签的 defer 和 async 属性用于控制脚本的加载和执行方式，尤其是在处理 JavaScript 文件时。它们之间的主要区别和应用场景如下：
@@ -2600,62 +2654,8 @@ chatgpt
         <category>前端</category>
       </categories>
       <tags>
+        <tag>javascript</tag>
         <tag>前端</tag>
-        <tag>javascript</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>JavaScript中的闭包</title>
-    <url>/2024/10/20/front-end/javascript-closure/</url>
-    <content><![CDATA[定义闭包（closure）是一个函数以及其捆绑的周边环境状态（lexical environment，词法环境）的引用的组合。换而言之，闭包让开发者可以从内部函数访问外部函数的作用域。在 JavaScript 中，闭包就是能够读取其他函数内部变量的, 闭包会随着函数的创建而被同时创建。
-作用
-本部分例子来自chatgpt
-
-
-创建私有变量
-
-function createCounter() &#123;    let count = 0;    return function() &#123;        count++;        return count;    &#125;;&#125;const counter = createCounter();console.log(counter()); // 输出 1console.log(counter());
-
-
-保持函数执行上下文
-
-function outer() &#123;    let name = &quot;John&quot;;    return function() &#123;        console.log(name);    &#125;;&#125;const inner = outer();inner(); // 输出 &quot;John&quot;
-
-
-函数柯里化
-
-function add(a) &#123;    return function(b) &#123;        return a + b;    &#125;;&#125;const addFive = add(5);console.log(addFive(10)); // 输出 15
-
-
-延迟执行和异步编程
-
-闭包常用于延迟执行和处理异步操作，因为它能够保存外部函数中的状态。
-function delayedMessage(message, delay) &#123;    setTimeout(function() &#123;        console.log(message);    &#125;, delay);&#125;
-
-
-模拟模块
-
-const module = (function() &#123;    let privateVar = &quot;I&#x27;m private&quot;;    function privateMethod() &#123;        console.log(privateVar);    &#125;    return &#123;        publicMethod: function() &#123;            privateMethod();        &#125;    &#125;;&#125;)();module.publicMethod(); // 输出 &quot;I&#x27;m private&quot;
-
-总结来说，闭包在 JavaScript 中用于数据的封装、状态的保持、异步编程以及提高代码的灵活性与模块化。
-思考题如果你能理解下面两段代码的运行结果，应该就算理解闭包的运行机制了。
-代码片段一：
-var name = &quot;The Window&quot;;var object = &#123;　　name : &quot;My Object&quot;,　　getNameFunc : function()&#123;　　　　return function()&#123;　　　　　　return this.name;　　　　&#125;;　　&#125;&#125;;alert(object.getNameFunc()())
-
-代码二：
-var name = &quot;The Window&quot;;var object = &#123;　　name : &quot;My Object&quot;,　　getNameFunc : function()&#123;        that = this;　　　  return function()&#123;　　　　　  return that.name;　　　  &#125;;　　&#125;&#125;;alert(object.getNameFunc()());
-
-
-参考资料
-闭包
-学习Javascript闭包（Closure）
-
-]]></content>
-      <categories>
-        <category>前端</category>
-      </categories>
-      <tags>
-        <tag>javascript</tag>
       </tags>
   </entry>
   <entry>
@@ -2861,8 +2861,8 @@ css中垂直居中的4种方式
         <category>面试</category>
       </categories>
       <tags>
-        <tag>前端</tag>
         <tag>javascript</tag>
+        <tag>前端</tag>
       </tags>
   </entry>
   <entry>
@@ -2927,20 +2927,6 @@ Resend 发送失败？ 确保你的发件域名在 Resend 后台已通过 DNS �
       </tags>
   </entry>
   <entry>
-    <title>Nodejs项目的Dockerfile模版</title>
-    <url>/2021/10/20/front-end/node-docker-template/</url>
-    <content><![CDATA[Nodejs项目的Dockerfile模版基于YarnFROM node:14.17.6-alpine3.14 as build# 取消对https的证书限制# ENV SELF_SIGNED_CERT_IN_CHAIN=true# ENV NODE_TLS_REJECT_UNAUTHORIZED=0# RUN npm config set strict-ssl false# RUN yarn config set strict-ssl falseRUN apk update &amp;&amp; apk add bashCOPY package.json yarn.lock .npmrc /tmp/RUN cd /tmp &amp;&amp; yarn install --frozen-lockfile --non-interactiveRUN mkdir -p /app &amp;&amp; cp -a /tmp/node_modules /app/WORKDIR /appCOPY . /appRUN yarn buildFROM build AS ciWORKDIR /appRUN yarn run test:ci &amp;&amp; yarn install --frozen-lockfile --non-interactive --productionFROM node:14.17.6-alpine3.14 as releaseRUN mkdir -p /app &amp;&amp; \	addgroup -S daminggroup &amp;&amp; \	adduser -S -h /app -G daminggroup daminguser &amp;&amp; \	chown -R daminguser:daminggroup /appWORKDIR /appCOPY --from=ci --chown=daminguser:daminggroup /app/dist ./distCOPY --from=ci --chown=daminguser:daminggroup /app/node_modules ./node_modulesCOPY --from=ci --chown=daminguser:daminggroup /app/package.json .HEALTHCHECK --interval=30s --timeout=30s CMD curl -f http://localhost:3978/ping || exit 1EXPOSE 3978CMD [&quot;sh&quot;, &quot;-c&quot;, &quot;node dist/index.js&quot;]
-
-基于NPMFROM node:14.17.6-alpine3.14 as build# pwc network limit# ENV SELF_SIGNED_CERT_IN_CHAIN=true# ENV NODE_TLS_REJECT_UNAUTHORIZED=0# RUN npm config set strict-ssl false# RUN yarn config set strict-ssl falseRUN apk update &amp;&amp; apk add bashCOPY package.json package-lock.json .npmrc /tmp/RUN cd /tmp &amp;&amp; npm installRUN mkdir -p /app &amp;&amp; cp -a /tmp/node_modules /app/WORKDIR /appCOPY . /appRUN npm run buildFROM build AS ciWORKDIR /appRUN npm run test:ci &amp;&amp; npm install --production --ignore-scripts trueFROM node:14.17.6-alpine3.14 as releaseRUN mkdir -p /app &amp;&amp; \	addgroup -S daminggroup &amp;&amp; \	adduser -S -h /app -G daminggroup daminguser &amp;&amp; \	chown -R daminguser:daminggroup /appWORKDIR /appCOPY --from=ci --chown=daminguser:daminggroup /app/dist ./distCOPY --from=ci --chown=daminguser:daminggroup /app/node_modules ./node_modulesCOPY --from=ci --chown=daminguser:daminggroup /app/package.json .HEALTHCHECK --interval=30s --timeout=30s CMD curl -f http://localhost:3978/ping || exit 1EXPOSE 3978CMD [&quot;sh&quot;, &quot;-c&quot;, &quot;node dist/index.js&quot;]]]></content>
-      <categories>
-        <category>前端</category>
-      </categories>
-      <tags>
-        <tag>docker</tag>
-        <tag>nodejs</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>在 Next.js 16 (Turbopack) 中集成 RDKit.js 渲染 SMILES 的工程实践与踩坑指南</title>
     <url>/2026/06/16/front-end/nextjs16-rdkitjs-smiles/</url>
     <content><![CDATA[在 Next.js 16 (Turbopack) 中集成 RDKit.js 渲染 SMILES 的工程实践与踩坑指南前言在生物制药数字化（AIDD、LIMS 等系统）的前端开发中，SMILES（简化分子线性输入规范）是表示分子结构最常用的文本格式。为了在前端实现“输入文本，实时预览 2D 分子结构”，我们需要引入化学信息学界的工业级开源工具包：RDKit.js。
@@ -2989,6 +2975,20 @@ Module not found: Can&#x27;t resolve &#x27;fs&#x27;./node_modules/@rdkit/rdkit/d
         <tag>nexjts</tag>
         <tag>rdkitjs</tag>
         <tag>smiles</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Nodejs项目的Dockerfile模版</title>
+    <url>/2021/10/20/front-end/node-docker-template/</url>
+    <content><![CDATA[Nodejs项目的Dockerfile模版基于YarnFROM node:14.17.6-alpine3.14 as build# 取消对https的证书限制# ENV SELF_SIGNED_CERT_IN_CHAIN=true# ENV NODE_TLS_REJECT_UNAUTHORIZED=0# RUN npm config set strict-ssl false# RUN yarn config set strict-ssl falseRUN apk update &amp;&amp; apk add bashCOPY package.json yarn.lock .npmrc /tmp/RUN cd /tmp &amp;&amp; yarn install --frozen-lockfile --non-interactiveRUN mkdir -p /app &amp;&amp; cp -a /tmp/node_modules /app/WORKDIR /appCOPY . /appRUN yarn buildFROM build AS ciWORKDIR /appRUN yarn run test:ci &amp;&amp; yarn install --frozen-lockfile --non-interactive --productionFROM node:14.17.6-alpine3.14 as releaseRUN mkdir -p /app &amp;&amp; \	addgroup -S daminggroup &amp;&amp; \	adduser -S -h /app -G daminggroup daminguser &amp;&amp; \	chown -R daminguser:daminggroup /appWORKDIR /appCOPY --from=ci --chown=daminguser:daminggroup /app/dist ./distCOPY --from=ci --chown=daminguser:daminggroup /app/node_modules ./node_modulesCOPY --from=ci --chown=daminguser:daminggroup /app/package.json .HEALTHCHECK --interval=30s --timeout=30s CMD curl -f http://localhost:3978/ping || exit 1EXPOSE 3978CMD [&quot;sh&quot;, &quot;-c&quot;, &quot;node dist/index.js&quot;]
+
+基于NPMFROM node:14.17.6-alpine3.14 as build# pwc network limit# ENV SELF_SIGNED_CERT_IN_CHAIN=true# ENV NODE_TLS_REJECT_UNAUTHORIZED=0# RUN npm config set strict-ssl false# RUN yarn config set strict-ssl falseRUN apk update &amp;&amp; apk add bashCOPY package.json package-lock.json .npmrc /tmp/RUN cd /tmp &amp;&amp; npm installRUN mkdir -p /app &amp;&amp; cp -a /tmp/node_modules /app/WORKDIR /appCOPY . /appRUN npm run buildFROM build AS ciWORKDIR /appRUN npm run test:ci &amp;&amp; npm install --production --ignore-scripts trueFROM node:14.17.6-alpine3.14 as releaseRUN mkdir -p /app &amp;&amp; \	addgroup -S daminggroup &amp;&amp; \	adduser -S -h /app -G daminggroup daminguser &amp;&amp; \	chown -R daminguser:daminggroup /appWORKDIR /appCOPY --from=ci --chown=daminguser:daminggroup /app/dist ./distCOPY --from=ci --chown=daminguser:daminggroup /app/node_modules ./node_modulesCOPY --from=ci --chown=daminguser:daminggroup /app/package.json .HEALTHCHECK --interval=30s --timeout=30s CMD curl -f http://localhost:3978/ping || exit 1EXPOSE 3978CMD [&quot;sh&quot;, &quot;-c&quot;, &quot;node dist/index.js&quot;]]]></content>
+      <categories>
+        <category>前端</category>
+      </categories>
+      <tags>
+        <tag>docker</tag>
+        <tag>nodejs</tag>
       </tags>
   </entry>
   <entry>
@@ -3302,58 +3302,6 @@ const navigate = useNavigate(); navigate(...)
       </tags>
   </entry>
   <entry>
-    <title>TypeScript中可选链</title>
-    <url>/2021/07/03/front-end/ts-optional-chaining/</url>
-    <content><![CDATA[TypeScript中可选链什么是可选链TypeScript 3.7中一个最引人关注的特性便是可选链(Optional Chaining)。
-所谓可选链，就是当我们试图使用访问对象的字段或者方法时，如果对象为null或者undefined，TypeScript将会自动停止运行的代码，以防止空指针异常。
-可选链的使用首先定义一个接口 A, 有一个字段b，b可能是字符串，也可能是null:
-interface A &#123;    b: string | null&#125;
-
-定义一个变量a:
-const a = &#123;    b: &#x27;c&#x27;&#125;
-
-使用?.来访问字段:
-console.log(a?.b)
-
-如果a为null或者undefined, 将输出undefined
-TypeScript做了什么可选链并不是ts的专利，在js就已经存在了，除了ie,其他现代浏览器最新版本都是支持了，但是一些老版本就不支持，因此ts没有使用js的语法，而是通过三元表达式? :转译。因此上面的代码将会转译成:
-console.log(a === null || a === void 0 ? void 0 : a.b);
-
-但是ts没有判断a是否是undefined, 而是因为在js中， undefined不仅是值，也可能是一个全局变量。直到es5之前，undefined是可以被修改的。我们可以通过下面的代码来修改:
-(function() &#123;  var undefined = 1  console.log(undefined) // 1&#125;)()
-
-参考
-深入理解 TypeScript(可选链（Optional Chaining）)
-JS: The difference between “undefined”, “null” and “void 0”
-可选链操作符
-
-]]></content>
-      <categories>
-        <category>前端</category>
-      </categories>
-      <tags>
-        <tag>typeScript</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>2022年度总结</title>
-    <url>/2021/12/31/summary/2022/</url>
-    <content><![CDATA[2022年度总结2022年真的是一个让人难以忘怀的年份，尤其在先后经历了上海封城、老丈人去世、领证结婚。
-疫情还记得2020年疫情刚开始的时候，那时侯自己一个人开车回上海，路上的车辆非常少，开车的感觉真的可以说非常爽，完全可以闭着眼开车，反正看不到车，即使进了上海市区。那个时候单纯的想，少则三个月，多则半年，疫情就会自然而然的过去，到时候我们该吃吃该喝喝。虽然这个判断翻车了，但是2021年也是对国内疫情还是比较乐观。但是2022年的上海封城打破了我所有的幻想。我从来没想过上海居然玩砸了“动态清理”，从华亭宾馆开始，上海的疫情持续不断，感染人数死活都下不去。
-3月份我刚搬到南翔就被封控了，但是我刚开始还好，虽然什么吃的都没有，但是只要封控时间到了就能出去买点东西。但遗憾的是，从4月份开始，上海开始静默了，我足足封在家里差不多两个月。我本来是不反对封城的，但是上海市政府真的很让人失望，疫情两年了，市政府似乎没有做好任何相关封城的预案。而且总感觉可能涉及到二十大的高层安排，市政府决策层应该是存在分歧的，并且和医疗系统的人也存在一定的隔阂。由于上层的问题，基层机构出现各种乱七八糟的事儿那也能理解了。
-在经过了白纸运动之后，我们的防疫政策从一个极端走向另外一个极端。我们彻底放开了，让80%以上的人感染了一遍。我不是反对放开，但是我比较反对如此毫无征兆的放开，没有准备好各种的退烧药，没有准备好口罩。
-技术今年继续做一个web2.5的项目，就是web2.0 + 区块链，不能算得上正宗的web3.0。其核心就是将部分原来放在数据库的数据放在区块链里。所以我们一般自称为web2.5。
-目前部门想全力押宝·web3·，希望能和审计部门能够做好技术服务，所以未来对区块链的研究大概率是会集中中DeFi(去中心化金融)。对我来说，金融是一个毫无头绪的东西，之前并没有接触过，没有一个良好的业务场景可以让我研究，导致对我来说DeFi可能只是一个比较空泛的名词。
-过去的一年，对以太坊还是比较浅显的，同时将也做了一些简单的demo。总的来说，也算简单的入门学了点皮毛，但是对智能合约的开发还是基本上一窍不通的。希望接下来的一年可以深入研究智能合约，可以独立开发智能合约并部署到一个测试网络。solana也会是一个比较重要的关注方向，但是考虑到solana的东家出点事儿，可能不太会重心在这个方面，不过rust语言还是会尽量深挖一下，这是一个很有挑战性的方向
-今年应该很少写angular了，更多开始写react。从我个人的角度来说，jsx和react hook对写一些组件来说确实是一把利器，但是对于如何做好一个完整的、强大的前端web应用来说，react的生态是不足的，太碎裂了，导致在接手不同的项目的时候总是能看到不同的react写法和工程组织形式。最近在react-mobile-picker做一个重构。一个方面是想改成通用的monorepo的组织形式，另外一个方面是需要升级核心依赖并使用typescript重写。目前这个工作还在努力中。 angular方面更多的专注于ngx-dom-confetti, 目前仅仅是对dom-confetti的angular封装，将来的计划是参考ripple的代码设计，将来可以好好的重构这个项目。hoteler-web是我一直会维护的angular的项目。
-今天在google domains买了个域名，然后尝试使用k3s的ingress部署了[https://hoteler.damingerdai.com/]。感觉使用k3s部署一些简单的应用基本上问题不大了。[hoteler](https://github.com/damingerdai/hoteler)已经是一个很稳定的demo，大概率是不会进行大规模的重构了。所以目前只有一个很简单的想法那就是使用spring cloud进行重写，这个是不太能自己部署到线上环境了，毕竟服务器资源就那么点，跑不起那么多的资源。
-针对golang的话，我目前私下的在做一个关于健康的demo，目前还在开发中，前端使用react，后端使用golang。目前希望在技术上的突破是使用loki做日志管理，Jaeger用于链路追踪，这是1.0的计划。2.0的话（如果有时间的话），希望可以加入区块链的一些元素，至少能做成个·web2.5·。
-今年其实还是探索了很多的技术。比如minio, harbor, drone, gogs和gitea。
-个人生活今天对我最大的事儿就是结婚了，没有比举办婚礼更重要的事儿了。本来由于收到上半年疫情的影响，原来不指望今年结婚的。本来定的日子是明年的正月办酒席，但是丈母娘觉得今年的夏天那么热，冬天一定很会冷，希望我们今年就是把事儿办了。所以婚期提前到11月份举行，本来日子选的好好的，也没啥好纠结的，毕竟妹子是自己谈的。但是明天和意外你永远都不知道哪个先来，我老丈人在婚礼的前两天去世了。在婚礼前的几个礼拜，我老丈人生病了，是便秘导致的肠梗阻。在医院治疗了一段时间本来已经治好了，但是不知道是医院的水平问题还是我老丈人本身的问题，在治疗过程中可能没有控制好糖尿病导致肺部感染， 在icu躺了几天之后终究将抢救无效去世，年仅50岁。在殡仪馆里，我看到同批火化的人中就属我老丈人最年轻。有的时间真的感觉世事无常，国庆节回去的时候，老丈人还好好的，结果才过去一个月不到，人就没了。
-展望未来对2023年这个经济判断是真的不太好说，谁也不知道明年会怎么想，我也不敢瞎说，我只能我大概率会重点关注·DeFi·。然后希望能够保住就业，保住现金流。
-]]></content>
-  </entry>
-  <entry>
     <title>Angular和React构建体积简单对比</title>
     <url>/2021/02/03/front-end/simple-comparison-of-angular-and-react-build-size/</url>
     <content><![CDATA[Angular和React构建体积简单对比前言Angular是我主要使用的前端框架， 和React是我最近正在学习的前端框架。今天我想对比一下在各自默认的情况下，两者打包体积的对比。
@@ -3419,86 +3367,38 @@ main.8c8b27cf.chunk大小为804B。
       </tags>
   </entry>
   <entry>
-    <title>2023年度总结</title>
-    <url>/2024/01/06/summary/2023/</url>
-    <content><![CDATA[2023年度总结2023年就这样子莫名其妙的过了，又是稀里糊涂的一年。这一年，和最爱的人去了一趟西藏，圆了她心心念念的梦想；这一年，坐了30多小时的火车，跨越千里去见证一段美好的爱情；这一年，参加了加入PWC以来第二次的线下年会，疫情总算是过去了。
-美好的西藏其实是先从上海到成都出发，在成都带了两天，陪她那只叫做花花的大熊猫。 其实19年时候我去过成都大熊貓繁育研究基地，那个时候还没有花花，也没有那么多的游客，当然也有可能我去的是淡季，不过总算是满足她的心愿了。吃了当地的特色，三大炮，鸡豆花，兔腿，麻婆豆腐，其实那个陈麻婆的那个夫妻肺片还是很有特色的，不辣，有点甜，和紫燕百味鸡的那个压根就不一样的。
-我们是报了一个旅行团，四个人，一个司机。除了我们之外，还有一个山东小哥，一个四川小伙。山东小哥是真的很社牛，和什么人都能聊起来，喜欢旅游，朋友圈三天两头出去玩，晒各地的美景。四川小伙是拿到美国一家博士的offer了，想在出国前能够好好放松一下。四个人一个司机，就这样子从成都沿着318国道出发了。
-去了很多地方，但是我没记住，因为这不是我热爱的，吃了很多美食，我记住了它们的味道，永远不会忘记。
-到了拉萨，我们去看了小昭寺，布达拉宫。吃了当地牦牛肉，喝了当地的牦牛奶做的奶茶。真的是美滋滋的日子啊。
+    <title>TypeScript中可选链</title>
+    <url>/2021/07/03/front-end/ts-optional-chaining/</url>
+    <content><![CDATA[TypeScript中可选链什么是可选链TypeScript 3.7中一个最引人关注的特性便是可选链(Optional Chaining)。
+所谓可选链，就是当我们试图使用访问对象的字段或者方法时，如果对象为null或者undefined，TypeScript将会自动停止运行的代码，以防止空指针异常。
+可选链的使用首先定义一个接口 A, 有一个字段b，b可能是字符串，也可能是null:
+interface A &#123;    b: string | null&#125;
 
+定义一个变量a:
+const a = &#123;    b: &#x27;c&#x27;&#125;
 
+使用?.来访问字段:
+console.log(a?.b)
 
+如果a为null或者undefined, 将输出undefined
+TypeScript做了什么可选链并不是ts的专利，在js就已经存在了，除了ie,其他现代浏览器最新版本都是支持了，但是一些老版本就不支持，因此ts没有使用js的语法，而是通过三元表达式? :转译。因此上面的代码将会转译成:
+console.log(a === null || a === void 0 ? void 0 : a.b);
 
+但是ts没有判断a是否是undefined, 而是因为在js中， undefined不仅是值，也可能是一个全局变量。直到es5之前，undefined是可以被修改的。我们可以通过下面的代码来修改:
+(function() &#123;  var undefined = 1  console.log(undefined) // 1&#125;)()
 
+参考
+深入理解 TypeScript(可选链（Optional Chaining）)
+JS: The difference between “undefined”, “null” and “void 0”
+可选链操作符
 
-PWC线下年会我是19年加入PWC的。PWC的年会其实是财年的意思，所以通常是5月份办年会。20年收到疫情的影响，此后的年会都是线上举行的，虽然有元宇宙的等加持，但是对我来而已其实并没有参与感的。收到疫情的影响，很多同事已经没有来公司面对面办公了，曾经的团队早就各奔东西，甚至都不在一个部门的了。
-终于，口罩没了，在加入PWC的第四年中，迎来的第二次线下年会。酒店更高级了，吃的很好，食物也精致，但是呢，我还是感觉19年那次年会吃的更惬意点。
-
-嘉峪关之行嘉峪关之行单纯的是因为大学同学结婚，便选择坐了30多小时的火车，先去西安和好友会和，再去嘉峪关。嘉峪关风景不错，可惜很难再有机会去了。
-
-其他我们还去来了迪士尼
-
-参加她的大学同学的婚礼
-
-最后Time files over us, but leaves its shadow behind.
 ]]></content>
-  </entry>
-  <entry>
-    <title>2024年度总结</title>
-    <url>/2025/01/13/summary/2024/</url>
-    <content><![CDATA[2024年度总结对我来说，2024年是一个特别有意义的一年。8月24号，我美丽又可爱的宝宝出生了，体验到了初为人父的喜悦；10月7号，国庆节刚过，公司人事就开邮件通知我我的岗位被取消了。
-初为人父的喜悦孩子的出生时间其实挺意外的。由于老婆在9月初有一场很重要的考试，所以不能耽搁，所以原来计划在20号去医院打催产素的，结果因为报告晚了一天，然后就被通知不用打催产素，已经开始见红了。不过开宫口的速度很慢，过两天还是上催产素了。我记得那个时候我在家里呆着，医院我有丈母娘陪着，反正又不可能那么急着生出来，我就回家先好好休息，打算第二天过去。结果第二天我丈母娘就通知我让我赶紧过去签字给我老婆打催产素。一波三折，到最后这个催产素还是打上去了。在6号待产室，晚上6点06分，7斤2两，我可爱的儿子就这样子平平安安的出生了。说实话，我并没有在第一时间听到孩子的哭声，相反这个小家伙睡的死死的。我伸过去看看了他，第一感觉他好丑啊，头型怪怪的，有点拉长的样子。听医生说，刚出生的小宝宝通常产道的挤压，出来的时候头多多少少会有点拉长的样子，等长大点就好了。
-孩子的出生，对我来说是一个特殊的人生里程碑，从这一刻开始，我不仅仅是一个普通的牛马，更是一个上有老下有小的天选牛马。就这样一下子，感觉身上的责任明显重了很多。算了一下孩子的奶粉钱，尿不湿的钱，将来休学的钱，以后娶老婆的钱和彩礼，还有供养老婆大人吃喝玩乐的钱。处处都是钱，处处都是压力。我也不知道将来孩子会活成什么样子，但是我不奢望他能出人头地，只希望平平安安的长大；不期待他将来学业有成，事业非凡，只希望他能过的自在安心。
-裁员其实裁员是有点风声的，但是一直都是狼来的状态。在国庆节，部门领导就私下的就透露过每个leader都需要上交一份裁员名单，更上级的领导会根据这份名单裁员。对于我这种干活儿的小喽啰，大概率是可以保住饭碗的，毕竟我还是比较能干活儿的，最近做的项目也是比较有钱的其实。
-但是非常尴尬的是，确实是裁员了，但是不是上海发起的裁员，是美国发起的裁员。美国最高层决定全球裁员好几千人，预计涉及美国，墨西哥，印度和上海几个地方的office。
-这次裁员主要是我们P &amp; T部门，其他部门似乎还好好的。P &amp; T由Labs和Digital两个小部门，我们labs这边十分平静的接受了这次裁员，大家虽然都不太能接受，但是普遍选择认命，大家该吃吃该喝喝，好聚好散。但是隔壁部门是有人闹了下，但是很快就没下文了。后来我听说出头闹事的人第一个找到工作之后就不出头了，结果也就没人闹事了。
-找工作找工作挺难的，基本上都是外包。没做面试的记录，就随便回忆一下吧。面试PayPal外包, 二面和三面一起面的，挂了，感觉二面和三面都不是很好。面试VOA2(一家不错的法资小公司)，因为英语和岗位不合适挂。面试迪士尼外包，一面挂了，搞笑的是又一家外包来邀请我去面试，主要是迪士尼的技术栈是Angular+Graphql，比较小众，但是我都用过，我不太想去，但是对方劝了我好几次，最后还是在二面挂了（面试三次，挂了两次，挺好玩的经历）。面试花旗外包，二面挂了，其实本来是挺有机会的，但是二面就27分钟，还算上我问的问题，只能被挂了。面试华钦（华钦是外包公司，但是这个岗位不是外包），我明明面试的是前端，面试官是后端的，道不同。面试摩根士丹利外包，二面过了，感觉比较水，相对好近。
-摩根士丹利进入摩根士丹利之后其实有段时间是不太适应的，习惯了普华永道这种混合办公和不定时工作制，不太能接受摩根士丹利这种965的风格，不过还好，两周就适应了，发了工资就更加适应，没有必要和钱过不去。摩根士丹利里面什么情况我不方便多说，但是根据工作安排来看，坚持到2026年底问题不大，以后就再说吧。
-总结如果没有裁员这回事儿，那么2024年对我还是一个挺不错的年份。涨点工资（普华永道每年7月调薪），有个儿子，本来就可以这样子过去了。可惜没有如果，现在在摩根做外包也能接受，毕竟正式员工对我们算得上非常nice了。希望2025年可以平平安安，保住工作，少点个人消费，多点留给家人。技术也没有什么大的想法，保住工作就行，苟活到经济能够真的复苏吧。
-]]></content>
-  </entry>
-  <entry>
-    <title>2025年度总结</title>
-    <url>/2026/02/24/summary/2025/</url>
-    <content><![CDATA[2025年度总结对我来说，2025年其实又是一个特别有意义的一年。3月初陪老婆去了一次她心心念念的日本，11月的最后一天，在中介第二次带看的情况，匆匆忙忙的买下上海一套二手房，圆了老婆又一个心愿。
-日本之行日本原计划是24年底就去的，但是因为失业，只关心找工作就放弃了。我本身去日本的兴趣不大，但是老婆非常想去就很仓促的时间定下去日本。我们去的是大阪，大概还有一个月的时候就是大阪世博会了，3月份初去还是还好，要是晚了估计人就太多了。
-大阪
-
-
-
-
-在大阪玩的很开心，感觉大阪是一个很国际化的大都市，不少西方和东南亚的面孔。就算看上去东亚面孔，也有很大的可能是中国人。我真的在大阪的地铁里听两个中国人可能是仗着日本人听不懂中国话说着非常非常虎狼的词儿。
-
-
-在大阪住的酒店有个温泉，可以免费去泡澡，没有国内那种搓澡等服务，就是纯粹的泡澡。 水很温和，不是十分烫人，让人感觉到十分舒服，感觉真的可以吸取洗去一声的疲惫。看了酒店的说明，估计这个温泉真的是从山里拉来的真的地下水，比国内所谓温泉但是就是自己烧开水强多了。
-
-
-在大阪，环球影城应该算得上必打卡点了，加上有一个马里奥馆，还是很值得去的。个人比较推荐的是水世界的表演，真的是非常的精彩，特技效果很好，有时间还是很推荐去看看的。
-宇治
-
-
-
-
-老婆是抹茶的超级粉丝，想去宇治。虽然我对此不是很感兴趣，更想去奈良。可惜行程有限，奈良和宇治只能二选一，所以最后是花了一天的时间去宇治。宇治是一个很不错的小城，但是去宇治的电车就不如大阪友好了。大阪的轨道交通都是日，中，英，韩四种语言，而去宇治的电车就日英两种选择了。
-城市不大，但是风景很不错，可能是淡季，游客不算多，但是还好。抹茶嘛，毫无兴趣，不做评价。
-买房老婆买房的想法其实很久了，24年就开始在网上看房了。不知道为什么，25年下半年就特别积极，我本来想着要不26、27年买房吧，要是房价涨了就算自己倒霉。我老婆的意思就先看看，可以考虑一下。可能是被当时租住的小区9月初卖了一套275万刺激，她觉得差不多了，想线下先看看，然后当月底约了一次中介去看过一次房。本来想着下次看房就要26年了，但是不知道老婆是怎么想的，想再看看，然后11月30号，我也没啥事儿，就一起去看看房子。我们这次看了四套房子，其中第四套有点大，价格超过预算，只是中介带我们去看看90平的房子大概是什么布局，估计他没想法当天他就成了一单。
-其实第一套和第二套我不是很满意，第一套价格低点，但是维护很差，重新装修需要花费很大的精力；第二套价格贵点，地段稍微好点，层楼好点，但装修也很一般，大概率还是重新装修。第三套的装修很好，17年的装修到现在都不过时，整体的设计很好的考虑到家里有小宝宝的情况，边边角角都做了圆角设计，材料可以看得出很明显是非常不错的，没有使用比较次的材料，保养也很好，听中介说房东是拿来自住的，没出租过。可能唯一的缺点就是在5楼，爬楼梯有点困难。
-11月30号，上午看房，下午带我妈妈和小宝宝也看了下，宝宝好像挺喜欢的，东看看西看看，应该也看上了吧。然后就宝山链家的中心就和房东谈判了，经过中介的谈判，我们最后还是拿下了这套房。挺快的，也很幸运，就这个装修，其实有不少人在抢，听中介说，上次就有人看上了，可惜约时间的时候不是房东没时间就是购房人没时间，我们去看房的时候，其实还有一个小姐姐也去看了，好像也有兴趣，可惜被我们抢先了。
-很开心能够在上海这个繁华的都市能够拥有一套自己的房子，感谢我老婆，没有她，我大概率不会留在上海，感谢我的孩子，没有他，我压根就没有留下的动力。
-技术摩根士丹利的工作没有可以值得说道的，没有太大的价值，但是我也学到很多东西，我第一次接触到了gitops，现在也在私下的学习这套概念。
-利用春节假期，尝试部署了一套自己的部署体系（kite,prometheus&#x2F;grafana, zot registry），尝试使用helm部署项目，感觉还不错。
-
-
-
-2026 · 向上生长2025 是沉淀与思考的一年。有探索，也有试错；有不确定，也有新的方向。
-2026，希望自己——
-在技术上，更专注本质。少一些浮躁，多一些深度；少一些追逐热点，多一些长期主义。
-在工作上，更从容坚定。把复杂问题拆解清楚，把系统设计得更优雅；让每一行代码，都对得起时间。
-在生活里，更有温度。给家人更多陪伴，给自己更多耐心，在快节奏里守住节奏。
-愿 2026，不是简单的“更忙”，而是“更好”。
-持续学习，持续创造，持续成为更清醒的自己。
-]]></content>
+      <categories>
+        <category>前端</category>
+      </categories>
+      <tags>
+        <tag>typeScript</tag>
+      </tags>
   </entry>
   <entry>
     <title>无 Docker Desktop + Colima + Docker Compose v2 标准化方案</title>
@@ -3940,10 +3840,84 @@ Q3: 外网无法访问✅ 检查防火墙：sudo ufw allow 80&#x2F;tcpsudo ufw a
       </tags>
   </entry>
   <entry>
+    <title>🚀 记一次本地 Homelab 环境 Gitea 升级迁移与 Actions (CI/CD) 完美集成实战</title>
+    <url>/2026/06/02/software/gitea-upgrade-and-actions-integration/</url>
+    <content><![CDATA[🚀 记一次本地 Homelab 环境 Gitea 升级迁移与 Actions (CI&#x2F;CD) 完美集成实战📌 前言最近对本地 Homelab 服务器的私有代码托管平台 Gitea 进行了一次大版本升级迁移（升级至 v1.26）。原本以为只是一次简单的 docker compose up，没想到中间经历了数据库连错库、旧运行器残留、以及 Gitea Actions (Act Runner) 容器网络隔离等一连串经典的暗坑。
+本文将完整记录这次迁移过程、踩坑原因以及最终如何完美集成兼容 GitHub Actions 语法的 Gitea Actions 并成功跑通 Go 自动化编译 的全案。
+
+🛠️ 第一阶段：大版本迁移与数据库踩坑在新的服务器上，我准备好了原有的数据卷 ./data 并编写了新的 docker-compose.yaml。然而初次启动后，发现网页端一片空白，原有的代码仓库、组织和用户全都不见了！
+🔍 踩坑原因检查 docker-compose.yaml 发现，在环境变量中误指定了一个全新的数据库名：
+- GITEA__database__NAME=gitea2 # 👈 罪魁祸首
+
+由于原本的 PostgreSQL 中旧数据存在于 gitea 库中，指定为 gitea2 导致 Gitea 在启动时自动初始化了一套全新的空白表。
+💡 解决方案
+执行 docker compose down 停止服务。
+对齐旧环境，将数据库名改回原本正确的名字（例如 gitea）。
+重新启动后，从日志中成功看到大版本所需的迁移脚本自动执行，历史仓库完美回归！
+
+
+🏃 第二阶段：绕过 CLI 限制，数据库直击“软删除”由于是迁移环境，进入 站点管理 -&gt; Actions -&gt; Runners 后，发现列表里赫然躺着一个“上次在线时间为去年”的离线旧 Runner（ID 为 3）。
+由于跨版本升级导致前端 UI 样式适配问题，网页端的删除按钮无法正常点击。如果尝试使用官方的 docker compose exec gitea gitea admin runners unregister 命令，又会高频触发各种执行环境或权限报错。
+💡 解决方案（硬核外挂）Gitea 底层对运行器采用了标准的软删除（Soft Delete）设计。与其在被权限限制死死的容器命令里打转，不如直接连入 PostgreSQL 数据库，把 action_runner 表中该记录的 deleted 字段（bigint 类型）变更为当前的时间戳：
+-- 连入 Postgres 数据库执行，直接对 ID=3 的旧运行器进行软删除UPDATE action_runner SET deleted = extract(epoch from now())::bigint WHERE id = 3;
+
+执行完毕后刷新网页，这个去年的残留旧 Runner 瞬间在前端彻底消失，清爽！
+
+🚀 第三阶段：集成 Gitea Actions (Act Runner)Gitea 本身只负责调度，干苦力跑流水线需要额外部署 Act Runner。在集成的过程中，有几个事关本地局域网（192.168.31.x）能否跑通的关键深坑。
+🙅 避坑指南与硬核操作
+官方超大镜像国内拉不动： 默认生成的 config.yaml 中，ubuntu-latest 映射的是 docker.gitea.com 的官方大镜像。直接拉取极易因超时导致流水线挂掉。
+
+
+🔥 我的硬核解法： 不改动 config.yaml 的默认配置。直接利用华为云的 DDN 加速代理将镜像曲线拉下，再通过 tag 重新打标伪装成官方域名，让 Runner 直接吃宿主机本地缓存！
+
+# 利用加速通道拉取docker pull swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/gitea/runner-images:ubuntu-latest# 重新打标伪装成官方域名docker tag swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/gitea/runner-images:ubuntu-latest docker.gitea.com/runner-images:ubuntu-latest
+
+
+
+
+
+网络隔离 Connection Refused： 如果将 config.yaml 中的 container.network 留空，Act Runner 启动的临时任务容器会自动加入 Docker 的默认 bridge 网络，导致其无法反向汇报日志。
+
+📝 终极配置文件展示1. 优化后的 config.yaml找到 container: 下的 network: 这一行，显式指定和你的 docker-compose.yaml 里面完全一样的网络名字，打通网络：
+runner:  # 保持默认的官方标签映射即可，因为我们已经在宿主机通过 docker tag 完成了“偷天换日”  labels:    - &quot;ubuntu-latest:docker://docker.gitea.com/runner-images:ubuntu-latest&quot;container:  # 👈 核心：让流水线的临时容器加入到宿主机的 Compose 网络中，拒绝网络隔离  network: &quot;gitea_v2_gitea&quot; 
+
+2. 健壮的 docker-compose.yaml将 GITEA_INSTANCE_URL 换成宿主机物理局域网 IP，彻底规避容器初始化阶段 IP 漂移引发的断连：
+services:  gitea:    image: docker.io/gitea/gitea:1.26    container_name: gitea    environment:      - GITEA__database__DB_TYPE=postgres      - GITEA__database__HOST=host.docker.internal:5432      - GITEA__database__NAME=gitea      - GITEA__actions__ENABLED=true # 👈 开启 Actions 总开关    # ... 其他保持原样 ...  runner:    image: gitea/act_runner:0.6.0    container_name: gitea_runner    restart: always    depends_on:      - gitea    environment:      CONFIG_FILE: /config.yaml      # 👈 改用宿主机直连 IP 绕过 Docker 内部握手死锁      GITEA_INSTANCE_URL: http://192.168.31.220:13000       GITEA_RUNNER_REGISTRATION_TOKEN: &lt;Your token&gt;      GITEA_RUNNER_NAME: &quot;damingerdai gitea runner&quot;    volumes:      - ./config.yaml:/config.yaml      - ./runner-data:/data      - ./runner_data/cache:/root/.cache      - /var/run/docker.sock:/var/run/docker.sock # 👈 允许调用宿主机 Docker    networks:      - gitea
+
+修改完成后，执行清空并重启三板斧：
+docker compose downsudo rm -f ./runner-data/.runner # 删掉旧凭证强制触发新配置注册docker compose up -d
+
+回到网页端，新 Runner 的常亮绿灯 (Idle) 瞬间激活！
+
+🐹 第四阶段：编写 Go 自动化编译工作流 (Workflow)环境打通后，在代码仓库根目录下创建 .gitea/workflows/go-ci.yaml：
+name: Gitea Go 自动化编译测试run-name: $&#123;&#123; gitea.actor &#125;&#125; 正在测试 Go 编译 🚀on: [push]jobs:  standalone-go-test:    runs-on: &#x27;ubuntu-latest&#x27; # 👈 精确匹配刚才在 config.yaml 里配的标签    steps:      - name: Setup Go        uses: actions/setup-go@v5        with:          go-version: &#x27;1.22&#x27;      - name: Create Test Main.go        run: |          cat &lt;&lt; &#x27;EOF&#x27; &gt; main.go          package main          import &quot;fmt&quot;          func main() &#123;              fmt.Println(&quot;Hello Gitea Actions! This is a compiled Go binary!&quot;)          &#125;          EOF      - name: Compile Go Code        run: go build -o main main.go      - name: Run Compiled Binary        run: ./main
+
+🎉 成果验收代码 git push 上去后，流水线秒级唤醒，在刚才伪装成功的 ubuntu-latest 容器环境内，最后的编译产物成功打印：
+Hello Gitea Actions! This is a compiled Go binary!
+
+至此，一套完全纯血、本地化、高效率的自建私有化 CI&#x2F;CD 环境宣告完美落成！
+
+💡 总结与反思
+直击底层的思维： 当官方 CLI 在特殊容器环境遇到阻碍时，理解其数据库的软删除机制（修改 deleted 时间戳字段），直接对数据库下手往往效率最高。
+巧妙避坑： 面对国内环境拉不动超大外网镜像的难题，利用 DDN 代理拉取 + 本地 docker tag 重新打标伪装 是一种对业务配置零侵入、极度优雅且高效的破局方案。
+
+]]></content>
+      <categories>
+        <category>软件</category>
+      </categories>
+      <tags>
+        <tag>docker</tag>
+        <tag>gitea</tag>
+        <tag>git</tag>
+        <tag>gitea action</tag>
+        <tag>CI/CD</tag>
+      </tags>
+  </entry>
+  <entry>
     <title></title>
     <url>/2026/07/07/software/docker-network-conflict-172-18-repair/</url>
     <content><![CDATA[
-title: Docker 把我宿主机网络”吃”了：一次 172.18 网段冲突的完整复盘date: 2026-07-07 14:33:21tags: [Docker 网络冲突、172.18 网段、Destination Host Unreachable、docker-compose、bridge、生产环境踩坑、容器网络排障、daemon.json、default-address-pools]categories: [软件]Docker 把我宿主机网络”吃”了：一次 172.18 网段冲突的完整复盘
+title: Docker 把我宿主机网络”吃”了：一次 172.18 网段冲突的完整复盘date: 2026-07-07 14:33:21tags: [Docker 网络冲突]categories: [软件]Docker 把我宿主机网络”吃”了：一次 172.18 网段冲突的完整复盘
 摘要：本文记录了一起由 Docker 自定义网络自动分配网段引发的宿主机网络故障。现象是宿主机无法访问内网某台服务器，报错 From 172.18.0.1 Destination Host Unreachable。最终定位到是 docker-compose 中的 pg-network 抢占了 172.18.0.0/16，并给出了不丢数据、不卸载 Docker 的最终解决方案。
 
 
@@ -4312,6 +4286,32 @@ Docker 默认也偏爱这个区间
 ]]></content>
   </entry>
   <entry>
+    <title>使用中国手机号码验证mailgun账号</title>
+    <url>/2025/08/13/software/how-register-mailgun-with-china-mobile-number/</url>
+    <content><![CDATA[前言Mailgun 是一个专为开发者设计的邮件发送平台，支持通过 API 高效、稳定地发送和接收邮件。它广泛用于用户通知、营销邮件、自动化开发信等场景。每个月可免费发送10000封邮件，可以添加1000个域名，每封邮件都有跟踪日志，简单明了的管理界面。
+注册点 mailgun.com 右上角的“start for free“进去是不会给免费版选项的，只有 free trial，而 https://www.mailgun.com/pricing/ 页面则有免费 plan，常规注册即可，无需填写信用卡.
+验证mailgun会发送邮件要求验证号码。在验证页面会要求用户提供手机号验证。但是对中国手机号码来说，可能存在收不到验证码的可能。
+
+解决在mailgun后台，点击右上角的问号❓，点击“Support”按钮。提交一个工单，点击左下方“Open a ticket”的开工单按钮。在开工单页面下拉选择“Account Management”类别，然后输入问题标题和具体内容。
+这是我总结的模版：
+Subject: Unable to Verify Email Due to Excessive VerificationContent:I am unable to complete email verification because I encountered an issue after entering my mobile phone number (+86 xxxxxxxxxxx) and requesting a verification code. The system notified me that I have exceeded the allowed number of attempts, along with other unspecified reminders.
+
+然后大概在24小时内就能解决。(我是40分钟就解决了)。
+其他别相信咸鱼上那帮所谓提供海外手机号码验证服务的那帮垃圾。
+引用
+Mailgun账号注册、域名配置、API开通教程
+Mailgun China
+国外Mailgun邮件服务账号验证不成功怎么办
+
+]]></content>
+      <categories>
+        <category>软件</category>
+      </categories>
+      <tags>
+        <tag>mailgun</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>优雅实现 Git 多账号切换：基于 SSH Config 与 includeIf 的环境隔离方案</title>
     <url>/2026/04/18/software/git-multi-account-setup-with-includeif/</url>
     <content><![CDATA[优雅实现 Git 多账号切换：基于 SSH Config 与 includeIf 的环境隔离方案在日常开发中，我们经常需要在一台电脑上同时处理个人开源项目和公司业务项目。最核心的痛点有两个：
@@ -4345,106 +4345,6 @@ Workspaces/├── personal/  # 存放个人项目└── company/   # 存�
       <tags>
         <tag>git</tag>
         <tag>SSH</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>🚀 记一次本地 Homelab 环境 Gitea 升级迁移与 Actions (CI/CD) 完美集成实战</title>
-    <url>/2026/06/02/software/gitea-upgrade-and-actions-integration/</url>
-    <content><![CDATA[🚀 记一次本地 Homelab 环境 Gitea 升级迁移与 Actions (CI&#x2F;CD) 完美集成实战📌 前言最近对本地 Homelab 服务器的私有代码托管平台 Gitea 进行了一次大版本升级迁移（升级至 v1.26）。原本以为只是一次简单的 docker compose up，没想到中间经历了数据库连错库、旧运行器残留、以及 Gitea Actions (Act Runner) 容器网络隔离等一连串经典的暗坑。
-本文将完整记录这次迁移过程、踩坑原因以及最终如何完美集成兼容 GitHub Actions 语法的 Gitea Actions 并成功跑通 Go 自动化编译 的全案。
-
-🛠️ 第一阶段：大版本迁移与数据库踩坑在新的服务器上，我准备好了原有的数据卷 ./data 并编写了新的 docker-compose.yaml。然而初次启动后，发现网页端一片空白，原有的代码仓库、组织和用户全都不见了！
-🔍 踩坑原因检查 docker-compose.yaml 发现，在环境变量中误指定了一个全新的数据库名：
-- GITEA__database__NAME=gitea2 # 👈 罪魁祸首
-
-由于原本的 PostgreSQL 中旧数据存在于 gitea 库中，指定为 gitea2 导致 Gitea 在启动时自动初始化了一套全新的空白表。
-💡 解决方案
-执行 docker compose down 停止服务。
-对齐旧环境，将数据库名改回原本正确的名字（例如 gitea）。
-重新启动后，从日志中成功看到大版本所需的迁移脚本自动执行，历史仓库完美回归！
-
-
-🏃 第二阶段：绕过 CLI 限制，数据库直击“软删除”由于是迁移环境，进入 站点管理 -&gt; Actions -&gt; Runners 后，发现列表里赫然躺着一个“上次在线时间为去年”的离线旧 Runner（ID 为 3）。
-由于跨版本升级导致前端 UI 样式适配问题，网页端的删除按钮无法正常点击。如果尝试使用官方的 docker compose exec gitea gitea admin runners unregister 命令，又会高频触发各种执行环境或权限报错。
-💡 解决方案（硬核外挂）Gitea 底层对运行器采用了标准的软删除（Soft Delete）设计。与其在被权限限制死死的容器命令里打转，不如直接连入 PostgreSQL 数据库，把 action_runner 表中该记录的 deleted 字段（bigint 类型）变更为当前的时间戳：
--- 连入 Postgres 数据库执行，直接对 ID=3 的旧运行器进行软删除UPDATE action_runner SET deleted = extract(epoch from now())::bigint WHERE id = 3;
-
-执行完毕后刷新网页，这个去年的残留旧 Runner 瞬间在前端彻底消失，清爽！
-
-🚀 第三阶段：集成 Gitea Actions (Act Runner)Gitea 本身只负责调度，干苦力跑流水线需要额外部署 Act Runner。在集成的过程中，有几个事关本地局域网（192.168.31.x）能否跑通的关键深坑。
-🙅 避坑指南与硬核操作
-官方超大镜像国内拉不动： 默认生成的 config.yaml 中，ubuntu-latest 映射的是 docker.gitea.com 的官方大镜像。直接拉取极易因超时导致流水线挂掉。
-
-
-🔥 我的硬核解法： 不改动 config.yaml 的默认配置。直接利用华为云的 DDN 加速代理将镜像曲线拉下，再通过 tag 重新打标伪装成官方域名，让 Runner 直接吃宿主机本地缓存！
-
-# 利用加速通道拉取docker pull swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/gitea/runner-images:ubuntu-latest# 重新打标伪装成官方域名docker tag swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/gitea/runner-images:ubuntu-latest docker.gitea.com/runner-images:ubuntu-latest
-
-
-
-
-
-网络隔离 Connection Refused： 如果将 config.yaml 中的 container.network 留空，Act Runner 启动的临时任务容器会自动加入 Docker 的默认 bridge 网络，导致其无法反向汇报日志。
-
-📝 终极配置文件展示1. 优化后的 config.yaml找到 container: 下的 network: 这一行，显式指定和你的 docker-compose.yaml 里面完全一样的网络名字，打通网络：
-runner:  # 保持默认的官方标签映射即可，因为我们已经在宿主机通过 docker tag 完成了“偷天换日”  labels:    - &quot;ubuntu-latest:docker://docker.gitea.com/runner-images:ubuntu-latest&quot;container:  # 👈 核心：让流水线的临时容器加入到宿主机的 Compose 网络中，拒绝网络隔离  network: &quot;gitea_v2_gitea&quot; 
-
-2. 健壮的 docker-compose.yaml将 GITEA_INSTANCE_URL 换成宿主机物理局域网 IP，彻底规避容器初始化阶段 IP 漂移引发的断连：
-services:  gitea:    image: docker.io/gitea/gitea:1.26    container_name: gitea    environment:      - GITEA__database__DB_TYPE=postgres      - GITEA__database__HOST=host.docker.internal:5432      - GITEA__database__NAME=gitea      - GITEA__actions__ENABLED=true # 👈 开启 Actions 总开关    # ... 其他保持原样 ...  runner:    image: gitea/act_runner:0.6.0    container_name: gitea_runner    restart: always    depends_on:      - gitea    environment:      CONFIG_FILE: /config.yaml      # 👈 改用宿主机直连 IP 绕过 Docker 内部握手死锁      GITEA_INSTANCE_URL: http://192.168.31.220:13000       GITEA_RUNNER_REGISTRATION_TOKEN: &lt;Your token&gt;      GITEA_RUNNER_NAME: &quot;damingerdai gitea runner&quot;    volumes:      - ./config.yaml:/config.yaml      - ./runner-data:/data      - ./runner_data/cache:/root/.cache      - /var/run/docker.sock:/var/run/docker.sock # 👈 允许调用宿主机 Docker    networks:      - gitea
-
-修改完成后，执行清空并重启三板斧：
-docker compose downsudo rm -f ./runner-data/.runner # 删掉旧凭证强制触发新配置注册docker compose up -d
-
-回到网页端，新 Runner 的常亮绿灯 (Idle) 瞬间激活！
-
-🐹 第四阶段：编写 Go 自动化编译工作流 (Workflow)环境打通后，在代码仓库根目录下创建 .gitea/workflows/go-ci.yaml：
-name: Gitea Go 自动化编译测试run-name: $&#123;&#123; gitea.actor &#125;&#125; 正在测试 Go 编译 🚀on: [push]jobs:  standalone-go-test:    runs-on: &#x27;ubuntu-latest&#x27; # 👈 精确匹配刚才在 config.yaml 里配的标签    steps:      - name: Setup Go        uses: actions/setup-go@v5        with:          go-version: &#x27;1.22&#x27;      - name: Create Test Main.go        run: |          cat &lt;&lt; &#x27;EOF&#x27; &gt; main.go          package main          import &quot;fmt&quot;          func main() &#123;              fmt.Println(&quot;Hello Gitea Actions! This is a compiled Go binary!&quot;)          &#125;          EOF      - name: Compile Go Code        run: go build -o main main.go      - name: Run Compiled Binary        run: ./main
-
-🎉 成果验收代码 git push 上去后，流水线秒级唤醒，在刚才伪装成功的 ubuntu-latest 容器环境内，最后的编译产物成功打印：
-Hello Gitea Actions! This is a compiled Go binary!
-
-至此，一套完全纯血、本地化、高效率的自建私有化 CI&#x2F;CD 环境宣告完美落成！
-
-💡 总结与反思
-直击底层的思维： 当官方 CLI 在特殊容器环境遇到阻碍时，理解其数据库的软删除机制（修改 deleted 时间戳字段），直接对数据库下手往往效率最高。
-巧妙避坑： 面对国内环境拉不动超大外网镜像的难题，利用 DDN 代理拉取 + 本地 docker tag 重新打标伪装 是一种对业务配置零侵入、极度优雅且高效的破局方案。
-
-]]></content>
-      <categories>
-        <category>软件</category>
-      </categories>
-      <tags>
-        <tag>docker</tag>
-        <tag>gitea</tag>
-        <tag>git</tag>
-        <tag>gitea action</tag>
-        <tag>CI/CD</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>使用中国手机号码验证mailgun账号</title>
-    <url>/2025/08/13/software/how-register-mailgun-with-china-mobile-number/</url>
-    <content><![CDATA[前言Mailgun 是一个专为开发者设计的邮件发送平台，支持通过 API 高效、稳定地发送和接收邮件。它广泛用于用户通知、营销邮件、自动化开发信等场景。每个月可免费发送10000封邮件，可以添加1000个域名，每封邮件都有跟踪日志，简单明了的管理界面。
-注册点 mailgun.com 右上角的“start for free“进去是不会给免费版选项的，只有 free trial，而 https://www.mailgun.com/pricing/ 页面则有免费 plan，常规注册即可，无需填写信用卡.
-验证mailgun会发送邮件要求验证号码。在验证页面会要求用户提供手机号验证。但是对中国手机号码来说，可能存在收不到验证码的可能。
-
-解决在mailgun后台，点击右上角的问号❓，点击“Support”按钮。提交一个工单，点击左下方“Open a ticket”的开工单按钮。在开工单页面下拉选择“Account Management”类别，然后输入问题标题和具体内容。
-这是我总结的模版：
-Subject: Unable to Verify Email Due to Excessive VerificationContent:I am unable to complete email verification because I encountered an issue after entering my mobile phone number (+86 xxxxxxxxxxx) and requesting a verification code. The system notified me that I have exceeded the allowed number of attempts, along with other unspecified reminders.
-
-然后大概在24小时内就能解决。(我是40分钟就解决了)。
-其他别相信咸鱼上那帮所谓提供海外手机号码验证服务的那帮垃圾。
-引用
-Mailgun账号注册、域名配置、API开通教程
-Mailgun China
-国外Mailgun邮件服务账号验证不成功怎么办
-
-]]></content>
-      <categories>
-        <category>软件</category>
-      </categories>
-      <tags>
-        <tag>mailgun</tag>
       </tags>
   </entry>
   <entry>
@@ -4766,6 +4666,27 @@ docker logs -f zot-registry&#123;&quot;time&quot;:&quot;2026-02-21T14:52:57.5097
       </tags>
   </entry>
   <entry>
+    <title>noice.nvim在cmdline中的光标自动滚动到最前面的bug</title>
+    <url>/2025/05/22/software/noice-nvim-cmdline-cursor-auto-scroll-to-front-bug/</url>
+    <content><![CDATA[前言最新把 neovim 升级到最新版本0.11.1,lazyvim 升级到14.x。然后不出意外就挂了好几个 plugin。其中 noice.nvim 是影响比较小的但比较膈应人的。
+bug描述
+
+
+
+当在cmdline模式输入命令的时候光标总是会莫名其妙的滚动到最前面。我本来以为是noice.nvim的问题，但是经过测试，发现只有在itermn2的非全屏模式下才会出现，全屏模式或者其他终端模拟器则不会出现类似的问题。
+解决好在bug: Cursor jumps in cmdline - 4.5.0中有小哥也遇到过类似的问题，他在iTerm2中禁用”由会话触发的窗口调整大小”功能解决了这个问题（设置路径：Settings &gt; Profiles &gt; [我的配置文件] &gt; Terminal &gt; 勾选”Disable session-initiated window resizing”），然后就好了。
+其他在https://superuser.com/questions/113944/how-to-prevent-screen-from-resizing-my-terminal-in-mac-os-x, 看上去iterm2的这个bug存在挺久的了。
+]]></content>
+      <categories>
+        <category>软件</category>
+      </categories>
+      <tags>
+        <tag>neovim</tag>
+        <tag>iterm2</tag>
+        <tag>nocie.nvim</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>学习multipass笔记</title>
     <url>/2023/12/14/software/multipass-learning/</url>
     <content><![CDATA[前言Multipass 是一个轻量虚拟机管理器，是由 Ubuntu 运营公司 Canonical 所推出的开源项目。运行环境支持 Linux、Windows、macOS。在不同的操作系统上，使用的是不同的虚拟化技术。在 Linux 上使用的是 KVM、Window 上使用 Hyper-V、macOS 中使用 HyperKit 以最小开销运行 VM，支持在笔记本模拟小型云。
@@ -4795,79 +4716,6 @@ Multipass - 如 Docker 般的虛擬機
       </categories>
       <tags>
         <tag>multipass</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>noice.nvim在cmdline中的光标自动滚动到最前面的bug</title>
-    <url>/2025/05/22/software/noice-nvim-cmdline-cursor-auto-scroll-to-front-bug/</url>
-    <content><![CDATA[前言最新把 neovim 升级到最新版本0.11.1,lazyvim 升级到14.x。然后不出意外就挂了好几个 plugin。其中 noice.nvim 是影响比较小的但比较膈应人的。
-bug描述
-
-
-
-当在cmdline模式输入命令的时候光标总是会莫名其妙的滚动到最前面。我本来以为是noice.nvim的问题，但是经过测试，发现只有在itermn2的非全屏模式下才会出现，全屏模式或者其他终端模拟器则不会出现类似的问题。
-解决好在bug: Cursor jumps in cmdline - 4.5.0中有小哥也遇到过类似的问题，他在iTerm2中禁用”由会话触发的窗口调整大小”功能解决了这个问题（设置路径：Settings &gt; Profiles &gt; [我的配置文件] &gt; Terminal &gt; 勾选”Disable session-initiated window resizing”），然后就好了。
-其他在https://superuser.com/questions/113944/how-to-prevent-screen-from-resizing-my-terminal-in-mac-os-x, 看上去iterm2的这个bug存在挺久的了。
-]]></content>
-      <categories>
-        <category>软件</category>
-      </categories>
-      <tags>
-        <tag>neovim</tag>
-        <tag>iterm2</tag>
-        <tag>nocie.nvim</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>Podman的hello world入门</title>
-    <url>/2024/01/21/software/podman-hello-world/</url>
-    <content><![CDATA[前言Podnam是一个符合OCI，用于在 Linux® 系统上开发、提供了与 Docker 等类似的功能来管理容器。管理和运行容器开源工具。 Podman 最初由 Red Hat® 工程师与开源社区一起开发。Podman使用 libpod 库管理整个容器生态系统。
-安装如果你使用Macos, 可以使用homebrew安装：
-brew install podman
-
-安装之后就可以创建和启动Podnam虚拟机：
-podman machine initpodman machine start
-
-如果你使用Debian 或者 ubuntu， 可以使用apt-get命令安装：
-sudo apt-get install runc -ysudo apt-get -y install podman
-
- 其他系统可能参考podman安装页面
-
-注意：对于 Windows 和 Mac，podman 需要一个虚拟机来部署容器。
-
-配置默认情况下，Podman 配置有两个容器注册表。
-
-quay.io
-docker.io
-
-我们可以在·&#x2F;etc&#x2F;containers&#x2F;registries.conf·看到
-但是为了方便我们构建基于Dockerfile的景象，我们需要在没有明确容器注册表的时候默认拉取docer.io的注册表，我们可以在·&#x2F;etc&#x2F;containers&#x2F;registries.conf·或者·$HOME&#x2F;.config&#x2F;containers&#x2F;registries.conf·设置unqualified-search-registries
-unqualified-search-registries = [&quot;docker.io&quot;]
-
-存储每个系统用户都有自己的容器存储地址。这意味着，如果您尝试从不同的用户登录中提取镜像，它将从远程注册表而不是本地映像中提取镜像。
-容器管理拉取容器：
-podman pull docker.io/nginx
-
-运行容器：
-podman  run --name docker-nginx -p 8080:80 docker.io/nginx
-
-如果你绑定1024一下的端口，你需要使用root权限：
-sudo podman run --name docker-nginx -p 80:80 docker.io/nginx
-
-对于root用户，容器将会存储在·&#x2F;var&#x2F;lib&#x2F;containers&#x2F;storag·的文件夹中。对于非root用户，容器将会存储在·$HOME&#x2F;.local&#x2F;share&#x2F;containers&#x2F;storage·的文件夹中。
-参考资料
-What is Podman?
-Podman 初学者指南（上）
-Podman “Error: no registries found in registries.conf, a registry must be provided” while logging&#x2F;pulling from docker.io
-What is Podman?
-
-]]></content>
-      <categories>
-        <category>软件</category>
-      </categories>
-      <tags>
-        <tag>podman</tag>
-        <tag>容器</tag>
       </tags>
   </entry>
   <entry>
@@ -4924,56 +4772,6 @@ docker run -d \  -v my_postgres_data:/var/lib/postgresql/18/docker \  -e POSTGRE
         <tag>容器</tag>
         <tag>docker compose</tag>
         <tag>postgres18</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>玩转 K8s 面板：轻量级 Kite 安装全记录 (K3s 篇)</title>
-    <url>/2026/01/25/software/setup-kite-with-prometheus-on-k3s/</url>
-    <content><![CDATA[前言在 Kubernetes 运维中，官方的 Dashboard 虽然功能齐全但显得有些沉重。如果你正在寻找一款轻量、现代化、且安装简单的监控面板，Kite 绝对是一个惊喜。本文将详细记录如何在 K3s 环境下安装 Kite，并配置 Ingress 域名访问以及集成 Prometheus 历史监控。
-一、 环境准备
-集群环境：K3s (自带 Traefik Ingress Controller)
-节点 IP：192.168.31.222
-目标域名：kite.damingerdaiinternal.com
-
-二、 部署 Kite 核心组件首先，我们直接使用官方提供的清单将 Kite 安装到 kube-system 命名空间下：
-kubectl apply -f https://raw.githubusercontent.com/zxh326/kite/refs/heads/main/deploy/install.yaml
-
-1. 修改服务为 NodePort (可选)为了方便最初的调试，我们可以将 Service 类型修改为 NodePort 并指定端口 32008：
-kubectl patch svc kite -n kube-system -p &#x27;&#123;&quot;spec&quot;:&#123;&quot;type&quot;:&quot;NodePort&quot;,&quot;ports&quot;:[&#123;&quot;port&quot;:8080,&quot;targetPort&quot;:8080,&quot;nodePort&quot;:32008&#125;]&#125;&#125;&#x27;
-
-2. 重置管理员密码Kite 默认通过环境变量管理账户。如果你需要自定义或重置密码，可以执行：
-kubectl set env deployment/kite KITE_ADMIN_USER=admin KITE_ADMIN_PASSWORD=your_new_password -n kube-system
-
-三、 配置 Ingress 域名访问 (HTTPS)由于 K3s 默认使用 Traefik，我们使用现代化的 ingressClassName 语法进行配置。
-1. 创建自签名证书 Secret为了支持 HTTPS，我们先为域名创建一个证书：
-openssl req -x509 -nodes -days 365 -newkey rsa:2048 \  -keyout tls.key -out tls.crt \  -subj &quot;/CN=kite.damingerdaiinternal.com&quot;kubectl create secret tls kite-tls --cert=tls.crt --key=tls.key -n kube-system
-
-2. 应用 Ingress 规则创建 kite-ingress.yaml：
-apiVersion: networking.k8s.io/v1kind: Ingressmetadata:  name: kite-ingress  namespace: kube-systemspec:  ingressClassName: traefik  tls:    - hosts: [&quot;kite.damingerdaiinternal.com&quot;]      secretName: kite-tls  rules:    - host: kite.damingerdaiinternal.com      http:        paths:          - path: /            pathType: Prefix            backend:              service:                name: kite                port:                  number: 8080
-
-应用配置：kubectl apply -f kite-ingress.yaml。随后在本地 hosts 文件中添加 192.168.31.222 kite.damingerdaiinternal.com 即可访问。
-
-四、 集成 Prometheus 开启历史监控Kite 默认只显示来自 metrics-server 的实时数据，无法看到历史趋势。我们需要接入 Prometheus。
-1. 安装 kube-prometheus-stack使用 Helm 快速部署全套监控栈：
-helm repo add prometheus-community https://prometheus-community.github.io/helm-chartshelm repo updatehelm install prometheus prometheus-community/kube-prometheus-stack --namespace monitoring --create-namespace
-
-2. 配置 Kite 连接 Prometheus找到 Prometheus 在集群内的 DNS 地址，并将其注入 Kite 的环境变量：
-# DNS地址通常为：http://[服务名].[命名空间].svc.cluster.local:9090kubectl set env deployment/kite PROMETHEUS_URL=http://prometheus-kube-prometheus-prometheus.monitoring.svc.cluster.local:9090 -n kube-system
-
-五、 总结稍等几分钟，待 Prometheus 完成指标抓取后，刷新 Kite 界面，你就会发现原先的 “Limited historical data” 提示消失了，取而代之的是精美的 CPU 和内存历史曲线图。
-Kite + K3s + Traefik + Prometheus 的组合，既保证了监控的深度，又维持了极低的资源消耗，非常适合中小规模集群或边缘计算场景。
-💡 小贴士
-如果发现 Ingress 无法解析，请检查 kubectl get ingress -n kube-system 的 ADDRESS 列。
-如果图表长时间不出数据，请确认 kube-state-metrics 是否在 monitoring 命名空间下正常运行。
-
-]]></content>
-      <categories>
-        <category>软件</category>
-      </categories>
-      <tags>
-        <tag>k3s</tag>
-        <tag>kubernetes</tag>
-        <tag>kite</tag>
       </tags>
   </entry>
   <entry>
@@ -5035,6 +4833,176 @@ sudo tailscale downsudo tailscale up --reset
         <tag>acme.sh</tag>
         <tag>tailsacle</tag>
         <tag>自建derp</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Podman的hello world入门</title>
+    <url>/2024/01/21/software/podman-hello-world/</url>
+    <content><![CDATA[前言Podnam是一个符合OCI，用于在 Linux® 系统上开发、提供了与 Docker 等类似的功能来管理容器。管理和运行容器开源工具。 Podman 最初由 Red Hat® 工程师与开源社区一起开发。Podman使用 libpod 库管理整个容器生态系统。
+安装如果你使用Macos, 可以使用homebrew安装：
+brew install podman
+
+安装之后就可以创建和启动Podnam虚拟机：
+podman machine initpodman machine start
+
+如果你使用Debian 或者 ubuntu， 可以使用apt-get命令安装：
+sudo apt-get install runc -ysudo apt-get -y install podman
+
+ 其他系统可能参考podman安装页面
+
+注意：对于 Windows 和 Mac，podman 需要一个虚拟机来部署容器。
+
+配置默认情况下，Podman 配置有两个容器注册表。
+
+quay.io
+docker.io
+
+我们可以在·&#x2F;etc&#x2F;containers&#x2F;registries.conf·看到
+但是为了方便我们构建基于Dockerfile的景象，我们需要在没有明确容器注册表的时候默认拉取docer.io的注册表，我们可以在·&#x2F;etc&#x2F;containers&#x2F;registries.conf·或者·$HOME&#x2F;.config&#x2F;containers&#x2F;registries.conf·设置unqualified-search-registries
+unqualified-search-registries = [&quot;docker.io&quot;]
+
+存储每个系统用户都有自己的容器存储地址。这意味着，如果您尝试从不同的用户登录中提取镜像，它将从远程注册表而不是本地映像中提取镜像。
+容器管理拉取容器：
+podman pull docker.io/nginx
+
+运行容器：
+podman  run --name docker-nginx -p 8080:80 docker.io/nginx
+
+如果你绑定1024一下的端口，你需要使用root权限：
+sudo podman run --name docker-nginx -p 80:80 docker.io/nginx
+
+对于root用户，容器将会存储在·&#x2F;var&#x2F;lib&#x2F;containers&#x2F;storag·的文件夹中。对于非root用户，容器将会存储在·$HOME&#x2F;.local&#x2F;share&#x2F;containers&#x2F;storage·的文件夹中。
+参考资料
+What is Podman?
+Podman 初学者指南（上）
+Podman “Error: no registries found in registries.conf, a registry must be provided” while logging&#x2F;pulling from docker.io
+What is Podman?
+
+]]></content>
+      <categories>
+        <category>软件</category>
+      </categories>
+      <tags>
+        <tag>podman</tag>
+        <tag>容器</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>玩转 K8s 面板：轻量级 Kite 安装全记录 (K3s 篇)</title>
+    <url>/2026/01/25/software/setup-kite-with-prometheus-on-k3s/</url>
+    <content><![CDATA[前言在 Kubernetes 运维中，官方的 Dashboard 虽然功能齐全但显得有些沉重。如果你正在寻找一款轻量、现代化、且安装简单的监控面板，Kite 绝对是一个惊喜。本文将详细记录如何在 K3s 环境下安装 Kite，并配置 Ingress 域名访问以及集成 Prometheus 历史监控。
+一、 环境准备
+集群环境：K3s (自带 Traefik Ingress Controller)
+节点 IP：192.168.31.222
+目标域名：kite.damingerdaiinternal.com
+
+二、 部署 Kite 核心组件首先，我们直接使用官方提供的清单将 Kite 安装到 kube-system 命名空间下：
+kubectl apply -f https://raw.githubusercontent.com/zxh326/kite/refs/heads/main/deploy/install.yaml
+
+1. 修改服务为 NodePort (可选)为了方便最初的调试，我们可以将 Service 类型修改为 NodePort 并指定端口 32008：
+kubectl patch svc kite -n kube-system -p &#x27;&#123;&quot;spec&quot;:&#123;&quot;type&quot;:&quot;NodePort&quot;,&quot;ports&quot;:[&#123;&quot;port&quot;:8080,&quot;targetPort&quot;:8080,&quot;nodePort&quot;:32008&#125;]&#125;&#125;&#x27;
+
+2. 重置管理员密码Kite 默认通过环境变量管理账户。如果你需要自定义或重置密码，可以执行：
+kubectl set env deployment/kite KITE_ADMIN_USER=admin KITE_ADMIN_PASSWORD=your_new_password -n kube-system
+
+三、 配置 Ingress 域名访问 (HTTPS)由于 K3s 默认使用 Traefik，我们使用现代化的 ingressClassName 语法进行配置。
+1. 创建自签名证书 Secret为了支持 HTTPS，我们先为域名创建一个证书：
+openssl req -x509 -nodes -days 365 -newkey rsa:2048 \  -keyout tls.key -out tls.crt \  -subj &quot;/CN=kite.damingerdaiinternal.com&quot;kubectl create secret tls kite-tls --cert=tls.crt --key=tls.key -n kube-system
+
+2. 应用 Ingress 规则创建 kite-ingress.yaml：
+apiVersion: networking.k8s.io/v1kind: Ingressmetadata:  name: kite-ingress  namespace: kube-systemspec:  ingressClassName: traefik  tls:    - hosts: [&quot;kite.damingerdaiinternal.com&quot;]      secretName: kite-tls  rules:    - host: kite.damingerdaiinternal.com      http:        paths:          - path: /            pathType: Prefix            backend:              service:                name: kite                port:                  number: 8080
+
+应用配置：kubectl apply -f kite-ingress.yaml。随后在本地 hosts 文件中添加 192.168.31.222 kite.damingerdaiinternal.com 即可访问。
+
+四、 集成 Prometheus 开启历史监控Kite 默认只显示来自 metrics-server 的实时数据，无法看到历史趋势。我们需要接入 Prometheus。
+1. 安装 kube-prometheus-stack使用 Helm 快速部署全套监控栈：
+helm repo add prometheus-community https://prometheus-community.github.io/helm-chartshelm repo updatehelm install prometheus prometheus-community/kube-prometheus-stack --namespace monitoring --create-namespace
+
+2. 配置 Kite 连接 Prometheus找到 Prometheus 在集群内的 DNS 地址，并将其注入 Kite 的环境变量：
+# DNS地址通常为：http://[服务名].[命名空间].svc.cluster.local:9090kubectl set env deployment/kite PROMETHEUS_URL=http://prometheus-kube-prometheus-prometheus.monitoring.svc.cluster.local:9090 -n kube-system
+
+五、 总结稍等几分钟，待 Prometheus 完成指标抓取后，刷新 Kite 界面，你就会发现原先的 “Limited historical data” 提示消失了，取而代之的是精美的 CPU 和内存历史曲线图。
+Kite + K3s + Traefik + Prometheus 的组合，既保证了监控的深度，又维持了极低的资源消耗，非常适合中小规模集群或边缘计算场景。
+💡 小贴士
+如果发现 Ingress 无法解析，请检查 kubectl get ingress -n kube-system 的 ADDRESS 列。
+如果图表长时间不出数据，请确认 kube-state-metrics 是否在 monitoring 命名空间下正常运行。
+
+]]></content>
+      <categories>
+        <category>软件</category>
+      </categories>
+      <tags>
+        <tag>k3s</tag>
+        <tag>kubernetes</tag>
+        <tag>kite</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>内网环境 K3s 部署实战：从 Zot OCI 托管到 HTTPS 域名解析全记录</title>
+    <url>/2026/03/01/software/uss-zot-push-and-pull-helm-charts/</url>
+    <content><![CDATA[前言在内网环境下搭建云原生基础设施时，镜像仓库的认证、OCI 协议的适配以及 Ingress 的路由转发通常是最容易卡壳的地方。本文记录了将应用部署至 K3s 集群，并通过自定义域名实现 HTTPS 访问的全过程。
+环境信息
+Zot 仓库 (OCI): 192.168.31.220:5000
+K3s 节点: 192.168.31.222
+服务域名: health-master-dev.damingerdaiinternal.com
+
+标准部署流程镜像仓库与 Helm 认证由于 Zot 采用 OCI 标准存储 Helm Chart，部署前需先在本地终端完成登录：
+# 登录 OCI 注册表echo &quot;YOUR_PASSWORD&quot; | helm registry login 192.168.31.220:5000 -u admin --password-stdin --plain-http
+
+在 Helm 中，–insecure 的含义通常是“允许不验证 SSL 证书的合法性”（比如自签名证书），但它默认依然会尝试使用 HTTPS。对于较新版本的 Helm（3.7+），专门提供了一个参数(–plain-http)来强制使用 HTTP 而非 HTTPS。
+配置 K3s 节点免密拉取为了让 K3s 能够拉取私有仓库的镜像，需在 192.168.31.222 节点上配置/etc/rancher/k3s/registries.yaml：
+mirrors:  &quot;192.168.31.220:5000&quot;:    endpoint:      - &quot;http://192.168.31.220:5000&quot;configs:  &quot;192.168.31.220:5000&quot;:    auth:      username: admin      password: YOUR_PASSWORD
+
+配置完成后重启服务：sudo systemctl restart k3s。
+Chart 的打包与推送（OCI 原始起点）在执行安装之前，我们需要将本地的 Chart 目录打包并推送到 Zot 仓库。OCI 模式下的推送与传统的 chartmuseum 不同，它直接利用了容器镜像的存储逻辑。
+打包 Chart首先，进入你的 Chart 目录（包含 Chart.yaml 的地方），执行打包命令： 
+helm package health-master
+
+执行后会生成一个 health-master-1.0.0.tgz 文件。
+推送至 Zot 仓库使用 helm push 命令。注意，这里的协议头必须是 oci://：
+# 格式：helm push [文件名] oci://[仓库地址]/[项目名]helm push health-master-1.0.0.tgz oci://192.168.31.220:5000/health-master \  --plain-http
+
+验证推送（避坑点）推送成功后，你会看到类似下方的输出：
+Pushed: 192.168.31.220:5000/health-master/health-master:1.0.0Digest: sha256:c2859e4f82d5248c59b2716762acc8929abe07694576d13636da1eabc114145d
+
+特别注意:
+
+在 Zot 或其他支持 OCI 的仓库中，你会发现 Chart 和 Docker 镜像并排存在。如果你使用的是 Zot 的 UI，你会看到该 Artifact 的媒体类型（Media Type）为 application&#x2F;vnd.cncf.helm.config.v1+json
+
+
+执行 Helm 安装使用 OCI 协议安装时，针对内网 HTTP 环境，必须携带 –plain-http 参数：
+helm install health-master-dev oci://192.168.31.220:5000/health-master/health-master \  --version 1.0.0 \  -f values.yaml \  --plain-http \  --namespace health-master-namespace-dev --create-namespace
+
+暴露 HTTPS 服务创建 Middleware 资源处理 HTTP 到 HTTPS 的强制跳转，并在 Ingress 中引用：
+# 1. 定义跳转中间件 (API 版本需根据 kubectl api-resources 确定)apiVersion: traefik.io/v1alpha1kind: Middlewaremetadata:  name: force-https  namespace: health-master-namespace-devspec:  redirectScheme:    scheme: https    permanent: true# 2. 配置 IngressapiVersion: networking.k8s.io/v1kind: Ingressmetadata:  name: health-master-ingress  annotations:    traefik.ingress.kubernetes.io/router.entrypoints: web, websecure    traefik.ingress.kubernetes.io/router.tls: &quot;true&quot;    traefik.ingress.kubernetes.io/router.middlewares: health-master-namespace-dev-force-https@kubernetescrdspec:  tls:    - hosts: [&quot;health-master-dev.damingerdaiinternal.com&quot;]      secretName: health-master-tls  rules:    - host: health-master-dev.damingerdaiinternal.com      http:        paths:          - path: /            pathType: ImplementationSpecific            backend:              service:                name: health-master-dev-web                port:                  number: 3000
+
+部署过程中的“血泪史”（踩坑排查）在实际操作中，我们并没有上述流程那么顺利，先后经历了四次重大“卡壳”：
+Helm 参数的“名不对题”坑位：在尝试解决认证问题时，习惯性给 helm install 加了 –insecure。
+真相：Helm 的命令行设计中，–insecure 仅用于 login；在 install&#x2F;push&#x2F;pull OCI 仓库时，如果是非 HTTPS 环境，必须使用 –plain-http。否则会报“协议不支持”或“认证找不到”的错误。
+僵死的 Namespace (Terminating)坑位：删除旧部署后，Namespace 状态卡在 Terminating 几十分钟不消失，导致无法重新部署。
+对策：这是由于 finalizers 机制拦截了资源释放。通过 kubectl edit ns &lt;namespace&gt; 强制手动删除 finalizers 数组内容，Namespace 会瞬间被强制销毁，从而解除锁定。
+关于推送时的常见报错：报错：401 Unauthorized：如果在 push 时遇到这个错误，请检查是否执行了 helm registry login。
+报错：server responded with status 405 Method Not Allowed：这通常是因为你没有使用 oci:&#x2F;&#x2F; 前缀，或者仓库没有开启 OCI 支持。
+K3s 节点的 401 Unauthorized坑位：本地 helm login 成功了，应用也部署上去了，但 Pod 状态一直是 ImagePullBackOff。
+定位：这是一个经典误区——“我登了不代表 K8s 登了”。Helm 客户端的认证信息存在用户家目录，而节点拉取镜像是由 Containerd 负责的。
+解决：必须在 K3s 的全局配置文件 registries.yaml 中显式声明私有仓库的账号密码
+Ingress 的 404 谜团与中间件失效坑位：Ingress 状态正常，ADDRESS 也有 IP，但访问域名总是返回 404 page not found。
+深度排查：通过 kubectl logs -n kube-system -l app.kubernetes.io&#x2F;name&#x3D;traefik 查看实时日志。
+关键发现：日志报错 middleware does not exist。
+原因：引用了不存在的内置中间件，导致 Traefik 拒绝加载整个路由规则。
+API 陷阱：旧版教程常用 traefik.containo.us&#x2F;v1alpha1，新版 K3s 需改为 traefik.io&#x2F;v1alpha1。只有 Middleware 成功创建并正确引用，路由才会生效。
+总结内网环境的“纯手工”部署是对运维基本功的最好打磨。每一个 404 背后，可能都是 API 版本不匹配或认证链路断裂的体现。理解了 OCI 协议规范、K8s 资源回收机制 以及 Traefik 路由匹配逻辑，这些坑就不再是阻碍，而是经验
+]]></content>
+      <categories>
+        <category>软件</category>
+      </categories>
+      <tags>
+        <tag>ingress</tag>
+        <tag>k3s</tag>
+        <tag>helm</tag>
+        <tag>kubernetes</tag>
+        <tag>kite</tag>
+        <tag>traefik</tag>
       </tags>
   </entry>
   <entry>
@@ -5145,72 +5113,90 @@ sudo tailscale up --advertise-routes=192.168.31.0/24 --accept-dns=false
       </tags>
   </entry>
   <entry>
-    <title>内网环境 K3s 部署实战：从 Zot OCI 托管到 HTTPS 域名解析全记录</title>
-    <url>/2026/03/01/software/uss-zot-push-and-pull-helm-charts/</url>
-    <content><![CDATA[前言在内网环境下搭建云原生基础设施时，镜像仓库的认证、OCI 协议的适配以及 Ingress 的路由转发通常是最容易卡壳的地方。本文记录了将应用部署至 K3s 集群，并通过自定义域名实现 HTTPS 访问的全过程。
-环境信息
-Zot 仓库 (OCI): 192.168.31.220:5000
-K3s 节点: 192.168.31.222
-服务域名: health-master-dev.damingerdaiinternal.com
-
-标准部署流程镜像仓库与 Helm 认证由于 Zot 采用 OCI 标准存储 Helm Chart，部署前需先在本地终端完成登录：
-# 登录 OCI 注册表echo &quot;YOUR_PASSWORD&quot; | helm registry login 192.168.31.220:5000 -u admin --password-stdin --plain-http
-
-在 Helm 中，–insecure 的含义通常是“允许不验证 SSL 证书的合法性”（比如自签名证书），但它默认依然会尝试使用 HTTPS。对于较新版本的 Helm（3.7+），专门提供了一个参数(–plain-http)来强制使用 HTTP 而非 HTTPS。
-配置 K3s 节点免密拉取为了让 K3s 能够拉取私有仓库的镜像，需在 192.168.31.222 节点上配置/etc/rancher/k3s/registries.yaml：
-mirrors:  &quot;192.168.31.220:5000&quot;:    endpoint:      - &quot;http://192.168.31.220:5000&quot;configs:  &quot;192.168.31.220:5000&quot;:    auth:      username: admin      password: YOUR_PASSWORD
-
-配置完成后重启服务：sudo systemctl restart k3s。
-Chart 的打包与推送（OCI 原始起点）在执行安装之前，我们需要将本地的 Chart 目录打包并推送到 Zot 仓库。OCI 模式下的推送与传统的 chartmuseum 不同，它直接利用了容器镜像的存储逻辑。
-打包 Chart首先，进入你的 Chart 目录（包含 Chart.yaml 的地方），执行打包命令： 
-helm package health-master
-
-执行后会生成一个 health-master-1.0.0.tgz 文件。
-推送至 Zot 仓库使用 helm push 命令。注意，这里的协议头必须是 oci://：
-# 格式：helm push [文件名] oci://[仓库地址]/[项目名]helm push health-master-1.0.0.tgz oci://192.168.31.220:5000/health-master \  --plain-http
-
-验证推送（避坑点）推送成功后，你会看到类似下方的输出：
-Pushed: 192.168.31.220:5000/health-master/health-master:1.0.0Digest: sha256:c2859e4f82d5248c59b2716762acc8929abe07694576d13636da1eabc114145d
-
-特别注意:
-
-在 Zot 或其他支持 OCI 的仓库中，你会发现 Chart 和 Docker 镜像并排存在。如果你使用的是 Zot 的 UI，你会看到该 Artifact 的媒体类型（Media Type）为 application&#x2F;vnd.cncf.helm.config.v1+json
-
-
-执行 Helm 安装使用 OCI 协议安装时，针对内网 HTTP 环境，必须携带 –plain-http 参数：
-helm install health-master-dev oci://192.168.31.220:5000/health-master/health-master \  --version 1.0.0 \  -f values.yaml \  --plain-http \  --namespace health-master-namespace-dev --create-namespace
-
-暴露 HTTPS 服务创建 Middleware 资源处理 HTTP 到 HTTPS 的强制跳转，并在 Ingress 中引用：
-# 1. 定义跳转中间件 (API 版本需根据 kubectl api-resources 确定)apiVersion: traefik.io/v1alpha1kind: Middlewaremetadata:  name: force-https  namespace: health-master-namespace-devspec:  redirectScheme:    scheme: https    permanent: true# 2. 配置 IngressapiVersion: networking.k8s.io/v1kind: Ingressmetadata:  name: health-master-ingress  annotations:    traefik.ingress.kubernetes.io/router.entrypoints: web, websecure    traefik.ingress.kubernetes.io/router.tls: &quot;true&quot;    traefik.ingress.kubernetes.io/router.middlewares: health-master-namespace-dev-force-https@kubernetescrdspec:  tls:    - hosts: [&quot;health-master-dev.damingerdaiinternal.com&quot;]      secretName: health-master-tls  rules:    - host: health-master-dev.damingerdaiinternal.com      http:        paths:          - path: /            pathType: ImplementationSpecific            backend:              service:                name: health-master-dev-web                port:                  number: 3000
-
-部署过程中的“血泪史”（踩坑排查）在实际操作中，我们并没有上述流程那么顺利，先后经历了四次重大“卡壳”：
-Helm 参数的“名不对题”坑位：在尝试解决认证问题时，习惯性给 helm install 加了 –insecure。
-真相：Helm 的命令行设计中，–insecure 仅用于 login；在 install&#x2F;push&#x2F;pull OCI 仓库时，如果是非 HTTPS 环境，必须使用 –plain-http。否则会报“协议不支持”或“认证找不到”的错误。
-僵死的 Namespace (Terminating)坑位：删除旧部署后，Namespace 状态卡在 Terminating 几十分钟不消失，导致无法重新部署。
-对策：这是由于 finalizers 机制拦截了资源释放。通过 kubectl edit ns &lt;namespace&gt; 强制手动删除 finalizers 数组内容，Namespace 会瞬间被强制销毁，从而解除锁定。
-关于推送时的常见报错：报错：401 Unauthorized：如果在 push 时遇到这个错误，请检查是否执行了 helm registry login。
-报错：server responded with status 405 Method Not Allowed：这通常是因为你没有使用 oci:&#x2F;&#x2F; 前缀，或者仓库没有开启 OCI 支持。
-K3s 节点的 401 Unauthorized坑位：本地 helm login 成功了，应用也部署上去了，但 Pod 状态一直是 ImagePullBackOff。
-定位：这是一个经典误区——“我登了不代表 K8s 登了”。Helm 客户端的认证信息存在用户家目录，而节点拉取镜像是由 Containerd 负责的。
-解决：必须在 K3s 的全局配置文件 registries.yaml 中显式声明私有仓库的账号密码
-Ingress 的 404 谜团与中间件失效坑位：Ingress 状态正常，ADDRESS 也有 IP，但访问域名总是返回 404 page not found。
-深度排查：通过 kubectl logs -n kube-system -l app.kubernetes.io&#x2F;name&#x3D;traefik 查看实时日志。
-关键发现：日志报错 middleware does not exist。
-原因：引用了不存在的内置中间件，导致 Traefik 拒绝加载整个路由规则。
-API 陷阱：旧版教程常用 traefik.containo.us&#x2F;v1alpha1，新版 K3s 需改为 traefik.io&#x2F;v1alpha1。只有 Middleware 成功创建并正确引用，路由才会生效。
-总结内网环境的“纯手工”部署是对运维基本功的最好打磨。每一个 404 背后，可能都是 API 版本不匹配或认证链路断裂的体现。理解了 OCI 协议规范、K8s 资源回收机制 以及 Traefik 路由匹配逻辑，这些坑就不再是阻碍，而是经验
+    <title>2022年度总结</title>
+    <url>/2021/12/31/summary/2022/</url>
+    <content><![CDATA[2022年度总结2022年真的是一个让人难以忘怀的年份，尤其在先后经历了上海封城、老丈人去世、领证结婚。
+疫情还记得2020年疫情刚开始的时候，那时侯自己一个人开车回上海，路上的车辆非常少，开车的感觉真的可以说非常爽，完全可以闭着眼开车，反正看不到车，即使进了上海市区。那个时候单纯的想，少则三个月，多则半年，疫情就会自然而然的过去，到时候我们该吃吃该喝喝。虽然这个判断翻车了，但是2021年也是对国内疫情还是比较乐观。但是2022年的上海封城打破了我所有的幻想。我从来没想过上海居然玩砸了“动态清理”，从华亭宾馆开始，上海的疫情持续不断，感染人数死活都下不去。
+3月份我刚搬到南翔就被封控了，但是我刚开始还好，虽然什么吃的都没有，但是只要封控时间到了就能出去买点东西。但遗憾的是，从4月份开始，上海开始静默了，我足足封在家里差不多两个月。我本来是不反对封城的，但是上海市政府真的很让人失望，疫情两年了，市政府似乎没有做好任何相关封城的预案。而且总感觉可能涉及到二十大的高层安排，市政府决策层应该是存在分歧的，并且和医疗系统的人也存在一定的隔阂。由于上层的问题，基层机构出现各种乱七八糟的事儿那也能理解了。
+在经过了白纸运动之后，我们的防疫政策从一个极端走向另外一个极端。我们彻底放开了，让80%以上的人感染了一遍。我不是反对放开，但是我比较反对如此毫无征兆的放开，没有准备好各种的退烧药，没有准备好口罩。
+技术今年继续做一个web2.5的项目，就是web2.0 + 区块链，不能算得上正宗的web3.0。其核心就是将部分原来放在数据库的数据放在区块链里。所以我们一般自称为web2.5。
+目前部门想全力押宝·web3·，希望能和审计部门能够做好技术服务，所以未来对区块链的研究大概率是会集中中DeFi(去中心化金融)。对我来说，金融是一个毫无头绪的东西，之前并没有接触过，没有一个良好的业务场景可以让我研究，导致对我来说DeFi可能只是一个比较空泛的名词。
+过去的一年，对以太坊还是比较浅显的，同时将也做了一些简单的demo。总的来说，也算简单的入门学了点皮毛，但是对智能合约的开发还是基本上一窍不通的。希望接下来的一年可以深入研究智能合约，可以独立开发智能合约并部署到一个测试网络。solana也会是一个比较重要的关注方向，但是考虑到solana的东家出点事儿，可能不太会重心在这个方面，不过rust语言还是会尽量深挖一下，这是一个很有挑战性的方向
+今年应该很少写angular了，更多开始写react。从我个人的角度来说，jsx和react hook对写一些组件来说确实是一把利器，但是对于如何做好一个完整的、强大的前端web应用来说，react的生态是不足的，太碎裂了，导致在接手不同的项目的时候总是能看到不同的react写法和工程组织形式。最近在react-mobile-picker做一个重构。一个方面是想改成通用的monorepo的组织形式，另外一个方面是需要升级核心依赖并使用typescript重写。目前这个工作还在努力中。 angular方面更多的专注于ngx-dom-confetti, 目前仅仅是对dom-confetti的angular封装，将来的计划是参考ripple的代码设计，将来可以好好的重构这个项目。hoteler-web是我一直会维护的angular的项目。
+今天在google domains买了个域名，然后尝试使用k3s的ingress部署了[https://hoteler.damingerdai.com/]。感觉使用k3s部署一些简单的应用基本上问题不大了。[hoteler](https://github.com/damingerdai/hoteler)已经是一个很稳定的demo，大概率是不会进行大规模的重构了。所以目前只有一个很简单的想法那就是使用spring cloud进行重写，这个是不太能自己部署到线上环境了，毕竟服务器资源就那么点，跑不起那么多的资源。
+针对golang的话，我目前私下的在做一个关于健康的demo，目前还在开发中，前端使用react，后端使用golang。目前希望在技术上的突破是使用loki做日志管理，Jaeger用于链路追踪，这是1.0的计划。2.0的话（如果有时间的话），希望可以加入区块链的一些元素，至少能做成个·web2.5·。
+今年其实还是探索了很多的技术。比如minio, harbor, drone, gogs和gitea。
+个人生活今天对我最大的事儿就是结婚了，没有比举办婚礼更重要的事儿了。本来由于收到上半年疫情的影响，原来不指望今年结婚的。本来定的日子是明年的正月办酒席，但是丈母娘觉得今年的夏天那么热，冬天一定很会冷，希望我们今年就是把事儿办了。所以婚期提前到11月份举行，本来日子选的好好的，也没啥好纠结的，毕竟妹子是自己谈的。但是明天和意外你永远都不知道哪个先来，我老丈人在婚礼的前两天去世了。在婚礼前的几个礼拜，我老丈人生病了，是便秘导致的肠梗阻。在医院治疗了一段时间本来已经治好了，但是不知道是医院的水平问题还是我老丈人本身的问题，在治疗过程中可能没有控制好糖尿病导致肺部感染， 在icu躺了几天之后终究将抢救无效去世，年仅50岁。在殡仪馆里，我看到同批火化的人中就属我老丈人最年轻。有的时间真的感觉世事无常，国庆节回去的时候，老丈人还好好的，结果才过去一个月不到，人就没了。
+展望未来对2023年这个经济判断是真的不太好说，谁也不知道明年会怎么想，我也不敢瞎说，我只能我大概率会重点关注·DeFi·。然后希望能够保住就业，保住现金流。
 ]]></content>
-      <categories>
-        <category>软件</category>
-      </categories>
-      <tags>
-        <tag>ingress</tag>
-        <tag>k3s</tag>
-        <tag>helm</tag>
-        <tag>kubernetes</tag>
-        <tag>kite</tag>
-        <tag>traefik</tag>
-      </tags>
+  </entry>
+  <entry>
+    <title>2023年度总结</title>
+    <url>/2024/01/06/summary/2023/</url>
+    <content><![CDATA[2023年度总结2023年就这样子莫名其妙的过了，又是稀里糊涂的一年。这一年，和最爱的人去了一趟西藏，圆了她心心念念的梦想；这一年，坐了30多小时的火车，跨越千里去见证一段美好的爱情；这一年，参加了加入PWC以来第二次的线下年会，疫情总算是过去了。
+美好的西藏其实是先从上海到成都出发，在成都带了两天，陪她那只叫做花花的大熊猫。 其实19年时候我去过成都大熊貓繁育研究基地，那个时候还没有花花，也没有那么多的游客，当然也有可能我去的是淡季，不过总算是满足她的心愿了。吃了当地的特色，三大炮，鸡豆花，兔腿，麻婆豆腐，其实那个陈麻婆的那个夫妻肺片还是很有特色的，不辣，有点甜，和紫燕百味鸡的那个压根就不一样的。
+我们是报了一个旅行团，四个人，一个司机。除了我们之外，还有一个山东小哥，一个四川小伙。山东小哥是真的很社牛，和什么人都能聊起来，喜欢旅游，朋友圈三天两头出去玩，晒各地的美景。四川小伙是拿到美国一家博士的offer了，想在出国前能够好好放松一下。四个人一个司机，就这样子从成都沿着318国道出发了。
+去了很多地方，但是我没记住，因为这不是我热爱的，吃了很多美食，我记住了它们的味道，永远不会忘记。
+到了拉萨，我们去看了小昭寺，布达拉宫。吃了当地牦牛肉，喝了当地的牦牛奶做的奶茶。真的是美滋滋的日子啊。
+
+
+
+
+
+
+PWC线下年会我是19年加入PWC的。PWC的年会其实是财年的意思，所以通常是5月份办年会。20年收到疫情的影响，此后的年会都是线上举行的，虽然有元宇宙的等加持，但是对我来而已其实并没有参与感的。收到疫情的影响，很多同事已经没有来公司面对面办公了，曾经的团队早就各奔东西，甚至都不在一个部门的了。
+终于，口罩没了，在加入PWC的第四年中，迎来的第二次线下年会。酒店更高级了，吃的很好，食物也精致，但是呢，我还是感觉19年那次年会吃的更惬意点。
+
+嘉峪关之行嘉峪关之行单纯的是因为大学同学结婚，便选择坐了30多小时的火车，先去西安和好友会和，再去嘉峪关。嘉峪关风景不错，可惜很难再有机会去了。
+
+其他我们还去来了迪士尼
+
+参加她的大学同学的婚礼
+
+最后Time files over us, but leaves its shadow behind.
+]]></content>
+  </entry>
+  <entry>
+    <title>2025年度总结</title>
+    <url>/2026/02/24/summary/2025/</url>
+    <content><![CDATA[2025年度总结对我来说，2025年其实又是一个特别有意义的一年。3月初陪老婆去了一次她心心念念的日本，11月的最后一天，在中介第二次带看的情况，匆匆忙忙的买下上海一套二手房，圆了老婆又一个心愿。
+日本之行日本原计划是24年底就去的，但是因为失业，只关心找工作就放弃了。我本身去日本的兴趣不大，但是老婆非常想去就很仓促的时间定下去日本。我们去的是大阪，大概还有一个月的时候就是大阪世博会了，3月份初去还是还好，要是晚了估计人就太多了。
+大阪
+
+
+
+
+在大阪玩的很开心，感觉大阪是一个很国际化的大都市，不少西方和东南亚的面孔。就算看上去东亚面孔，也有很大的可能是中国人。我真的在大阪的地铁里听两个中国人可能是仗着日本人听不懂中国话说着非常非常虎狼的词儿。
+
+
+在大阪住的酒店有个温泉，可以免费去泡澡，没有国内那种搓澡等服务，就是纯粹的泡澡。 水很温和，不是十分烫人，让人感觉到十分舒服，感觉真的可以吸取洗去一声的疲惫。看了酒店的说明，估计这个温泉真的是从山里拉来的真的地下水，比国内所谓温泉但是就是自己烧开水强多了。
+
+
+在大阪，环球影城应该算得上必打卡点了，加上有一个马里奥馆，还是很值得去的。个人比较推荐的是水世界的表演，真的是非常的精彩，特技效果很好，有时间还是很推荐去看看的。
+宇治
+
+
+
+
+老婆是抹茶的超级粉丝，想去宇治。虽然我对此不是很感兴趣，更想去奈良。可惜行程有限，奈良和宇治只能二选一，所以最后是花了一天的时间去宇治。宇治是一个很不错的小城，但是去宇治的电车就不如大阪友好了。大阪的轨道交通都是日，中，英，韩四种语言，而去宇治的电车就日英两种选择了。
+城市不大，但是风景很不错，可能是淡季，游客不算多，但是还好。抹茶嘛，毫无兴趣，不做评价。
+买房老婆买房的想法其实很久了，24年就开始在网上看房了。不知道为什么，25年下半年就特别积极，我本来想着要不26、27年买房吧，要是房价涨了就算自己倒霉。我老婆的意思就先看看，可以考虑一下。可能是被当时租住的小区9月初卖了一套275万刺激，她觉得差不多了，想线下先看看，然后当月底约了一次中介去看过一次房。本来想着下次看房就要26年了，但是不知道老婆是怎么想的，想再看看，然后11月30号，我也没啥事儿，就一起去看看房子。我们这次看了四套房子，其中第四套有点大，价格超过预算，只是中介带我们去看看90平的房子大概是什么布局，估计他没想法当天他就成了一单。
+其实第一套和第二套我不是很满意，第一套价格低点，但是维护很差，重新装修需要花费很大的精力；第二套价格贵点，地段稍微好点，层楼好点，但装修也很一般，大概率还是重新装修。第三套的装修很好，17年的装修到现在都不过时，整体的设计很好的考虑到家里有小宝宝的情况，边边角角都做了圆角设计，材料可以看得出很明显是非常不错的，没有使用比较次的材料，保养也很好，听中介说房东是拿来自住的，没出租过。可能唯一的缺点就是在5楼，爬楼梯有点困难。
+11月30号，上午看房，下午带我妈妈和小宝宝也看了下，宝宝好像挺喜欢的，东看看西看看，应该也看上了吧。然后就宝山链家的中心就和房东谈判了，经过中介的谈判，我们最后还是拿下了这套房。挺快的，也很幸运，就这个装修，其实有不少人在抢，听中介说，上次就有人看上了，可惜约时间的时候不是房东没时间就是购房人没时间，我们去看房的时候，其实还有一个小姐姐也去看了，好像也有兴趣，可惜被我们抢先了。
+很开心能够在上海这个繁华的都市能够拥有一套自己的房子，感谢我老婆，没有她，我大概率不会留在上海，感谢我的孩子，没有他，我压根就没有留下的动力。
+技术摩根士丹利的工作没有可以值得说道的，没有太大的价值，但是我也学到很多东西，我第一次接触到了gitops，现在也在私下的学习这套概念。
+利用春节假期，尝试部署了一套自己的部署体系（kite,prometheus&#x2F;grafana, zot registry），尝试使用helm部署项目，感觉还不错。
+
+
+
+2026 · 向上生长2025 是沉淀与思考的一年。有探索，也有试错；有不确定，也有新的方向。
+2026，希望自己——
+在技术上，更专注本质。少一些浮躁，多一些深度；少一些追逐热点，多一些长期主义。
+在工作上，更从容坚定。把复杂问题拆解清楚，把系统设计得更优雅；让每一行代码，都对得起时间。
+在生活里，更有温度。给家人更多陪伴，给自己更多耐心，在快节奏里守住节奏。
+愿 2026，不是简单的“更忙”，而是“更好”。
+持续学习，持续创造，持续成为更清醒的自己。
+]]></content>
   </entry>
   <entry>
     <title>记录一些测试币的水龙头</title>
@@ -5234,24 +5220,18 @@ polygonpolygon faucet, 支持多个测试网络，但是Goerli的ETH没拿到
       </tags>
   </entry>
   <entry>
-    <title>Android Studio安装笔记</title>
-    <url>/2021/01/01/software/install/how-to-install-android-studio/</url>
-    <content><![CDATA[Android Studio安装笔记简单记录一下Android Studio安装
-下载从官网安装Android Studio,
-然后点击安装。
-Android SDK使用http://ping.chinaz.com获取dl.google.com的大陆响应时间最短的IP地址。
-以我为例：180.163.151.161
-将其写入hosts文件(C:\WINDOWS\System32\drivers\etc\hosts)
-180.163.151.161 dl.google.com
-
-参考资料在Android Studio中下载Android SDK的两种方式（Android Studio3.0、windows
+    <title>2024年度总结</title>
+    <url>/2025/01/13/summary/2024/</url>
+    <content><![CDATA[2024年度总结对我来说，2024年是一个特别有意义的一年。8月24号，我美丽又可爱的宝宝出生了，体验到了初为人父的喜悦；10月7号，国庆节刚过，公司人事就开邮件通知我我的岗位被取消了。
+初为人父的喜悦孩子的出生时间其实挺意外的。由于老婆在9月初有一场很重要的考试，所以不能耽搁，所以原来计划在20号去医院打催产素的，结果因为报告晚了一天，然后就被通知不用打催产素，已经开始见红了。不过开宫口的速度很慢，过两天还是上催产素了。我记得那个时候我在家里呆着，医院我有丈母娘陪着，反正又不可能那么急着生出来，我就回家先好好休息，打算第二天过去。结果第二天我丈母娘就通知我让我赶紧过去签字给我老婆打催产素。一波三折，到最后这个催产素还是打上去了。在6号待产室，晚上6点06分，7斤2两，我可爱的儿子就这样子平平安安的出生了。说实话，我并没有在第一时间听到孩子的哭声，相反这个小家伙睡的死死的。我伸过去看看了他，第一感觉他好丑啊，头型怪怪的，有点拉长的样子。听医生说，刚出生的小宝宝通常产道的挤压，出来的时候头多多少少会有点拉长的样子，等长大点就好了。
+孩子的出生，对我来说是一个特殊的人生里程碑，从这一刻开始，我不仅仅是一个普通的牛马，更是一个上有老下有小的天选牛马。就这样一下子，感觉身上的责任明显重了很多。算了一下孩子的奶粉钱，尿不湿的钱，将来休学的钱，以后娶老婆的钱和彩礼，还有供养老婆大人吃喝玩乐的钱。处处都是钱，处处都是压力。我也不知道将来孩子会活成什么样子，但是我不奢望他能出人头地，只希望平平安安的长大；不期待他将来学业有成，事业非凡，只希望他能过的自在安心。
+裁员其实裁员是有点风声的，但是一直都是狼来的状态。在国庆节，部门领导就私下的就透露过每个leader都需要上交一份裁员名单，更上级的领导会根据这份名单裁员。对于我这种干活儿的小喽啰，大概率是可以保住饭碗的，毕竟我还是比较能干活儿的，最近做的项目也是比较有钱的其实。
+但是非常尴尬的是，确实是裁员了，但是不是上海发起的裁员，是美国发起的裁员。美国最高层决定全球裁员好几千人，预计涉及美国，墨西哥，印度和上海几个地方的office。
+这次裁员主要是我们P &amp; T部门，其他部门似乎还好好的。P &amp; T由Labs和Digital两个小部门，我们labs这边十分平静的接受了这次裁员，大家虽然都不太能接受，但是普遍选择认命，大家该吃吃该喝喝，好聚好散。但是隔壁部门是有人闹了下，但是很快就没下文了。后来我听说出头闹事的人第一个找到工作之后就不出头了，结果也就没人闹事了。
+找工作找工作挺难的，基本上都是外包。没做面试的记录，就随便回忆一下吧。面试PayPal外包, 二面和三面一起面的，挂了，感觉二面和三面都不是很好。面试VOA2(一家不错的法资小公司)，因为英语和岗位不合适挂。面试迪士尼外包，一面挂了，搞笑的是又一家外包来邀请我去面试，主要是迪士尼的技术栈是Angular+Graphql，比较小众，但是我都用过，我不太想去，但是对方劝了我好几次，最后还是在二面挂了（面试三次，挂了两次，挺好玩的经历）。面试花旗外包，二面挂了，其实本来是挺有机会的，但是二面就27分钟，还算上我问的问题，只能被挂了。面试华钦（华钦是外包公司，但是这个岗位不是外包），我明明面试的是前端，面试官是后端的，道不同。面试摩根士丹利外包，二面过了，感觉比较水，相对好近。
+摩根士丹利进入摩根士丹利之后其实有段时间是不太适应的，习惯了普华永道这种混合办公和不定时工作制，不太能接受摩根士丹利这种965的风格，不过还好，两周就适应了，发了工资就更加适应，没有必要和钱过不去。摩根士丹利里面什么情况我不方便多说，但是根据工作安排来看，坚持到2026年底问题不大，以后就再说吧。
+总结如果没有裁员这回事儿，那么2024年对我还是一个挺不错的年份。涨点工资（普华永道每年7月调薪），有个儿子，本来就可以这样子过去了。可惜没有如果，现在在摩根做外包也能接受，毕竟正式员工对我们算得上非常nice了。希望2025年可以平平安安，保住工作，少点个人消费，多点留给家人。技术也没有什么大的想法，保住工作就行，苟活到经济能够真的复苏吧。
 ]]></content>
-      <categories>
-        <category>软件</category>
-      </categories>
-      <tags>
-        <tag>Android Studio</tag>
-      </tags>
   </entry>
   <entry>
     <title>drone + gogs + docker实现持续自动化部署</title>
@@ -5380,6 +5360,26 @@ cd &quot;$(brew --repo)/Library/Taps/homebrew/homebrew-core&quot; &amp;&amp; git
       </tags>
   </entry>
   <entry>
+    <title>Android Studio安装笔记</title>
+    <url>/2021/01/01/software/install/how-to-install-android-studio/</url>
+    <content><![CDATA[Android Studio安装笔记简单记录一下Android Studio安装
+下载从官网安装Android Studio,
+然后点击安装。
+Android SDK使用http://ping.chinaz.com获取dl.google.com的大陆响应时间最短的IP地址。
+以我为例：180.163.151.161
+将其写入hosts文件(C:\WINDOWS\System32\drivers\etc\hosts)
+180.163.151.161 dl.google.com
+
+参考资料在Android Studio中下载Android SDK的两种方式（Android Studio3.0、windows
+]]></content>
+      <categories>
+        <category>软件</category>
+      </categories>
+      <tags>
+        <tag>Android Studio</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>在armbian上使用snap安装neovim</title>
     <url>/2025/02/14/software/install/use-snap-to-install-neovim-on-armbian/</url>
     <content><![CDATA[概述最近搞了一台armbian的机子，想在上面安装neovim，但是发现apt上的nvim版本太低了，只有0.4.0好像。经过一番的搜索，发现Snaps可以满足我的要求。
@@ -5450,52 +5450,6 @@ kubectl patch svc skooner -n kube-system --type=&#x27;json&#x27; -p=&#x27;[&#123
         <tag>k3s</tag>
         <tag>kubernetes</tag>
         <tag>skooner</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>HorizontalPodAutoscaler入门实践</title>
-    <url>/2023/09/27/software/k8s/horizontal-pod-autoscaler-getting-started/</url>
-    <content><![CDATA[HorizontalPodAutoscaler在Kubernetes中，HorizontalPodAutoscaler 自动更新工作负载资源（例如Deployment或者StatefulSet），目的是自动扩缩工作负载以满足需求。水平扩缩意味着对增加的负载的响应是部署更多的 Pod。
-本文目的是通过Docker Desktop上的Kubernetes实例去实践pod的水平扩展。
-本文默认Docker Desktop上的Kubernetes已经安装完成。如果需要帮助，可以阅读Docker Desktop自带k8s安装笔记。
-安装 Metrics server由于Docker Desktop上的Kubernetes默认并没有安装Metrics server，而HorizontalPodAutoscaler依赖通过Metrics server获取到的数据， 因此需要提前安装。
-kubectl top node error: Metrics API not available
-
-从Metrics server的release页面获取最新的components.yaml文件，
-然后执行：
-kubectl apply -f components.yaml
-
-镜像的拉取和运行需要一点时间。我们可以通过以下命令查看运行情况：
-kubectl  get pod -n kube-system | grep metrics# 结果metrics-server-75f45b4dd4-fbxd2          1/1     Running   0               3h25m
-
-查看node资源情况：
-kubectl top node# 结果NAME             CPU(cores)   CPU%   MEMORY(bytes)   MEMORY%   docker-desktop   1901m        47%    6250Mi          80% 
-
-查看pod资源情况
-kubectl top pods -A# 结果NAMESPACE           NAME                                     CPU(cores)   MEMORY(bytes)             kube-system         coredns-5d78c9869d-dq2s7                 4m           16Mi            kube-system         coredns-5d78c9869d-g5xhx                 2m           21Mi            kube-system         etcd-docker-desktop                      20m          72Mi            kube-system         kube-apiserver-docker-desktop            32m          271Mi           kube-system         kube-controller-manager-docker-desktop   11m          64Mi            kube-system         kube-proxy-qdc55                         1m           25Mi            kube-system         kube-scheduler-docker-desktop            5m           32Mi            kube-system         metrics-server-75f45b4dd4-fbxd2          6m           23Mi            kube-system         storage-provisioner                      4m           15Mi            kube-system         vpnkit-controller                        1m           14Mi  
-
-配置HorizontalPodAutoscaler这里以我的个人开源项目hoteler为例, 将下面的内容写入hpa.yaml文件中：
-apiVersion: autoscaling/v2kind: HorizontalPodAutoscalermetadata:  name: hoteler-api-hpa  namespace: hoteler-namespace  labels:    app: hoteler-api-hpaspec:  maxReplicas: 5  minReplicas: 1  scaleTargetRef:    apiVersion: apps/v1    kind: Deployment    name: hoteler-api  metrics:    - type: Resource      resource:        name: cpu        target:          type: Utilization          averageUtilization: 50    - type: Resource      resource:        name: memory        target:          type: Utilization          averageUtilization: 50
-minReplicas: 1表示最小一个pod实例，maxReplicas: 5则说明最多扩展到5个pod实例。
-metrics下面定义两个·Resource·， 第一个Resource规定当cpu资源占用率超过50%就会进行扩容，第二个Resource则规定了当内存使用率超过50%之后才会行将扩容。 这两个Resource是独立计算所需要的副本数量，取最大值。
-参考
-Horizontal Pod Autoscaling
-k8s的HPA安装测试
-安装 Metrics server
-Enable Kubernetes Metrics Server on Docker Desktop
-Kubernetes HPA 使用详解
-How kubernetes HPA with 2 or more metrics behaves - especially the no.of replicas calculation?
-feat: 使用k8s的HorizontalPodAutoscaler进行水平的资源缩放
-
-]]></content>
-      <categories>
-        <category>软件</category>
-      </categories>
-      <tags>
-        <tag>k8s</tag>
-        <tag>docker</tag>
-        <tag>kubernetes</tag>
-        <tag>Docker Desktop</tag>
       </tags>
   </entry>
   <entry>
@@ -5593,6 +5547,52 @@ Minikube - Kubernetes本地实验环境
         <tag>minikube</tag>
         <tag>kubernetes</tag>
         <tag>Mac</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>HorizontalPodAutoscaler入门实践</title>
+    <url>/2023/09/27/software/k8s/horizontal-pod-autoscaler-getting-started/</url>
+    <content><![CDATA[HorizontalPodAutoscaler在Kubernetes中，HorizontalPodAutoscaler 自动更新工作负载资源（例如Deployment或者StatefulSet），目的是自动扩缩工作负载以满足需求。水平扩缩意味着对增加的负载的响应是部署更多的 Pod。
+本文目的是通过Docker Desktop上的Kubernetes实例去实践pod的水平扩展。
+本文默认Docker Desktop上的Kubernetes已经安装完成。如果需要帮助，可以阅读Docker Desktop自带k8s安装笔记。
+安装 Metrics server由于Docker Desktop上的Kubernetes默认并没有安装Metrics server，而HorizontalPodAutoscaler依赖通过Metrics server获取到的数据， 因此需要提前安装。
+kubectl top node error: Metrics API not available
+
+从Metrics server的release页面获取最新的components.yaml文件，
+然后执行：
+kubectl apply -f components.yaml
+
+镜像的拉取和运行需要一点时间。我们可以通过以下命令查看运行情况：
+kubectl  get pod -n kube-system | grep metrics# 结果metrics-server-75f45b4dd4-fbxd2          1/1     Running   0               3h25m
+
+查看node资源情况：
+kubectl top node# 结果NAME             CPU(cores)   CPU%   MEMORY(bytes)   MEMORY%   docker-desktop   1901m        47%    6250Mi          80% 
+
+查看pod资源情况
+kubectl top pods -A# 结果NAMESPACE           NAME                                     CPU(cores)   MEMORY(bytes)             kube-system         coredns-5d78c9869d-dq2s7                 4m           16Mi            kube-system         coredns-5d78c9869d-g5xhx                 2m           21Mi            kube-system         etcd-docker-desktop                      20m          72Mi            kube-system         kube-apiserver-docker-desktop            32m          271Mi           kube-system         kube-controller-manager-docker-desktop   11m          64Mi            kube-system         kube-proxy-qdc55                         1m           25Mi            kube-system         kube-scheduler-docker-desktop            5m           32Mi            kube-system         metrics-server-75f45b4dd4-fbxd2          6m           23Mi            kube-system         storage-provisioner                      4m           15Mi            kube-system         vpnkit-controller                        1m           14Mi  
+
+配置HorizontalPodAutoscaler这里以我的个人开源项目hoteler为例, 将下面的内容写入hpa.yaml文件中：
+apiVersion: autoscaling/v2kind: HorizontalPodAutoscalermetadata:  name: hoteler-api-hpa  namespace: hoteler-namespace  labels:    app: hoteler-api-hpaspec:  maxReplicas: 5  minReplicas: 1  scaleTargetRef:    apiVersion: apps/v1    kind: Deployment    name: hoteler-api  metrics:    - type: Resource      resource:        name: cpu        target:          type: Utilization          averageUtilization: 50    - type: Resource      resource:        name: memory        target:          type: Utilization          averageUtilization: 50
+minReplicas: 1表示最小一个pod实例，maxReplicas: 5则说明最多扩展到5个pod实例。
+metrics下面定义两个·Resource·， 第一个Resource规定当cpu资源占用率超过50%就会进行扩容，第二个Resource则规定了当内存使用率超过50%之后才会行将扩容。 这两个Resource是独立计算所需要的副本数量，取最大值。
+参考
+Horizontal Pod Autoscaling
+k8s的HPA安装测试
+安装 Metrics server
+Enable Kubernetes Metrics Server on Docker Desktop
+Kubernetes HPA 使用详解
+How kubernetes HPA with 2 or more metrics behaves - especially the no.of replicas calculation?
+feat: 使用k8s的HorizontalPodAutoscaler进行水平的资源缩放
+
+]]></content>
+      <categories>
+        <category>软件</category>
+      </categories>
+      <tags>
+        <tag>k8s</tag>
+        <tag>docker</tag>
+        <tag>kubernetes</tag>
+        <tag>Docker Desktop</tag>
       </tags>
   </entry>
   <entry>
