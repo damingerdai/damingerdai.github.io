@@ -19,6 +19,120 @@ More info: Deployment
 ]]></content>
   </entry>
   <entry>
+    <title>给Ingress上配置ssl证书</title>
+    <url>/2022/06/18/back-end/add-ssl-for-ingress/</url>
+    <content><![CDATA[给Ingress上配置ssl证书创建secretkubectl create secret tls [secretName]  --cert=[pem文件路径] --key=[key文件路径] --namespace [namespace] -o yaml --dry-run=client &gt; ingress-default-cert.yamlkubectl apply -f ingress-default-cert.yaml
+
+Ingress添加证书apiVersion: networking.k8s.io/v1beta1kind: Ingress  metadata:     name: [ingress-name]     namespace: [namespace] # ingress要和secret在同一个名称空间下     annotations:         kubernetes.io/ingress.class: traefik         traefik.frontend.rule.type: PathPrefixStrip         # http 重定向到 https         ingress.kubernetes.io/ssl-redirect: &quot;True&quot; spec:     tls:         - hosts:             - xxxx.xxxx # 这里是下面要配置https的域名             - xxxx.xxxx # 这里是下面要配置https的域名         secretName:             [secret-name]:     rules:    - host: xxx.xxx.com      http:        paths:          - path: /            pathType: Prefix            backend:              service:                name: [service-name]                port:                  number: 8080
+
+
+参考资料
+为k8s集群配置SSL证书
+k3s配置ingress使用ssl证书
+
+]]></content>
+      <categories>
+        <category>后端</category>
+      </categories>
+      <tags>
+        <tag>k8s</tag>
+        <tag>ingress</tag>
+        <tag>ssl</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>使用docker-compose备份Postgres Docker容器的解决方案</title>
+    <url>/2024/07/10/back-end/back-end-how-to-backup-postgres-docker-container/</url>
+    <content><![CDATA[使用docker-compose备份Postgres Docker容器的解决方案备份使用pg_dumpall命令备份Postgres数据库。
+docker-compose exec &lt;postgres_service&gt; pg_dumpall -U postgres &gt; dump_`date +%Y-%m-%d&quot;_&quot;%H_%M_%S`.sql
+
+
+docker-compose exec &lt;postgres_service&gt; 在名为&lt;postgres_service&gt;的Postgres容器上执行命令。
+-U postgres 指定数据库的用户名。Docker的默认用户名是postgres，如果你使用不同的用户名，请进行修改。
+
+恢复将dump_date +%Y-%m-%d”“%H%M_%S.sql文件放置在backup文件夹中。
+然后使用Docker卷将backup文件夹绑定到Postgres容器上：
+volumes:    - ./backup:/backup
+
+删除现有的Postgres容器并创建一个新的容器：
+docker-compose down &amp;&amp; docker-compose up -d
+
+执行数据库导入命令：
+docker-compose exec postgres psql -f /backup/dump_xxx.sql postgres -U postgres
+
+参考资料
+使用docker-compose备份和恢复Postgres数据库
+
+]]></content>
+      <categories>
+        <category>后端</category>
+      </categories>
+      <tags>
+        <tag>docker</tag>
+        <tag>docker-compose</tag>
+        <tag>postgres</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Spring Security 中基于用户信息的动态密码加密</title>
+    <url>/2025/02/08/back-end/dynamic-password-encryption-based-on-user-information-in-spring-security/</url>
+    <content><![CDATA[Spring Security 中基于用户信息的动态密码加密前言通过自定义 Spring Security 的 DaoAuthenticationProvider，可以实现根据用户信息的不同，动态切换不同的密码加密方式。这种方法允许您根据用户的角色、组或其他属性，选择最合适的加密算法，从而提高安全性或满足特定的业务需求。
+DaoAuthenticationProviderDaoAuthenticationProvider是用于实现用户名密码的登陆AuthenticationProvider，通过自定义实现additionalAuthenticationChecks方法可以实现从UserDetails获取一个字段从而动态获取密码加密服务。
+实现自定义DaoAuthenticationProvider：
+@Componentpublic class HotelerAuthenticationProvider extends DaoAuthenticationProvider implements AuthenticationProvider, ApplicationContextAware &#123;    private ApplicationContext applicationContext;    protected void additionalAuthenticationChecks(UserDetails userDetails, UsernamePasswordAuthenticationToken authentication) throws AuthenticationException &#123;        if (authentication.getCredentials() == null) &#123;            this.logger.debug(&quot;Failed to authenticate since no credentials provided&quot;);            throw new BadCredentialsException(this.messages.getMessage(&quot;AbstractUserDetailsAuthenticationProvider.badCredentials&quot;, &quot;Bad credentials&quot;));        &#125;        var user =  (User)userDetails;        var passwordType = CommonUtils.isNotEmpty(user.getPasswordType()) ? user.getPasswordType() : &quot;noop&quot;;        var passwordService = this.getPasswordService(passwordType);        var presentedPassword = authentication.getCredentials().toString();        if (!user.getPassword().equals(passwordService.encodePassword(presentedPassword))) &#123;            this.logger.debug(&quot;Failed to authenticate since password does not match stored value&quot;);            throw new BadCredentialsException(this.messages.getMessage(&quot;AbstractUserDetailsAuthenticationProvider.badCredentials&quot;, &quot;Bad credentials&quot;));        &#125;    &#125;    @Override    public void setApplicationContext(ApplicationContext applicationContext) throws BeansException &#123;        this.applicationContext = applicationContext;    &#125;    @Override    protected void doAfterPropertiesSet() &#123;        super.doAfterPropertiesSet();        Assert.notNull(this.applicationContext, &quot;A applicationContext must be set&quot;);    &#125;    protected IPasswordService getPasswordService(String passwordType) &#123;        return Objects.requireNonNull(this.applicationContext).getBean(passwordType + &quot;PasswordService&quot;, IPasswordService.class);    &#125;    public HotelerAuthenticationProvider(UserDetailsService userDetailsService) &#123;        super();        this.setUserDetailsService(userDetailsService);    &#125;&#125;
+
+将HotelerAuthenticationProvider注入到AuthenticationManager中：
+@Beanpublic AuthenticationManager authenticationManager(HotelerAuthenticationProvider authenticationProvider) &#123;;    ProviderManager pm = new ProviderManager(authenticationProvider);    return pm;&#125;]]></content>
+      <tags>
+        <tag>Spring Security</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Bazel 8 Bzlmod 迁移记录：从 WORKSPACE 到 MODULE.bazel</title>
+    <url>/2025/11/03/back-end/bazel8-bzlmod-migration/</url>
+    <content><![CDATA[Bazel 8 Bzlmod 迁移记录：从 WORKSPACE 到 MODULE.bazel本文档记录了项目 hoteler 从 Bazel 旧版 WORKSPACE 机制迁移到 Bazel 8 Bzlmod（Bazel 模块系统）的完整过程，重点记录了在迁移 Java 和 Maven 依赖时遇到的关键问题及其解决方案。
+1. 迁移背景与目标
+原 Bazel 版本: Bazel 7.x
+目标 Bazel 版本: Bazel 8.4.2 
+目标: 完全移除 WORKSPACE 文件，将所有外部依赖（包括规则集和 Maven Artifacts）迁移到 MODULE.bazel 文件中进行管理。
+涉及的关键规则集: rules_java、rules_jvm_external、rules_spring。
+
+2. 原始 WORKSPACE 结构概述项目原先使用传统的 WORKSPACE 文件管理依赖，主要依赖 http_archive 引入规则集，并使用 rules_jvm_external 的 maven_install 函数定义所有 Maven 依赖。
+# WORKSPACE (简化结构)workspace(name = &quot;hoteler&quot;)# 通过 http_archive 引入 rules_jvm_external 和 rules_springload(&quot;@bazel_tools//tools/build_defs/repo:http.bzl&quot;, &quot;http_archive&quot;)http_archive(...) # rules_jvm_externalhttp_archive(...) # rules_spring# 使用 maven_install 定义所有 Maven 依赖，并将其暴露为 @maven 代码库load(&quot;@rules_jvm_external//:defs.bzl&quot;, &quot;maven_install&quot;)maven_install(    artifacts = [...], # 包含 Spring Boot, Mybatis, JWT 等所有依赖    maven_install_json = &quot;@//:maven_install.json&quot;,)load(&quot;@maven//:defs.bzl&quot;, &quot;pinned_maven_install&quot;)pinned_maven_install()
+
+3. Bzlmod 迁移与问题记录迁移过程主要集中在 MODULE.bazel 文件的创建和调整上，遇到了 Bazel 8 Bzlmod 机制的多个严格限制。
+3.1 遇到的第一个问题：load 语句限制问题描述:尝试在 MODULE.bazel 文件中直接使用 load 语句引入 rules_jvm_external 扩展和本地 .bzl 文件时，Bazel 报错 load statements may not be used in MODULE.bazel files。
+原因分析:MODULE.bazel 文件只允许使用声明性语句如 module(), bazel_dep(), 和 use_extension()。任何形式的 load 语句（包括加载模块扩展）都必须被重写为 use_extension 模式。
+初步解决方案 (失败)：最初尝试将 load 用于模块扩展也失败，因为它与 use_extension 的语法要求不符。
+3.2 遇到的第二个问题：核心依赖缺失 (rules_java)问题描述:在成功引入 rules_jvm_external 后，构建失败，报错 No repository visible as &#39;@rules_java&#39; from main repository。
+原因分析:在 Bzlmod 中，即使是 Java 项目的核心规则集 rules_java 也需要被显式声明。rules_jvm_external 和 rules_spring 都依赖于它。
+解决方案:在 MODULE.bazel 中显式添加 rules_java 依赖，并根据最终构建需求将其版本设置为 8.16.1。
+bazel_dep(    name = &quot;rules_java&quot;,    version = &quot;8.16.1&quot;, )
+
+3.3 遇到的第三个问题：@maven 仓库可见性问题问题描述:在 BUILD.bazel 文件中引用 Maven 依赖时，持续收到错误 No repository visible as &#39;@maven&#39; from main repository 或 No repository visible as &#39;@unpinned_maven&#39; from main repository。
+原因分析:在 Bzlmod 中，模块扩展（如 rules_jvm_external 的 maven 扩展）创建的代码库（如 @maven）不会自动对主模块可见。需要一个额外的步骤来将该代码库导入到主模块的命名空间。
+解决方案 (最终):使用 use_repo 函数将模块扩展生成的 maven 仓库导入。这是 rules_jvm_external 在 Bazel 8 中推荐的 Bzlmod 导入方式:
+# MODULE.bazel (最终结构的关键变动)maven = use_extension(&quot;@rules_jvm_external//:extensions.bzl&quot;, &quot;maven&quot;)# 使用 use_repo 将扩展生成的 &#x27;maven&#x27; 仓库导入主模块use_repo(maven, &quot;maven&quot;)maven.install(    lock_file = &quot;//:maven_install.json&quot;, # 修正了参数名    artifacts = [...],    # ...)
+
+4. 最终 Bzlmod 配置与 BUILD 文件以下是完成迁移后项目的最终依赖管理文件。
+4.1 最终的 MODULE.bazel 文件该文件集成了所有规则集依赖、版本修正和 Maven 扩展配置。
+module(    name = &quot;hoteler&quot;,    compatibility_level = 1,)bazel_dep(    name = &quot;rules_java&quot;,    version = &quot;8.16.1&quot;, )bazel_dep(    name = &quot;rules_jvm_external&quot;,    version = &quot;6.7&quot;, # 解决版本冲突)bazel_dep(    name = &quot;rules_spring&quot;,    version = &quot;2.6.3&quot;,)# 使用 use_extension 激活 Maven 扩展maven = use_extension(&quot;@rules_jvm_external//:extensions.bzl&quot;, &quot;maven&quot;)# 导入 Maven 仓库，使其在 BUILD 文件中可见为 @mavenuse_repo(maven, &quot;maven&quot;)# 配置 Maven 依赖maven.install(    lock_file = &quot;//:maven_install.json&quot;,    artifacts = [        &quot;org.springframework.boot:spring-boot-starter-web:3.5.5&quot;,        # ... (所有 Maven 依赖项，包括补充的 cn.hutool:hutool-crypto 等)    ],    fetch_sources = True,    repositories = [        &quot;https://maven.aliyun.com/repository/central&quot;,        # ... (所有仓库)    ],)
+
+4.2 最终的 BUILD.bazel 引用在 BUILD.bazel 文件中，所有对 Maven 依赖的引用都保持使用 @maven//:... 别名，因为 MODULE.bazel 文件已通过 use_repo(maven, &quot;maven&quot;) 语句确保了 maven 代码库的可见性。
+# BUILD.bazel (部分内容)java_library(    name = &quot;java-maven-lib&quot;,    srcs = glob([&quot;src/main/java/org/daming/hoteler/*.java&quot;]),    deps = [        &quot;@maven//:org_springframework_boot_spring_boot_starter_web&quot;,        &quot;@maven//:io_jsonwebtoken_jjwt_api&quot;,        # ... (所有其他 @maven 引用)    ],    # ...)
+
+5. 结论通过将规则集定义从 http_archive 迁移到 bazel_dep，并将 maven_install 逻辑封装到 use_extension 和 use_repo 组合中，项目成功实现了到 Bazel 8 Bzlmod 的完全迁移，并移除了 WORKSPACE 文件。迁移的关键在于理解 Bazel 8 对依赖导入和名称空间可见性的严格要求。
+]]></content>
+      <categories>
+        <category>后端</category>
+      </categories>
+      <tags>
+        <tag>spring boot</tag>
+        <tag>bazel</tag>
+        <tag>bzlmod</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>如何在10分钟内使用LangChain</title>
     <url>/2024/06/09/ai/how-to-use-langchain-in-10-minutes/</url>
     <content><![CDATA[如何在10分钟内使用LangChainLangChain是一个强大的Python和Javascript&#x2F;Typescript库，它可以让你快速地原型化大型语言模型应用。它允许你将LLM任务链在一起（因此得名），甚至可以让你快速轻松地运行自主代理(autonomous agents)。今天，我们将介绍chain的基础知识，这样你就可以立即开始你最新的LLM项目。
@@ -91,120 +205,6 @@ LangChain的力量在于其简单性和灵活性。无论你是经验丰富的�
         <tag>AI</tag>
         <tag>LangChain</tag>
         <tag>翻译</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>给Ingress上配置ssl证书</title>
-    <url>/2022/06/18/back-end/add-ssl-for-ingress/</url>
-    <content><![CDATA[给Ingress上配置ssl证书创建secretkubectl create secret tls [secretName]  --cert=[pem文件路径] --key=[key文件路径] --namespace [namespace] -o yaml --dry-run=client &gt; ingress-default-cert.yamlkubectl apply -f ingress-default-cert.yaml
-
-Ingress添加证书apiVersion: networking.k8s.io/v1beta1kind: Ingress  metadata:     name: [ingress-name]     namespace: [namespace] # ingress要和secret在同一个名称空间下     annotations:         kubernetes.io/ingress.class: traefik         traefik.frontend.rule.type: PathPrefixStrip         # http 重定向到 https         ingress.kubernetes.io/ssl-redirect: &quot;True&quot; spec:     tls:         - hosts:             - xxxx.xxxx # 这里是下面要配置https的域名             - xxxx.xxxx # 这里是下面要配置https的域名         secretName:             [secret-name]:     rules:    - host: xxx.xxx.com      http:        paths:          - path: /            pathType: Prefix            backend:              service:                name: [service-name]                port:                  number: 8080
-
-
-参考资料
-为k8s集群配置SSL证书
-k3s配置ingress使用ssl证书
-
-]]></content>
-      <categories>
-        <category>后端</category>
-      </categories>
-      <tags>
-        <tag>k8s</tag>
-        <tag>ingress</tag>
-        <tag>ssl</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>使用docker-compose备份Postgres Docker容器的解决方案</title>
-    <url>/2024/07/10/back-end/back-end-how-to-backup-postgres-docker-container/</url>
-    <content><![CDATA[使用docker-compose备份Postgres Docker容器的解决方案备份使用pg_dumpall命令备份Postgres数据库。
-docker-compose exec &lt;postgres_service&gt; pg_dumpall -U postgres &gt; dump_`date +%Y-%m-%d&quot;_&quot;%H_%M_%S`.sql
-
-
-docker-compose exec &lt;postgres_service&gt; 在名为&lt;postgres_service&gt;的Postgres容器上执行命令。
--U postgres 指定数据库的用户名。Docker的默认用户名是postgres，如果你使用不同的用户名，请进行修改。
-
-恢复将dump_date +%Y-%m-%d”“%H%M_%S.sql文件放置在backup文件夹中。
-然后使用Docker卷将backup文件夹绑定到Postgres容器上：
-volumes:    - ./backup:/backup
-
-删除现有的Postgres容器并创建一个新的容器：
-docker-compose down &amp;&amp; docker-compose up -d
-
-执行数据库导入命令：
-docker-compose exec postgres psql -f /backup/dump_xxx.sql postgres -U postgres
-
-参考资料
-使用docker-compose备份和恢复Postgres数据库
-
-]]></content>
-      <categories>
-        <category>后端</category>
-      </categories>
-      <tags>
-        <tag>docker</tag>
-        <tag>docker-compose</tag>
-        <tag>postgres</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>Bazel 8 Bzlmod 迁移记录：从 WORKSPACE 到 MODULE.bazel</title>
-    <url>/2025/11/03/back-end/bazel8-bzlmod-migration/</url>
-    <content><![CDATA[Bazel 8 Bzlmod 迁移记录：从 WORKSPACE 到 MODULE.bazel本文档记录了项目 hoteler 从 Bazel 旧版 WORKSPACE 机制迁移到 Bazel 8 Bzlmod（Bazel 模块系统）的完整过程，重点记录了在迁移 Java 和 Maven 依赖时遇到的关键问题及其解决方案。
-1. 迁移背景与目标
-原 Bazel 版本: Bazel 7.x
-目标 Bazel 版本: Bazel 8.4.2 
-目标: 完全移除 WORKSPACE 文件，将所有外部依赖（包括规则集和 Maven Artifacts）迁移到 MODULE.bazel 文件中进行管理。
-涉及的关键规则集: rules_java、rules_jvm_external、rules_spring。
-
-2. 原始 WORKSPACE 结构概述项目原先使用传统的 WORKSPACE 文件管理依赖，主要依赖 http_archive 引入规则集，并使用 rules_jvm_external 的 maven_install 函数定义所有 Maven 依赖。
-# WORKSPACE (简化结构)workspace(name = &quot;hoteler&quot;)# 通过 http_archive 引入 rules_jvm_external 和 rules_springload(&quot;@bazel_tools//tools/build_defs/repo:http.bzl&quot;, &quot;http_archive&quot;)http_archive(...) # rules_jvm_externalhttp_archive(...) # rules_spring# 使用 maven_install 定义所有 Maven 依赖，并将其暴露为 @maven 代码库load(&quot;@rules_jvm_external//:defs.bzl&quot;, &quot;maven_install&quot;)maven_install(    artifacts = [...], # 包含 Spring Boot, Mybatis, JWT 等所有依赖    maven_install_json = &quot;@//:maven_install.json&quot;,)load(&quot;@maven//:defs.bzl&quot;, &quot;pinned_maven_install&quot;)pinned_maven_install()
-
-3. Bzlmod 迁移与问题记录迁移过程主要集中在 MODULE.bazel 文件的创建和调整上，遇到了 Bazel 8 Bzlmod 机制的多个严格限制。
-3.1 遇到的第一个问题：load 语句限制问题描述:尝试在 MODULE.bazel 文件中直接使用 load 语句引入 rules_jvm_external 扩展和本地 .bzl 文件时，Bazel 报错 load statements may not be used in MODULE.bazel files。
-原因分析:MODULE.bazel 文件只允许使用声明性语句如 module(), bazel_dep(), 和 use_extension()。任何形式的 load 语句（包括加载模块扩展）都必须被重写为 use_extension 模式。
-初步解决方案 (失败)：最初尝试将 load 用于模块扩展也失败，因为它与 use_extension 的语法要求不符。
-3.2 遇到的第二个问题：核心依赖缺失 (rules_java)问题描述:在成功引入 rules_jvm_external 后，构建失败，报错 No repository visible as &#39;@rules_java&#39; from main repository。
-原因分析:在 Bzlmod 中，即使是 Java 项目的核心规则集 rules_java 也需要被显式声明。rules_jvm_external 和 rules_spring 都依赖于它。
-解决方案:在 MODULE.bazel 中显式添加 rules_java 依赖，并根据最终构建需求将其版本设置为 8.16.1。
-bazel_dep(    name = &quot;rules_java&quot;,    version = &quot;8.16.1&quot;, )
-
-3.3 遇到的第三个问题：@maven 仓库可见性问题问题描述:在 BUILD.bazel 文件中引用 Maven 依赖时，持续收到错误 No repository visible as &#39;@maven&#39; from main repository 或 No repository visible as &#39;@unpinned_maven&#39; from main repository。
-原因分析:在 Bzlmod 中，模块扩展（如 rules_jvm_external 的 maven 扩展）创建的代码库（如 @maven）不会自动对主模块可见。需要一个额外的步骤来将该代码库导入到主模块的命名空间。
-解决方案 (最终):使用 use_repo 函数将模块扩展生成的 maven 仓库导入。这是 rules_jvm_external 在 Bazel 8 中推荐的 Bzlmod 导入方式:
-# MODULE.bazel (最终结构的关键变动)maven = use_extension(&quot;@rules_jvm_external//:extensions.bzl&quot;, &quot;maven&quot;)# 使用 use_repo 将扩展生成的 &#x27;maven&#x27; 仓库导入主模块use_repo(maven, &quot;maven&quot;)maven.install(    lock_file = &quot;//:maven_install.json&quot;, # 修正了参数名    artifacts = [...],    # ...)
-
-4. 最终 Bzlmod 配置与 BUILD 文件以下是完成迁移后项目的最终依赖管理文件。
-4.1 最终的 MODULE.bazel 文件该文件集成了所有规则集依赖、版本修正和 Maven 扩展配置。
-module(    name = &quot;hoteler&quot;,    compatibility_level = 1,)bazel_dep(    name = &quot;rules_java&quot;,    version = &quot;8.16.1&quot;, )bazel_dep(    name = &quot;rules_jvm_external&quot;,    version = &quot;6.7&quot;, # 解决版本冲突)bazel_dep(    name = &quot;rules_spring&quot;,    version = &quot;2.6.3&quot;,)# 使用 use_extension 激活 Maven 扩展maven = use_extension(&quot;@rules_jvm_external//:extensions.bzl&quot;, &quot;maven&quot;)# 导入 Maven 仓库，使其在 BUILD 文件中可见为 @mavenuse_repo(maven, &quot;maven&quot;)# 配置 Maven 依赖maven.install(    lock_file = &quot;//:maven_install.json&quot;,    artifacts = [        &quot;org.springframework.boot:spring-boot-starter-web:3.5.5&quot;,        # ... (所有 Maven 依赖项，包括补充的 cn.hutool:hutool-crypto 等)    ],    fetch_sources = True,    repositories = [        &quot;https://maven.aliyun.com/repository/central&quot;,        # ... (所有仓库)    ],)
-
-4.2 最终的 BUILD.bazel 引用在 BUILD.bazel 文件中，所有对 Maven 依赖的引用都保持使用 @maven//:... 别名，因为 MODULE.bazel 文件已通过 use_repo(maven, &quot;maven&quot;) 语句确保了 maven 代码库的可见性。
-# BUILD.bazel (部分内容)java_library(    name = &quot;java-maven-lib&quot;,    srcs = glob([&quot;src/main/java/org/daming/hoteler/*.java&quot;]),    deps = [        &quot;@maven//:org_springframework_boot_spring_boot_starter_web&quot;,        &quot;@maven//:io_jsonwebtoken_jjwt_api&quot;,        # ... (所有其他 @maven 引用)    ],    # ...)
-
-5. 结论通过将规则集定义从 http_archive 迁移到 bazel_dep，并将 maven_install 逻辑封装到 use_extension 和 use_repo 组合中，项目成功实现了到 Bazel 8 Bzlmod 的完全迁移，并移除了 WORKSPACE 文件。迁移的关键在于理解 Bazel 8 对依赖导入和名称空间可见性的严格要求。
-]]></content>
-      <categories>
-        <category>后端</category>
-      </categories>
-      <tags>
-        <tag>spring boot</tag>
-        <tag>bazel</tag>
-        <tag>bzlmod</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>Spring Security 中基于用户信息的动态密码加密</title>
-    <url>/2025/02/08/back-end/dynamic-password-encryption-based-on-user-information-in-spring-security/</url>
-    <content><![CDATA[Spring Security 中基于用户信息的动态密码加密前言通过自定义 Spring Security 的 DaoAuthenticationProvider，可以实现根据用户信息的不同，动态切换不同的密码加密方式。这种方法允许您根据用户的角色、组或其他属性，选择最合适的加密算法，从而提高安全性或满足特定的业务需求。
-DaoAuthenticationProviderDaoAuthenticationProvider是用于实现用户名密码的登陆AuthenticationProvider，通过自定义实现additionalAuthenticationChecks方法可以实现从UserDetails获取一个字段从而动态获取密码加密服务。
-实现自定义DaoAuthenticationProvider：
-@Componentpublic class HotelerAuthenticationProvider extends DaoAuthenticationProvider implements AuthenticationProvider, ApplicationContextAware &#123;    private ApplicationContext applicationContext;    protected void additionalAuthenticationChecks(UserDetails userDetails, UsernamePasswordAuthenticationToken authentication) throws AuthenticationException &#123;        if (authentication.getCredentials() == null) &#123;            this.logger.debug(&quot;Failed to authenticate since no credentials provided&quot;);            throw new BadCredentialsException(this.messages.getMessage(&quot;AbstractUserDetailsAuthenticationProvider.badCredentials&quot;, &quot;Bad credentials&quot;));        &#125;        var user =  (User)userDetails;        var passwordType = CommonUtils.isNotEmpty(user.getPasswordType()) ? user.getPasswordType() : &quot;noop&quot;;        var passwordService = this.getPasswordService(passwordType);        var presentedPassword = authentication.getCredentials().toString();        if (!user.getPassword().equals(passwordService.encodePassword(presentedPassword))) &#123;            this.logger.debug(&quot;Failed to authenticate since password does not match stored value&quot;);            throw new BadCredentialsException(this.messages.getMessage(&quot;AbstractUserDetailsAuthenticationProvider.badCredentials&quot;, &quot;Bad credentials&quot;));        &#125;    &#125;    @Override    public void setApplicationContext(ApplicationContext applicationContext) throws BeansException &#123;        this.applicationContext = applicationContext;    &#125;    @Override    protected void doAfterPropertiesSet() &#123;        super.doAfterPropertiesSet();        Assert.notNull(this.applicationContext, &quot;A applicationContext must be set&quot;);    &#125;    protected IPasswordService getPasswordService(String passwordType) &#123;        return Objects.requireNonNull(this.applicationContext).getBean(passwordType + &quot;PasswordService&quot;, IPasswordService.class);    &#125;    public HotelerAuthenticationProvider(UserDetailsService userDetailsService) &#123;        super();        this.setUserDetailsService(userDetailsService);    &#125;&#125;
-
-将HotelerAuthenticationProvider注入到AuthenticationManager中：
-@Beanpublic AuthenticationManager authenticationManager(HotelerAuthenticationProvider authenticationProvider) &#123;;    ProviderManager pm = new ProviderManager(authenticationProvider);    return pm;&#125;]]></content>
-      <tags>
-        <tag>Spring Security</tag>
       </tags>
   </entry>
   <entry>
@@ -516,43 +516,6 @@ kubectl port-forward service/pgbouncer 5432:5432
       </tags>
   </entry>
   <entry>
-    <title>在k8s中如何强制删除处于Terminating状态的namesapce</title>
-    <url>/2025/02/13/back-end/how-to-forcefully-delete-a-namespace-that-is-stuck-in-the-Terminating-state/</url>
-    <content><![CDATA[概述在k3s中删除一个namespace十分简单，就是一个命令的事儿：
-kubectl delete ns $&#123;namespace&#125;
-
-但是可能存在删除失败或者namespace一直处于Terminating状态的话，那么上面的命令可能行不通。这里介绍两种实用的解决方案去帮助我们解决。
-注意: 这两种方案可能存在错误删除的情况，请谨慎操作。
-强制删除kubectl提供force和grace-period&#x3D;0两个参数帮助我们强制删除namespace：
-kubectl delete ns $&#123;namespace&#125; --force --grace-period=0
-
-说明：
-
-–force：强制删除资源，跳过正常的删除流程。
-
-–grace-period&#x3D;0：立即删除资源，不等待任何清理操作。
-
-
-使用Kubernetes API 删除获取处于Terminating状态的namespace：
-kubectl get ns |grep Terminating |awk &#123;&#x27;print $1&#x27;&#125;
-
-调用Kubernetes API 删除指定的namespace
-kubectl get ns $&#123;namespace&#125; -o json &gt;$&#123;namespace&#125;.jsonsed -i &#x27;/&quot;kubernetes&quot;/d&#x27; $&#123;namespace&#125;.jsonkubectl replace --raw &quot;/api/v1/namespaces/$&#123;namespace&#125;/finalize&quot; -f $&#123;namespace&#125;.json
-
-参考资料
-Kubernetes 的 NameSpace 无法删除应该怎么办
-kubernetes批量删除长期处于Terminating状态的namespace
-
-]]></content>
-      <categories>
-        <category>后端</category>
-      </categories>
-      <tags>
-        <tag>k8s</tag>
-        <tag>k3s</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>k3s使用Let‘s Encrypt配置https入口部署</title>
     <url>/2022/09/03/back-end/k3s-uses-letsencrypt-and-traefik-to-deploy-the-https/</url>
     <content><![CDATA[前言本文记录k3s使用letsencrypt配置ssl证书和续签。
@@ -609,6 +572,41 @@ Documenting “context deadline exceeded” errors relating to the webhook
         <tag>ssl</tag>
         <tag>k3s</tag>
         <tag>letsencrypt</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>记录使用pg_dump中遇到的ssl问题</title>
+    <url>/2023/02/25/back-end/pg_dump_ssl_issues/</url>
+    <content><![CDATA[记录使用pg_dump中遇到的ssl问题问题描述在使用pg_dump过程中遇到的两个问题：
+
+SSL connection is required. Please specify SSL options and retry.
+SSL error: unsafe legacy renegotiation disabled
+
+SSL option问题这是因为postgresql需要使用TLS&#x2F;SSL connections，我们可以设置一个环境变量PGSSLMODE为required就可以了。
+针对Linux或者Macos用户，使用:
+export PGSSLMODE=require
+针对Windows用户，使用:
+SET PGSSLMODE=require
+
+unsafe legacy renegotiation disabled这是因为ssl协议存在一个漏洞，后来升级的时候提供了一个开关默认关闭这个了漏洞，这个解决方法存在一定安全隐患，请谨慎使用。
+创建一个自定义的openssl.cnf,并写入：
+openssl_conf = openssl_init[openssl_init]ssl_conf = ssl_sect[ssl_sect]system_default = system_default_sect[system_default_sect]Options = UnsafeLegacyRenegotiation
+
+将该config文件的路径写入名为OPENSSL_CONF的环境变量：
+export OPENSSL_CONF=/path/to/custom/openssl.cnf
+
+参考资料
+Migrate your PostgreSQL database by using dump and restore
+SSL error unsafe legacy renegotiation disabled
+
+]]></content>
+      <categories>
+        <category>后端</category>
+      </categories>
+      <tags>
+        <tag>ssl</tag>
+        <tag>pg_dump</tag>
+        <tag>postgresql</tag>
       </tags>
   </entry>
   <entry>
@@ -694,38 +692,40 @@ Githubfeat: 从springfox迁移到springdoc以及修复AuthenticationFilter过滤
       </tags>
   </entry>
   <entry>
-    <title>记录使用pg_dump中遇到的ssl问题</title>
-    <url>/2023/02/25/back-end/pg_dump_ssl_issues/</url>
-    <content><![CDATA[记录使用pg_dump中遇到的ssl问题问题描述在使用pg_dump过程中遇到的两个问题：
+    <title>在k8s中如何强制删除处于Terminating状态的namesapce</title>
+    <url>/2025/02/13/back-end/how-to-forcefully-delete-a-namespace-that-is-stuck-in-the-Terminating-state/</url>
+    <content><![CDATA[概述在k3s中删除一个namespace十分简单，就是一个命令的事儿：
+kubectl delete ns $&#123;namespace&#125;
 
-SSL connection is required. Please specify SSL options and retry.
-SSL error: unsafe legacy renegotiation disabled
+但是可能存在删除失败或者namespace一直处于Terminating状态的话，那么上面的命令可能行不通。这里介绍两种实用的解决方案去帮助我们解决。
+注意: 这两种方案可能存在错误删除的情况，请谨慎操作。
+强制删除kubectl提供force和grace-period&#x3D;0两个参数帮助我们强制删除namespace：
+kubectl delete ns $&#123;namespace&#125; --force --grace-period=0
 
-SSL option问题这是因为postgresql需要使用TLS&#x2F;SSL connections，我们可以设置一个环境变量PGSSLMODE为required就可以了。
-针对Linux或者Macos用户，使用:
-export PGSSLMODE=require
-针对Windows用户，使用:
-SET PGSSLMODE=require
+说明：
 
-unsafe legacy renegotiation disabled这是因为ssl协议存在一个漏洞，后来升级的时候提供了一个开关默认关闭这个了漏洞，这个解决方法存在一定安全隐患，请谨慎使用。
-创建一个自定义的openssl.cnf,并写入：
-openssl_conf = openssl_init[openssl_init]ssl_conf = ssl_sect[ssl_sect]system_default = system_default_sect[system_default_sect]Options = UnsafeLegacyRenegotiation
+–force：强制删除资源，跳过正常的删除流程。
 
-将该config文件的路径写入名为OPENSSL_CONF的环境变量：
-export OPENSSL_CONF=/path/to/custom/openssl.cnf
+–grace-period&#x3D;0：立即删除资源，不等待任何清理操作。
+
+
+使用Kubernetes API 删除获取处于Terminating状态的namespace：
+kubectl get ns |grep Terminating |awk &#123;&#x27;print $1&#x27;&#125;
+
+调用Kubernetes API 删除指定的namespace
+kubectl get ns $&#123;namespace&#125; -o json &gt;$&#123;namespace&#125;.jsonsed -i &#x27;/&quot;kubernetes&quot;/d&#x27; $&#123;namespace&#125;.jsonkubectl replace --raw &quot;/api/v1/namespaces/$&#123;namespace&#125;/finalize&quot; -f $&#123;namespace&#125;.json
 
 参考资料
-Migrate your PostgreSQL database by using dump and restore
-SSL error unsafe legacy renegotiation disabled
+Kubernetes 的 NameSpace 无法删除应该怎么办
+kubernetes批量删除长期处于Terminating状态的namespace
 
 ]]></content>
       <categories>
         <category>后端</category>
       </categories>
       <tags>
-        <tag>ssl</tag>
-        <tag>pg_dump</tag>
-        <tag>postgresql</tag>
+        <tag>k8s</tag>
+        <tag>k3s</tag>
       </tags>
   </entry>
   <entry>
@@ -993,49 +993,6 @@ Guide to Spring Email
       </tags>
   </entry>
   <entry>
-    <title>技术复盘：基于 OAuth 2.0 规范的 Spring Boot 鉴权标准化改造</title>
-    <url>/2026/04/02/back-end/spring-boot-oauth2-swagger-standardization/</url>
-    <content><![CDATA[现状与需求在 Hoteler 项目的开发测试阶段，由于原有的登录接口 &#x2F;token 采用非标设计（自定义 JSON 结构、Header 传参），导致 Swagger UI (SpringDoc) 无法识别认证状态，必须手动复制 Token 并粘贴至 Authorize 框中，测试效率低。
-目标：实现符合 OAuth 2.0 Password Grant 规范的接口，对接 Swagger UI 自动鉴权流。
-协议参考本次改造主要参考了以下关于 OAuth 2.0 协议实现的标准逻辑：
-
-理解OAuth 2.0
-OAuth 2.0 的一个简单解释
-OAuth 2.0 的四种方式
-GitHub OAuth 第三方登录示例教程
-
-技术实现方案响应报文的标准化（Schema Mapping）OAuth 2.0 规定 Access Token Response 的根路径必须包含 access_token。为兼容原有业务对象 UserToken，采用接口注入方式扩展响应体：
-public interface OAuth2Compatible &#123;    @JsonProperty(&quot;access_token&quot;)    String getAccessToken(); // 映射至业务 Token 字段    @JsonProperty(&quot;token_type&quot;)    default String getTokenType() &#123; return &quot;bearer&quot;; &#125;        @JsonProperty(&quot;expires_in&quot;)    default long getExpiresIn() &#123; return 2592000; &#125;&#125;
-
-通过 UserTokenResponse implements OAuth2Compatible，在不修改原有 userToken 嵌套对象的前提下，输出了符合 RFC 6749 要求的 JSON 字段
-登录接口参数兼容修改 &#x2F;token 接口，支持 application&#x2F;x-www-form-urlencoded 消费类型，以接收 Swagger UI 默认发送的 username 和 password 表单参数。
-@Operation(summary = &quot;创建token&quot;)@PostMapping(value = &quot;token&quot;, consumes = &#123; MediaType.APPLICATION_FORM_URLENCODED_VALUE, MediaType.APPLICATION_JSON_VALUE &#125;)public UserTokenResponse createToken(@RequestParam(value = &quot;username&quot;, required = false) String formUser,                                        @RequestParam(value = &quot;password&quot;, required = false) String formPass,                                        @RequestHeader(value = &quot;username&quot;, required = false) String headUser,                                        @RequestHeader(value = &quot;password&quot;, required = false) String headPass,                                        HttpSession session) &#123;    var username = (headUser != null) ? headUser : formUser;    var password = (headPass != null) ? headPass : formPass;    try &#123;        var unauthenticated = UsernamePasswordAuthenticationToken.unauthenticated(username, password);        var authenticate = authenticationManager.authenticate(unauthenticated);        var userToken = tokenService.createToken(username, password);        SecurityContextHolder.getContext().setAuthentication(authenticate);        session.setAttribute(HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY, SecurityContextHolder.getContext());        var response = new UserTokenResponse();        response.setUserToken(userToken);        return response;    &#125; catch (AuthenticationException ex) &#123;            LoggerManager.getApiLogger().error(&quot;AuthenticationException: &quot; + ex.getMessage());            throw ex;    &#125; catch (HotelerException ex) &#123;        LoggerManager.getApiLogger().error(&quot;HotelerException: &quot; + ex.getMessage());        throw ex;    &#125; catch (Exception ex) &#123;        LoggerManager.getApiLogger().error(&quot;Exception: &quot; + ex.getMessage());        throw ex;    &#125; finally &#123;        // TODO    &#125;&#125;
-
-OpenAPI SecurityScheme 配置在 OpenApiConfig 中定义 SecurityScheme。关键点在于 type 声明为 OAUTH2，并正确指向 tokenUrl。
-private Components components() &#123;    return new Components()            .addSecuritySchemes(&quot;bearer-key&quot;, new SecurityScheme().type(SecurityScheme.Type.HTTP).scheme(&quot;bearer&quot;).bearerFormat(&quot;JWT&quot;))            .addSecuritySchemes(&quot;OAuth2Password&quot;, new SecurityScheme()                    .type(SecurityScheme.Type.OAUTH2)                    .description(&quot;输入用户名和密码登录以获取令牌&quot;)                    .flows(new OAuthFlows()                            .password(new OAuthFlow()                                    // 这里的 URL 必须对应你 Controller 里的 @PostMapping(&quot;token&quot;)                                    .tokenUrl(&quot;/api/v1/token&quot;)                                    .scopes(new Scopes().addString(&quot;read&quot;, &quot;读权限&quot;))                            )                    ));    &#125;
-
-调试记录Header 填充失效问题现象： 弹窗登录成功后，调用业务接口仍未自动携带 Authorization Header。定位： 接口声明的 SecurityRequirement 名称与 SecurityScheme 的 Key 不一致。解决： 统一使用 OAuth2Password 作为唯一标识符或者直接删除原有的SecurityScheme 的 Key。
-@Operation(security = &#123; @SecurityRequirement(name = &quot;OAuth2Password&quot;) &#125;)
-
-结论通过本次改造，后端认证模块具备了以下特性：
-
-协议对齐：完全兼容 OAuth 2.0 密码模式。
-前端自动化：Swagger UI 可实现“登录-存储-填充”闭环。
-零破坏升级：原有基于 Header 传参的旧客户端调用不受影响。
-
-项目仓库： damingerdai&#x2F;hoteler
-]]></content>
-      <categories>
-        <category>后端</category>
-      </categories>
-      <tags>
-        <tag>spring boot</tag>
-        <tag>swagger ui</tag>
-        <tag>oauth2</tag>
-        <tag>spring doc</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>Spring Cloud Gateway 聚合 Swagger UI：实现微服务统一 API 文档入口</title>
     <url>/2026/01/07/back-end/spring-cloud-gateway-swagger-ui-aggregation/</url>
     <content><![CDATA[🚀 前言在微服务架构中，随着服务数量的增加，每个业务服务（如 auth、workflow）都有自己独立的 Swagger UI 页面。对于开发者和测试人员来说，频繁切换不同的 URL 和端口来查看 API 文档非常低效。
@@ -1126,6 +1083,49 @@ minio:  # 注意：这里配置的是 MinIO API 映射出来的端口 19000  end
         <tag>gradle</tag>
         <tag>spring webflux</tag>
         <tag>文件上传</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>技术复盘：基于 OAuth 2.0 规范的 Spring Boot 鉴权标准化改造</title>
+    <url>/2026/04/02/back-end/spring-boot-oauth2-swagger-standardization/</url>
+    <content><![CDATA[现状与需求在 Hoteler 项目的开发测试阶段，由于原有的登录接口 &#x2F;token 采用非标设计（自定义 JSON 结构、Header 传参），导致 Swagger UI (SpringDoc) 无法识别认证状态，必须手动复制 Token 并粘贴至 Authorize 框中，测试效率低。
+目标：实现符合 OAuth 2.0 Password Grant 规范的接口，对接 Swagger UI 自动鉴权流。
+协议参考本次改造主要参考了以下关于 OAuth 2.0 协议实现的标准逻辑：
+
+理解OAuth 2.0
+OAuth 2.0 的一个简单解释
+OAuth 2.0 的四种方式
+GitHub OAuth 第三方登录示例教程
+
+技术实现方案响应报文的标准化（Schema Mapping）OAuth 2.0 规定 Access Token Response 的根路径必须包含 access_token。为兼容原有业务对象 UserToken，采用接口注入方式扩展响应体：
+public interface OAuth2Compatible &#123;    @JsonProperty(&quot;access_token&quot;)    String getAccessToken(); // 映射至业务 Token 字段    @JsonProperty(&quot;token_type&quot;)    default String getTokenType() &#123; return &quot;bearer&quot;; &#125;        @JsonProperty(&quot;expires_in&quot;)    default long getExpiresIn() &#123; return 2592000; &#125;&#125;
+
+通过 UserTokenResponse implements OAuth2Compatible，在不修改原有 userToken 嵌套对象的前提下，输出了符合 RFC 6749 要求的 JSON 字段
+登录接口参数兼容修改 &#x2F;token 接口，支持 application&#x2F;x-www-form-urlencoded 消费类型，以接收 Swagger UI 默认发送的 username 和 password 表单参数。
+@Operation(summary = &quot;创建token&quot;)@PostMapping(value = &quot;token&quot;, consumes = &#123; MediaType.APPLICATION_FORM_URLENCODED_VALUE, MediaType.APPLICATION_JSON_VALUE &#125;)public UserTokenResponse createToken(@RequestParam(value = &quot;username&quot;, required = false) String formUser,                                        @RequestParam(value = &quot;password&quot;, required = false) String formPass,                                        @RequestHeader(value = &quot;username&quot;, required = false) String headUser,                                        @RequestHeader(value = &quot;password&quot;, required = false) String headPass,                                        HttpSession session) &#123;    var username = (headUser != null) ? headUser : formUser;    var password = (headPass != null) ? headPass : formPass;    try &#123;        var unauthenticated = UsernamePasswordAuthenticationToken.unauthenticated(username, password);        var authenticate = authenticationManager.authenticate(unauthenticated);        var userToken = tokenService.createToken(username, password);        SecurityContextHolder.getContext().setAuthentication(authenticate);        session.setAttribute(HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY, SecurityContextHolder.getContext());        var response = new UserTokenResponse();        response.setUserToken(userToken);        return response;    &#125; catch (AuthenticationException ex) &#123;            LoggerManager.getApiLogger().error(&quot;AuthenticationException: &quot; + ex.getMessage());            throw ex;    &#125; catch (HotelerException ex) &#123;        LoggerManager.getApiLogger().error(&quot;HotelerException: &quot; + ex.getMessage());        throw ex;    &#125; catch (Exception ex) &#123;        LoggerManager.getApiLogger().error(&quot;Exception: &quot; + ex.getMessage());        throw ex;    &#125; finally &#123;        // TODO    &#125;&#125;
+
+OpenAPI SecurityScheme 配置在 OpenApiConfig 中定义 SecurityScheme。关键点在于 type 声明为 OAUTH2，并正确指向 tokenUrl。
+private Components components() &#123;    return new Components()            .addSecuritySchemes(&quot;bearer-key&quot;, new SecurityScheme().type(SecurityScheme.Type.HTTP).scheme(&quot;bearer&quot;).bearerFormat(&quot;JWT&quot;))            .addSecuritySchemes(&quot;OAuth2Password&quot;, new SecurityScheme()                    .type(SecurityScheme.Type.OAUTH2)                    .description(&quot;输入用户名和密码登录以获取令牌&quot;)                    .flows(new OAuthFlows()                            .password(new OAuthFlow()                                    // 这里的 URL 必须对应你 Controller 里的 @PostMapping(&quot;token&quot;)                                    .tokenUrl(&quot;/api/v1/token&quot;)                                    .scopes(new Scopes().addString(&quot;read&quot;, &quot;读权限&quot;))                            )                    ));    &#125;
+
+调试记录Header 填充失效问题现象： 弹窗登录成功后，调用业务接口仍未自动携带 Authorization Header。定位： 接口声明的 SecurityRequirement 名称与 SecurityScheme 的 Key 不一致。解决： 统一使用 OAuth2Password 作为唯一标识符或者直接删除原有的SecurityScheme 的 Key。
+@Operation(security = &#123; @SecurityRequirement(name = &quot;OAuth2Password&quot;) &#125;)
+
+结论通过本次改造，后端认证模块具备了以下特性：
+
+协议对齐：完全兼容 OAuth 2.0 密码模式。
+前端自动化：Swagger UI 可实现“登录-存储-填充”闭环。
+零破坏升级：原有基于 Header 传参的旧客户端调用不受影响。
+
+项目仓库： damingerdai&#x2F;hoteler
+]]></content>
+      <categories>
+        <category>后端</category>
+      </categories>
+      <tags>
+        <tag>spring boot</tag>
+        <tag>swagger ui</tag>
+        <tag>oauth2</tag>
+        <tag>spring doc</tag>
       </tags>
   </entry>
   <entry>
@@ -1319,6 +1319,78 @@ import io.swagger.v3.oas.annotations.media.Schema;import org.springframework.htt
       </tags>
   </entry>
   <entry>
+    <title>使用apache commons-csv读写csv文件</title>
+    <url>/2025/04/07/back-end/use-apache-commons-csv-read-write-files/</url>
+    <content><![CDATA[使用apache commons-csv读写csv文件前言本文的目的是使用apache commons-csv读写csv文件。
+定义实体Worker是通过ai随机定义的一个java类型:
+public class Worker &#123;    private String id;    private String employeeNumber;    private int version;    private String lastName;    private String firstName;    private String gender;    private String department;    private String position;    private LocalDate hireDate;    private String email;    private String phoneNumber;    private String status;    ...&#125;
+
+可以通过faker随机生成Worker类型的对象。具体实现可以查看下文。
+Apache Commons CSVCommons CSV 能够读写多种变体的逗号分隔值（CSV）格式文件，由Apache负责开发。
+使用maven引入：
+&lt;dependency&gt;    &lt;groupId&gt;org.apache.commons&lt;/groupId&gt;    &lt;artifactId&gt;commons-csv&lt;/artifactId&gt;    &lt;version&gt;1.14.0&lt;/version&gt;&lt;/dependency&gt;
+
+使用groovy gradle引入：
+implementation &#x27;org.apache.commons:commons-csv:1.14.0&#x27;
+
+使用kotlin：
+implementation(&quot;org.apache.commons:commons-csv:1.14.0&quot;)
+
+写csv文件先创建好文件：
+var path = nfsRootPath + File.separator + &quot;workers_&quot; + DateUtils.getYearMonthDay() + &quot;.csv&quot;;var file = new File(path);if (!file.exists()) &#123;    file.createNewFile();&#125;
+
+nfsRootPath为$&#123;user.dir&#125;/nfs-root， DateUtils.getYearMonthDay()表示获取当前年月日（yyyy-MM-dd）。
+CSVFormat是apache commons csv中用于指定CSV文件解析及写入的格式规范。
+commons csv内置了12种格式的支持：
+
+DEFAULT: 标准逗号分隔值（CSV）格式，遵循RFC4180规范，但允许空行存在
+EXCEL: 微软Excel文件格式（使用逗号作为值分隔符）
+INFORMIX_UNLOAD: Informix 默认 CSV 导出格式（通过 UNLOAD TO file_name 操作生成）
+INFORMIX_UNLOAD_CSV: Informix 默认 CSV 导出格式（通过 UNLOAD TO file_name 操作生成，禁用转义功能）
+MONGODB_CSV: MongoDB 默认 CSV 格式（通过 mongoexport 命令导出使用）
+MONGODB_TSV: MongoDB 默认 TSV 格式（通过 mongoexport 命令导出使用）
+MYSQL:MySQL 默认数据格式（通过 SELECT INTO OUTFILE 和 LOAD DATA INFILE 命令使用）
+ORACLE: Oracle 默认数据格式（通过 SQL*Loader 工具使用）
+POSTGRESQL_CSV: PostgreSQL默认 CSV 格式（通过 COPY 命令操作使用）
+POSTGRESQL_TEXT: PostgreSQL默认文本格式（通过 COPY 命令使用）
+RFC4180: RFC 4180 标准定义的逗号分隔值（CSV）格式
+TDF: 制表符分隔格式（TDF）
+
+这里使用DEFAULT的csv format：
+var headers = new String[] &#123;    &quot;employee_number&quot;,    &quot;version&quot;,    &quot;last_name&quot;,    &quot;first_name&quot;,    &quot;gender&quot;,    &quot;department&quot;,    &quot;position&quot;,    &quot;hire_date&quot;,    &quot;email&quot;,    &quot;phone_number&quot;,    &quot;status&quot;,&#125;;var csvFormat = CSVFormat.DEFAULT.builder().setHeader(headers).get();
+
+利用BufferedWriter和CSVPrinter将Worker对象写入csv文件中：
+try (var fw = new FileWriter(path); var bw = new BufferedWriter(fw)) &#123;    var csvPrinter = new CSVPrinter(bw, csvFormat);    var format = DateTimeFormatter.ofPattern(&quot;yyyy-MM-dd&quot;);    var workers = WorkerMockFactory.createWorkers(100);    workers.forEach(worker -&gt; &#123;        try &#123;            csvPrinter.printRecord(                worker.getEmployeeNumber(),                worker.getVersion(),                worker.getLastName(),                worker.getFirstName(),                worker.getGender(),                worker.getDepartment(),                worker.getPosition(),                worker.getHireDate().format(format),                worker.getEmail(),                worker.getPhoneNumber(),                worker.getStatus()            );        &#125; catch (IOException e) &#123;            throw new RuntimeException(e);        &#125;    &#125;);&#125; catch (Exception e) &#123;    e.printStackTrace();    throw e;&#125;
+
+读csv文件CSVFormat除了可以用于写csv文件之外，还可以用于读csv文件。
+先获取文件路径并判断文件是否存在：
+ var path = nfsRootPath + File.separator + &quot;workers_20250406.csv&quot;;var file = new File(path);if (!file.exists()) &#123;    return;&#125;
+
+CSVFormat提供parse方法读取实现任意实现Reader接口的对象，这里我使用FileReader。
+try (var in = new FileReader(path)) &#123;    var records = csvFormat.parse(in);    var format = DateTimeFormatter.ofPattern(&quot;yyyy-MM-dd&quot;);    var workers = records.stream().map(record -&gt; &#123;        var worker = new Worker();        worker.setEmployeeNumber(record.get(&quot;employee_number&quot;));        var version = record.get(&quot;version&quot;);        try &#123;            worker.setVersion(Integer.parseInt(version));        &#125; catch (NumberFormatException ex) &#123;            ex.printStackTrace();        &#125;        worker.setLastName(record.get(&quot;last_name&quot;));        worker.setFirstName(record.get(&quot;first_name&quot;));        worker.setGender(record.get(&quot;gender&quot;));        worker.setDepartment(record.get(&quot;department&quot;));        worker.setPosition(record.get(&quot;position&quot;));        var hiredDate = record.get(&quot;hire_date&quot;);        if (Objects.nonNull(hiredDate) &amp;&amp; StringUtils.isNoneBlank(hiredDate)) &#123;            worker.setHireDate(LocalDate.parse(hiredDate, format));        &#125;        worker.setEmail(record.get(&quot;email&quot;));        worker.setPhoneNumber(record.get(&quot;phone_number&quot;));        worker.setStatus(record.get(&quot;status&quot;));        return worker;    &#125;).toList();    System.out.println(&quot;workers sum: &quot; + workers.size());    workers.forEach(System.out::println);&#125; catch (IOException e) &#123;    throw new RuntimeException(e);&#125;
+
+部分运行结果如下：
+com.github.damingerdai.batcher.pojo.Worker@7b7b1448[id=&lt;null&gt;,employeeNumber=WK4745-87688,version=1,lastName=Schroeder,firstName=Anisha,gender=female,department=DevOps,position=Architect,hireDate=2021-06-30,email=anisha.schroeder@prohaska.net,phoneNumber=18878513958,status=probation]com.github.damingerdai.batcher.pojo.Worker@14624acc[id=&lt;null&gt;,employeeNumber=WK0980-74595,version=3,lastName=Schmidt,firstName=Isaias,gender=female,department=R&amp;D,position=Junior Developer,hireDate=2021-10-19,email=isaias.schmidt@gottlieb.biz,phoneNumber=14535433286,status=resigned]
+
+Fakerfaker移植自Ruby的faker gem（以及Perl的Data::Faker模块），能够生成仿真数据。
+针对中国格式的手机号码，可以使用如下代码随机生成：
+public class ChinaPhoneNumberGenerator &#123;    // 中国运营商号段（2023年最新）    private static final List&lt;String&gt; PREFIXES = Arrays.asList(            &quot;130&quot;, &quot;131&quot;, &quot;132&quot;, &quot;133&quot;, &quot;134&quot;, &quot;135&quot;, &quot;136&quot;, &quot;137&quot;, &quot;138&quot;, &quot;139&quot;,            &quot;145&quot;, &quot;146&quot;, &quot;147&quot;, &quot;148&quot;, &quot;149&quot;,            &quot;150&quot;, &quot;151&quot;, &quot;152&quot;, &quot;153&quot;, &quot;155&quot;, &quot;156&quot;, &quot;157&quot;, &quot;158&quot;, &quot;159&quot;,            &quot;165&quot;, &quot;166&quot;, &quot;167&quot;, &quot;168&quot;, &quot;169&quot;,            &quot;170&quot;, &quot;171&quot;, &quot;172&quot;, &quot;173&quot;, &quot;174&quot;, &quot;175&quot;, &quot;176&quot;, &quot;177&quot;, &quot;178&quot;, &quot;179&quot;,            &quot;180&quot;, &quot;181&quot;, &quot;182&quot;, &quot;183&quot;, &quot;184&quot;, &quot;185&quot;, &quot;186&quot;, &quot;187&quot;, &quot;188&quot;, &quot;189&quot;,            &quot;190&quot;, &quot;191&quot;, &quot;192&quot;, &quot;193&quot;, &quot;194&quot;, &quot;195&quot;, &quot;196&quot;, &quot;197&quot;, &quot;198&quot;, &quot;199&quot;    );    // 常见显示格式（随机选择）    private static final List&lt;String&gt; FORMATS = Arrays.asList(            &quot;%s%s%s&quot;          // 13800138000            &quot;%s-%s-%s&quot;,        // 138-0013-8000            &quot;%s %s %s&quot;,        // 138 0013 8000            &quot;+86 %s%s%s&quot;,      // +86 13800138000            &quot;+86-%s-%s-%s&quot;,    // +86-138-0013-8000            &quot;0086 %s%s%s&quot;      // 0086 13800138000    );    public static String generate() &#123;        Faker faker = new Faker(Locale.CHINA);        // 生成基础号码部分        String prefix = PREFIXES.get(faker.random().nextInt(PREFIXES.size()));        String middle = String.format(&quot;%04d&quot;, faker.number().numberBetween(0, 9999));        String tail = String.format(&quot;%04d&quot;, faker.number().numberBetween(0, 9999));        // 随机选择显示格式        String format = FORMATS.get(faker.random().nextInt(FORMATS.size()));        // 生成最终号码        String phone = String.format(format, prefix, middle, tail);        // 二次验证确保有效性        return validate(phone) ? phone : generate();    &#125;    // 严格验证手机号逻辑    private static boolean validate(String phone) &#123;        // 统一去除格式符号        String cleanNumber = phone.replaceAll(&quot;[+\\- ()]&quot;, &quot;&quot;);        // 验证长度和开头        if (cleanNumber.startsWith(&quot;86&quot;)) &#123;            return cleanNumber.length() == 13 &amp;&amp; cleanNumber.matches(&quot;^861[3-9]\\d&#123;9&#125;$&quot;);        &#125; else if (cleanNumber.startsWith(&quot;0086&quot;)) &#123;            return cleanNumber.length() == 14 &amp;&amp; cleanNumber.matches(&quot;^00861[3-9]\\d&#123;9&#125;$&quot;);        &#125; else &#123;            return cleanNumber.length() == 11 &amp;&amp; cleanNumber.matches(&quot;^1[3-9]\\d&#123;9&#125;$&quot;);        &#125;    &#125;&#125;
+
+随机生成Worker的代码如下：
+public class WorkerMockFactory &#123;    private static final Faker faker = new Faker(Locale.ENGLISH);    private static final FakeValuesService fakeValues = new FakeValuesService(            Locale.of(&quot;en-US&quot;), new RandomService());    // 预定义枚举选项    private static final List&lt;String&gt; GENDERS = Arrays.asList(            &quot;male&quot;, &quot;female&quot;, &quot;other&quot;, &quot;not_specified&quot;);    private static final List&lt;String&gt; STATUSES = Arrays.asList(            &quot;active&quot;, &quot;resigned&quot;, &quot;on_leave&quot;, &quot;probation&quot;);    // 部门与职位映射    private static final List&lt;String&gt; TECH_DEPTS = Arrays.asList(            &quot;Engineering&quot;, &quot;R&amp;D&quot;, &quot;DevOps&quot;, &quot;QA&quot;);    private static final List&lt;String&gt; TECH_POSITIONS = Arrays.asList(            &quot;Junior Developer&quot;, &quot;Senior Developer&quot;, &quot;Tech Lead&quot;, &quot;Architect&quot;);    public static Worker createWorker() &#123;        Worker worker = new Worker();        // 生成符合业务规则的工号 (示例: WK2024-00123)        worker.setEmployeeNumber(fakeValues.bothify(&quot;WK####-#####&quot;).replaceAll(&quot;#&quot;, &quot;0&quot;));        // 使用构建者模式设置字段        worker.setVersion(faker.random().nextInt(1, 5)); // 模拟历史版本        worker.setLastName(faker.name().lastName());        worker.setFirstName(faker.name().firstName());        worker.setGender(GENDERS.get(faker.random().nextInt(GENDERS.size())));        worker.setDepartment(faker.options().nextElement(TECH_DEPTS));        worker.setPosition(faker.options().nextElement(TECH_POSITIONS));        worker.setHireDate(generateHireDate());        worker.setEmail(generateCorporateEmail(worker));        worker.setPhoneNumber(ChinaPhoneNumberGenerator.generate()); // 统一号码格式        worker.setStatus(faker.options().nextElement(STATUSES));        return worker;    &#125;    private static LocalDate generateHireDate() &#123;        return faker.date().past(365 * 5, TimeUnit.DAYS)                .toInstant().atZone(ZoneId.systemDefault())                .toLocalDate();    &#125;    private static String generateCorporateEmail(Worker worker) &#123;        return String.format(&quot;%s.%s@%s&quot;,                worker.getFirstName().toLowerCase().replaceAll(&quot;&#x27;&quot;, &quot;&quot;),                worker.getLastName().toLowerCase().replaceAll(&quot;&#x27;&quot;, &quot;&quot;),                faker.internet().domainName());    &#125;    public static boolean validate(Worker worker) &#123;        return worker.getEmail().matches(&quot;^[a-z.]+@[a-z]+\\.[a-z]&#123;2,&#125;$&quot;)                &amp;&amp; worker.getEmployeeNumber().startsWith(&quot;WK&quot;)                &amp;&amp; worker.getHireDate().isAfter(LocalDate.of(2010, 1, 1));    &#125;    // 批量生成方法    public static List&lt;Worker&gt; createWorkers(int count) &#123;        return IntStream.range(0, count)                .mapToObj(i -&gt; createWorker())                .collect(Collectors.toList());    &#125;    // 大量数据（超过10万）批量生成方法    public static List&lt;Worker&gt; createWorkersParallel(int count) &#123;        return IntStream.range(0, count)                .parallel()                .mapToObj(i -&gt; createWorker())                .collect(Collectors.toList());    &#125;&#125;
+
+引用
+faker repo
+apache commons csv
+commons-csv mvaen repository.
+
+]]></content>
+      <tags>
+        <tag>java</tag>
+        <tag>commons-csv</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>使用bazel构建spring boot项目</title>
     <url>/2024/02/11/back-end/use-bazel-build-and-run-spring-boot/</url>
     <content><![CDATA[前言根据官网的定义，Bazel是类似于Make，Maven和Gradle的开源构建和测试工具。它使用人类可读的高级构建语言Starlark(一种基于python的方言)。 Bazel支持多种语言的项目，并为多种平台构建输出。 
@@ -1391,78 +1463,6 @@ New Java Project With Bazel
         <tag>spring boot</tag>
         <tag>bazel</tag>
         <tag>java</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>使用apache commons-csv读写csv文件</title>
-    <url>/2025/04/07/back-end/use-apache-commons-csv-read-write-files/</url>
-    <content><![CDATA[使用apache commons-csv读写csv文件前言本文的目的是使用apache commons-csv读写csv文件。
-定义实体Worker是通过ai随机定义的一个java类型:
-public class Worker &#123;    private String id;    private String employeeNumber;    private int version;    private String lastName;    private String firstName;    private String gender;    private String department;    private String position;    private LocalDate hireDate;    private String email;    private String phoneNumber;    private String status;    ...&#125;
-
-可以通过faker随机生成Worker类型的对象。具体实现可以查看下文。
-Apache Commons CSVCommons CSV 能够读写多种变体的逗号分隔值（CSV）格式文件，由Apache负责开发。
-使用maven引入：
-&lt;dependency&gt;    &lt;groupId&gt;org.apache.commons&lt;/groupId&gt;    &lt;artifactId&gt;commons-csv&lt;/artifactId&gt;    &lt;version&gt;1.14.0&lt;/version&gt;&lt;/dependency&gt;
-
-使用groovy gradle引入：
-implementation &#x27;org.apache.commons:commons-csv:1.14.0&#x27;
-
-使用kotlin：
-implementation(&quot;org.apache.commons:commons-csv:1.14.0&quot;)
-
-写csv文件先创建好文件：
-var path = nfsRootPath + File.separator + &quot;workers_&quot; + DateUtils.getYearMonthDay() + &quot;.csv&quot;;var file = new File(path);if (!file.exists()) &#123;    file.createNewFile();&#125;
-
-nfsRootPath为$&#123;user.dir&#125;/nfs-root， DateUtils.getYearMonthDay()表示获取当前年月日（yyyy-MM-dd）。
-CSVFormat是apache commons csv中用于指定CSV文件解析及写入的格式规范。
-commons csv内置了12种格式的支持：
-
-DEFAULT: 标准逗号分隔值（CSV）格式，遵循RFC4180规范，但允许空行存在
-EXCEL: 微软Excel文件格式（使用逗号作为值分隔符）
-INFORMIX_UNLOAD: Informix 默认 CSV 导出格式（通过 UNLOAD TO file_name 操作生成）
-INFORMIX_UNLOAD_CSV: Informix 默认 CSV 导出格式（通过 UNLOAD TO file_name 操作生成，禁用转义功能）
-MONGODB_CSV: MongoDB 默认 CSV 格式（通过 mongoexport 命令导出使用）
-MONGODB_TSV: MongoDB 默认 TSV 格式（通过 mongoexport 命令导出使用）
-MYSQL:MySQL 默认数据格式（通过 SELECT INTO OUTFILE 和 LOAD DATA INFILE 命令使用）
-ORACLE: Oracle 默认数据格式（通过 SQL*Loader 工具使用）
-POSTGRESQL_CSV: PostgreSQL默认 CSV 格式（通过 COPY 命令操作使用）
-POSTGRESQL_TEXT: PostgreSQL默认文本格式（通过 COPY 命令使用）
-RFC4180: RFC 4180 标准定义的逗号分隔值（CSV）格式
-TDF: 制表符分隔格式（TDF）
-
-这里使用DEFAULT的csv format：
-var headers = new String[] &#123;    &quot;employee_number&quot;,    &quot;version&quot;,    &quot;last_name&quot;,    &quot;first_name&quot;,    &quot;gender&quot;,    &quot;department&quot;,    &quot;position&quot;,    &quot;hire_date&quot;,    &quot;email&quot;,    &quot;phone_number&quot;,    &quot;status&quot;,&#125;;var csvFormat = CSVFormat.DEFAULT.builder().setHeader(headers).get();
-
-利用BufferedWriter和CSVPrinter将Worker对象写入csv文件中：
-try (var fw = new FileWriter(path); var bw = new BufferedWriter(fw)) &#123;    var csvPrinter = new CSVPrinter(bw, csvFormat);    var format = DateTimeFormatter.ofPattern(&quot;yyyy-MM-dd&quot;);    var workers = WorkerMockFactory.createWorkers(100);    workers.forEach(worker -&gt; &#123;        try &#123;            csvPrinter.printRecord(                worker.getEmployeeNumber(),                worker.getVersion(),                worker.getLastName(),                worker.getFirstName(),                worker.getGender(),                worker.getDepartment(),                worker.getPosition(),                worker.getHireDate().format(format),                worker.getEmail(),                worker.getPhoneNumber(),                worker.getStatus()            );        &#125; catch (IOException e) &#123;            throw new RuntimeException(e);        &#125;    &#125;);&#125; catch (Exception e) &#123;    e.printStackTrace();    throw e;&#125;
-
-读csv文件CSVFormat除了可以用于写csv文件之外，还可以用于读csv文件。
-先获取文件路径并判断文件是否存在：
- var path = nfsRootPath + File.separator + &quot;workers_20250406.csv&quot;;var file = new File(path);if (!file.exists()) &#123;    return;&#125;
-
-CSVFormat提供parse方法读取实现任意实现Reader接口的对象，这里我使用FileReader。
-try (var in = new FileReader(path)) &#123;    var records = csvFormat.parse(in);    var format = DateTimeFormatter.ofPattern(&quot;yyyy-MM-dd&quot;);    var workers = records.stream().map(record -&gt; &#123;        var worker = new Worker();        worker.setEmployeeNumber(record.get(&quot;employee_number&quot;));        var version = record.get(&quot;version&quot;);        try &#123;            worker.setVersion(Integer.parseInt(version));        &#125; catch (NumberFormatException ex) &#123;            ex.printStackTrace();        &#125;        worker.setLastName(record.get(&quot;last_name&quot;));        worker.setFirstName(record.get(&quot;first_name&quot;));        worker.setGender(record.get(&quot;gender&quot;));        worker.setDepartment(record.get(&quot;department&quot;));        worker.setPosition(record.get(&quot;position&quot;));        var hiredDate = record.get(&quot;hire_date&quot;);        if (Objects.nonNull(hiredDate) &amp;&amp; StringUtils.isNoneBlank(hiredDate)) &#123;            worker.setHireDate(LocalDate.parse(hiredDate, format));        &#125;        worker.setEmail(record.get(&quot;email&quot;));        worker.setPhoneNumber(record.get(&quot;phone_number&quot;));        worker.setStatus(record.get(&quot;status&quot;));        return worker;    &#125;).toList();    System.out.println(&quot;workers sum: &quot; + workers.size());    workers.forEach(System.out::println);&#125; catch (IOException e) &#123;    throw new RuntimeException(e);&#125;
-
-部分运行结果如下：
-com.github.damingerdai.batcher.pojo.Worker@7b7b1448[id=&lt;null&gt;,employeeNumber=WK4745-87688,version=1,lastName=Schroeder,firstName=Anisha,gender=female,department=DevOps,position=Architect,hireDate=2021-06-30,email=anisha.schroeder@prohaska.net,phoneNumber=18878513958,status=probation]com.github.damingerdai.batcher.pojo.Worker@14624acc[id=&lt;null&gt;,employeeNumber=WK0980-74595,version=3,lastName=Schmidt,firstName=Isaias,gender=female,department=R&amp;D,position=Junior Developer,hireDate=2021-10-19,email=isaias.schmidt@gottlieb.biz,phoneNumber=14535433286,status=resigned]
-
-Fakerfaker移植自Ruby的faker gem（以及Perl的Data::Faker模块），能够生成仿真数据。
-针对中国格式的手机号码，可以使用如下代码随机生成：
-public class ChinaPhoneNumberGenerator &#123;    // 中国运营商号段（2023年最新）    private static final List&lt;String&gt; PREFIXES = Arrays.asList(            &quot;130&quot;, &quot;131&quot;, &quot;132&quot;, &quot;133&quot;, &quot;134&quot;, &quot;135&quot;, &quot;136&quot;, &quot;137&quot;, &quot;138&quot;, &quot;139&quot;,            &quot;145&quot;, &quot;146&quot;, &quot;147&quot;, &quot;148&quot;, &quot;149&quot;,            &quot;150&quot;, &quot;151&quot;, &quot;152&quot;, &quot;153&quot;, &quot;155&quot;, &quot;156&quot;, &quot;157&quot;, &quot;158&quot;, &quot;159&quot;,            &quot;165&quot;, &quot;166&quot;, &quot;167&quot;, &quot;168&quot;, &quot;169&quot;,            &quot;170&quot;, &quot;171&quot;, &quot;172&quot;, &quot;173&quot;, &quot;174&quot;, &quot;175&quot;, &quot;176&quot;, &quot;177&quot;, &quot;178&quot;, &quot;179&quot;,            &quot;180&quot;, &quot;181&quot;, &quot;182&quot;, &quot;183&quot;, &quot;184&quot;, &quot;185&quot;, &quot;186&quot;, &quot;187&quot;, &quot;188&quot;, &quot;189&quot;,            &quot;190&quot;, &quot;191&quot;, &quot;192&quot;, &quot;193&quot;, &quot;194&quot;, &quot;195&quot;, &quot;196&quot;, &quot;197&quot;, &quot;198&quot;, &quot;199&quot;    );    // 常见显示格式（随机选择）    private static final List&lt;String&gt; FORMATS = Arrays.asList(            &quot;%s%s%s&quot;          // 13800138000            &quot;%s-%s-%s&quot;,        // 138-0013-8000            &quot;%s %s %s&quot;,        // 138 0013 8000            &quot;+86 %s%s%s&quot;,      // +86 13800138000            &quot;+86-%s-%s-%s&quot;,    // +86-138-0013-8000            &quot;0086 %s%s%s&quot;      // 0086 13800138000    );    public static String generate() &#123;        Faker faker = new Faker(Locale.CHINA);        // 生成基础号码部分        String prefix = PREFIXES.get(faker.random().nextInt(PREFIXES.size()));        String middle = String.format(&quot;%04d&quot;, faker.number().numberBetween(0, 9999));        String tail = String.format(&quot;%04d&quot;, faker.number().numberBetween(0, 9999));        // 随机选择显示格式        String format = FORMATS.get(faker.random().nextInt(FORMATS.size()));        // 生成最终号码        String phone = String.format(format, prefix, middle, tail);        // 二次验证确保有效性        return validate(phone) ? phone : generate();    &#125;    // 严格验证手机号逻辑    private static boolean validate(String phone) &#123;        // 统一去除格式符号        String cleanNumber = phone.replaceAll(&quot;[+\\- ()]&quot;, &quot;&quot;);        // 验证长度和开头        if (cleanNumber.startsWith(&quot;86&quot;)) &#123;            return cleanNumber.length() == 13 &amp;&amp; cleanNumber.matches(&quot;^861[3-9]\\d&#123;9&#125;$&quot;);        &#125; else if (cleanNumber.startsWith(&quot;0086&quot;)) &#123;            return cleanNumber.length() == 14 &amp;&amp; cleanNumber.matches(&quot;^00861[3-9]\\d&#123;9&#125;$&quot;);        &#125; else &#123;            return cleanNumber.length() == 11 &amp;&amp; cleanNumber.matches(&quot;^1[3-9]\\d&#123;9&#125;$&quot;);        &#125;    &#125;&#125;
-
-随机生成Worker的代码如下：
-public class WorkerMockFactory &#123;    private static final Faker faker = new Faker(Locale.ENGLISH);    private static final FakeValuesService fakeValues = new FakeValuesService(            Locale.of(&quot;en-US&quot;), new RandomService());    // 预定义枚举选项    private static final List&lt;String&gt; GENDERS = Arrays.asList(            &quot;male&quot;, &quot;female&quot;, &quot;other&quot;, &quot;not_specified&quot;);    private static final List&lt;String&gt; STATUSES = Arrays.asList(            &quot;active&quot;, &quot;resigned&quot;, &quot;on_leave&quot;, &quot;probation&quot;);    // 部门与职位映射    private static final List&lt;String&gt; TECH_DEPTS = Arrays.asList(            &quot;Engineering&quot;, &quot;R&amp;D&quot;, &quot;DevOps&quot;, &quot;QA&quot;);    private static final List&lt;String&gt; TECH_POSITIONS = Arrays.asList(            &quot;Junior Developer&quot;, &quot;Senior Developer&quot;, &quot;Tech Lead&quot;, &quot;Architect&quot;);    public static Worker createWorker() &#123;        Worker worker = new Worker();        // 生成符合业务规则的工号 (示例: WK2024-00123)        worker.setEmployeeNumber(fakeValues.bothify(&quot;WK####-#####&quot;).replaceAll(&quot;#&quot;, &quot;0&quot;));        // 使用构建者模式设置字段        worker.setVersion(faker.random().nextInt(1, 5)); // 模拟历史版本        worker.setLastName(faker.name().lastName());        worker.setFirstName(faker.name().firstName());        worker.setGender(GENDERS.get(faker.random().nextInt(GENDERS.size())));        worker.setDepartment(faker.options().nextElement(TECH_DEPTS));        worker.setPosition(faker.options().nextElement(TECH_POSITIONS));        worker.setHireDate(generateHireDate());        worker.setEmail(generateCorporateEmail(worker));        worker.setPhoneNumber(ChinaPhoneNumberGenerator.generate()); // 统一号码格式        worker.setStatus(faker.options().nextElement(STATUSES));        return worker;    &#125;    private static LocalDate generateHireDate() &#123;        return faker.date().past(365 * 5, TimeUnit.DAYS)                .toInstant().atZone(ZoneId.systemDefault())                .toLocalDate();    &#125;    private static String generateCorporateEmail(Worker worker) &#123;        return String.format(&quot;%s.%s@%s&quot;,                worker.getFirstName().toLowerCase().replaceAll(&quot;&#x27;&quot;, &quot;&quot;),                worker.getLastName().toLowerCase().replaceAll(&quot;&#x27;&quot;, &quot;&quot;),                faker.internet().domainName());    &#125;    public static boolean validate(Worker worker) &#123;        return worker.getEmail().matches(&quot;^[a-z.]+@[a-z]+\\.[a-z]&#123;2,&#125;$&quot;)                &amp;&amp; worker.getEmployeeNumber().startsWith(&quot;WK&quot;)                &amp;&amp; worker.getHireDate().isAfter(LocalDate.of(2010, 1, 1));    &#125;    // 批量生成方法    public static List&lt;Worker&gt; createWorkers(int count) &#123;        return IntStream.range(0, count)                .mapToObj(i -&gt; createWorker())                .collect(Collectors.toList());    &#125;    // 大量数据（超过10万）批量生成方法    public static List&lt;Worker&gt; createWorkersParallel(int count) &#123;        return IntStream.range(0, count)                .parallel()                .mapToObj(i -&gt; createWorker())                .collect(Collectors.toList());    &#125;&#125;
-
-引用
-faker repo
-apache commons csv
-commons-csv mvaen repository.
-
-]]></content>
-      <tags>
-        <tag>java</tag>
-        <tag>commons-csv</tag>
       </tags>
   </entry>
   <entry>
@@ -2231,6 +2231,85 @@ document.documentElement.style.setProperty(&#x27;--primary-color&#x27;, &#x27;#e
       </tags>
   </entry>
   <entry>
+    <title>如何使用bazel去构建基于express和typescript的nodejs项目</title>
+    <url>/2023/08/10/front-end/how-to-use-bazel-to-build-nodejs-typescript-expressjs/</url>
+    <content><![CDATA[前言Bazel 是一款类似于 Make、Maven 和 Gradle的开源构建和测试工具。它使用可读的高级构建语言，支持多种变成语言编写的项目，并且能够为多个平台进行构建。Bazel 支持构建包含多个仓库、大量开发人员的大型代码库。
+详细介绍可见Bazel官网。
+目的本文的目的是使用bazel5去构建一个完整的nodejs后端项目，并不负责bazel相关知识的介绍。
+配置首先在package.json文件中·devDependencies·部分添加：
+&quot;@bazel/bazelisk&quot;: &quot;^1.7.5&quot;,&quot;@bazel/buildifier&quot;: &quot;^6.0.0&quot;,&quot;@bazel/ibazel&quot;: &quot;^0.16.0&quot;,&quot;@bazel/typescript&quot;: &quot;^5.8.1&quot;,
+
+然后再执行安装依赖命令。
+创建.bazelignore文件并写入下面的内容:
+.gitnode_modulesdist
+
+创建.bazelrc文件并写入下面的内容:
+# Enable debugging tests with --config=debugtest:debug --test_arg=--node_options=--inspect-brk --test_output=streamed --test_strategy=exclusive --test_timeout=9999 --nocache_test_results# Do not attempt to de-flake locally.# On CI we might set this to `3` to run with deflaking.test --flaky_test_attempts=1################################ Filesystem interactions     ################################# Create symlinks in the project:# - dist/bin for outputs# - dist/testlogs, dist/genfiles# - bazel-out# NB: bazel-out should be excluded from the editor configuration.# The checked-in /.vscode/settings.json does this for VSCode.# Other editors may require manual config to ignore this directory.# In the past, we say a problem where VSCode traversed a massive tree, opening file handles and# eventually a surprising failure with auto-discovery of the C++ toolchain in# MacOS High Sierra.# See https://github.com/bazelbuild/bazel/issues/4603build --symlink_prefix=dist/# Turn off legacy external runfilesbuild --nolegacy_external_runfilesrun --nolegacy_external_runfilestest --nolegacy_external_runfiles# Turn on --incompatible_strict_action_env which was on by default# in Bazel 0.21.0 but turned off again in 0.22.0. Follow# https://github.com/bazelbuild/bazel/issues/7026 for more details.# This flag is needed to so that the bazel cache is not invalidated# when running bazel via `yarn bazel`.# See https://github.com/angular/angular/issues/27514.build --incompatible_strict_action_envrun --incompatible_strict_action_envtest --incompatible_strict_action_env# Do not build runfile trees by default. If an execution strategy relies on runfile# symlink teee, the tree is created on-demand. See: https://github.com/bazelbuild/bazel/issues/6627# and https://github.com/bazelbuild/bazel/commit/03246077f948f2790a83520e7dccc2625650e6dfbuild --nobuild_runfile_linksbuild --enable_runfiles################################ Release support             ## Turn on these settings with ##  --config=release           ################################# Releases should always be stamped with version control info# This command assumes node on the path and is a workaround for# https://github.com/bazelbuild/bazel/issues/4802build:release --workspace_status_command=&quot;yarn -s ng-dev release build-env-stamp --mode=release&quot;build:release --stamp# Building AIO against local Angular deps requires stamping# versions in Angular packages due to CLI version checks.build:aio_local_deps --stampbuild:aio_local_deps --workspace_status_command=&quot;yarn -s --cwd aio local-workspace-status&quot;# Snapshots should also be stamped with version control information.build:snapshot-build --workspace_status_command=&quot;yarn -s ng-dev release build-env-stamp --mode=snapshot&quot;build:snapshot-build --stamp########################################################### AIO architect build configuration                      ## See aio/angular.json for available configurations.     ## To build with a partiular configuration:               ##   bazel build //aio:build --aio_build_config=&lt;config&gt;  ## Default config is `stable``.                           ###########################################################build --flag_alias=aio_build_config=//aio:flag_aio_build_config##################################### AIO first party dep substitution ## Turn on with                     ##  --config=aio_local_deps         #####################################build:aio_local_deps --//aio:flag_aio_local_deps################################ Output                      ################################# A more useful default output mode for bazel query# Prints eg. &quot;ng_module rule //foo:bar&quot; rather than just &quot;//foo:bar&quot;query --output=label_kind# By default, failing tests don&#x27;t print any output, it goes to the log filetest --test_output=errors################################# Settings for CircleCI        ################################## Bazel flags for CircleCI are in /.circleci/bazel.linux.rc and /.circleci/bazel.windows.rc################################### Remote Build Execution support ## Turn on these settings with    ##  --config=remote               #################################### The following --define=EXECUTOR=remote will be able to be removed# once https://github.com/bazelbuild/bazel/issues/7254 is fixedbuild:remote --define=EXECUTOR=remote# Set a higher timeout value, just in case.build:remote --remote_timeout=600# Bazel detects maximum number of jobs based on host resources.# Since we run remotely, we can increase this number significantly.common:remote --jobs=200build:remote --google_default_credentials# Limit the number of test jobs for on an AIO local deps build. The example tests running# concurrently pushes the circleci executor RAM usage to its limits.test:aio_local_deps --jobs=24# Force remote exeuctions to consider the entire run as linuxbuild:remote --cpu=k8build:remote --host_cpu=k8# Toolchain and platform related flagsbuild:remote --crosstool_top=@npm//@angular/build-tooling/bazel/remote-execution/cpp:cc_toolchain_suitebuild:remote --extra_toolchains=@npm//@angular/build-tooling/bazel/remote-execution/cpp:cc_toolchainbuild:remote --extra_execution_platforms=@npm//@angular/build-tooling/bazel/remote-execution:platformbuild:remote --host_platform=@npm//@angular/build-tooling/bazel/remote-execution:platformbuild:remote --platforms=@npm//@angular/build-tooling/bazel/remote-execution:platform# Remote instance and cachingbuild:remote --remote_instance_name=projects/internal-200822/instances/primary_instancebuild:remote --project_id=internal-200822build:remote --remote_cache=remotebuildexecution.googleapis.combuild:remote --remote_executor=remotebuildexecution.googleapis.com# Use HTTP remote cachebuild:remote-cache --remote_cache=https://storage.googleapis.com/angular-team-cachebuild:remote-cache --remote_accept_cached=truebuild:remote-cache --remote_upload_local_results=truebuild:remote-cache --google_default_credentials# Ensure that tags like &quot;no-remote-exec&quot; get propagated to actions created by rules,# even if the rule implementation does not explicitly pass them to the execution requirements.# https://bazel.build/reference/command-line-reference#flag--experimental_allow_tags_propagationcommon --experimental_allow_tags_propagation# Disable network access in the sandbox by default. To enable network access# for a particular target, use:## load(&quot;@npm//@angular/build-tooling/bazel/remote-execution:index.bzl&quot;, &quot;ENABLE_NETWORK&quot;)# my_target(#   ...,#   exec_properties = ENABLE_NETWORK,   # Enables network in remote exec#   tags = [&quot;requires-network&quot;]         # Enables network in sandbox# )build --nosandbox_default_allow_network################################### Saucelabs tests settings       ## Turn on these settings with    ##  --config=saucelabs            #################################### For saucelabs tests we don&#x27;t want to enable flaky test attempts. Karma has its own integrated# retry mechanism and we do not want to retry unnecessarily if Karma already tried multiple times.test:saucelabs --flaky_test_attempts=1################# Flag Aliases ################## --ng_perf will ask the Ivy compiler to produce performance results for each build.build --flag_alias=ng_perf=//packages/compiler-cli:ng_perf##################################################### User bazel configuration# NOTE: This needs to be the *last* entry in the config.##################################################### Load any settings which are specific to the current user. Needs to be *last* statement# in this config, as the user configuration should be able to overwrite flags from this file.try-import %workspace%/.bazelrc.user
+
+创建.bazelversion用于指定bazel版本：
+5.0.0
+
+
+可以使用bazel5的任意版本，理论上都支持，但是不要使用bazel6的版本
+
+新建WORKSPACE用于定义bazel的工作区：
+workspace(   name = &quot;express-postgres-ts-starter&quot;,    managed_directories = &#123;        &quot;@npm&quot;: [&quot;node_modules&quot;],    &#125;,)
+
+导入http_archive用于获取bazel的库：
+load(&quot;@bazel_tools//tools/build_defs/repo:http.bzl&quot;, &quot;http_archive&quot;)
+
+如果使用了.yarn文件夹用于限制yarn的版本，可以通过创建yarn.bzl解决：
+YARN_PATH = &quot;.yarn/releases/yarn-1.22.19.cjs&quot;YARN_LABEL = &quot;//:&quot; + YARN_PATH
+
+然后在WORKSPACE导入：
+load(&quot;//:yarn.bzl&quot;, &quot;YARN_LABEL&quot;)
+
+引入bazel的nodesj依赖库：
+http_archive(    name = &quot;build_bazel_rules_nodejs&quot;,    sha256 = &quot;5dd1e5dea1322174c57d3ca7b899da381d516220793d0adef3ba03b9d23baa8e&quot;,    urls = [        &quot;https://github.com/bazelbuild/rules_nodejs/releases/download/5.8.3/rules_nodejs-5.8.3.tar.gz&quot;,        &quot;https://ghproxy.com/https://github.com/bazelbuild/rules_nodejs/releases/download/5.8.3/rules_nodejs-5.8.3.tar.gz&quot;    ],)load(&quot;@build_bazel_rules_nodejs//:repositories.bzl&quot;, &quot;build_bazel_rules_nodejs_dependencies&quot;)build_bazel_rules_nodejs_dependencies()http_archive(    name = &quot;rules_pkg&quot;,    sha256 = &quot;62eeb544ff1ef41d786e329e1536c1d541bb9bcad27ae984d57f18f314018e66&quot;,    urls = [        &quot;https://mirror.bazel.build/github.com/bazelbuild/rules_pkg/releases/download/0.6.0/rules_pkg-0.6.0.tar.gz&quot;,        &quot;https://github.com/bazelbuild/rules_pkg/releases/download/0.6.0/rules_pkg-0.6.0.tar.gz&quot;,        &quot;https://ghproxy.com/https://github.com/bazelbuild/rules_pkg/releases/download/0.6.0/rules_pkg-0.6.0.tar.gz&quot;,    ],)# Fetch Aspect lib for utilities like write_source_files# NOTE: We cannot move past version 1.23.2 of aspect_bazel_lib because it requires us to move to bazel 6.0.0 which#       breaks our usage of managed_directorieshttp_archive(    name = &quot;aspect_bazel_lib&quot;,    sha256 = &quot;4b2e774387bae6242879820086b7b738d49bf3d0659522ea5d9363be01a27582&quot;,    strip_prefix = &quot;bazel-lib-1.23.2&quot;,    urls = [        &quot;https://github.com/aspect-build/bazel-lib/archive/refs/tags/v1.23.2.tar.gz&quot;,        &quot;https://ghproxy.com/https://github.com/aspect-build/bazel-lib/archive/refs/tags/v1.23.2.tar.gz&quot;,    ])
+
+配置nodejs工具链：
+load(&quot;@rules_nodejs//nodejs:repositories.bzl&quot;, &quot;nodejs_register_toolchains&quot;)nodejs_register_toolchains(    name = &quot;nodejs&quot;,    node_version = &quot;18.10.0&quot;,)
+
+
+在arm mac上不支持nodejs20的版本，不确定其他平台时候是否支持nodejs20
+
+配置yarn_install下载依赖：
+load(&quot;@build_bazel_rules_nodejs//:index.bzl&quot;, &quot;yarn_install&quot;)yarn_install(    name = &quot;npm&quot;,		data = [        YARN_LABEL,        &quot;//:.yarnrc&quot;,				&quot;//:patches/trim-newlines+5.0.0.patch&quot;		],		exports_directories_only = False,		symlink_node_modules = True,    package_json = &quot;//:package.json&quot;,		yarn = YARN_LABEL,    yarn_lock = &quot;//:yarn.lock&quot;,)
+
+创建BUILD.bazel, 并定义为公开的:
+package(default_visibility = [&quot;//visibility:public&quot;])
+
+导入ts_project和nodejs_binary用于构建typescript和nodejs：
+load(&quot;@npm//@bazel/typescript:index.bzl&quot;, &quot;ts_project&quot;)load(&quot;@build_bazel_rules_nodejs//:index.bzl&quot;, &quot;nodejs_binary&quot;)
+
+定义SRCS变量用于声明所有需要参与编译的ts文件：
+SRCS = glob(	[		&quot;src/**/*.ts&quot;,	],	exclude = [		&quot;src/**/*.spec.ts&quot;	])
+
+使用ts_project将ts编译成js：
+ts_project(    name = &quot;server-ts&quot;,    srcs = [&quot;server.ts&quot; ] + SRCS,    resolve_json_module = True,    source_map = True,    tsconfig = &quot;//:tsconfig.json&quot;,    visibility = [&quot;//visibility:public&quot;],    deps = [        &quot;@npm//@apollo/server&quot;,        &quot;@npm//@graphql-tools/merge&quot;,        &quot;@npm//body-parser&quot;,        &quot;@npm//compression&quot;,        &quot;@npm//cookie-parser&quot;,        &quot;@npm//dotenv&quot;,        &quot;@npm//exceljs&quot;,        &quot;@npm//express&quot;,        &quot;@npm//express-fileupload&quot;,        &quot;@npm//express-joi-validation&quot;,        &quot;@npm//express-session&quot;,        &quot;@npm//graphql&quot;,        &quot;@npm//graphql-tag&quot;,        &quot;@npm//helmet&quot;,        &quot;@npm//joi&quot;,        &quot;@npm//jsonwebtoken&quot;,        &quot;@npm//knex&quot;,        &quot;@npm//lodash&quot;,        &quot;@npm//minio&quot;,        &quot;@npm//morgan&quot;,        &quot;@npm//pg&quot;,        &quot;@npm//pg-boss&quot;,        &quot;@npm//redis&quot;,        &quot;@npm//socket.io&quot;,        &quot;@npm//winston&quot;,        &quot;@npm//@types/express&quot;,        &quot;@npm//@types/express-fileupload&quot;,        &quot;@npm//@types/express-session&quot;,        &quot;@npm//@types/jest&quot;,        &quot;@npm//@types/node&quot;,    ])
+
+现在可以编译了：
+yarn bazel build //... 
+
+最后可以在dist/bin看到一个server.js, 我们可以通过执行node dist/bin/server.js运行我们的nodejs项目了。
+参考
+Bazel官网
+Bazel 学习笔记 (一) 快速开始
+使用Bazel编译TypeScript
+angular
+feat: add bazel support
+
+]]></content>
+      <categories>
+        <category>前端</category>
+      </categories>
+      <tags>
+        <tag>bazel</tag>
+        <tag>typescript</tag>
+        <tag>nodejs</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>从 3 秒白屏到首屏可见 —— 一次基于 Chrome Performance Call Tree 的深度优化复盘</title>
     <url>/2026/02/25/front-end/from-3s-white-screen-to-first-paint-react-performance-optimization/</url>
     <content><![CDATA[🎯 从 3 秒白屏到首屏可见 —— 一次基于 Chrome Performance Call Tree 的深度优化复盘
@@ -2446,85 +2525,6 @@ React Fiber 调度
         <tag>白屏</tag>
         <tag>优化</tag>
         <tag>复盘</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>如何使用bazel去构建基于express和typescript的nodejs项目</title>
-    <url>/2023/08/10/front-end/how-to-use-bazel-to-build-nodejs-typescript-expressjs/</url>
-    <content><![CDATA[前言Bazel 是一款类似于 Make、Maven 和 Gradle的开源构建和测试工具。它使用可读的高级构建语言，支持多种变成语言编写的项目，并且能够为多个平台进行构建。Bazel 支持构建包含多个仓库、大量开发人员的大型代码库。
-详细介绍可见Bazel官网。
-目的本文的目的是使用bazel5去构建一个完整的nodejs后端项目，并不负责bazel相关知识的介绍。
-配置首先在package.json文件中·devDependencies·部分添加：
-&quot;@bazel/bazelisk&quot;: &quot;^1.7.5&quot;,&quot;@bazel/buildifier&quot;: &quot;^6.0.0&quot;,&quot;@bazel/ibazel&quot;: &quot;^0.16.0&quot;,&quot;@bazel/typescript&quot;: &quot;^5.8.1&quot;,
-
-然后再执行安装依赖命令。
-创建.bazelignore文件并写入下面的内容:
-.gitnode_modulesdist
-
-创建.bazelrc文件并写入下面的内容:
-# Enable debugging tests with --config=debugtest:debug --test_arg=--node_options=--inspect-brk --test_output=streamed --test_strategy=exclusive --test_timeout=9999 --nocache_test_results# Do not attempt to de-flake locally.# On CI we might set this to `3` to run with deflaking.test --flaky_test_attempts=1################################ Filesystem interactions     ################################# Create symlinks in the project:# - dist/bin for outputs# - dist/testlogs, dist/genfiles# - bazel-out# NB: bazel-out should be excluded from the editor configuration.# The checked-in /.vscode/settings.json does this for VSCode.# Other editors may require manual config to ignore this directory.# In the past, we say a problem where VSCode traversed a massive tree, opening file handles and# eventually a surprising failure with auto-discovery of the C++ toolchain in# MacOS High Sierra.# See https://github.com/bazelbuild/bazel/issues/4603build --symlink_prefix=dist/# Turn off legacy external runfilesbuild --nolegacy_external_runfilesrun --nolegacy_external_runfilestest --nolegacy_external_runfiles# Turn on --incompatible_strict_action_env which was on by default# in Bazel 0.21.0 but turned off again in 0.22.0. Follow# https://github.com/bazelbuild/bazel/issues/7026 for more details.# This flag is needed to so that the bazel cache is not invalidated# when running bazel via `yarn bazel`.# See https://github.com/angular/angular/issues/27514.build --incompatible_strict_action_envrun --incompatible_strict_action_envtest --incompatible_strict_action_env# Do not build runfile trees by default. If an execution strategy relies on runfile# symlink teee, the tree is created on-demand. See: https://github.com/bazelbuild/bazel/issues/6627# and https://github.com/bazelbuild/bazel/commit/03246077f948f2790a83520e7dccc2625650e6dfbuild --nobuild_runfile_linksbuild --enable_runfiles################################ Release support             ## Turn on these settings with ##  --config=release           ################################# Releases should always be stamped with version control info# This command assumes node on the path and is a workaround for# https://github.com/bazelbuild/bazel/issues/4802build:release --workspace_status_command=&quot;yarn -s ng-dev release build-env-stamp --mode=release&quot;build:release --stamp# Building AIO against local Angular deps requires stamping# versions in Angular packages due to CLI version checks.build:aio_local_deps --stampbuild:aio_local_deps --workspace_status_command=&quot;yarn -s --cwd aio local-workspace-status&quot;# Snapshots should also be stamped with version control information.build:snapshot-build --workspace_status_command=&quot;yarn -s ng-dev release build-env-stamp --mode=snapshot&quot;build:snapshot-build --stamp########################################################### AIO architect build configuration                      ## See aio/angular.json for available configurations.     ## To build with a partiular configuration:               ##   bazel build //aio:build --aio_build_config=&lt;config&gt;  ## Default config is `stable``.                           ###########################################################build --flag_alias=aio_build_config=//aio:flag_aio_build_config##################################### AIO first party dep substitution ## Turn on with                     ##  --config=aio_local_deps         #####################################build:aio_local_deps --//aio:flag_aio_local_deps################################ Output                      ################################# A more useful default output mode for bazel query# Prints eg. &quot;ng_module rule //foo:bar&quot; rather than just &quot;//foo:bar&quot;query --output=label_kind# By default, failing tests don&#x27;t print any output, it goes to the log filetest --test_output=errors################################# Settings for CircleCI        ################################## Bazel flags for CircleCI are in /.circleci/bazel.linux.rc and /.circleci/bazel.windows.rc################################### Remote Build Execution support ## Turn on these settings with    ##  --config=remote               #################################### The following --define=EXECUTOR=remote will be able to be removed# once https://github.com/bazelbuild/bazel/issues/7254 is fixedbuild:remote --define=EXECUTOR=remote# Set a higher timeout value, just in case.build:remote --remote_timeout=600# Bazel detects maximum number of jobs based on host resources.# Since we run remotely, we can increase this number significantly.common:remote --jobs=200build:remote --google_default_credentials# Limit the number of test jobs for on an AIO local deps build. The example tests running# concurrently pushes the circleci executor RAM usage to its limits.test:aio_local_deps --jobs=24# Force remote exeuctions to consider the entire run as linuxbuild:remote --cpu=k8build:remote --host_cpu=k8# Toolchain and platform related flagsbuild:remote --crosstool_top=@npm//@angular/build-tooling/bazel/remote-execution/cpp:cc_toolchain_suitebuild:remote --extra_toolchains=@npm//@angular/build-tooling/bazel/remote-execution/cpp:cc_toolchainbuild:remote --extra_execution_platforms=@npm//@angular/build-tooling/bazel/remote-execution:platformbuild:remote --host_platform=@npm//@angular/build-tooling/bazel/remote-execution:platformbuild:remote --platforms=@npm//@angular/build-tooling/bazel/remote-execution:platform# Remote instance and cachingbuild:remote --remote_instance_name=projects/internal-200822/instances/primary_instancebuild:remote --project_id=internal-200822build:remote --remote_cache=remotebuildexecution.googleapis.combuild:remote --remote_executor=remotebuildexecution.googleapis.com# Use HTTP remote cachebuild:remote-cache --remote_cache=https://storage.googleapis.com/angular-team-cachebuild:remote-cache --remote_accept_cached=truebuild:remote-cache --remote_upload_local_results=truebuild:remote-cache --google_default_credentials# Ensure that tags like &quot;no-remote-exec&quot; get propagated to actions created by rules,# even if the rule implementation does not explicitly pass them to the execution requirements.# https://bazel.build/reference/command-line-reference#flag--experimental_allow_tags_propagationcommon --experimental_allow_tags_propagation# Disable network access in the sandbox by default. To enable network access# for a particular target, use:## load(&quot;@npm//@angular/build-tooling/bazel/remote-execution:index.bzl&quot;, &quot;ENABLE_NETWORK&quot;)# my_target(#   ...,#   exec_properties = ENABLE_NETWORK,   # Enables network in remote exec#   tags = [&quot;requires-network&quot;]         # Enables network in sandbox# )build --nosandbox_default_allow_network################################### Saucelabs tests settings       ## Turn on these settings with    ##  --config=saucelabs            #################################### For saucelabs tests we don&#x27;t want to enable flaky test attempts. Karma has its own integrated# retry mechanism and we do not want to retry unnecessarily if Karma already tried multiple times.test:saucelabs --flaky_test_attempts=1################# Flag Aliases ################## --ng_perf will ask the Ivy compiler to produce performance results for each build.build --flag_alias=ng_perf=//packages/compiler-cli:ng_perf##################################################### User bazel configuration# NOTE: This needs to be the *last* entry in the config.##################################################### Load any settings which are specific to the current user. Needs to be *last* statement# in this config, as the user configuration should be able to overwrite flags from this file.try-import %workspace%/.bazelrc.user
-
-创建.bazelversion用于指定bazel版本：
-5.0.0
-
-
-可以使用bazel5的任意版本，理论上都支持，但是不要使用bazel6的版本
-
-新建WORKSPACE用于定义bazel的工作区：
-workspace(   name = &quot;express-postgres-ts-starter&quot;,    managed_directories = &#123;        &quot;@npm&quot;: [&quot;node_modules&quot;],    &#125;,)
-
-导入http_archive用于获取bazel的库：
-load(&quot;@bazel_tools//tools/build_defs/repo:http.bzl&quot;, &quot;http_archive&quot;)
-
-如果使用了.yarn文件夹用于限制yarn的版本，可以通过创建yarn.bzl解决：
-YARN_PATH = &quot;.yarn/releases/yarn-1.22.19.cjs&quot;YARN_LABEL = &quot;//:&quot; + YARN_PATH
-
-然后在WORKSPACE导入：
-load(&quot;//:yarn.bzl&quot;, &quot;YARN_LABEL&quot;)
-
-引入bazel的nodesj依赖库：
-http_archive(    name = &quot;build_bazel_rules_nodejs&quot;,    sha256 = &quot;5dd1e5dea1322174c57d3ca7b899da381d516220793d0adef3ba03b9d23baa8e&quot;,    urls = [        &quot;https://github.com/bazelbuild/rules_nodejs/releases/download/5.8.3/rules_nodejs-5.8.3.tar.gz&quot;,        &quot;https://ghproxy.com/https://github.com/bazelbuild/rules_nodejs/releases/download/5.8.3/rules_nodejs-5.8.3.tar.gz&quot;    ],)load(&quot;@build_bazel_rules_nodejs//:repositories.bzl&quot;, &quot;build_bazel_rules_nodejs_dependencies&quot;)build_bazel_rules_nodejs_dependencies()http_archive(    name = &quot;rules_pkg&quot;,    sha256 = &quot;62eeb544ff1ef41d786e329e1536c1d541bb9bcad27ae984d57f18f314018e66&quot;,    urls = [        &quot;https://mirror.bazel.build/github.com/bazelbuild/rules_pkg/releases/download/0.6.0/rules_pkg-0.6.0.tar.gz&quot;,        &quot;https://github.com/bazelbuild/rules_pkg/releases/download/0.6.0/rules_pkg-0.6.0.tar.gz&quot;,        &quot;https://ghproxy.com/https://github.com/bazelbuild/rules_pkg/releases/download/0.6.0/rules_pkg-0.6.0.tar.gz&quot;,    ],)# Fetch Aspect lib for utilities like write_source_files# NOTE: We cannot move past version 1.23.2 of aspect_bazel_lib because it requires us to move to bazel 6.0.0 which#       breaks our usage of managed_directorieshttp_archive(    name = &quot;aspect_bazel_lib&quot;,    sha256 = &quot;4b2e774387bae6242879820086b7b738d49bf3d0659522ea5d9363be01a27582&quot;,    strip_prefix = &quot;bazel-lib-1.23.2&quot;,    urls = [        &quot;https://github.com/aspect-build/bazel-lib/archive/refs/tags/v1.23.2.tar.gz&quot;,        &quot;https://ghproxy.com/https://github.com/aspect-build/bazel-lib/archive/refs/tags/v1.23.2.tar.gz&quot;,    ])
-
-配置nodejs工具链：
-load(&quot;@rules_nodejs//nodejs:repositories.bzl&quot;, &quot;nodejs_register_toolchains&quot;)nodejs_register_toolchains(    name = &quot;nodejs&quot;,    node_version = &quot;18.10.0&quot;,)
-
-
-在arm mac上不支持nodejs20的版本，不确定其他平台时候是否支持nodejs20
-
-配置yarn_install下载依赖：
-load(&quot;@build_bazel_rules_nodejs//:index.bzl&quot;, &quot;yarn_install&quot;)yarn_install(    name = &quot;npm&quot;,		data = [        YARN_LABEL,        &quot;//:.yarnrc&quot;,				&quot;//:patches/trim-newlines+5.0.0.patch&quot;		],		exports_directories_only = False,		symlink_node_modules = True,    package_json = &quot;//:package.json&quot;,		yarn = YARN_LABEL,    yarn_lock = &quot;//:yarn.lock&quot;,)
-
-创建BUILD.bazel, 并定义为公开的:
-package(default_visibility = [&quot;//visibility:public&quot;])
-
-导入ts_project和nodejs_binary用于构建typescript和nodejs：
-load(&quot;@npm//@bazel/typescript:index.bzl&quot;, &quot;ts_project&quot;)load(&quot;@build_bazel_rules_nodejs//:index.bzl&quot;, &quot;nodejs_binary&quot;)
-
-定义SRCS变量用于声明所有需要参与编译的ts文件：
-SRCS = glob(	[		&quot;src/**/*.ts&quot;,	],	exclude = [		&quot;src/**/*.spec.ts&quot;	])
-
-使用ts_project将ts编译成js：
-ts_project(    name = &quot;server-ts&quot;,    srcs = [&quot;server.ts&quot; ] + SRCS,    resolve_json_module = True,    source_map = True,    tsconfig = &quot;//:tsconfig.json&quot;,    visibility = [&quot;//visibility:public&quot;],    deps = [        &quot;@npm//@apollo/server&quot;,        &quot;@npm//@graphql-tools/merge&quot;,        &quot;@npm//body-parser&quot;,        &quot;@npm//compression&quot;,        &quot;@npm//cookie-parser&quot;,        &quot;@npm//dotenv&quot;,        &quot;@npm//exceljs&quot;,        &quot;@npm//express&quot;,        &quot;@npm//express-fileupload&quot;,        &quot;@npm//express-joi-validation&quot;,        &quot;@npm//express-session&quot;,        &quot;@npm//graphql&quot;,        &quot;@npm//graphql-tag&quot;,        &quot;@npm//helmet&quot;,        &quot;@npm//joi&quot;,        &quot;@npm//jsonwebtoken&quot;,        &quot;@npm//knex&quot;,        &quot;@npm//lodash&quot;,        &quot;@npm//minio&quot;,        &quot;@npm//morgan&quot;,        &quot;@npm//pg&quot;,        &quot;@npm//pg-boss&quot;,        &quot;@npm//redis&quot;,        &quot;@npm//socket.io&quot;,        &quot;@npm//winston&quot;,        &quot;@npm//@types/express&quot;,        &quot;@npm//@types/express-fileupload&quot;,        &quot;@npm//@types/express-session&quot;,        &quot;@npm//@types/jest&quot;,        &quot;@npm//@types/node&quot;,    ])
-
-现在可以编译了：
-yarn bazel build //... 
-
-最后可以在dist/bin看到一个server.js, 我们可以通过执行node dist/bin/server.js运行我们的nodejs项目了。
-参考
-Bazel官网
-Bazel 学习笔记 (一) 快速开始
-使用Bazel编译TypeScript
-angular
-feat: add bazel support
-
-]]></content>
-      <categories>
-        <category>前端</category>
-      </categories>
-      <tags>
-        <tag>bazel</tag>
-        <tag>typescript</tag>
-        <tag>nodejs</tag>
       </tags>
   </entry>
   <entry>
@@ -2866,57 +2866,6 @@ css中垂直居中的4种方式
       </tags>
   </entry>
   <entry>
-    <title>在 Next.js 16 (Turbopack) 中集成 RDKit.js 渲染 SMILES 的工程实践与踩坑指南</title>
-    <url>/2026/06/16/front-end/nextjs16-rdkitjs-smiles/</url>
-    <content><![CDATA[在 Next.js 16 (Turbopack) 中集成 RDKit.js 渲染 SMILES 的工程实践与踩坑指南前言在生物制药数字化（AIDD、LIMS 等系统）的前端开发中，SMILES（简化分子线性输入规范）是表示分子结构最常用的文本格式。为了在前端实现“输入文本，实时预览 2D 分子结构”，我们需要引入化学信息学界的工业级开源工具包：RDKit.js。
-由于 RDKit.js 底层依赖重型的 WebAssembly (Wasm) 编译产物，当它遇到 Next.js 16 默认的 Turbopack 构建流以及 SSR（服务端预渲染） 架构时，会引发一系列经典的打包与运行时崩溃。
-本文将完整记录基于 Next.js 16 + Bun + TypeScript 栈集成 RDKit.js 的踩坑心路历程，并分享最终的离线化解决方案。
-一、 初次尝试与经典的 “fs” 编译炸弹按照常规的前端模块化思维，我们首先会通过 Bun 安装依赖：
-bun add @rdkit/rdkit
-
-然后在一个标准的 Client Component 中尝试动态加载：
-// 尝试通过全局或动态 import 载入import initRDKitModule from &quot;@rdkit/rdkit&quot;;
-
-然而，一旦启动开发服务器，Next.js 16 会直接抛出无法编译的红屏错误:
-Module not found: Can&#x27;t resolve &#x27;fs&#x27;./node_modules/@rdkit/rdkit/dist/RDKit_minimal.js (7:655)&gt; 7 | ...if(ENVIRONMENT_IS_NODE)&#123;var fs=require(&quot;fs&quot;);...    |                                 ^^^^^^^^^^^^^
-
-为什么会报错？RDKit.js 的底层胶水代码（由 Emscripten 编译生成）为了同时兼容 Node.js 和浏览器环境，其混淆代码中包含了 if(ENVIRONMENT_IS_NODE)&#123; var fs = require(&quot;fs&quot;); &#125; 这样的环境判别逻辑。
-虽然我们在代码中可能加了 typeof window !== &#39;undefined&#39; 的运行时拦截，但 Next.js 16 默认的 Turbopack 编译器在静态编译打包阶段是非常死板的。只要它在扫描依赖树时看到了 require(&quot;fs&quot;)，就会固执地尝试在浏览器捆绑包里去打包 Node.js 的原生 fs（文件系统）模块。由于浏览器端根本没有文件系统，编译直接宣告崩溃。
-为什么不能走 SSR 或 Server Action？有人会想，既然浏览器端打包卡住，那把 RDKit 移到服务端运行，通过 SSR 或 Server Action 渲染好再返回不行吗？这条路同样是死胡同：
-
-缺乏 Canvas 环境：RDKit 渲染的核心方法（如 draw_to_canvas_with_highlights）需要接收一个真实的 HTMLCanvasElement 节点，利用浏览器的渲染上下文画图。服务端压根没有 DOM 和 Canvas 实例。
-打字交互的网络雪崩：用户在输入框手敲 SMILES 时是逐字输入的。如果每次按键都触发一次 Server Action 请求去服务端开辟 Wasm 内存、解析并返回，网络延迟会造成极其严重的卡顿和闪烁。分子结构的解析与预览必须留在客户端本地，实现零延迟响应。
-
-二、 破局思维：静态映射与全局单例既然不能通过常规的 Bundler 编译流去 import 它，我们就必须让编译器“闭眼”——将 RDKit 相关的 Wasm 和 JS 胶水代码作为纯静态资产对待，避开 Turbopack 的依赖扫描，利用浏览器的 window 对象进行纯客户端外挂加载。
-1. 自动化构建：利用 postinstall 自动映射我们不需要手动去复制物理文件。为了保证团队协作和 CI&#x2F;CD 自动构建时资源不丢失，我们可以在 package.json 的 scripts 中配置一个 postinstall 钩子。这样每次 bun install 结束后，脚本会自动把需要的包文件同步到 Next.js 的 public 静态资源池中:
-&#123;  &quot;scripts&quot;: &#123;    &quot;postinstall&quot;: &quot;mkdir -p public/rdkit &amp;&amp; cp node_modules/@rdkit/rdkit/dist/RDKit_minimal.js public/rdkit/ &amp;&amp; cp node_modules/@rdkit/rdkit/dist/RDKit_minimal.wasm public/rdkit/&quot;  &#125;&#125;
-
-执行一次 bun run postinstall，文件就会安静地躺在 public&#x2F;rdkit&#x2F; 下，Turbopack 再也不会去扫描它们。
-三、 完美的 TypeScript 类型驯服术为了让这个“外挂”在全局 window 上的单例不报 TS 错误，我们需要在项目中补全它的类型声明。
-1. 补充全局声明：types&#x2F;rdkit.d.ts在项目根目录下创建类型定义，明确全局缓存和初始化函数的签名：
-// 假设你已经将官方提供的 RDKitModule 等基础接口存放于 definitions.d.ts 中import &#123; RDKitModule, RDKitLoader &#125; from &#x27;./definitions&#x27;;declare global &#123;  interface Window &#123;    // 静态脚本加载后，挂载在 window 上的全局初始化函数    initRDKitModule?: RDKitLoader;    // 用于在客户端浏览器生命周期内缓存实例，实现全局单例    _rdkitInstance?: RDKitModule;  &#125;&#125;
-
-四、 实战：编写实时渲染组件接下来，我们利用 Next.js 16 原生的 next&#x2F;script 组件异步加载静态资源，并在组件中处理好高频打字时的内存释放。
-// components/molecule-preview.tsx&#x27;use client&#x27;;import React, &#123; useEffect, useRef, useState &#125; from &#x27;react&#x27;;import Script from &#x27;next/script&#x27;;import type &#123; RDKitModule, JSMol &#125; from &#x27;../types/definitions&#x27;;interface MoleculePreviewProps &#123;  smiles: string;  width?: number;  height?: number;&#125;export const MoleculePreview: React.FC&lt;MoleculePreviewProps&gt; = (&#123;  smiles,  width = 240,  height = 180,&#125;) =&gt; &#123;  const canvasRef = useRef&lt;HTMLCanvasElement | null&gt;(null);  const [rdkit, setRdkit] = useState&lt;RDKitModule | null&gt;(null);  const [error, setError] = useState&lt;string | null&gt;(null);  const [isScriptLoaded, setIsScriptLoaded] = useState(false);  // 1. 静态脚本加载完毕后的初始化逻辑（全局单例模式）  const handleRDKitLoad = async () =&gt; &#123;    setIsScriptLoaded(true);    if (typeof window === &#x27;undefined&#x27; || !window.initRDKitModule) return;    // 命中缓存，直接复用    if (window._rdkitInstance) &#123;      setRdkit(window._rdkitInstance);      return;    &#125;    try &#123;      // 显式指定本地 public 下的 wasm 路径      const instance = await window.initRDKitModule(&#123;        locateFile: () =&gt; &#x27;/rdkit/RDKit_minimal.wasm&#x27;,      &#125;);      window._rdkitInstance = instance; // 写入全局缓存      setRdkit(instance);    &#125; catch (err) &#123;      console.error(&#x27;RDKit Wasm 初始化失败:&#x27;, err);      setError(&#x27;引擎初始化失败&#x27;);    &#125;  &#125;;  // 2. 监听 SMILES 输入变化，实时绘制 2D 图形  useEffect(() =&gt; &#123;    if (!rdkit || !canvasRef.current) return;    const canvas = canvasRef.current;    const ctx = canvas.getContext(&#x27;2d&#x27;);    // 输入为空时清空画布    if (!smiles.trim()) &#123;      ctx?.clearRect(0, 0, width, height);      setError(null);      return;    &#125;    let mol: JSMol | null = null;    try &#123;      mol = rdkit.get_mol(smiles);      if (mol &amp;&amp; mol.is_valid()) &#123;        setError(null);        ctx?.clearRect(0, 0, width, height);                // 执行 2D 绘图        mol.draw_to_canvas_with_highlights(          canvas,          JSON.stringify(&#123; width, height, bondLineWidth: 1.8 &#125;)        );      &#125; else &#123;        setError(&#x27;无效的 SMILES 语法&#x27;);      &#125;    &#125; catch (err) &#123;      // 捕获用户打字过程中，括号未闭合等临时的非法中间状态      setError(&#x27;结构解析中...&#x27;);    &#125; finally &#123;      // 【极度重要】：WebAssembly 的 C++ 堆内存无法被 JS 的垃圾回收(GC)自动清理。      // 必须在 finally 块中显式调用 delete()，否则高频打字时会导致浏览器内存泄漏甚至卡死。      if (mol) &#123;        mol.delete();      &#125;    &#125;  &#125;, [rdkit, smiles, width, height]);  return (    &lt;&gt;      &#123;/* 载入本地 public 目录下的静态胶水代码 */&#125;      &lt;Script        src=&quot;/rdkit/RDKit_minimal.js&quot;        strategy=&quot;afterInteractive&quot;        onLoad=&#123;handleRDKitLoad&#125;        onError=&#123;() =&gt; setError(&#x27;化学脚本加载失败&#x27;)&#125;      /&gt;      &lt;div className=&quot;relative border border-slate-200 bg-white rounded-lg flex items-center justify-center min-h-[180px] p-2&quot;&gt;        &lt;canvas          ref=&#123;canvasRef&#125;          width=&#123;width&#125;          height=&#123;height&#125;          className=&#123;error ? &#x27;opacity-20 grayscale&#x27; : &#x27;opacity-100 transition-opacity&#x27;&#125;        /&gt;        &#123;/* 状态提示 */&#125;        &#123;!rdkit &amp;&amp; !error &amp;&amp; (          &lt;span className=&quot;absolute text-xs text-slate-400 animate-pulse&quot;&gt;            &#123;!isScriptLoaded ? &#x27;正在加载本地脚本...&#x27; : &#x27;正在初始化本地 Wasm...&#x27;&#125;          &lt;/span&gt;        )&#125;        &#123;error &amp;&amp; (          &lt;span className=&quot;absolute bottom-2 text-xs text-red-600 bg-red-50 px-2 py-0.5 rounded border border-red-100&quot;&gt;            &#123;error&#125;          &lt;/span&gt;        )&#125;      &lt;/div&gt;    &lt;/&gt;  );&#125;;
-
-总结针对 RDKit.js 这种横跨 Node 和浏览器端的重型 WebAssembly 库，在 Next.js 16 体系下，一味地去死磕 Bundler 的编译 fallback 配置往往事倍功半。
-通过本次实践我们发现，采用“构建期利用 postinstall 剥离静态文件 $\rightarrow$ 运行时利用 next&#x2F;script 绕过 Turbopack 扫描 $\rightarrow$ 全局 window 实现单例懒加载”的曲线救国路线，反而带来了更多的工程优势：
-
-彻底离线化：完全脱离远端 CDN 的网络依赖，适合内网或实验室环境部署。
-绝对稳定：锁定了本地 node_modules 的版本，避免生产环境发生非预期升级。
-首屏编译无感：静态资产零加工，完美保留了 Next.js 16 的极致开发启动速度。
-
-]]></content>
-      <categories>
-        <category>前端</category>
-      </categories>
-      <tags>
-        <tag>nexjts</tag>
-        <tag>rdkitjs</tag>
-        <tag>smiles</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>Next.js + Supabase 实现完美的重置密码工作流（含 React Email 与 Resend SMTP 配置）</title>
     <url>/2026/01/18/front-end/nextjs-supabase-password-reset-workflow/</url>
     <content><![CDATA[前言在现代 Web 开发中，身份验证（Auth）是一个核心环节。Supabase 提供了强大的 Auth 服务，但如何将其完美集成到 Next.js (App Router) 中，并使用 React Email 自定义精美的邮件模板？本文将带你走通整个流程。
@@ -2978,6 +2927,57 @@ Resend 发送失败？ 确保你的发件域名在 Resend 后台已通过 DNS �
       </tags>
   </entry>
   <entry>
+    <title>在 Next.js 16 (Turbopack) 中集成 RDKit.js 渲染 SMILES 的工程实践与踩坑指南</title>
+    <url>/2026/06/16/front-end/nextjs16-rdkitjs-smiles/</url>
+    <content><![CDATA[在 Next.js 16 (Turbopack) 中集成 RDKit.js 渲染 SMILES 的工程实践与踩坑指南前言在生物制药数字化（AIDD、LIMS 等系统）的前端开发中，SMILES（简化分子线性输入规范）是表示分子结构最常用的文本格式。为了在前端实现“输入文本，实时预览 2D 分子结构”，我们需要引入化学信息学界的工业级开源工具包：RDKit.js。
+由于 RDKit.js 底层依赖重型的 WebAssembly (Wasm) 编译产物，当它遇到 Next.js 16 默认的 Turbopack 构建流以及 SSR（服务端预渲染） 架构时，会引发一系列经典的打包与运行时崩溃。
+本文将完整记录基于 Next.js 16 + Bun + TypeScript 栈集成 RDKit.js 的踩坑心路历程，并分享最终的离线化解决方案。
+一、 初次尝试与经典的 “fs” 编译炸弹按照常规的前端模块化思维，我们首先会通过 Bun 安装依赖：
+bun add @rdkit/rdkit
+
+然后在一个标准的 Client Component 中尝试动态加载：
+// 尝试通过全局或动态 import 载入import initRDKitModule from &quot;@rdkit/rdkit&quot;;
+
+然而，一旦启动开发服务器，Next.js 16 会直接抛出无法编译的红屏错误:
+Module not found: Can&#x27;t resolve &#x27;fs&#x27;./node_modules/@rdkit/rdkit/dist/RDKit_minimal.js (7:655)&gt; 7 | ...if(ENVIRONMENT_IS_NODE)&#123;var fs=require(&quot;fs&quot;);...    |                                 ^^^^^^^^^^^^^
+
+为什么会报错？RDKit.js 的底层胶水代码（由 Emscripten 编译生成）为了同时兼容 Node.js 和浏览器环境，其混淆代码中包含了 if(ENVIRONMENT_IS_NODE)&#123; var fs = require(&quot;fs&quot;); &#125; 这样的环境判别逻辑。
+虽然我们在代码中可能加了 typeof window !== &#39;undefined&#39; 的运行时拦截，但 Next.js 16 默认的 Turbopack 编译器在静态编译打包阶段是非常死板的。只要它在扫描依赖树时看到了 require(&quot;fs&quot;)，就会固执地尝试在浏览器捆绑包里去打包 Node.js 的原生 fs（文件系统）模块。由于浏览器端根本没有文件系统，编译直接宣告崩溃。
+为什么不能走 SSR 或 Server Action？有人会想，既然浏览器端打包卡住，那把 RDKit 移到服务端运行，通过 SSR 或 Server Action 渲染好再返回不行吗？这条路同样是死胡同：
+
+缺乏 Canvas 环境：RDKit 渲染的核心方法（如 draw_to_canvas_with_highlights）需要接收一个真实的 HTMLCanvasElement 节点，利用浏览器的渲染上下文画图。服务端压根没有 DOM 和 Canvas 实例。
+打字交互的网络雪崩：用户在输入框手敲 SMILES 时是逐字输入的。如果每次按键都触发一次 Server Action 请求去服务端开辟 Wasm 内存、解析并返回，网络延迟会造成极其严重的卡顿和闪烁。分子结构的解析与预览必须留在客户端本地，实现零延迟响应。
+
+二、 破局思维：静态映射与全局单例既然不能通过常规的 Bundler 编译流去 import 它，我们就必须让编译器“闭眼”——将 RDKit 相关的 Wasm 和 JS 胶水代码作为纯静态资产对待，避开 Turbopack 的依赖扫描，利用浏览器的 window 对象进行纯客户端外挂加载。
+1. 自动化构建：利用 postinstall 自动映射我们不需要手动去复制物理文件。为了保证团队协作和 CI&#x2F;CD 自动构建时资源不丢失，我们可以在 package.json 的 scripts 中配置一个 postinstall 钩子。这样每次 bun install 结束后，脚本会自动把需要的包文件同步到 Next.js 的 public 静态资源池中:
+&#123;  &quot;scripts&quot;: &#123;    &quot;postinstall&quot;: &quot;mkdir -p public/rdkit &amp;&amp; cp node_modules/@rdkit/rdkit/dist/RDKit_minimal.js public/rdkit/ &amp;&amp; cp node_modules/@rdkit/rdkit/dist/RDKit_minimal.wasm public/rdkit/&quot;  &#125;&#125;
+
+执行一次 bun run postinstall，文件就会安静地躺在 public&#x2F;rdkit&#x2F; 下，Turbopack 再也不会去扫描它们。
+三、 完美的 TypeScript 类型驯服术为了让这个“外挂”在全局 window 上的单例不报 TS 错误，我们需要在项目中补全它的类型声明。
+1. 补充全局声明：types&#x2F;rdkit.d.ts在项目根目录下创建类型定义，明确全局缓存和初始化函数的签名：
+// 假设你已经将官方提供的 RDKitModule 等基础接口存放于 definitions.d.ts 中import &#123; RDKitModule, RDKitLoader &#125; from &#x27;./definitions&#x27;;declare global &#123;  interface Window &#123;    // 静态脚本加载后，挂载在 window 上的全局初始化函数    initRDKitModule?: RDKitLoader;    // 用于在客户端浏览器生命周期内缓存实例，实现全局单例    _rdkitInstance?: RDKitModule;  &#125;&#125;
+
+四、 实战：编写实时渲染组件接下来，我们利用 Next.js 16 原生的 next&#x2F;script 组件异步加载静态资源，并在组件中处理好高频打字时的内存释放。
+// components/molecule-preview.tsx&#x27;use client&#x27;;import React, &#123; useEffect, useRef, useState &#125; from &#x27;react&#x27;;import Script from &#x27;next/script&#x27;;import type &#123; RDKitModule, JSMol &#125; from &#x27;../types/definitions&#x27;;interface MoleculePreviewProps &#123;  smiles: string;  width?: number;  height?: number;&#125;export const MoleculePreview: React.FC&lt;MoleculePreviewProps&gt; = (&#123;  smiles,  width = 240,  height = 180,&#125;) =&gt; &#123;  const canvasRef = useRef&lt;HTMLCanvasElement | null&gt;(null);  const [rdkit, setRdkit] = useState&lt;RDKitModule | null&gt;(null);  const [error, setError] = useState&lt;string | null&gt;(null);  const [isScriptLoaded, setIsScriptLoaded] = useState(false);  // 1. 静态脚本加载完毕后的初始化逻辑（全局单例模式）  const handleRDKitLoad = async () =&gt; &#123;    setIsScriptLoaded(true);    if (typeof window === &#x27;undefined&#x27; || !window.initRDKitModule) return;    // 命中缓存，直接复用    if (window._rdkitInstance) &#123;      setRdkit(window._rdkitInstance);      return;    &#125;    try &#123;      // 显式指定本地 public 下的 wasm 路径      const instance = await window.initRDKitModule(&#123;        locateFile: () =&gt; &#x27;/rdkit/RDKit_minimal.wasm&#x27;,      &#125;);      window._rdkitInstance = instance; // 写入全局缓存      setRdkit(instance);    &#125; catch (err) &#123;      console.error(&#x27;RDKit Wasm 初始化失败:&#x27;, err);      setError(&#x27;引擎初始化失败&#x27;);    &#125;  &#125;;  // 2. 监听 SMILES 输入变化，实时绘制 2D 图形  useEffect(() =&gt; &#123;    if (!rdkit || !canvasRef.current) return;    const canvas = canvasRef.current;    const ctx = canvas.getContext(&#x27;2d&#x27;);    // 输入为空时清空画布    if (!smiles.trim()) &#123;      ctx?.clearRect(0, 0, width, height);      setError(null);      return;    &#125;    let mol: JSMol | null = null;    try &#123;      mol = rdkit.get_mol(smiles);      if (mol &amp;&amp; mol.is_valid()) &#123;        setError(null);        ctx?.clearRect(0, 0, width, height);                // 执行 2D 绘图        mol.draw_to_canvas_with_highlights(          canvas,          JSON.stringify(&#123; width, height, bondLineWidth: 1.8 &#125;)        );      &#125; else &#123;        setError(&#x27;无效的 SMILES 语法&#x27;);      &#125;    &#125; catch (err) &#123;      // 捕获用户打字过程中，括号未闭合等临时的非法中间状态      setError(&#x27;结构解析中...&#x27;);    &#125; finally &#123;      // 【极度重要】：WebAssembly 的 C++ 堆内存无法被 JS 的垃圾回收(GC)自动清理。      // 必须在 finally 块中显式调用 delete()，否则高频打字时会导致浏览器内存泄漏甚至卡死。      if (mol) &#123;        mol.delete();      &#125;    &#125;  &#125;, [rdkit, smiles, width, height]);  return (    &lt;&gt;      &#123;/* 载入本地 public 目录下的静态胶水代码 */&#125;      &lt;Script        src=&quot;/rdkit/RDKit_minimal.js&quot;        strategy=&quot;afterInteractive&quot;        onLoad=&#123;handleRDKitLoad&#125;        onError=&#123;() =&gt; setError(&#x27;化学脚本加载失败&#x27;)&#125;      /&gt;      &lt;div className=&quot;relative border border-slate-200 bg-white rounded-lg flex items-center justify-center min-h-[180px] p-2&quot;&gt;        &lt;canvas          ref=&#123;canvasRef&#125;          width=&#123;width&#125;          height=&#123;height&#125;          className=&#123;error ? &#x27;opacity-20 grayscale&#x27; : &#x27;opacity-100 transition-opacity&#x27;&#125;        /&gt;        &#123;/* 状态提示 */&#125;        &#123;!rdkit &amp;&amp; !error &amp;&amp; (          &lt;span className=&quot;absolute text-xs text-slate-400 animate-pulse&quot;&gt;            &#123;!isScriptLoaded ? &#x27;正在加载本地脚本...&#x27; : &#x27;正在初始化本地 Wasm...&#x27;&#125;          &lt;/span&gt;        )&#125;        &#123;error &amp;&amp; (          &lt;span className=&quot;absolute bottom-2 text-xs text-red-600 bg-red-50 px-2 py-0.5 rounded border border-red-100&quot;&gt;            &#123;error&#125;          &lt;/span&gt;        )&#125;      &lt;/div&gt;    &lt;/&gt;  );&#125;;
+
+总结针对 RDKit.js 这种横跨 Node 和浏览器端的重型 WebAssembly 库，在 Next.js 16 体系下，一味地去死磕 Bundler 的编译 fallback 配置往往事倍功半。
+通过本次实践我们发现，采用“构建期利用 postinstall 剥离静态文件 $\rightarrow$ 运行时利用 next&#x2F;script 绕过 Turbopack 扫描 $\rightarrow$ 全局 window 实现单例懒加载”的曲线救国路线，反而带来了更多的工程优势：
+
+彻底离线化：完全脱离远端 CDN 的网络依赖，适合内网或实验室环境部署。
+绝对稳定：锁定了本地 node_modules 的版本，避免生产环境发生非预期升级。
+首屏编译无感：静态资产零加工，完美保留了 Next.js 16 的极致开发启动速度。
+
+]]></content>
+      <categories>
+        <category>前端</category>
+      </categories>
+      <tags>
+        <tag>nexjts</tag>
+        <tag>rdkitjs</tag>
+        <tag>smiles</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>Nodejs项目的Dockerfile模版</title>
     <url>/2021/10/20/front-end/node-docker-template/</url>
     <content><![CDATA[Nodejs项目的Dockerfile模版基于YarnFROM node:14.17.6-alpine3.14 as build# 取消对https的证书限制# ENV SELF_SIGNED_CERT_IN_CHAIN=true# ENV NODE_TLS_REJECT_UNAUTHORIZED=0# RUN npm config set strict-ssl false# RUN yarn config set strict-ssl falseRUN apk update &amp;&amp; apk add bashCOPY package.json yarn.lock .npmrc /tmp/RUN cd /tmp &amp;&amp; yarn install --frozen-lockfile --non-interactiveRUN mkdir -p /app &amp;&amp; cp -a /tmp/node_modules /app/WORKDIR /appCOPY . /appRUN yarn buildFROM build AS ciWORKDIR /appRUN yarn run test:ci &amp;&amp; yarn install --frozen-lockfile --non-interactive --productionFROM node:14.17.6-alpine3.14 as releaseRUN mkdir -p /app &amp;&amp; \	addgroup -S daminggroup &amp;&amp; \	adduser -S -h /app -G daminggroup daminguser &amp;&amp; \	chown -R daminguser:daminggroup /appWORKDIR /appCOPY --from=ci --chown=daminguser:daminggroup /app/dist ./distCOPY --from=ci --chown=daminguser:daminggroup /app/node_modules ./node_modulesCOPY --from=ci --chown=daminguser:daminggroup /app/package.json .HEALTHCHECK --interval=30s --timeout=30s CMD curl -f http://localhost:3978/ping || exit 1EXPOSE 3978CMD [&quot;sh&quot;, &quot;-c&quot;, &quot;node dist/index.js&quot;]
@@ -2989,32 +2989,6 @@ Resend 发送失败？ 确保你的发件域名在 Resend 后台已通过 DNS �
       <tags>
         <tag>docker</tag>
         <tag>nodejs</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>Performance Fix for Stripe.js Script Loading</title>
-    <url>/2025/11/16/front-end/performance-fix-for-stripejs-scripts-loading/</url>
-    <content><![CDATA[Technical SummaryThis summary details a refactoring effort aimed at preventing the premature loading of the Stripe payment script, a common cause of degraded initial page load performance in applications that integrate third-party libraries.
-The ObjectiveThe primary goal was to ensure that the core Stripe JavaScript file (e.g., https://m.stripe.com/6 or https://js.stripe.com/v3/) is only requested and downloaded when a user actually enters a payment-required context, facilitating true lazy loading.
-The Problem: Immediate Execution on Module ImportIn the original code structure, the Stripe initialization was handled in a shared service file as follows:
-// src/shared/service/stripe.ts (Old Code)import &#123; loadStripe &#125; from &#x27;@stripe/stripe-js&#x27;;// The issue lies here: loadStripe is executed immediately in the top-level scope.export const stripePromise = loadStripe(    import.meta.env.VITE_STRIPE_PRIVATE_API_KEY).then(stripe =&gt; &#123;    // ...    return stripe;&#125;);
-
-Because the expression loadStripe(...) was immediately executed and its resulting Promise was exported (export const stripePromise = ...), any component that imported this file—even if it was a component on a non-payment page—would trigger the synchronous execution of this module. This instantly called loadStripe(), initiating the network request for the Stripe script, regardless of the component’s render state.
-The Solution: Wrapping Initialization in an Exported FunctionThe fix involved decoupling the loadStripe call from the module’s initial execution flow by wrapping it inside an exported function, getStripePromise().
-1. Refactoring the Stripe Service FileThe stripe.ts file was changed to export a function instead of an eagerly evaluated Promise:
-// src/shared/service/stripe.ts (New Code)import &#123; loadStripe &#125; from &#x27;@stripe/stripe-js&#x27;;export const getStripePromise = () =&gt; &#123;    console.warn(&#x27;Stripe load function called.&#x27;);    return loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY).then(stripe =&gt; &#123;        console.warn(&#x27;Stripe script downloaded and loaded.&#x27;);        return stripe;    &#125;);&#125;;// The immediate export of the promise was removed:// //export const stripePromise = getStripePromise(); 
-
-2. Local Initialization in Consumer ComponentsThe components that utilize the Stripe context (e.g., paymentMethod/index.tsx, setupChecker/index.tsx) were updated to call this function locally within their own module scope:
-// src/components/stripe/paymentMethod/index.tsx (New Code)import &#123; getStripePromise &#125; from &#x27;@/shared/service/stripe&#x27;;// The promise is now initialized here, within the specific payment module.const stripePromise = getStripePromise(); // This module is expected to be loaded via React.lazy() in a parent component.
-
-ConclusionThis refactoring successfully shifts the responsibility for initiating the Stripe script download from the application’s core bundle to the specific, smaller JavaScript chunk of the payment module. By ensuring the loadStripe() function is only executed when the payment component is mounted and its module is finally loaded (typically via a React.lazy trigger), we eliminate unnecessary network requests on initial page loads, contributing to a better user experience and improved performance metrics.
-]]></content>
-      <categories>
-        <category>前端</category>
-      </categories>
-      <tags>
-        <tag>react</tag>
-        <tag>stripe</tag>
       </tags>
   </entry>
   <entry>
@@ -3201,6 +3175,32 @@ exports只是module.exports的引用，主要用于辅助导出属性或方法�
       </tags>
   </entry>
   <entry>
+    <title>Performance Fix for Stripe.js Script Loading</title>
+    <url>/2025/11/16/front-end/performance-fix-for-stripejs-scripts-loading/</url>
+    <content><![CDATA[Technical SummaryThis summary details a refactoring effort aimed at preventing the premature loading of the Stripe payment script, a common cause of degraded initial page load performance in applications that integrate third-party libraries.
+The ObjectiveThe primary goal was to ensure that the core Stripe JavaScript file (e.g., https://m.stripe.com/6 or https://js.stripe.com/v3/) is only requested and downloaded when a user actually enters a payment-required context, facilitating true lazy loading.
+The Problem: Immediate Execution on Module ImportIn the original code structure, the Stripe initialization was handled in a shared service file as follows:
+// src/shared/service/stripe.ts (Old Code)import &#123; loadStripe &#125; from &#x27;@stripe/stripe-js&#x27;;// The issue lies here: loadStripe is executed immediately in the top-level scope.export const stripePromise = loadStripe(    import.meta.env.VITE_STRIPE_PRIVATE_API_KEY).then(stripe =&gt; &#123;    // ...    return stripe;&#125;);
+
+Because the expression loadStripe(...) was immediately executed and its resulting Promise was exported (export const stripePromise = ...), any component that imported this file—even if it was a component on a non-payment page—would trigger the synchronous execution of this module. This instantly called loadStripe(), initiating the network request for the Stripe script, regardless of the component’s render state.
+The Solution: Wrapping Initialization in an Exported FunctionThe fix involved decoupling the loadStripe call from the module’s initial execution flow by wrapping it inside an exported function, getStripePromise().
+1. Refactoring the Stripe Service FileThe stripe.ts file was changed to export a function instead of an eagerly evaluated Promise:
+// src/shared/service/stripe.ts (New Code)import &#123; loadStripe &#125; from &#x27;@stripe/stripe-js&#x27;;export const getStripePromise = () =&gt; &#123;    console.warn(&#x27;Stripe load function called.&#x27;);    return loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY).then(stripe =&gt; &#123;        console.warn(&#x27;Stripe script downloaded and loaded.&#x27;);        return stripe;    &#125;);&#125;;// The immediate export of the promise was removed:// //export const stripePromise = getStripePromise(); 
+
+2. Local Initialization in Consumer ComponentsThe components that utilize the Stripe context (e.g., paymentMethod/index.tsx, setupChecker/index.tsx) were updated to call this function locally within their own module scope:
+// src/components/stripe/paymentMethod/index.tsx (New Code)import &#123; getStripePromise &#125; from &#x27;@/shared/service/stripe&#x27;;// The promise is now initialized here, within the specific payment module.const stripePromise = getStripePromise(); // This module is expected to be loaded via React.lazy() in a parent component.
+
+ConclusionThis refactoring successfully shifts the responsibility for initiating the Stripe script download from the application’s core bundle to the specific, smaller JavaScript chunk of the payment module. By ensuring the loadStripe() function is only executed when the payment component is mounted and its module is finally loaded (typically via a React.lazy trigger), we eliminate unnecessary network requests on initial page loads, contributing to a better user experience and improved performance metrics.
+]]></content>
+      <categories>
+        <category>前端</category>
+      </categories>
+      <tags>
+        <tag>react</tag>
+        <tag>stripe</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>基于 Microsoft Graph API 与 React Email 构建现代化邮件发送系统</title>
     <url>/2025/12/27/front-end/react-email-ms-graph-nodemailer/</url>
     <content><![CDATA[背景在传统的 Node.js 服务端开发中，使用 Nodemailer 配合 SMTP 协议是发送邮件的标准做法。然而，随着安全标准的提升，微软已宣布将在 2026 年彻底停止 Outlook&#x2F;Microsoft 365 对 SMTP 基础身份验证（Basic Auth）的支持。
@@ -3302,6 +3302,40 @@ const navigate = useNavigate(); navigate(...)
       </tags>
   </entry>
   <entry>
+    <title>TypeScript中可选链</title>
+    <url>/2021/07/03/front-end/ts-optional-chaining/</url>
+    <content><![CDATA[TypeScript中可选链什么是可选链TypeScript 3.7中一个最引人关注的特性便是可选链(Optional Chaining)。
+所谓可选链，就是当我们试图使用访问对象的字段或者方法时，如果对象为null或者undefined，TypeScript将会自动停止运行的代码，以防止空指针异常。
+可选链的使用首先定义一个接口 A, 有一个字段b，b可能是字符串，也可能是null:
+interface A &#123;    b: string | null&#125;
+
+定义一个变量a:
+const a = &#123;    b: &#x27;c&#x27;&#125;
+
+使用?.来访问字段:
+console.log(a?.b)
+
+如果a为null或者undefined, 将输出undefined
+TypeScript做了什么可选链并不是ts的专利，在js就已经存在了，除了ie,其他现代浏览器最新版本都是支持了，但是一些老版本就不支持，因此ts没有使用js的语法，而是通过三元表达式? :转译。因此上面的代码将会转译成:
+console.log(a === null || a === void 0 ? void 0 : a.b);
+
+但是ts没有判断a是否是undefined, 而是因为在js中， undefined不仅是值，也可能是一个全局变量。直到es5之前，undefined是可以被修改的。我们可以通过下面的代码来修改:
+(function() &#123;  var undefined = 1  console.log(undefined) // 1&#125;)()
+
+参考
+深入理解 TypeScript(可选链（Optional Chaining）)
+JS: The difference between “undefined”, “null” and “void 0”
+可选链操作符
+
+]]></content>
+      <categories>
+        <category>前端</category>
+      </categories>
+      <tags>
+        <tag>typeScript</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>Angular和React构建体积简单对比</title>
     <url>/2021/02/03/front-end/simple-comparison-of-angular-and-react-build-size/</url>
     <content><![CDATA[Angular和React构建体积简单对比前言Angular是我主要使用的前端框架， 和React是我最近正在学习的前端框架。今天我想对比一下在各自默认的情况下，两者打包体积的对比。
@@ -3364,40 +3398,6 @@ main.8c8b27cf.chunk大小为804B。
       <tags>
         <tag>angular</tag>
         <tag>react</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>TypeScript中可选链</title>
-    <url>/2021/07/03/front-end/ts-optional-chaining/</url>
-    <content><![CDATA[TypeScript中可选链什么是可选链TypeScript 3.7中一个最引人关注的特性便是可选链(Optional Chaining)。
-所谓可选链，就是当我们试图使用访问对象的字段或者方法时，如果对象为null或者undefined，TypeScript将会自动停止运行的代码，以防止空指针异常。
-可选链的使用首先定义一个接口 A, 有一个字段b，b可能是字符串，也可能是null:
-interface A &#123;    b: string | null&#125;
-
-定义一个变量a:
-const a = &#123;    b: &#x27;c&#x27;&#125;
-
-使用?.来访问字段:
-console.log(a?.b)
-
-如果a为null或者undefined, 将输出undefined
-TypeScript做了什么可选链并不是ts的专利，在js就已经存在了，除了ie,其他现代浏览器最新版本都是支持了，但是一些老版本就不支持，因此ts没有使用js的语法，而是通过三元表达式? :转译。因此上面的代码将会转译成:
-console.log(a === null || a === void 0 ? void 0 : a.b);
-
-但是ts没有判断a是否是undefined, 而是因为在js中， undefined不仅是值，也可能是一个全局变量。直到es5之前，undefined是可以被修改的。我们可以通过下面的代码来修改:
-(function() &#123;  var undefined = 1  console.log(undefined) // 1&#125;)()
-
-参考
-深入理解 TypeScript(可选链（Optional Chaining）)
-JS: The difference between “undefined”, “null” and “void 0”
-可选链操作符
-
-]]></content>
-      <categories>
-        <category>前端</category>
-      </categories>
-      <tags>
-        <tag>typeScript</tag>
       </tags>
   </entry>
   <entry>
@@ -3719,160 +3719,6 @@ NXDOMAIN 错误：因为是内网域名，公共 DNS 无法解析。解决办法
         <tag>gitea</tag>
         <tag>helm</tag>
         <tag>Kubernetes</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>在 Minikube 上部署 Rancher：避坑指南与实战教程</title>
-    <url>/2026/01/20/software/deploy-rancher-on-minikube-guide/</url>
-    <content><![CDATA[前言在本地环境（如 Minikube）部署 Rancher 时，最常见的两个问题是资源分配不足和证书签发卡死。本文将记录如何通过宿主机 IP（192.168.31.133）和固定 NodePort（30081）成功搭建 Rancher。
-一、 环境准备
-宿主机 IP: 192.168.31.133
-目标访问端口: 30081
-
-1. 启动 Minikube (关键参数)在 Docker 驱动下，Minikube 运行在容器内。为了让宿主机能直接访问 NodePort，必须在启动时通过 --ports 参数建立隧道映射。
-# 建议先清理旧环境minikube delete# 启动并映射 30081 端口，分配至少 8GB 内存（Rancher 较重，建议给足）minikube start --cpus 4 --memory 8192 --driver=docker --ports=30081:30081
-
-2. 安装 Helmcurl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
-
-
-二、 部署 cert-manager (证书基础)Rancher 依赖 cert-manager 来处理 SSL 证书。请确保组件完全运行后再进行下一步。
-helm repo add jetstack https://charts.jetstack.iohelm repo update# 安装 CRDskubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.13.0/cert-manager.crds.yaml# 安装组件helm install cert-manager jetstack/cert-manager \  --namespace cert-manager \  --create-namespace \  --version v1.13.0
-
-三、 安装 Rancher 与 sslip.io 的秘密1. 执行安装命令helm repo add rancher-stable https://releases.rancher.com/server-charts/stablehelm repo updatehelm install rancher rancher-stable/rancher \  --namespace cattle-system \  --create-namespace \  --set hostname=rancher.192.168.31.133.sslip.io \  --set bootstrapPassword=admin \  --set service.type=NodePort
-
-2. 深度解析：为什么用 sslip.io？在命令中我们设置了 hostname=rancher.192.168.31.133.sslip.io。
-
-为什么填它？ Rancher 强制要求一个域名来生成证书和配置内部路由。sslip.io 是一个免费服务，它会自动将 192.168.31.133.sslip.io 解析到你的宿主机 IP。
-为什么实际没用到？ 虽然证书是发给这个域名的，但我们通过 NodePort 直接访问 IP 也能打开页面。不过，强烈建议保留此设置，因为后续 Rancher 纳管其他集群时，会使用这个域名生成注册 URL。
-
-四、 性能优化与网络微调 (避坑核心)1. 缩减副本数：解决启动卡死Rancher 默认启动 3 个副本，在单机 Minikube 上会造成严重的资源竞争，导致 Pod 长期处于 0/1 Ready。初始化时请务必缩减为 1 个：
-kubectl scale deploy rancher -n cattle-system --replicas=1
-
-2. 固定 NodePort 端口默认端口是随机的，我们需要手动将其固定为映射好的 30081：
-kubectl patch svc rancher -n cattle-system -p &#x27;&#123;&quot;spec&quot;:&#123;&quot;ports&quot;:[&#123;&quot;port&quot;:443,&quot;targetPort&quot;:443,&quot;nodePort&quot;:30081,&quot;name&quot;:&quot;https-internal&quot;&#125;]&#125;&#125;&#x27;
-
-五、 状态排查运行 kubectl get certificate -n cattle-system。如果 READY 为 True，说明证书签发成功。此时只需静候 2 分钟，Pod 就会变为 1/1 Ready。
-附录：Rancher 健康检查脚本为了方便大家快速定位部署问题，可以保存以下脚本 check_rancher.sh：
-#!/bin/bashecho &quot;===== 1. 检查 Cert-Manager 状态 =====&quot;kubectl get pods -n cert-managerecho -e &quot;\n===== 2. 检查证书签发状态 =====&quot;kubectl get certificate -n cattle-systemecho -e &quot;\n===== 3. 检查 Rancher Pod 运行状态 =====&quot;kubectl get pods -n cattle-system -l app=rancherecho -e &quot;\n===== 4. 检查服务端口映射 =====&quot;kubectl get svc -n cattle-system rancherecho -e &quot;\n===== 5. 获取初始登录密码 =====&quot;kubectl get secret --namespace cattle-system bootstrap-secret -o jsonpath=&#123;.data.bootstrapPassword&#125; | base64 --decode &amp;&amp; echo &quot;&quot;echo -e &quot;\n[提示] 请访问: https://192.168.31.133:30081&quot;
-
-使用方法：chmod +x check_rancher.sh &amp;&amp; ./check_rancher.sh
-
-博主结语：在 Minikube 上跑 Rancher 是一件很酷的事，但一定要给够内存并手动控制副本数。希望这篇教程能让你少走弯路！
-]]></content>
-      <categories>
-        <category>软件</category>
-      </categories>
-      <tags>
-        <tag>minikube</tag>
-        <tag>kubernetes</tag>
-        <tag>rancher</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>在内网 Kubernetes 集群上使用 Helm 安装 Rancher 并支持域名访问</title>
-    <url>/2025/08/17/software/deploying-rancher-via-helm-in-rrivate-kubernetes-with-custom-domain-configuration/</url>
-    <content><![CDATA[前言本指南将帮助您在 192.168.31.222 的内网服务器上，使用 Helm 安装 Rancher，并通过域名 rancher.damingerdaiinternal.com 访问。  
-1. 前提条件✅ 已部署 Kubernetes 集群（单节点或多节点均可）✅ 已安装 kubectl 和 Helm 3✅ 已配置 DNS 或 Hosts 解析（确保 rancher.damingerdaiinternal.com 指向 192.168.31.222）✅ 服务器开放 80 和 443 端口  
-2. 安装 cert-manager（用于证书管理）Rancher 依赖 cert-manager 管理 TLS 证书。
-2.1 安装 cert-manager CRDkubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.11.0/cert-manager.crds.yaml
-
-
-2.2 添加 Helm 仓库并安装 cert-managerhelm repo add jetstack https://charts.jetstack.iohelm repo updatehelm install cert-manager jetstack/cert-manager \  --namespace cert-manager \  --create-namespace \  --version v1.11.0
-
-2.3 验证 cert-manager 是否运行kubectl -n cert-manager get pods预期输出：NAME                                       READY   STATUS    RESTARTS   AGEcert-manager-7dd5554b4-abc12               1/1     Running   0          1mcert-manager-cainjector-64dc9f6bff-xyz45   1/1     Running   0          1mcert-manager-webhook-5f4d8b7b8d-pqr78      1/1     Running   0          1m
-
-3. 生成自签名证书（适用于内网）由于是内网环境，我们使用自签名证书。
-3.1 生成 CA 根证书openssl req -x509 -newkey rsa:4096 -sha256 -days 3650 -nodes \  -keyout ca.key -out ca.crt -subj &quot;/CN=damingerdaiinternal.com CA&quot;
-
-3.2 生成服务器证书openssl req -newkey rsa:4096 -sha256 -nodes \  -keyout tls.key -out tls.csr -subj &quot;/CN=rancher.damingerdaiinternal.com&quot;
-
-
-3.3 使用 CA 签名服务器证书openssl x509 -req -sha256 -days 3650 \  -in tls.csr -CA ca.crt -CAkey ca.key -CAcreateserial \  -out tls.crt -extfile &lt;(echo &quot;subjectAltName=DNS:rancher.damingerdaiinternal.com&quot;)
-
-4. 安装 Rancher4.1 创建命名空间kubectl create namespace cattle-system
-
-4.2 创建 Kubernetes Secret 存储证书kubectl -n cattle-system create secret tls tls-rancher-ingress \  --cert=tls.crt --key=tls.keykubectl -n cattle-system create secret generic tls-ca \  --from-file=ca.crt
-
-4.3 添加 Rancher Helm 仓库helm repo add rancher-stable https://releases.rancher.com/server-charts/stablehelm repo update
-
-4.4 使用 Helm 安装 Rancherhelm install rancher rancher-stable/rancher \  --namespace cattle-system \  --set hostname=rancher.damingerdaiinternal.com \  --set bootstrapPassword=admin \  --set ingress.tls.source=secret \  --set privateCA=true \  --set replicas=1
-
-输出：
-NAME: rancherLAST DEPLOYED: Sun Aug 17 14:37:32 2025NAMESPACE: cattle-systemSTATUS: deployedREVISION: 1TEST SUITE: NoneNOTES:Rancher Server has been installed.NOTE: Rancher may take several minutes to fully initialize. Please standby while Certificates are being issued, Containers are started and the Ingress rule comes up.Check out our docs at https://rancher.com/docs/If you provided your own bootstrap password during installation, browse to https://rancher.damingerdaiinternal.com to get started.If this is the first time you installed Rancher, get started by running this command and clicking the URL it generates: echo https://rancher.damingerdaiinternal.com/dashboard/?setup=$(kubectl get secret --namespace cattle-system bootstrap-secret -o go-template=&#x27;&#123;&#123;.data.bootstrapPassword|base64decode&#125;&#125;&#x27;) To get just the bootstrap password on its own, run: kubectl get secret --namespace cattle-system bootstrap-secret -o go-template=&#x27;&#123;&#123;.data.bootstrapPassword|base64decode&#125;&#125;&#123;&#123; &quot;\n&quot; &#125;&#125;&#x27;
-
-5. 配置 DNS &#x2F; Hosts 解析5.1 方案 A：内网 DNS 服务器在 DNS 服务器（如 Bind、Windows DNS）中添加：
-rancher.damingerdaiinternal.com. IN A 192.168.31.222
-
-5.2 方案 B：客户端 Hosts 文件在需要访问的电脑上修改 &#x2F;etc&#x2F;hosts（Linux&#x2F;macOS）或 C:\Windows\System32\drivers\etc\hosts（Windows）：
-192.168.31.222 rancher.damingerdaiinternal.com
-
-
-6. 验证安装6.1 检查 Rancher Pod 状态kubectl -n cattle-system get pods -l app=rancher预期输出：NAME                      READY   STATUS    RESTARTS   AGErancher-5d8f6c9b8-abc12   1/1     Running   0          2m
-
-6.2 查看 Ingress 配置kubectl -n cattle-system get ingress预期输出：NAME      HOSTS                              ADDRESS        PORTSrancher   rancher.damingerdaiinternal.com    192.168.31.222 80, 443
-
-
-6.3 访问 Rancher UI在浏览器打开：
-https://rancher.damingerdaiinternal.com
-• 首次登录：用户名 admin，密码 admin  
-• 证书警告：由于是自签名证书，浏览器会提示不安全，手动信任即可  
-7. 卸载 Rancherhelm uninstall rancher -n cattle-systemkubectl delete namespace cattle-systemkubectl delete -f https://github.com/cert-manager/cert-manager/releases/download/v1.11.0/cert-manager.crds.yaml
-
-8. 常见问题Q1: 访问时提示 “证书不受信任”✅ 解决方案：• Windows：双击 ca.crt 并安装到 “受信任的根证书颁发机构”  
-• Linux&#x2F;macOS：  sudo cp ca.crt &#x2F;usr&#x2F;local&#x2F;share&#x2F;ca-certificates&#x2F;  sudo update-ca-certificates
-Q2: Rancher Pod 无法启动✅ 检查日志：kubectl -n cattle-system logs -f deployment&#x2F;rancher
-✅ 检查资源是否足够（Rancher 至少需要 2GB 内存）：kubectl describe nodes
-Q3: 外网无法访问✅ 检查防火墙：sudo ufw allow 80&#x2F;tcpsudo ufw allow 443&#x2F;tcp
-✅ 如果是云服务器，检查安全组规则  
-总结✅ 已完成：• 使用 Helm 安装 Rancher  
-• 配置自签名证书  
-• 支持域名 rancher.damingerdaiinternal.com 访问  
-• 验证 HTTPS 安全性  
-现在，您可以通过 https://rancher.damingerdaiinternal.com 访问 Rancher 管理 Kubernetes 集群！ 🎉
-]]></content>
-      <categories>
-        <category>软件</category>
-      </categories>
-      <tags>
-        <tag>Kubernetes</tag>
-        <tag>Helm</tag>
-        <tag>Rancher</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>优雅实现 Git 多账号切换：基于 SSH Config 与 includeIf 的环境隔离方案</title>
-    <url>/2026/04/18/software/git-multi-account-setup-with-includeif/</url>
-    <content><![CDATA[优雅实现 Git 多账号切换：基于 SSH Config 与 includeIf 的环境隔离方案在日常开发中，我们经常需要在一台电脑上同时处理个人开源项目和公司业务项目。最核心的痛点有两个：
-
-SSH Key 冲突：GitHub 默认只识别一对密钥，多账号如何无感切换？
-提交身份混淆：如何在公司项目中自动使用公司邮箱，在个人项目中自动使用个人邮箱？
-
-本文分享一种“一次配置，永久生效”的自动化方案。
-1. 目录结构规划首先，建议按用途将项目存放在不同的父目录下，这是自动化切换的前提。
-Workspaces/├── personal/  # 存放个人项目└── company/   # 存放公司项目
-
-2. 生成独立的 SSH 密钥为每个账号生成专属的密钥对，不要覆盖默认的 id_ed25519。
-# 生成个人账号密钥ssh-keygen -t ed25519 -C &quot;personal@email.com&quot; -f ~/.ssh/id_ed25519_personal# 生成公司账号密钥ssh-keygen -t ed25519 -C &quot;work@company.com&quot; -f ~/.ssh/id_ed25519_work
-生成的 .pub 文件内容需分别上传至对应 GitHub 账号的 SSH Keys 设置中。
-3. 配置 Git 身份自动切换利用 Git 的 includeIf 特性，根据当前所在的文件夹自动加载不同的配置。
-修改全局配置 ~/.gitconfig[user]    name = YourName_Work    email = work@company.com[core]    # 全局默认使用公司密钥    sshCommand = &quot;ssh -i ~/.ssh/id_ed25519_work&quot;# 关键：当路径匹配 personal 文件夹时，加载额外配置[includeIf &quot;gitdir/i:~/Workspaces/personal/&quot;]    path = ~/.gitconfig-personal
-
-创建个人专属配置 ~/.gitconfig-personal[user]    name = YourName_Personal    email = personal@email.com[core]    # 强制在此目录下使用个人密钥    sshCommand = &quot;ssh -i ~/.ssh/id_ed25519_personal&quot;
-
-4. 方案优势
-无需修改 URL：不需要像传统的 SSH Alias 方案那样把 github.com 改成 github-personal，直接复制 GitHub 上的 git@github.com:... 即可克隆。
-零误操作：只要进入了 personal 目录，所有的 git commit 都会自动关联个人邮箱，彻底避免用公司邮箱给开源社区提代码的尴尬。
-兼容性强：该方案在终端、Neovim (LazyVim)、VS Code 等各类开发工具中均可完美生效。
-
-5. 常见问题验证配置完成后，可以通过以下命令验证：
-# 进入项目目录cd ~/Workspaces/personal/some-repo# 验证邮箱切换git config user.email# 验证 SSH 密钥切换ssh -T git@github.com
-]]></content>
-      <categories>
-        <category>软件</category>
-      </categories>
-      <tags>
-        <tag>git</tag>
-        <tag>SSH</tag>
       </tags>
   </entry>
   <entry>
@@ -4252,6 +4098,227 @@ Docker 默认也偏爱这个区间
         <tag>docker</tag>
         <tag>docker network</tag>
         <tag>172.18.0.x</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>在内网 Kubernetes 集群上使用 Helm 安装 Rancher 并支持域名访问</title>
+    <url>/2025/08/17/software/deploying-rancher-via-helm-in-rrivate-kubernetes-with-custom-domain-configuration/</url>
+    <content><![CDATA[前言本指南将帮助您在 192.168.31.222 的内网服务器上，使用 Helm 安装 Rancher，并通过域名 rancher.damingerdaiinternal.com 访问。  
+1. 前提条件✅ 已部署 Kubernetes 集群（单节点或多节点均可）✅ 已安装 kubectl 和 Helm 3✅ 已配置 DNS 或 Hosts 解析（确保 rancher.damingerdaiinternal.com 指向 192.168.31.222）✅ 服务器开放 80 和 443 端口  
+2. 安装 cert-manager（用于证书管理）Rancher 依赖 cert-manager 管理 TLS 证书。
+2.1 安装 cert-manager CRDkubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.11.0/cert-manager.crds.yaml
+
+
+2.2 添加 Helm 仓库并安装 cert-managerhelm repo add jetstack https://charts.jetstack.iohelm repo updatehelm install cert-manager jetstack/cert-manager \  --namespace cert-manager \  --create-namespace \  --version v1.11.0
+
+2.3 验证 cert-manager 是否运行kubectl -n cert-manager get pods预期输出：NAME                                       READY   STATUS    RESTARTS   AGEcert-manager-7dd5554b4-abc12               1/1     Running   0          1mcert-manager-cainjector-64dc9f6bff-xyz45   1/1     Running   0          1mcert-manager-webhook-5f4d8b7b8d-pqr78      1/1     Running   0          1m
+
+3. 生成自签名证书（适用于内网）由于是内网环境，我们使用自签名证书。
+3.1 生成 CA 根证书openssl req -x509 -newkey rsa:4096 -sha256 -days 3650 -nodes \  -keyout ca.key -out ca.crt -subj &quot;/CN=damingerdaiinternal.com CA&quot;
+
+3.2 生成服务器证书openssl req -newkey rsa:4096 -sha256 -nodes \  -keyout tls.key -out tls.csr -subj &quot;/CN=rancher.damingerdaiinternal.com&quot;
+
+
+3.3 使用 CA 签名服务器证书openssl x509 -req -sha256 -days 3650 \  -in tls.csr -CA ca.crt -CAkey ca.key -CAcreateserial \  -out tls.crt -extfile &lt;(echo &quot;subjectAltName=DNS:rancher.damingerdaiinternal.com&quot;)
+
+4. 安装 Rancher4.1 创建命名空间kubectl create namespace cattle-system
+
+4.2 创建 Kubernetes Secret 存储证书kubectl -n cattle-system create secret tls tls-rancher-ingress \  --cert=tls.crt --key=tls.keykubectl -n cattle-system create secret generic tls-ca \  --from-file=ca.crt
+
+4.3 添加 Rancher Helm 仓库helm repo add rancher-stable https://releases.rancher.com/server-charts/stablehelm repo update
+
+4.4 使用 Helm 安装 Rancherhelm install rancher rancher-stable/rancher \  --namespace cattle-system \  --set hostname=rancher.damingerdaiinternal.com \  --set bootstrapPassword=admin \  --set ingress.tls.source=secret \  --set privateCA=true \  --set replicas=1
+
+输出：
+NAME: rancherLAST DEPLOYED: Sun Aug 17 14:37:32 2025NAMESPACE: cattle-systemSTATUS: deployedREVISION: 1TEST SUITE: NoneNOTES:Rancher Server has been installed.NOTE: Rancher may take several minutes to fully initialize. Please standby while Certificates are being issued, Containers are started and the Ingress rule comes up.Check out our docs at https://rancher.com/docs/If you provided your own bootstrap password during installation, browse to https://rancher.damingerdaiinternal.com to get started.If this is the first time you installed Rancher, get started by running this command and clicking the URL it generates: echo https://rancher.damingerdaiinternal.com/dashboard/?setup=$(kubectl get secret --namespace cattle-system bootstrap-secret -o go-template=&#x27;&#123;&#123;.data.bootstrapPassword|base64decode&#125;&#125;&#x27;) To get just the bootstrap password on its own, run: kubectl get secret --namespace cattle-system bootstrap-secret -o go-template=&#x27;&#123;&#123;.data.bootstrapPassword|base64decode&#125;&#125;&#123;&#123; &quot;\n&quot; &#125;&#125;&#x27;
+
+5. 配置 DNS &#x2F; Hosts 解析5.1 方案 A：内网 DNS 服务器在 DNS 服务器（如 Bind、Windows DNS）中添加：
+rancher.damingerdaiinternal.com. IN A 192.168.31.222
+
+5.2 方案 B：客户端 Hosts 文件在需要访问的电脑上修改 &#x2F;etc&#x2F;hosts（Linux&#x2F;macOS）或 C:\Windows\System32\drivers\etc\hosts（Windows）：
+192.168.31.222 rancher.damingerdaiinternal.com
+
+
+6. 验证安装6.1 检查 Rancher Pod 状态kubectl -n cattle-system get pods -l app=rancher预期输出：NAME                      READY   STATUS    RESTARTS   AGErancher-5d8f6c9b8-abc12   1/1     Running   0          2m
+
+6.2 查看 Ingress 配置kubectl -n cattle-system get ingress预期输出：NAME      HOSTS                              ADDRESS        PORTSrancher   rancher.damingerdaiinternal.com    192.168.31.222 80, 443
+
+
+6.3 访问 Rancher UI在浏览器打开：
+https://rancher.damingerdaiinternal.com
+• 首次登录：用户名 admin，密码 admin  
+• 证书警告：由于是自签名证书，浏览器会提示不安全，手动信任即可  
+7. 卸载 Rancherhelm uninstall rancher -n cattle-systemkubectl delete namespace cattle-systemkubectl delete -f https://github.com/cert-manager/cert-manager/releases/download/v1.11.0/cert-manager.crds.yaml
+
+8. 常见问题Q1: 访问时提示 “证书不受信任”✅ 解决方案：• Windows：双击 ca.crt 并安装到 “受信任的根证书颁发机构”  
+• Linux&#x2F;macOS：  sudo cp ca.crt &#x2F;usr&#x2F;local&#x2F;share&#x2F;ca-certificates&#x2F;  sudo update-ca-certificates
+Q2: Rancher Pod 无法启动✅ 检查日志：kubectl -n cattle-system logs -f deployment&#x2F;rancher
+✅ 检查资源是否足够（Rancher 至少需要 2GB 内存）：kubectl describe nodes
+Q3: 外网无法访问✅ 检查防火墙：sudo ufw allow 80&#x2F;tcpsudo ufw allow 443&#x2F;tcp
+✅ 如果是云服务器，检查安全组规则  
+总结✅ 已完成：• 使用 Helm 安装 Rancher  
+• 配置自签名证书  
+• 支持域名 rancher.damingerdaiinternal.com 访问  
+• 验证 HTTPS 安全性  
+现在，您可以通过 https://rancher.damingerdaiinternal.com 访问 Rancher 管理 Kubernetes 集群！ 🎉
+]]></content>
+      <categories>
+        <category>软件</category>
+      </categories>
+      <tags>
+        <tag>Kubernetes</tag>
+        <tag>Helm</tag>
+        <tag>Rancher</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>在 Minikube 上部署 Rancher：避坑指南与实战教程</title>
+    <url>/2026/01/20/software/deploy-rancher-on-minikube-guide/</url>
+    <content><![CDATA[前言在本地环境（如 Minikube）部署 Rancher 时，最常见的两个问题是资源分配不足和证书签发卡死。本文将记录如何通过宿主机 IP（192.168.31.133）和固定 NodePort（30081）成功搭建 Rancher。
+一、 环境准备
+宿主机 IP: 192.168.31.133
+目标访问端口: 30081
+
+1. 启动 Minikube (关键参数)在 Docker 驱动下，Minikube 运行在容器内。为了让宿主机能直接访问 NodePort，必须在启动时通过 --ports 参数建立隧道映射。
+# 建议先清理旧环境minikube delete# 启动并映射 30081 端口，分配至少 8GB 内存（Rancher 较重，建议给足）minikube start --cpus 4 --memory 8192 --driver=docker --ports=30081:30081
+
+2. 安装 Helmcurl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+
+
+二、 部署 cert-manager (证书基础)Rancher 依赖 cert-manager 来处理 SSL 证书。请确保组件完全运行后再进行下一步。
+helm repo add jetstack https://charts.jetstack.iohelm repo update# 安装 CRDskubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.13.0/cert-manager.crds.yaml# 安装组件helm install cert-manager jetstack/cert-manager \  --namespace cert-manager \  --create-namespace \  --version v1.13.0
+
+三、 安装 Rancher 与 sslip.io 的秘密1. 执行安装命令helm repo add rancher-stable https://releases.rancher.com/server-charts/stablehelm repo updatehelm install rancher rancher-stable/rancher \  --namespace cattle-system \  --create-namespace \  --set hostname=rancher.192.168.31.133.sslip.io \  --set bootstrapPassword=admin \  --set service.type=NodePort
+
+2. 深度解析：为什么用 sslip.io？在命令中我们设置了 hostname=rancher.192.168.31.133.sslip.io。
+
+为什么填它？ Rancher 强制要求一个域名来生成证书和配置内部路由。sslip.io 是一个免费服务，它会自动将 192.168.31.133.sslip.io 解析到你的宿主机 IP。
+为什么实际没用到？ 虽然证书是发给这个域名的，但我们通过 NodePort 直接访问 IP 也能打开页面。不过，强烈建议保留此设置，因为后续 Rancher 纳管其他集群时，会使用这个域名生成注册 URL。
+
+四、 性能优化与网络微调 (避坑核心)1. 缩减副本数：解决启动卡死Rancher 默认启动 3 个副本，在单机 Minikube 上会造成严重的资源竞争，导致 Pod 长期处于 0/1 Ready。初始化时请务必缩减为 1 个：
+kubectl scale deploy rancher -n cattle-system --replicas=1
+
+2. 固定 NodePort 端口默认端口是随机的，我们需要手动将其固定为映射好的 30081：
+kubectl patch svc rancher -n cattle-system -p &#x27;&#123;&quot;spec&quot;:&#123;&quot;ports&quot;:[&#123;&quot;port&quot;:443,&quot;targetPort&quot;:443,&quot;nodePort&quot;:30081,&quot;name&quot;:&quot;https-internal&quot;&#125;]&#125;&#125;&#x27;
+
+五、 状态排查运行 kubectl get certificate -n cattle-system。如果 READY 为 True，说明证书签发成功。此时只需静候 2 分钟，Pod 就会变为 1/1 Ready。
+附录：Rancher 健康检查脚本为了方便大家快速定位部署问题，可以保存以下脚本 check_rancher.sh：
+#!/bin/bashecho &quot;===== 1. 检查 Cert-Manager 状态 =====&quot;kubectl get pods -n cert-managerecho -e &quot;\n===== 2. 检查证书签发状态 =====&quot;kubectl get certificate -n cattle-systemecho -e &quot;\n===== 3. 检查 Rancher Pod 运行状态 =====&quot;kubectl get pods -n cattle-system -l app=rancherecho -e &quot;\n===== 4. 检查服务端口映射 =====&quot;kubectl get svc -n cattle-system rancherecho -e &quot;\n===== 5. 获取初始登录密码 =====&quot;kubectl get secret --namespace cattle-system bootstrap-secret -o jsonpath=&#123;.data.bootstrapPassword&#125; | base64 --decode &amp;&amp; echo &quot;&quot;echo -e &quot;\n[提示] 请访问: https://192.168.31.133:30081&quot;
+
+使用方法：chmod +x check_rancher.sh &amp;&amp; ./check_rancher.sh
+
+博主结语：在 Minikube 上跑 Rancher 是一件很酷的事，但一定要给够内存并手动控制副本数。希望这篇教程能让你少走弯路！
+]]></content>
+      <categories>
+        <category>软件</category>
+      </categories>
+      <tags>
+        <tag>minikube</tag>
+        <tag>kubernetes</tag>
+        <tag>rancher</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>寻找轻量级 S3 替代方案：极简分布式对象存储 Garage 搭建与全线打通指南</title>
+    <url>/2026/07/12/software/garage-s3-alternative-setup-guide/</url>
+    <content><![CDATA[为了让这篇技术博客更具实战价值和严谨性，我们将刚才发生的 Go SDK 语法编译坑（s3.PutObjectInput） 以及 S3 403 鉴权坑（Bucket 粒度显式授权） 完美地融合进博客的“踩坑记录”中。
+以下是更新后的完整博客内容，结构更紧凑，逻辑也更闭环：
+
+寻找轻量级 S3 替代方案：极简分布式对象存储 Garage 搭建与全线打通指南在自建基础设施、HomeLab 或微型云环境时，MinIO 通常是大家首选的 S3 兼容对象存储。然而，MinIO于2026 年 2 月 12 日宣布不再维护，2026 年 4 月 25 日正式归档为只读状态
+最近关注到一篇优秀的技术分享 Garage: The Minimalist Distributed Object Store — Your Lightweight S3 Alternative，文中极力推荐了 Garage。这是一个用 Rust 编写的轻量级、去中心化分布式对象存储，专为不规则、低带宽的多节点网络设计，单个节点跑起来甚至只需要几十兆内存，可以说是将“极简主义”贯彻到了极致。
+本文将基于最新的 Garage v2.3.0，详细记录如何通过 Docker Compose 快速搭建单节点集群，并分享在部署以及后续使用 SDK 进行客户端测试时遇到的四大核心深坑与避坑姿势。
+
+1. 环境准备与架构设计根据极简主义的设计原则，我们采用 Docker Compose 进行微服务化部署.
+核心配置文件由于 Garage 容器镜像内部运行环境极致轻量化（甚至没有默认 shell），我们需要将宿主机的配置文件、元数据目录以及数据存储目录通过 Volume 挂载进去。
+docker-compose.ymlversion: &#x27;3.8&#x27;services:  garage:    image: dxflrs/garage:v2.3.0    container_name: garage    restart: unless-stopped    ports:      - &quot;3900:3900&quot; # S3 API 端点      - &quot;3901:3901&quot; # RPC 集群内通讯端口      - &quot;3902:3902&quot; # S3 Web 静态托管      - &quot;3903:3903&quot; # Admin API 管理端点    volumes:      - ./garage.toml:/etc/garage.toml:ro      - ./meta:/var/lib/garage/meta      - ./data:/var/lib/garage/data
+
+garage.tomlmetadata_dir = &quot;/var/lib/garage/meta&quot;data_dir = &quot;/var/lib/garage/data&quot;db_engine = &quot;sqlite&quot;replication_factor = 1# RPC 相关配置rpc_bind_addr = &quot;[::]:3901&quot;# 🔥 必须是严格的 32 字节（64位十六进制字符）强随机密钥rpc_secret = &quot;f07d2a5b6e8f9c1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a&quot;[s3_api]s3_region = &quot;garage&quot;api_bind_addr = &quot;[::]:3900&quot;[s3_web]bind_addr = &quot;[::]:3902&quot;root_domain = &quot;.web.garage&quot;[admin]api_bind_addr = &quot;[::]:3903&quot;admin_token = &quot;your_admin_token_here&quot;
+
+
+2. 单节点集群初始化三部曲因为 Garage 本质上是一个“分布式”架构，哪怕我们是单机单节点运行，也必须显式宣告其拓扑结构（Cluster Layout）并为其分配磁盘容量，否则服务无法建立任何 S3 Key 或 Bucket。
+第一步：角色与容量指派（Staging Layout）首先查看状态获取当前节点的 Node ID，随后指派该节点。
+# 查看并获取 Node IDdocker compose exec garage /garage status# 指派角色（以 Node ID 为 cf1675b039dc847d 为例，指定 10G 额度）docker compose exec garage /garage layout assign cf1675b039dc847d -t node1 -z zone1 -c 10G
+
+第二步：使拓扑结构落盘生效运行以下命令激活刚才暂存（Staged）的拓扑改动。Garage 会自动计算 256 个哈希数据分区（Partitions）：
+docker compose exec garage /garage layout apply --version 1
+
+第三步：生成 S3 凭证拓扑激活后，终于可以爽快地创建 S3 的 Access Key 和 Secret Key 了：
+docker compose exec garage /garage key create my-key
+
+控制台会直接打印出你的 Key ID 和 Secret key。
+
+3. 核心踩坑与全链路调优记录（重难点）在从零到彻底打通的过程中，我们极易遇到以下四个官方文档不会明说的“隐形坑”：
+坑一：rpc_secret 严格的长度和格式校验如果图省事随便写一个普通字符串密码作为 rpc_secret，容器会直接崩溃报错。Garage 强制要求该密钥必须通过高强度随机算法生成，且满足 32 字节（即 64 位 Hex 字符）。
+
+正确生成姿势： 在宿主机运行 openssl rand -hex 32，将其作为密匙填入即可。
+
+坑二：极简镜像找不到 garage 命令执行文件当尝试运行 docker compose exec garage garage status 时，会报 executable file not found。这是因为镜像为了极致轻量，没有将二进制文件塞入 /usr/bin。我们需要显式指定根目录绝对路径进行交互：
+docker compose exec garage /garage status
+
+坑三：v2.x 拓扑阶段容量参数（Capacity）要求严格单位在指派 Layout 时，如果传递 -c 1 想代表权重，会触发 Capacity should be at least 1K 的错误。在新版 Garage 中，**-c 必须是合规的容量单位格式（如 10G, 1T），且至少大于 1K (1024 bytes)**。
+坑四：新旧版本 key 权限子命令变更许多旧博客引用的 key allow-create 在最新的 v2.3.0 中已经废弃。新版本中统一收敛到了 key allow 子命令下：
+# 赋予全局建桶权限docker compose exec garage /garage key allow &lt;YOUR_KEY_ID&gt; --create-bucket
+
+坑五：桶已经建立，但客户端依然报 403 AccessDenied 错误当我们在后台使用管理员命令创建了一个桶（bucket create test-bucket）后，通过 Go 语言或客户端上传文件时可能会遇到以下报错：
+
+api error AccessDenied: Forbidden: Operation is not allowed for this key.
+
+这是 Garage 非常严谨的最小权限隔离设计。即使你的 Key 拥有全局建桶的权限（Can create buckets: true），但对于已经存在的桶（尤其是管理员建立的桶），它默认处于无权访问的状态。必须显式进行桶级别的授权：
+docker compose exec garage /garage bucket allow test-bucket --key &lt;YOUR_KEY_ID&gt; --read --write
+
+当看到控制台的 KEYS FOR THIS BUCKET 权限表刷新出 RW 标志时，才代表该 Key 真正打通了对该存储桶的读写全通路。
+
+4. Golang 访问与全链路验证测试为了验证服务彻底可用，我们可以写一段简单的 Go 脚本来进行连接、上传、下载的闭环测试。
+这里使用官方的 AWS SDK for Go v2。由于本地没有配置通配符域名解析，初始化客户端时必须指定 UsePathStyle: true 启用路径样式路由。
+此外需要注意，在官方 SDK 中，上传对象参数的正确结构体名称是 s3.PutObjectInput（手写时容易误写成 s3.Input 导致编译失败）。
+main.gopackage mainimport (	&quot;context&quot;	&quot;bytes&quot;	&quot;fmt&quot;	&quot;io&quot;	&quot;log&quot;	&quot;github.com/aws/aws-sdk-go-v2/aws&quot;	&quot;github.com/aws/aws-sdk-go-v2/config&quot;	&quot;github.com/aws/aws-sdk-go-v2/credentials&quot;	&quot;github.com/aws/aws-sdk-go-v2/service/s3&quot;)func main() &#123;	endpoint := &quot;http://localhost:3900&quot;	region := &quot;garage&quot;	accessKey := &quot;你的AccessKey&quot;	secretKey := &quot;你的SecretKey&quot;	bucketName := &quot;test-bucket&quot;	cfg, err := config.LoadDefaultConfig(context.TODO(),		config.WithRegion(region),		config.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(accessKey, secretKey, &quot;&quot;)),	)	if err != nil &#123;		log.Fatalf(&quot;无法加载 SDK 配置: %v&quot;, err)	&#125;	s3Client := s3.NewFromConfig(cfg, func(o *s3.Options) &#123;		o.BaseEndpoint = aws.String(endpoint)		o.UsePathStyle = true // 必须开启 Path-Style	&#125;)	fmt.Println(&quot;成功连接到 Garage 对象存储...&quot;)	// 上传对象验证	objectKey := &quot;hello-garage.txt&quot;	content := []byte(&quot;Hello Arthur, Garage S3 is working perfectly with Go!&quot;)	_, err = s3Client.PutObject(context.TODO(), &amp;s3.PutObjectInput&#123;		Bucket: aws.String(bucketName),		Key:    aws.String(objectKey),		Body:   bytes.NewReader(content),	&#125;)	if err != nil &#123;		log.Fatalf(&quot;文件上传失败: %v&quot;, err)	&#125;	fmt.Printf(&quot;成功上传对象: %s\n&quot;, objectKey)	// 下载对象验证	resp, err := s3Client.GetObject(context.TODO(), &amp;s3.GetObjectInput&#123;		Bucket: aws.String(bucketName),		Key:    aws.String(objectKey),	&#125;)	if err != nil &#123;		log.Fatalf(&quot;文件下载失败: %v&quot;, err)	&#125;	defer resp.Body.Close()	downloadedContent, err := io.ReadAll(resp.Body)	if err != nil &#123;		log.Fatalf(&quot;读取下载内容失败: %v&quot;, err)	&#125;	fmt.Printf(&quot;成功下载对象，内容为:\n&gt; %s\n&quot;, string(downloadedContent))&#125;
+
+
+5. 总结比起传统的 MinIO，Garage 极其精简的 Rust 运行时带来了惊人的低开销和极高的敏捷度。虽然在部署和多层级权限划分时有一些严谨的限制（也就是我们一路上踩过的坑），但只要理清了 Layout 指派 -&gt; 生效 -&gt; 全局 Key 赋权 -&gt; 存储桶粒度赋权 这条链路，它在轻量级私有云和 HomeLab 环境中绝对能成为一件完美的 Minimalist 艺术品。
+
+]]></content>
+      <categories>
+        <category>软件</category>
+      </categories>
+      <tags>
+        <tag>s3</tag>
+        <tag>garage</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>优雅实现 Git 多账号切换：基于 SSH Config 与 includeIf 的环境隔离方案</title>
+    <url>/2026/04/18/software/git-multi-account-setup-with-includeif/</url>
+    <content><![CDATA[优雅实现 Git 多账号切换：基于 SSH Config 与 includeIf 的环境隔离方案在日常开发中，我们经常需要在一台电脑上同时处理个人开源项目和公司业务项目。最核心的痛点有两个：
+
+SSH Key 冲突：GitHub 默认只识别一对密钥，多账号如何无感切换？
+提交身份混淆：如何在公司项目中自动使用公司邮箱，在个人项目中自动使用个人邮箱？
+
+本文分享一种“一次配置，永久生效”的自动化方案。
+1. 目录结构规划首先，建议按用途将项目存放在不同的父目录下，这是自动化切换的前提。
+Workspaces/├── personal/  # 存放个人项目└── company/   # 存放公司项目
+
+2. 生成独立的 SSH 密钥为每个账号生成专属的密钥对，不要覆盖默认的 id_ed25519。
+# 生成个人账号密钥ssh-keygen -t ed25519 -C &quot;personal@email.com&quot; -f ~/.ssh/id_ed25519_personal# 生成公司账号密钥ssh-keygen -t ed25519 -C &quot;work@company.com&quot; -f ~/.ssh/id_ed25519_work
+生成的 .pub 文件内容需分别上传至对应 GitHub 账号的 SSH Keys 设置中。
+3. 配置 Git 身份自动切换利用 Git 的 includeIf 特性，根据当前所在的文件夹自动加载不同的配置。
+修改全局配置 ~/.gitconfig[user]    name = YourName_Work    email = work@company.com[core]    # 全局默认使用公司密钥    sshCommand = &quot;ssh -i ~/.ssh/id_ed25519_work&quot;# 关键：当路径匹配 personal 文件夹时，加载额外配置[includeIf &quot;gitdir/i:~/Workspaces/personal/&quot;]    path = ~/.gitconfig-personal
+
+创建个人专属配置 ~/.gitconfig-personal[user]    name = YourName_Personal    email = personal@email.com[core]    # 强制在此目录下使用个人密钥    sshCommand = &quot;ssh -i ~/.ssh/id_ed25519_personal&quot;
+
+4. 方案优势
+无需修改 URL：不需要像传统的 SSH Alias 方案那样把 github.com 改成 github-personal，直接复制 GitHub 上的 git@github.com:... 即可克隆。
+零误操作：只要进入了 personal 目录，所有的 git commit 都会自动关联个人邮箱，彻底避免用公司邮箱给开源社区提代码的尴尬。
+兼容性强：该方案在终端、Neovim (LazyVim)、VS Code 等各类开发工具中均可完美生效。
+
+5. 常见问题验证配置完成后，可以通过以下命令验证：
+# 进入项目目录cd ~/Workspaces/personal/some-repo# 验证邮箱切换git config user.email# 验证 SSH 密钥切换ssh -T git@github.com
+]]></content>
+      <categories>
+        <category>软件</category>
+      </categories>
+      <tags>
+        <tag>git</tag>
+        <tag>SSH</tag>
       </tags>
   </entry>
   <entry>
@@ -4882,7 +4949,6 @@ Report:	* UDP: true	* IPv4: yes	* Nearest DERP: Hong Kong Custom DERP	* DERP lat
 sudo tailscale downsudo tailscale up --reset
 
 重置后，两端节点均能正常通过自建的 hk-custom 节点进行双向中继通信。
-引用1. 
 ]]></content>
       <categories>
         <category>软件</category>
@@ -5120,6 +5186,27 @@ API 陷阱：旧版教程常用 traefik.containo.us&#x2F;v1alpha1，新版 K3s �
       </tags>
   </entry>
   <entry>
+    <title>记录一些测试币的水龙头</title>
+    <url>/2023/01/07/web3/some-token-faucet/</url>
+    <content><![CDATA[记录一些测试币的水龙头记录一些常用的区块链水龙头，以防忘记
+GoerliGoerli Testnet Faucet: 不太记得当初是怎么知道了，但是似乎永远失败…
+GOERLI FAUCET, 每天可以获取0.1 ETH(以前是可以每天领取0.25ETH), 需要使用Alchemy账号.
+Mining Faucet, 使用cpu的算力去挖矿，问题不大，可以使用。
+polygonpolygon faucet, 支持多个测试网络，但是Goerli的ETH没拿到
+参考资料
+免費取得Goerli測試幣
+
+]]></content>
+      <categories>
+        <category>web3</category>
+      </categories>
+      <tags>
+        <tag>web3</tag>
+        <tag>Goerli</tag>
+        <tag>polygon</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>2022年度总结</title>
     <url>/2021/12/31/summary/2022/</url>
     <content><![CDATA[2022年度总结2022年真的是一个让人难以忘怀的年份，尤其在先后经历了上海封城、老丈人去世、领证结婚。
@@ -5161,20 +5248,6 @@ PWC线下年会我是19年加入PWC的。PWC的年会其实是财年的意思，
 参加她的大学同学的婚礼
 
 最后Time files over us, but leaves its shadow behind.
-]]></content>
-  </entry>
-  <entry>
-    <title>2024年度总结</title>
-    <url>/2025/01/13/summary/2024/</url>
-    <content><![CDATA[2024年度总结对我来说，2024年是一个特别有意义的一年。8月24号，我美丽又可爱的宝宝出生了，体验到了初为人父的喜悦；10月7号，国庆节刚过，公司人事就开邮件通知我我的岗位被取消了。
-初为人父的喜悦孩子的出生时间其实挺意外的。由于老婆在9月初有一场很重要的考试，所以不能耽搁，所以原来计划在20号去医院打催产素的，结果因为报告晚了一天，然后就被通知不用打催产素，已经开始见红了。不过开宫口的速度很慢，过两天还是上催产素了。我记得那个时候我在家里呆着，医院我有丈母娘陪着，反正又不可能那么急着生出来，我就回家先好好休息，打算第二天过去。结果第二天我丈母娘就通知我让我赶紧过去签字给我老婆打催产素。一波三折，到最后这个催产素还是打上去了。在6号待产室，晚上6点06分，7斤2两，我可爱的儿子就这样子平平安安的出生了。说实话，我并没有在第一时间听到孩子的哭声，相反这个小家伙睡的死死的。我伸过去看看了他，第一感觉他好丑啊，头型怪怪的，有点拉长的样子。听医生说，刚出生的小宝宝通常产道的挤压，出来的时候头多多少少会有点拉长的样子，等长大点就好了。
-孩子的出生，对我来说是一个特殊的人生里程碑，从这一刻开始，我不仅仅是一个普通的牛马，更是一个上有老下有小的天选牛马。就这样一下子，感觉身上的责任明显重了很多。算了一下孩子的奶粉钱，尿不湿的钱，将来休学的钱，以后娶老婆的钱和彩礼，还有供养老婆大人吃喝玩乐的钱。处处都是钱，处处都是压力。我也不知道将来孩子会活成什么样子，但是我不奢望他能出人头地，只希望平平安安的长大；不期待他将来学业有成，事业非凡，只希望他能过的自在安心。
-裁员其实裁员是有点风声的，但是一直都是狼来的状态。在国庆节，部门领导就私下的就透露过每个leader都需要上交一份裁员名单，更上级的领导会根据这份名单裁员。对于我这种干活儿的小喽啰，大概率是可以保住饭碗的，毕竟我还是比较能干活儿的，最近做的项目也是比较有钱的其实。
-但是非常尴尬的是，确实是裁员了，但是不是上海发起的裁员，是美国发起的裁员。美国最高层决定全球裁员好几千人，预计涉及美国，墨西哥，印度和上海几个地方的office。
-这次裁员主要是我们P &amp; T部门，其他部门似乎还好好的。P &amp; T由Labs和Digital两个小部门，我们labs这边十分平静的接受了这次裁员，大家虽然都不太能接受，但是普遍选择认命，大家该吃吃该喝喝，好聚好散。但是隔壁部门是有人闹了下，但是很快就没下文了。后来我听说出头闹事的人第一个找到工作之后就不出头了，结果也就没人闹事了。
-找工作找工作挺难的，基本上都是外包。没做面试的记录，就随便回忆一下吧。面试PayPal外包, 二面和三面一起面的，挂了，感觉二面和三面都不是很好。面试VOA2(一家不错的法资小公司)，因为英语和岗位不合适挂。面试迪士尼外包，一面挂了，搞笑的是又一家外包来邀请我去面试，主要是迪士尼的技术栈是Angular+Graphql，比较小众，但是我都用过，我不太想去，但是对方劝了我好几次，最后还是在二面挂了（面试三次，挂了两次，挺好玩的经历）。面试花旗外包，二面挂了，其实本来是挺有机会的，但是二面就27分钟，还算上我问的问题，只能被挂了。面试华钦（华钦是外包公司，但是这个岗位不是外包），我明明面试的是前端，面试官是后端的，道不同。面试摩根士丹利外包，二面过了，感觉比较水，相对好近。
-摩根士丹利进入摩根士丹利之后其实有段时间是不太适应的，习惯了普华永道这种混合办公和不定时工作制，不太能接受摩根士丹利这种965的风格，不过还好，两周就适应了，发了工资就更加适应，没有必要和钱过不去。摩根士丹利里面什么情况我不方便多说，但是根据工作安排来看，坚持到2026年底问题不大，以后就再说吧。
-总结如果没有裁员这回事儿，那么2024年对我还是一个挺不错的年份。涨点工资（普华永道每年7月调薪），有个儿子，本来就可以这样子过去了。可惜没有如果，现在在摩根做外包也能接受，毕竟正式员工对我们算得上非常nice了。希望2025年可以平平安安，保住工作，少点个人消费，多点留给家人。技术也没有什么大的想法，保住工作就行，苟活到经济能够真的复苏吧。
 ]]></content>
   </entry>
   <entry>
@@ -5220,25 +5293,18 @@ PWC线下年会我是19年加入PWC的。PWC的年会其实是财年的意思，
 ]]></content>
   </entry>
   <entry>
-    <title>记录一些测试币的水龙头</title>
-    <url>/2023/01/07/web3/some-token-faucet/</url>
-    <content><![CDATA[记录一些测试币的水龙头记录一些常用的区块链水龙头，以防忘记
-GoerliGoerli Testnet Faucet: 不太记得当初是怎么知道了，但是似乎永远失败…
-GOERLI FAUCET, 每天可以获取0.1 ETH(以前是可以每天领取0.25ETH), 需要使用Alchemy账号.
-Mining Faucet, 使用cpu的算力去挖矿，问题不大，可以使用。
-polygonpolygon faucet, 支持多个测试网络，但是Goerli的ETH没拿到
-参考资料
-免費取得Goerli測試幣
-
+    <title>2024年度总结</title>
+    <url>/2025/01/13/summary/2024/</url>
+    <content><![CDATA[2024年度总结对我来说，2024年是一个特别有意义的一年。8月24号，我美丽又可爱的宝宝出生了，体验到了初为人父的喜悦；10月7号，国庆节刚过，公司人事就开邮件通知我我的岗位被取消了。
+初为人父的喜悦孩子的出生时间其实挺意外的。由于老婆在9月初有一场很重要的考试，所以不能耽搁，所以原来计划在20号去医院打催产素的，结果因为报告晚了一天，然后就被通知不用打催产素，已经开始见红了。不过开宫口的速度很慢，过两天还是上催产素了。我记得那个时候我在家里呆着，医院我有丈母娘陪着，反正又不可能那么急着生出来，我就回家先好好休息，打算第二天过去。结果第二天我丈母娘就通知我让我赶紧过去签字给我老婆打催产素。一波三折，到最后这个催产素还是打上去了。在6号待产室，晚上6点06分，7斤2两，我可爱的儿子就这样子平平安安的出生了。说实话，我并没有在第一时间听到孩子的哭声，相反这个小家伙睡的死死的。我伸过去看看了他，第一感觉他好丑啊，头型怪怪的，有点拉长的样子。听医生说，刚出生的小宝宝通常产道的挤压，出来的时候头多多少少会有点拉长的样子，等长大点就好了。
+孩子的出生，对我来说是一个特殊的人生里程碑，从这一刻开始，我不仅仅是一个普通的牛马，更是一个上有老下有小的天选牛马。就这样一下子，感觉身上的责任明显重了很多。算了一下孩子的奶粉钱，尿不湿的钱，将来休学的钱，以后娶老婆的钱和彩礼，还有供养老婆大人吃喝玩乐的钱。处处都是钱，处处都是压力。我也不知道将来孩子会活成什么样子，但是我不奢望他能出人头地，只希望平平安安的长大；不期待他将来学业有成，事业非凡，只希望他能过的自在安心。
+裁员其实裁员是有点风声的，但是一直都是狼来的状态。在国庆节，部门领导就私下的就透露过每个leader都需要上交一份裁员名单，更上级的领导会根据这份名单裁员。对于我这种干活儿的小喽啰，大概率是可以保住饭碗的，毕竟我还是比较能干活儿的，最近做的项目也是比较有钱的其实。
+但是非常尴尬的是，确实是裁员了，但是不是上海发起的裁员，是美国发起的裁员。美国最高层决定全球裁员好几千人，预计涉及美国，墨西哥，印度和上海几个地方的office。
+这次裁员主要是我们P &amp; T部门，其他部门似乎还好好的。P &amp; T由Labs和Digital两个小部门，我们labs这边十分平静的接受了这次裁员，大家虽然都不太能接受，但是普遍选择认命，大家该吃吃该喝喝，好聚好散。但是隔壁部门是有人闹了下，但是很快就没下文了。后来我听说出头闹事的人第一个找到工作之后就不出头了，结果也就没人闹事了。
+找工作找工作挺难的，基本上都是外包。没做面试的记录，就随便回忆一下吧。面试PayPal外包, 二面和三面一起面的，挂了，感觉二面和三面都不是很好。面试VOA2(一家不错的法资小公司)，因为英语和岗位不合适挂。面试迪士尼外包，一面挂了，搞笑的是又一家外包来邀请我去面试，主要是迪士尼的技术栈是Angular+Graphql，比较小众，但是我都用过，我不太想去，但是对方劝了我好几次，最后还是在二面挂了（面试三次，挂了两次，挺好玩的经历）。面试花旗外包，二面挂了，其实本来是挺有机会的，但是二面就27分钟，还算上我问的问题，只能被挂了。面试华钦（华钦是外包公司，但是这个岗位不是外包），我明明面试的是前端，面试官是后端的，道不同。面试摩根士丹利外包，二面过了，感觉比较水，相对好近。
+摩根士丹利进入摩根士丹利之后其实有段时间是不太适应的，习惯了普华永道这种混合办公和不定时工作制，不太能接受摩根士丹利这种965的风格，不过还好，两周就适应了，发了工资就更加适应，没有必要和钱过不去。摩根士丹利里面什么情况我不方便多说，但是根据工作安排来看，坚持到2026年底问题不大，以后就再说吧。
+总结如果没有裁员这回事儿，那么2024年对我还是一个挺不错的年份。涨点工资（普华永道每年7月调薪），有个儿子，本来就可以这样子过去了。可惜没有如果，现在在摩根做外包也能接受，毕竟正式员工对我们算得上非常nice了。希望2025年可以平平安安，保住工作，少点个人消费，多点留给家人。技术也没有什么大的想法，保住工作就行，苟活到经济能够真的复苏吧。
 ]]></content>
-      <categories>
-        <category>web3</category>
-      </categories>
-      <tags>
-        <tag>web3</tag>
-        <tag>Goerli</tag>
-        <tag>polygon</tag>
-      </tags>
   </entry>
   <entry>
     <title>drone + gogs + docker实现持续自动化部署</title>
@@ -5463,46 +5529,23 @@ feat: 使用k8s的HorizontalPodAutoscaler进行水平的资源缩放
       </tags>
   </entry>
   <entry>
-    <title>轻量化 K8s 管理方案：在 k3s 中部署 Skooner 可视化面板</title>
-    <url>/2026/01/08/software/k8s/deploy-skooner-on-k3s/</url>
-    <content><![CDATA[前言管理 Kubernetes 集群不应该以牺牲系统资源为代价。虽然官方 Dashboard 功能强大，但对于小型集群或单节点 k3s 环境来说，它往往显得过于臃肿。如果你正在寻找一个极致轻快、响应迅速的管理界面，Skooner 是一个完美的平衡点。
-Skooner（原名 K8dash）是一款开源、超轻量级的实时仪表盘，它在不增加集群负担的前提下，提供了核心的资源观测能力。
-为什么选择 Skooner？Skooner 的设计哲学与 k3s 的轻量化理念完美契合：
+    <title>K3S安装的时候默认使用docker</title>
+    <url>/2022/05/15/software/k8s/k3s-install-with-docker/</url>
+    <content><![CDATA[K3S安装的时候默认使用docker问题k8s在1.20之后就弃用docker的运行时了，所以k3s也开始默认使用containerd作为默认的运行时。这导致一个问题。那就是k3s无法访问本地docker镜像。
+解决方案一种解决方案就是使用containerd的镜像，而不是docker。还有一种方式是在安装时就指定k3s使用docker作为运行环境。
+/usr/local/bin/k3s-uninstall.shcurl -sfL https://get.k3s.io | sh -s - server --docker
 
-极低的资源占用：它的内存占用通常不到 50MB，在你的系统监控中几乎可以忽略不计。
-实时状态感知：基于 WebSocket 技术，无需手动刷新页面即可实时查看 CPU、内存消耗以及 Pod 状态。
-移动端自适应：UI 采用响应式设计，即使在手机或平板浏览器上也能轻松排查集群问题。
-
-部署步骤在本指南中，我们将通过 NodePort (32007) 的方式部署并暴露 Skooner，以便你直接通过物理机 IP 访问。
-1. 部署核心组件首先，一键安装 Skooner 的命名空间、服务和部署资源：
-kubectl apply -f https://raw.githubusercontent.com/skooner-k8s/skooner/master/kubernetes-skooner.yaml
-
-2. 配置自定义端口 (32007)默认情况下，Kubernetes 会分配一个随机的 NodePort。我们通过以下命令将其固定为 32007：
-kubectl patch svc skooner -n kube-system --type=&#x27;json&#x27; -p=&#x27;[&#123;&quot;op&quot;: &quot;replace&quot;, &quot;path&quot;: &quot;/spec/type&quot;, &quot;value&quot;:&quot;NodePort&quot;&#125;, &#123;&quot;op&quot;: &quot;replace&quot;, &quot;path&quot;: &quot;/spec/ports/0/nodePort&quot;, &quot;value&quot;:32007&#125;]&#x27;
-
-3. 创建管理 TokenSkooner 使用 Kubernetes 原生的 RBAC 权限。为了获得完整的管理权限，我们需要创建一个 ServiceAccount 并生成登录 Token：
-# 创建 ServiceAccount 和 集群角色绑定cat &lt;&lt;EOF | kubectl apply -f -apiVersion: v1kind: ServiceAccountmetadata:  name: skooner-admin  namespace: kube-system---apiVersion: rbac.authorization.k8s.io/v1kind: ClusterRoleBindingmetadata:  name: skooner-admin-bindingroleRef:  apiGroup: rbac.authorization.k8s.io  kind: ClusterRole  name: cluster-adminsubjects:- kind: ServiceAccount  name: skooner-admin  namespace: kube-systemEOF# 生成登录 Token（有效期 24 小时）kubectl create token skooner-admin -n kube-system --duration=24h
-
-
-如何访问
-打开浏览器，访问：http://&lt;你的服务器IP&gt;:32007。
-在登录界面选择 “Token” 模式。
-粘贴上一步生成的长字符串即可进入面板。
-
-这是我本地的效果：
-
-结语Skooner 在保持 k3s 轻量化特性的同时，为你提供了一个直观、现代的操作界面。对于那些既想要可视化观测、又不想被复杂管理平台拖慢系统性能的开发者来说，Skooner 是一个“即插即用”的最佳方案。
-如需了解更多高级配置，可以参考官方文档：skooner.io。
-一键安装脚本# 1. Deploy Skooner resourceskubectl apply -f https://raw.githubusercontent.com/skooner-k8s/skooner/master/kubernetes-skooner.yaml# 2. Patch the Service to NodePort and set it specifically to 32007kubectl patch svc skooner -n kube-system --type=&#x27;json&#x27; -p=&#x27;[&#123;&quot;op&quot;: &quot;replace&quot;, &quot;path&quot;: &quot;/spec/type&quot;, &quot;value&quot;:&quot;NodePort&quot;&#125;, &#123;&quot;op&quot;: &quot;replace&quot;, &quot;path&quot;: &quot;/spec/ports/0/nodePort&quot;, &quot;value&quot;:32007&#125;]&#x27;# 3. Create a Cluster Admin ServiceAccount for login (if not already created)cat &lt;&lt;EOF | kubectl apply -f -apiVersion: v1kind: ServiceAccountmetadata:  name: skooner-admin  namespace: kube-system---apiVersion: rbac.authorization.k8s.io/v1kind: ClusterRoleBindingmetadata:  name: skooner-admin-bindingroleRef:  apiGroup: rbac.authorization.k8s.io  kind: ClusterRole  name: cluster-adminsubjects:- kind: ServiceAccount  name: skooner-admin  namespace: kube-systemEOF# 4. Generate Login Tokenecho &quot;-------------------------------------------------------&quot;echo &quot;Skooner is now accessible at port: 32007&quot;echo &quot;Access URL: http://$(hostname -I | awk &#x27;&#123;print $1&#125;&#x27;):32007&quot;echo &quot;&quot;echo &quot;Login Token:&quot;kubectl create token skooner-admin -n kube-system --duration=24hecho &quot;-------------------------------------------------------&quot;
+国内用户，可以使用以下方法加速安装：
+curl -sfL https://rancher-mirror.rancher.cn/k3s/k3s-install.sh | INSTALL_K3S_MIRROR=cn sh -s - server --docker
 ]]></content>
       <categories>
         <category>软件</category>
       </categories>
       <tags>
         <tag>k8s</tag>
+        <tag>docker</tag>
         <tag>k3s</tag>
         <tag>kubernetes</tag>
-        <tag>skooner</tag>
       </tags>
   </entry>
   <entry>
@@ -5549,57 +5592,6 @@ Kubernetes Dashboard
         <tag>docker</tag>
         <tag>kubernetes</tag>
         <tag>Docker Desktop</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>Mac版minikube安装笔记</title>
-    <url>/2022/01/17/software/k8s/how-to-install-minkube-on-mac/</url>
-    <content><![CDATA[Mac版minikube安装笔记minikube是一个专注于让Kubernetes更加容易学习和开发的本地Kubernetes。只需要Docker或者虚拟机环境，我们便可以通过minikube start就能快速启动Kubernetes。
-要求安装minikube需要以下要求：
-
-至少两个CPU
-至少2GB内容
-至少20GB的硬盘空间
-容器或者虚拟机， 比如Docker, Hyperkit, Hyper-V, KVM, Parallels, Podman, VirtualBox, or VMware Fusion&#x2F;Workstation
-
-安装针对macos的x86-64的平台的，可以使用homebrew进行安装：
-brew install minikube
-
-如果倾向于二进制文件安装，可以使用下面的命令：
-curl -LO https://storage.googleapis.com/minikube/releases/latest/minikube-darwin-amd64sudo install minikube-darwin-amd64 /usr/local/bin/minikube
-
-如果是其他平台的操作系统，请看minikube的官网教程
-启动简单来说，可以直接使用minikube start可以直接启动了，但是在国内用于特殊的网络限制，请使用如下命令：
-minikube start --registry-mirror=https://registry.docker-cn.com  --image-repository registry.cn-hangzhou.aliyuncs.com/google_containers
-
-驱动（Drivers）通过驱动，minikube可以支持不同的容器和虚拟机。
-针对macos来说，推荐使用docker和hyperkit，我们只需要在上面的命令的基础上添加--vm-driver=docker或者--vm-driver=hyperkit。
-其他平台可以访问Drivers。
-kubectlkubectl是Kubernetes的命令行工具，方便用户通过一些简单的命令去管理Kubernetes。
-如果事先安装了docker desktop, 那么kubectl已经安装好了，如果没有安装，那可以使用homebrew安装：
-brew install kubectl 
-
-其他平台可以访问kubectl
-验证新建终端，输入kubectl get po -A,显示以下类似命令就算启动成功了：
-NAMESPACE     NAME                               READY   STATUS    RESTARTS   AGEkube-system   coredns-7d89d9b6b8-d462h           0/1     Running   0          20skube-system   etcd-minikube                      1/1     Running   0          32skube-system   kube-apiserver-minikube            1/1     Running   0          35skube-system   kube-controller-manager-minikube   1/1     Running   0          32skube-system   kube-proxy-gcbpj                   1/1     Running   0          20skube-system   kube-scheduler-minikube            1/1     Running   0          31skube-system   storage-provisioner                1/1     Running   0          30s
-
-
-参考资料以下是本文撰写过程中的参考资料：
-
-minikube start
-kubectl
-Minkube安装笔记
-Minikube - Kubernetes本地实验环境
-
-]]></content>
-      <categories>
-        <category>软件</category>
-      </categories>
-      <tags>
-        <tag>k8s</tag>
-        <tag>minikube</tag>
-        <tag>kubernetes</tag>
-        <tag>Mac</tag>
       </tags>
   </entry>
   <entry>
@@ -5658,23 +5650,97 @@ eyJhbGciOiJSUzI1NiIsImtpZCI6Imk0TWpNeGM3SWVrMHllMVphM0FPVFZIZ2RIaXZIbll2UzZObkJS
       </tags>
   </entry>
   <entry>
-    <title>K3S安装的时候默认使用docker</title>
-    <url>/2022/05/15/software/k8s/k3s-install-with-docker/</url>
-    <content><![CDATA[K3S安装的时候默认使用docker问题k8s在1.20之后就弃用docker的运行时了，所以k3s也开始默认使用containerd作为默认的运行时。这导致一个问题。那就是k3s无法访问本地docker镜像。
-解决方案一种解决方案就是使用containerd的镜像，而不是docker。还有一种方式是在安装时就指定k3s使用docker作为运行环境。
-/usr/local/bin/k3s-uninstall.shcurl -sfL https://get.k3s.io | sh -s - server --docker
+    <title>轻量化 K8s 管理方案：在 k3s 中部署 Skooner 可视化面板</title>
+    <url>/2026/01/08/software/k8s/deploy-skooner-on-k3s/</url>
+    <content><![CDATA[前言管理 Kubernetes 集群不应该以牺牲系统资源为代价。虽然官方 Dashboard 功能强大，但对于小型集群或单节点 k3s 环境来说，它往往显得过于臃肿。如果你正在寻找一个极致轻快、响应迅速的管理界面，Skooner 是一个完美的平衡点。
+Skooner（原名 K8dash）是一款开源、超轻量级的实时仪表盘，它在不增加集群负担的前提下，提供了核心的资源观测能力。
+为什么选择 Skooner？Skooner 的设计哲学与 k3s 的轻量化理念完美契合：
 
-国内用户，可以使用以下方法加速安装：
-curl -sfL https://rancher-mirror.rancher.cn/k3s/k3s-install.sh | INSTALL_K3S_MIRROR=cn sh -s - server --docker
+极低的资源占用：它的内存占用通常不到 50MB，在你的系统监控中几乎可以忽略不计。
+实时状态感知：基于 WebSocket 技术，无需手动刷新页面即可实时查看 CPU、内存消耗以及 Pod 状态。
+移动端自适应：UI 采用响应式设计，即使在手机或平板浏览器上也能轻松排查集群问题。
+
+部署步骤在本指南中，我们将通过 NodePort (32007) 的方式部署并暴露 Skooner，以便你直接通过物理机 IP 访问。
+1. 部署核心组件首先，一键安装 Skooner 的命名空间、服务和部署资源：
+kubectl apply -f https://raw.githubusercontent.com/skooner-k8s/skooner/master/kubernetes-skooner.yaml
+
+2. 配置自定义端口 (32007)默认情况下，Kubernetes 会分配一个随机的 NodePort。我们通过以下命令将其固定为 32007：
+kubectl patch svc skooner -n kube-system --type=&#x27;json&#x27; -p=&#x27;[&#123;&quot;op&quot;: &quot;replace&quot;, &quot;path&quot;: &quot;/spec/type&quot;, &quot;value&quot;:&quot;NodePort&quot;&#125;, &#123;&quot;op&quot;: &quot;replace&quot;, &quot;path&quot;: &quot;/spec/ports/0/nodePort&quot;, &quot;value&quot;:32007&#125;]&#x27;
+
+3. 创建管理 TokenSkooner 使用 Kubernetes 原生的 RBAC 权限。为了获得完整的管理权限，我们需要创建一个 ServiceAccount 并生成登录 Token：
+# 创建 ServiceAccount 和 集群角色绑定cat &lt;&lt;EOF | kubectl apply -f -apiVersion: v1kind: ServiceAccountmetadata:  name: skooner-admin  namespace: kube-system---apiVersion: rbac.authorization.k8s.io/v1kind: ClusterRoleBindingmetadata:  name: skooner-admin-bindingroleRef:  apiGroup: rbac.authorization.k8s.io  kind: ClusterRole  name: cluster-adminsubjects:- kind: ServiceAccount  name: skooner-admin  namespace: kube-systemEOF# 生成登录 Token（有效期 24 小时）kubectl create token skooner-admin -n kube-system --duration=24h
+
+
+如何访问
+打开浏览器，访问：http://&lt;你的服务器IP&gt;:32007。
+在登录界面选择 “Token” 模式。
+粘贴上一步生成的长字符串即可进入面板。
+
+这是我本地的效果：
+
+结语Skooner 在保持 k3s 轻量化特性的同时，为你提供了一个直观、现代的操作界面。对于那些既想要可视化观测、又不想被复杂管理平台拖慢系统性能的开发者来说，Skooner 是一个“即插即用”的最佳方案。
+如需了解更多高级配置，可以参考官方文档：skooner.io。
+一键安装脚本# 1. Deploy Skooner resourceskubectl apply -f https://raw.githubusercontent.com/skooner-k8s/skooner/master/kubernetes-skooner.yaml# 2. Patch the Service to NodePort and set it specifically to 32007kubectl patch svc skooner -n kube-system --type=&#x27;json&#x27; -p=&#x27;[&#123;&quot;op&quot;: &quot;replace&quot;, &quot;path&quot;: &quot;/spec/type&quot;, &quot;value&quot;:&quot;NodePort&quot;&#125;, &#123;&quot;op&quot;: &quot;replace&quot;, &quot;path&quot;: &quot;/spec/ports/0/nodePort&quot;, &quot;value&quot;:32007&#125;]&#x27;# 3. Create a Cluster Admin ServiceAccount for login (if not already created)cat &lt;&lt;EOF | kubectl apply -f -apiVersion: v1kind: ServiceAccountmetadata:  name: skooner-admin  namespace: kube-system---apiVersion: rbac.authorization.k8s.io/v1kind: ClusterRoleBindingmetadata:  name: skooner-admin-bindingroleRef:  apiGroup: rbac.authorization.k8s.io  kind: ClusterRole  name: cluster-adminsubjects:- kind: ServiceAccount  name: skooner-admin  namespace: kube-systemEOF# 4. Generate Login Tokenecho &quot;-------------------------------------------------------&quot;echo &quot;Skooner is now accessible at port: 32007&quot;echo &quot;Access URL: http://$(hostname -I | awk &#x27;&#123;print $1&#125;&#x27;):32007&quot;echo &quot;&quot;echo &quot;Login Token:&quot;kubectl create token skooner-admin -n kube-system --duration=24hecho &quot;-------------------------------------------------------&quot;
 ]]></content>
       <categories>
         <category>软件</category>
       </categories>
       <tags>
         <tag>k8s</tag>
-        <tag>docker</tag>
         <tag>k3s</tag>
         <tag>kubernetes</tag>
+        <tag>skooner</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Mac版minikube安装笔记</title>
+    <url>/2022/01/17/software/k8s/how-to-install-minkube-on-mac/</url>
+    <content><![CDATA[Mac版minikube安装笔记minikube是一个专注于让Kubernetes更加容易学习和开发的本地Kubernetes。只需要Docker或者虚拟机环境，我们便可以通过minikube start就能快速启动Kubernetes。
+要求安装minikube需要以下要求：
+
+至少两个CPU
+至少2GB内容
+至少20GB的硬盘空间
+容器或者虚拟机， 比如Docker, Hyperkit, Hyper-V, KVM, Parallels, Podman, VirtualBox, or VMware Fusion&#x2F;Workstation
+
+安装针对macos的x86-64的平台的，可以使用homebrew进行安装：
+brew install minikube
+
+如果倾向于二进制文件安装，可以使用下面的命令：
+curl -LO https://storage.googleapis.com/minikube/releases/latest/minikube-darwin-amd64sudo install minikube-darwin-amd64 /usr/local/bin/minikube
+
+如果是其他平台的操作系统，请看minikube的官网教程
+启动简单来说，可以直接使用minikube start可以直接启动了，但是在国内用于特殊的网络限制，请使用如下命令：
+minikube start --registry-mirror=https://registry.docker-cn.com  --image-repository registry.cn-hangzhou.aliyuncs.com/google_containers
+
+驱动（Drivers）通过驱动，minikube可以支持不同的容器和虚拟机。
+针对macos来说，推荐使用docker和hyperkit，我们只需要在上面的命令的基础上添加--vm-driver=docker或者--vm-driver=hyperkit。
+其他平台可以访问Drivers。
+kubectlkubectl是Kubernetes的命令行工具，方便用户通过一些简单的命令去管理Kubernetes。
+如果事先安装了docker desktop, 那么kubectl已经安装好了，如果没有安装，那可以使用homebrew安装：
+brew install kubectl 
+
+其他平台可以访问kubectl
+验证新建终端，输入kubectl get po -A,显示以下类似命令就算启动成功了：
+NAMESPACE     NAME                               READY   STATUS    RESTARTS   AGEkube-system   coredns-7d89d9b6b8-d462h           0/1     Running   0          20skube-system   etcd-minikube                      1/1     Running   0          32skube-system   kube-apiserver-minikube            1/1     Running   0          35skube-system   kube-controller-manager-minikube   1/1     Running   0          32skube-system   kube-proxy-gcbpj                   1/1     Running   0          20skube-system   kube-scheduler-minikube            1/1     Running   0          31skube-system   storage-provisioner                1/1     Running   0          30s
+
+
+参考资料以下是本文撰写过程中的参考资料：
+
+minikube start
+kubectl
+Minkube安装笔记
+Minikube - Kubernetes本地实验环境
+
+]]></content>
+      <categories>
+        <category>软件</category>
+      </categories>
+      <tags>
+        <tag>k8s</tag>
+        <tag>minikube</tag>
+        <tag>kubernetes</tag>
+        <tag>Mac</tag>
       </tags>
   </entry>
 </search>
