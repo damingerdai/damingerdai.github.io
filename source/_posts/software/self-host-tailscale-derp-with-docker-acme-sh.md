@@ -206,7 +206,3 @@ sudo tailscale up --reset
 ```
 
 重置后，两端节点均能正常通过自建的 `hk-custom` 节点进行双向中继通信。
-
-## 引用
-
-1. 
