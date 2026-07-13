@@ -5,18 +5,11 @@ tags: [s3, garage]
 categories: [软件]
 ---
 
-
-为了让这篇技术博客更具实战价值和严谨性，我们将刚才发生的 **Go SDK 语法编译坑（`s3.PutObjectInput`）** 以及 **S3 403 鉴权坑（Bucket 粒度显式授权）** 完美地融合进博客的“踩坑记录”中。
-
-以下是更新后的完整博客内容，结构更紧凑，逻辑也更闭环：
-
----
-
 # 寻找轻量级 S3 替代方案：极简分布式对象存储 Garage 搭建与全线打通指南
 
 在自建基础设施、HomeLab 或微型云环境时，MinIO 通常是大家首选的 S3 兼容对象存储。然而，[MinIO](github.com/minio/minio)于2026 年 2 月 12 日宣布不再维护，2026 年 4 月 25 日正式归档为只读状态
 
-最近关注到一篇优秀的技术分享 *[Garage: The Minimalist Distributed Object Store — Your Lightweight S3 Alternative](https://blog-ocampoge.medium.com/garage-the-minimalist-distributed-object-store-your-lightweight-s3-alternative-b7ca8be162b0)*，文中极力推荐了 **Garage**。这是一个用 Rust 编写的轻量级、去中心化分布式对象存储，专为不规则、低带宽的多节点网络设计，单个节点跑起来甚至只需要几十兆内存，可以说是将“极简主义”贯彻到了极致。
+最近关注到一篇优秀的技术分享 _[Garage: The Minimalist Distributed Object Store — Your Lightweight S3 Alternative](https://blog-ocampoge.medium.com/garage-the-minimalist-distributed-object-store-your-lightweight-s3-alternative-b7ca8be162b0)_，文中极力推荐了 **Garage**。这是一个用 Rust 编写的轻量级、去中心化分布式对象存储，专为不规则、低带宽的多节点网络设计，单个节点跑起来甚至只需要几十兆内存，可以说是将“极简主义”贯彻到了极致。
 
 本文将基于最新的 **Garage v2.3.0**，详细记录如何通过 Docker Compose 快速搭建单节点集群，并分享在部署以及后续使用 SDK 进行客户端测试时遇到的**四大核心深坑**与避坑姿势。
 
@@ -33,8 +26,6 @@ categories: [软件]
 #### `docker-compose.yml`
 
 ```yaml
-version: '3.8'
-
 services:
   garage:
     image: dxflrs/garage:v2.3.0
