@@ -1,7 +1,7 @@
 ---
 title: 在windows系统中如何给rust如何配置字节源
 date: 2025-04-30 16:57:06
-tags: [windows, rustl]
+tags: [windows, rust]
 categories: [后端]
 ---
 
@@ -47,9 +47,9 @@ index = "https://rsproxy.cn/crates.io-index"
 git-fetch-with-cli = true
 ```
 
-
 ## 参考资料
 
 1. [rsproxy](https://rsproxy.cn/)
 2. [Windows 11 上通过国内源安装 Rust](https://www.sunzhongwei.com/windows-11-install-rust-with-china-mirror)
 3. [rustup-init.exe 安装失败及其解决方案](https://www.cnblogs.com/manqing321/p/17026725.html)
+
