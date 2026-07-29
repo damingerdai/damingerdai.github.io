@@ -1,0 +1,632 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="dark"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1.0,viewport-fit=cover"><title>在 Docker 构建 Rust 项目时注入 Git 版本信息 | Damingerdai's Blog</title><meta name="author" content="Arthur Ming"><meta name="copyright" content="Arthur Ming"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#0d0d0d"><meta name="description" content="在 Docker 构建 Rust 项目时注入 Git 版本信息在开发 Rust 服务时，我们经常希望程序能够输出自身的构建信息，例如：  当前版本对应的 Git commit； Git 分支； 最近的 tag 或 git describe 结果； commit 的提交时间； Rust 编译器和 Cargo 版本； 程序的构建时间。  这些信息对于排查线上问题很有帮助。看到某个容器正在运行时，我们可">
+<meta property="og:type" content="article">
+<meta property="og:title" content="在 Docker 构建 Rust 项目时注入 Git 版本信息">
+<meta property="og:url" content="http://blog.damingerdai.com/2026/07/29/back-end/rust-docker-git-build-metadata/index.html">
+<meta property="og:site_name" content="Damingerdai&#39;s Blog">
+<meta property="og:description" content="在 Docker 构建 Rust 项目时注入 Git 版本信息在开发 Rust 服务时，我们经常希望程序能够输出自身的构建信息，例如：  当前版本对应的 Git commit； Git 分支； 最近的 tag 或 git describe 结果； commit 的提交时间； Rust 编译器和 Cargo 版本； 程序的构建时间。  这些信息对于排查线上问题很有帮助。看到某个容器正在运行时，我们可">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg">
+<meta property="article:published_time" content="2026-07-29T05:46:50.000Z">
+<meta property="article:modified_time" content="2026-07-29T05:50:29.724Z">
+<meta property="article:author" content="Arthur Ming">
+<meta property="article:tag" content="docker">
+<meta property="article:tag" content="rust">
+<meta property="article:tag" content="git">
+<meta property="article:tag" content="vergen">
+<meta property="article:tag" content="vergen_git2">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg"><script type="application/ld+json">{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "在 Docker 构建 Rust 项目时注入 Git 版本信息",
+  "url": "http://blog.damingerdai.com/2026/07/29/back-end/rust-docker-git-build-metadata/",
+  "image": "https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg",
+  "datePublished": "2026-07-29T05:46:50.000Z",
+  "dateModified": "2026-07-29T05:50:29.724Z",
+  "author": [
+    {
+      "@type": "Person",
+      "name": "Arthur Ming",
+      "url": "http://blog.damingerdai.com"
+    }
+  ]
+}</script><link rel="shortcut icon" href="/img/avatar.png"><link rel="canonical" href="http://blog.damingerdai.com/2026/07/29/back-end/rust-docker-git-build-metadata/index.html"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><link rel="stylesheet" href="/css/index.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free/css/all.min.css"><script>
+    (() => {
+      
+    const saveToLocal = {
+      set: (key, value, ttl) => {
+        if (!ttl) return
+        const expiry = Date.now() + ttl * 86400000
+        localStorage.setItem(key, JSON.stringify({ value, expiry }))
+      },
+      get: key => {
+        const itemStr = localStorage.getItem(key)
+        if (!itemStr) return undefined
+        const { value, expiry } = JSON.parse(itemStr)
+        if (Date.now() > expiry) {
+          localStorage.removeItem(key)
+          return undefined
+        }
+        return value
+      }
+    }
+
+    window.btf = {
+      saveToLocal,
+      getScript: (url, attr = {}) => new Promise((resolve, reject) => {
+        const script = document.createElement('script')
+        script.src = url
+        script.async = true
+        Object.entries(attr).forEach(([key, val]) => script.setAttribute(key, val))
+        script.onload = script.onreadystatechange = () => {
+          if (!script.readyState || /loaded|complete/.test(script.readyState)) resolve()
+        }
+        script.onerror = reject
+        document.head.appendChild(script)
+      }),
+      getCSS: (url, id) => new Promise((resolve, reject) => {
+        const link = document.createElement('link')
+        link.rel = 'stylesheet'
+        link.href = url
+        if (id) link.id = id
+        link.onload = link.onreadystatechange = () => {
+          if (!link.readyState || /loaded|complete/.test(link.readyState)) resolve()
+        }
+        link.onerror = reject
+        document.head.appendChild(link)
+      }),
+      addGlobalFn: (key, fn, name = false, parent = window) => {
+        if (!false && key.startsWith('pjax')) return
+        const globalFn = parent.globalFn || {}
+        globalFn[key] = globalFn[key] || {}
+        globalFn[key][name || Object.keys(globalFn[key]).length] = fn
+        parent.globalFn = globalFn
+      }
+    }
+  
+      
+      const activateDarkMode = () => {
+        document.documentElement.setAttribute('data-theme', 'dark')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+        }
+      }
+      const activateLightMode = () => {
+        document.documentElement.setAttribute('data-theme', 'light')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#ffffff')
+        }
+      }
+
+      btf.activateDarkMode = activateDarkMode
+      btf.activateLightMode = activateLightMode
+
+      const theme = saveToLocal.get('theme')
+    
+          const mediaQueryDark = window.matchMedia('(prefers-color-scheme: dark)')
+          const mediaQueryLight = window.matchMedia('(prefers-color-scheme: light)')
+
+          if (theme === undefined) {
+            if (mediaQueryLight.matches) activateLightMode()
+            else if (mediaQueryDark.matches) activateDarkMode()
+            else {
+              const hour = new Date().getHours()
+              const isNight = hour <= 6 || hour >= 18
+              isNight ? activateDarkMode() : activateLightMode()
+            }
+            mediaQueryDark.addEventListener('change', () => {
+              if (saveToLocal.get('theme') === undefined) {
+                e.matches ? activateDarkMode() : activateLightMode()
+              }
+            })
+          } else {
+            theme === 'light' ? activateLightMode() : activateDarkMode()
+          }
+        
+      
+      const asideStatus = saveToLocal.get('aside-status')
+      if (asideStatus !== undefined) {
+        document.documentElement.classList.toggle('hide-aside', asideStatus === 'hide')
+      }
+    
+      
+    const detectApple = () => {
+      if (/iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent)) {
+        document.documentElement.classList.add('apple')
+      }
+    }
+    detectApple()
+  
+    })()
+  </script><script>const GLOBAL_CONFIG = {
+  root: '/',
+  algolia: undefined,
+  localSearch: undefined,
+  translate: undefined,
+  highlight: {"plugin":"highlight.js","highlightCopy":true,"highlightLang":true,"highlightHeightLimit":false,"highlightFullpage":false,"highlightMacStyle":false},
+  copy: {
+    success: '复制成功',
+    error: '复制失败',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '',
+  dateSuffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: undefined,
+  lightbox: 'null',
+  Snackbar: undefined,
+  infinitegrid: {
+    js: 'https://cdn.jsdelivr.net/npm/@egjs/infinitegrid/dist/infinitegrid.min.js',
+    buttonText: '加载更多'
+  },
+  isPhotoFigcaption: false,
+  islazyloadPlugin: false,
+  isAnchor: false,
+  percent: {
+    toc: true,
+    rightside: false,
+  },
+  autoDarkmode: true
+}</script><script id="config-diff">var GLOBAL_CONFIG_SITE = {
+  title: '在 Docker 构建 Rust 项目时注入 Git 版本信息',
+  isHighlightShrink: false,
+  isToc: true,
+  pageType: 'post'
+}</script><link rel="stylesheet" href="/css/styles.css"><meta name="generator" content="Hexo 7.3.0"></head><body><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="avatar-img text-center"><img src="/img/avatar.png" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="site-data text-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">94</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">142</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">8</div></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归类</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><span class="site-page group"><i class="fa-fw fas fa-list"></i><span> 其他</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><li><a class="site-page child" href="/others/learning"><i class="fa-fw fas fa-graduation-cap"></i><span> 学习课程</span></a></li><li><a class="site-page child" href="/others/link/"><i class="fa-fw fas fa-link"></i><span> 链接</span></a></li><li><a class="site-page child" href="/others/interview/"><i class="fa-fw fas fa-glide"></i><span> 面试</span></a></li></ul></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于</span></a></div></div></div></div><div class="post" id="body-wrap"><header class="post-bg" id="page-header" style="background-image: url(https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg);"><nav id="nav"><span id="blog-info"><a class="nav-site-title" href="/"><span class="site-name">Damingerdai's Blog</span></a><a class="nav-page-title" href="/"><span class="site-name">在 Docker 构建 Rust 项目时注入 Git 版本信息</span><span class="site-name"><i class="fa-solid fa-circle-arrow-left"></i><span>  返回首页</span></span></a></span><div id="menus"><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归类</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><span class="site-page group"><i class="fa-fw fas fa-list"></i><span> 其他</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><li><a class="site-page child" href="/others/learning"><i class="fa-fw fas fa-graduation-cap"></i><span> 学习课程</span></a></li><li><a class="site-page child" href="/others/link/"><i class="fa-fw fas fa-link"></i><span> 链接</span></a></li><li><a class="site-page child" href="/others/interview/"><i class="fa-fw fas fa-glide"></i><span> 面试</span></a></li></ul></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于</span></a></div></div><div id="toggle-menu"><span class="site-page"><i class="fas fa-bars fa-fw"></i></span></div></div></nav><div id="post-info"><h1 class="post-title">在 Docker 构建 Rust 项目时注入 Git 版本信息</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2026-07-29T05:46:50.000Z" title="发表于 2026-07-29 13:46:50">2026-07-29</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2026-07-29T05:50:29.724Z" title="更新于 2026-07-29 13:50:29">2026-07-29</time></span><span class="post-meta-categories"><span class="post-meta-separator">|</span><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/%E5%90%8E%E7%AB%AF/">后端</a></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-pv-cv" id="" data-flag-title=""><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">浏览量:</span><span id="busuanzi_value_page_pv"><i class="fa-solid fa-spinner fa-spin"></i></span></span></div></div></div></header><main class="layout" id="content-inner"><div id="post"><article class="container post-content" id="article-container"><h1 id="在-Docker-构建-Rust-项目时注入-Git-版本信息"><a href="#在-Docker-构建-Rust-项目时注入-Git-版本信息" class="headerlink" title="在 Docker 构建 Rust 项目时注入 Git 版本信息"></a>在 Docker 构建 Rust 项目时注入 Git 版本信息</h1><p>在开发 Rust 服务时，我们经常希望程序能够输出自身的构建信息，例如：</p>
+<ul>
+<li>当前版本对应的 Git commit；</li>
+<li>Git 分支；</li>
+<li>最近的 tag 或 <code>git describe</code> 结果；</li>
+<li>commit 的提交时间；</li>
+<li>Rust 编译器和 Cargo 版本；</li>
+<li>程序的构建时间。</li>
+</ul>
+<p>这些信息对于排查线上问题很有帮助。看到某个容器正在运行时，我们可以快速确认它究竟由哪一次提交构建，而不必仅依赖容易被重复使用的 Docker tag。</p>
+<p>本文记录我在 Rust 项目中使用 <code>vergen-git2</code> 生成构建信息，并在 Docker 构建阶段通过 build arguments 注入 Git 元数据的过程。</p>
+<h2 id="一、为什么-Docker-构建时可能读取不到-Git-信息"><a href="#一、为什么-Docker-构建时可能读取不到-Git-信息" class="headerlink" title="一、为什么 Docker 构建时可能读取不到 Git 信息"></a>一、为什么 Docker 构建时可能读取不到 Git 信息</h2><p>在本地直接执行：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">cargo build --release</span><br></pre></td></tr></table></figure>
+
+<p>构建脚本通常可以沿着当前目录找到 <code>.git</code>，因此 <code>vergen-git2</code> 能直接读取 commit、branch 和 tag 等信息。</p>
+<p>但是 Docker 构建并不一定能看到 <code>.git</code>。常见原因包括：</p>
+<ol>
+<li><code>.dockerignore</code> 中排除了 <code>.git</code>；</li>
+<li>Dockerfile 只复制了 <code>Cargo.toml</code>、<code>Cargo.lock</code>、<code>build.rs</code> 和 <code>src</code>；</li>
+<li>构建使用的是源码压缩包，而不是完整的 Git 仓库；</li>
+<li>CI 平台使用浅克隆，某些 tag 或历史记录不可用。</li>
+</ol>
+<p>当然，也可以直接把 <code>.git</code> 复制进构建上下文，但这会增加上下文大小，降低缓存效率，还可能把不必要的仓库信息带入构建过程。</p>
+<p>我的处理方式是：</p>
+<ol>
+<li>在宿主机上通过 Git 命令取得版本信息；</li>
+<li>使用 <code>docker build --build-arg</code> 将其传给 Docker；</li>
+<li>Dockerfile 把 build arguments 转成构建阶段的环境变量；</li>
+<li><code>build.rs</code> 将环境变量写入最终的 Rust 二进制文件；</li>
+<li>如果 Git 信息不可用，则使用 <code>unknown</code>，保证构建不会失败。</li>
+</ol>
+<h2 id="二、使用-vergen-git2-生成构建信息"><a href="#二、使用-vergen-git2-生成构建信息" class="headerlink" title="二、使用 vergen-git2 生成构建信息"></a>二、使用 <code>vergen-git2</code> 生成构建信息</h2><p>项目使用 <code>vergen-git2</code> 收集构建、Cargo、Git、Rust 编译器和系统信息。一个完整的 <code>build.rs</code> 可以写成：</p>
+<figure class="highlight rust"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">use</span> std::error::Error;</span><br><span class="line"><span class="keyword">use</span> vergen_git2::&#123;Build, Cargo, Emitter, Git2, Rustc, Sysinfo&#125;;</span><br><span class="line"></span><br><span class="line"><span class="keyword">const</span> GIT_KEYS: &amp;[&amp;<span class="type">str</span>] = &amp;[</span><br><span class="line">    <span class="string">&quot;VERGEN_GIT_DESCRIBE&quot;</span>,</span><br><span class="line">    <span class="string">&quot;VERGEN_GIT_SHA&quot;</span>,</span><br><span class="line">    <span class="string">&quot;VERGEN_GIT_COMMIT_DATE&quot;</span>,</span><br><span class="line">    <span class="string">&quot;VERGEN_GIT_BRANCH&quot;</span>,</span><br><span class="line">];</span><br><span class="line"></span><br><span class="line"><span class="keyword">fn</span> <span class="title function_">main</span>() <span class="punctuation">-&gt;</span> <span class="type">Result</span>&lt;(), <span class="type">Box</span>&lt;<span class="keyword">dyn</span> Error&gt;&gt; &#123;</span><br><span class="line">    <span class="built_in">println!</span>(<span class="string">&quot;cargo:rerun-if-changed=build.rs&quot;</span>);</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 默认值以及外部环境变量变更检测。</span></span><br><span class="line">    <span class="keyword">for</span> <span class="variable">key</span> <span class="keyword">in</span> GIT_KEYS &#123;</span><br><span class="line">        <span class="built_in">println!</span>(<span class="string">&quot;cargo:rerun-if-env-changed=&#123;key&#125;&quot;</span>);</span><br><span class="line">        <span class="built_in">println!</span>(<span class="string">&quot;cargo:rustc-env=&#123;key&#125;=unknown&quot;</span>);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">let</span> <span class="keyword">mut </span><span class="variable">emitter</span> = Emitter::<span class="title function_ invoke__">default</span>();</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 无法读取 .git 时，不阻止项目继续构建。</span></span><br><span class="line">    <span class="keyword">let</span> <span class="variable">_</span> = emitter.<span class="title function_ invoke__">add_instructions</span>(&amp;Build::<span class="title function_ invoke__">all_build</span>());</span><br><span class="line">    <span class="keyword">let</span> <span class="variable">_</span> = emitter.<span class="title function_ invoke__">add_instructions</span>(&amp;Cargo::<span class="title function_ invoke__">all_cargo</span>());</span><br><span class="line">    <span class="keyword">let</span> <span class="variable">_</span> = emitter.<span class="title function_ invoke__">add_instructions</span>(&amp;Git2::<span class="title function_ invoke__">all_git</span>());</span><br><span class="line">    <span class="keyword">let</span> <span class="variable">_</span> = emitter.<span class="title function_ invoke__">add_instructions</span>(&amp;Rustc::<span class="title function_ invoke__">all_rustc</span>());</span><br><span class="line">    <span class="keyword">let</span> <span class="variable">_</span> = emitter.<span class="title function_ invoke__">add_instructions</span>(&amp;Sysinfo::<span class="title function_ invoke__">all_sysinfo</span>());</span><br><span class="line">    <span class="keyword">let</span> <span class="variable">_</span> = emitter.<span class="title function_ invoke__">emit</span>();</span><br><span class="line"></span><br><span class="line">    <span class="comment">// Docker build arguments 或外部环境变量拥有最高优先级。</span></span><br><span class="line">    <span class="keyword">for</span> <span class="variable">key</span> <span class="keyword">in</span> GIT_KEYS &#123;</span><br><span class="line">        <span class="keyword">if</span> <span class="keyword">let</span> <span class="variable">Ok</span>(value) = std::env::<span class="title function_ invoke__">var</span>(key) &#123;</span><br><span class="line">            <span class="keyword">if</span> !value.<span class="title function_ invoke__">trim</span>().<span class="title function_ invoke__">is_empty</span>() &#123;</span><br><span class="line">                <span class="built_in">println!</span>(<span class="string">&quot;cargo:rustc-env=&#123;key&#125;=&#123;value&#125;&quot;</span>);</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="title function_ invoke__">Ok</span>(())</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>这里有三层数据来源，优先级从低到高依次为：</p>
+<ol>
+<li><code>unknown</code> 默认值；</li>
+<li><code>vergen-git2</code> 从当前 Git 仓库读取的值；</li>
+<li>Docker 或外部环境变量注入的值。</li>
+</ol>
+<p>同一个 <code>cargo:rustc-env</code> 变量可能被输出多次，最终以后输出的值为准。因此，即使 Docker 构建环境里不存在 <code>.git</code>，宿主机传入的值仍然可以覆盖默认值。</p>
+<p><code>cargo:rerun-if-env-changed</code> 也很重要。它告诉 Cargo：当这些环境变量发生变化时，需要重新运行构建脚本。否则在复用 Cargo 缓存时，新的 Git commit 信息可能不会进入二进制文件。</p>
+<h2 id="三、编写多阶段-Dockerfile"><a href="#三、编写多阶段-Dockerfile" class="headerlink" title="三、编写多阶段 Dockerfile"></a>三、编写多阶段 Dockerfile</h2><p>Dockerfile 使用 Rust 官方镜像完成编译，再把二进制文件复制到更精简的 Debian 运行时镜像中：</p>
+<figure class="highlight dockerfile"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">FROM</span> rust:<span class="number">1.97</span>.<span class="number">1</span>-slim-trixie AS builder</span><br><span class="line"></span><br><span class="line"><span class="keyword">WORKDIR</span><span class="language-bash"> /app</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># Git metadata injected at build time.</span></span><br><span class="line"><span class="comment"># Defaults keep the build working when the caller provides no Git information.</span></span><br><span class="line"><span class="keyword">ARG</span> VERGEN_GIT_DESCRIBE=unknown</span><br><span class="line"><span class="keyword">ARG</span> VERGEN_GIT_SHA=unknown</span><br><span class="line"><span class="keyword">ARG</span> VERGEN_GIT_COMMIT_DATE=unknown</span><br><span class="line"><span class="keyword">ARG</span> VERGEN_GIT_BRANCH=unknown</span><br><span class="line"></span><br><span class="line"><span class="keyword">ENV</span> VERGEN_GIT_DESCRIBE=$VERGEN_GIT_DESCRIBE \</span><br><span class="line">    VERGEN_GIT_SHA=$VERGEN_GIT_SHA \</span><br><span class="line">    VERGEN_GIT_COMMIT_DATE=$VERGEN_GIT_COMMIT_DATE \</span><br><span class="line">    VERGEN_GIT_BRANCH=$VERGEN_GIT_BRANCH</span><br><span class="line"></span><br><span class="line"><span class="keyword">COPY</span><span class="language-bash"> Cargo.toml Cargo.lock build.rs ./</span></span><br><span class="line"><span class="keyword">COPY</span><span class="language-bash"> src ./src</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">RUN</span><span class="language-bash"> cargo build --release</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">FROM</span> debian:trixie-slim</span><br><span class="line"></span><br><span class="line"><span class="keyword">WORKDIR</span><span class="language-bash"> /app</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">COPY</span><span class="language-bash"> --from=builder /app/target/release/rammal /app/rammal</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">EXPOSE</span> <span class="number">8000</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">ENTRYPOINT</span><span class="language-bash"> [<span class="string">&quot;/app/rammal&quot;</span>]</span></span><br></pre></td></tr></table></figure>
+
+<p>这里选择 <code>rust:1.97.1-slim-trixie</code> 作为 builder，并使用 <code>debian:trixie-slim</code> 作为运行时。二者都基于 Debian Trixie，能够减少因为 glibc 版本不一致导致的运行时兼容问题。</p>
+<p>需要注意的是，<code>ARG</code> 只在 Docker 构建阶段存在。把它们赋给 <code>ENV</code> 后，执行 <code>cargo build</code> 的进程才能通过 <code>std::env::var</code> 读取这些值。</p>
+<p>这些环境变量只定义在 <code>builder</code> 阶段，不会自动进入最终的 Debian 镜像。Git 信息已经在编译过程中写入二进制文件，因此运行容器时也不再需要这些环境变量。</p>
+<h2 id="四、编写统一的构建脚本"><a href="#四、编写统一的构建脚本" class="headerlink" title="四、编写统一的构建脚本"></a>四、编写统一的构建脚本</h2><p>为了避免每次手动填写 build arguments，我编写了一个 <code>build.sh</code>：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#!/usr/bin/env bash</span></span><br><span class="line"></span><br><span class="line"><span class="built_in">set</span> -euo pipefail</span><br><span class="line"></span><br><span class="line">IMAGE_NAME=<span class="string">&quot;damingerdai/rammal&quot;</span></span><br><span class="line">IMAGE_TAG=<span class="string">&quot;<span class="variable">$&#123;1:-latest&#125;</span>&quot;</span></span><br><span class="line"></span><br><span class="line"><span class="built_in">echo</span> <span class="string">&quot;Building Docker image: <span class="variable">$&#123;IMAGE_NAME&#125;</span>:<span class="variable">$&#123;IMAGE_TAG&#125;</span>&quot;</span></span><br><span class="line"></span><br><span class="line">GIT_DESCRIBE=$(git describe --always --dirty 2&gt;/dev/null || <span class="built_in">echo</span> <span class="string">&quot;unknown&quot;</span>)</span><br><span class="line">GIT_SHA=$(git rev-parse HEAD 2&gt;/dev/null || <span class="built_in">echo</span> <span class="string">&quot;unknown&quot;</span>)</span><br><span class="line">GIT_COMMIT_DATE=$(git <span class="built_in">log</span> -1 --format=%cI 2&gt;/dev/null || <span class="built_in">echo</span> <span class="string">&quot;unknown&quot;</span>)</span><br><span class="line">GIT_BRANCH=$(git branch --show-current 2&gt;/dev/null || <span class="built_in">echo</span> <span class="string">&quot;unknown&quot;</span>)</span><br><span class="line"></span><br><span class="line"><span class="comment"># Detached HEAD is common in CI, so an empty branch is also treated as unknown.</span></span><br><span class="line">GIT_BRANCH=<span class="string">&quot;<span class="variable">$&#123;GIT_BRANCH:-unknown&#125;</span>&quot;</span></span><br><span class="line"></span><br><span class="line">docker build \</span><br><span class="line">  --build-arg VERGEN_GIT_DESCRIBE=<span class="string">&quot;<span class="variable">$&#123;GIT_DESCRIBE&#125;</span>&quot;</span> \</span><br><span class="line">  --build-arg VERGEN_GIT_SHA=<span class="string">&quot;<span class="variable">$&#123;GIT_SHA&#125;</span>&quot;</span> \</span><br><span class="line">  --build-arg VERGEN_GIT_COMMIT_DATE=<span class="string">&quot;<span class="variable">$&#123;GIT_COMMIT_DATE&#125;</span>&quot;</span> \</span><br><span class="line">  --build-arg VERGEN_GIT_BRANCH=<span class="string">&quot;<span class="variable">$&#123;GIT_BRANCH&#125;</span>&quot;</span> \</span><br><span class="line">  -t <span class="string">&quot;<span class="variable">$&#123;IMAGE_NAME&#125;</span>:<span class="variable">$&#123;IMAGE_TAG&#125;</span>&quot;</span> \</span><br><span class="line">  .</span><br><span class="line"></span><br><span class="line"><span class="built_in">echo</span> <span class="string">&quot;Build completed:&quot;</span></span><br><span class="line">docker images <span class="string">&quot;<span class="variable">$&#123;IMAGE_NAME&#125;</span>:<span class="variable">$&#123;IMAGE_TAG&#125;</span>&quot;</span></span><br></pre></td></tr></table></figure>
+
+<p>给脚本添加执行权限：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">chmod</span> +x build.sh</span><br></pre></td></tr></table></figure>
+
+<p>不传参数时，镜像 tag 默认为 <code>latest</code>：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">./build.sh</span><br></pre></td></tr></table></figure>
+
+<p>也可以指定 tag：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">./build.sh v2026.729.0</span><br></pre></td></tr></table></figure>
+
+<p>最终构建出的镜像分别是：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">damingerdai/rammal:latest</span><br></pre></td></tr></table></figure>
+
+<p>或者：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">damingerdai/rammal:v2026.729.0</span><br></pre></td></tr></table></figure>
+
+<h2 id="五、在-Rust-程序中读取构建信息"><a href="#五、在-Rust-程序中读取构建信息" class="headerlink" title="五、在 Rust 程序中读取构建信息"></a>五、在 Rust 程序中读取构建信息</h2><p><code>build.rs</code> 通过 <code>cargo:rustc-env</code> 写入的值，可以在 Rust 源码中使用 <code>env!</code> 或 <code>option_env!</code> 读取。</p>
+<p>如果已经确保 <code>build.rs</code> 总会提供默认值，可以直接使用：</p>
+<figure class="highlight rust"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">pub</span> <span class="keyword">struct</span> <span class="title class_">VersionInfo</span> &#123;</span><br><span class="line">    <span class="keyword">pub</span> git_describe: &amp;<span class="symbol">&#x27;static</span> <span class="type">str</span>,</span><br><span class="line">    <span class="keyword">pub</span> git_sha: &amp;<span class="symbol">&#x27;static</span> <span class="type">str</span>,</span><br><span class="line">    <span class="keyword">pub</span> git_commit_date: &amp;<span class="symbol">&#x27;static</span> <span class="type">str</span>,</span><br><span class="line">    <span class="keyword">pub</span> git_branch: &amp;<span class="symbol">&#x27;static</span> <span class="type">str</span>,</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">pub</span> <span class="keyword">fn</span> <span class="title function_">version_info</span>() <span class="punctuation">-&gt;</span> VersionInfo &#123;</span><br><span class="line">    VersionInfo &#123;</span><br><span class="line">        git_describe: <span class="built_in">env!</span>(<span class="string">&quot;VERGEN_GIT_DESCRIBE&quot;</span>),</span><br><span class="line">        git_sha: <span class="built_in">env!</span>(<span class="string">&quot;VERGEN_GIT_SHA&quot;</span>),</span><br><span class="line">        git_commit_date: <span class="built_in">env!</span>(<span class="string">&quot;VERGEN_GIT_COMMIT_DATE&quot;</span>),</span><br><span class="line">        git_branch: <span class="built_in">env!</span>(<span class="string">&quot;VERGEN_GIT_BRANCH&quot;</span>),</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>如果希望源码脱离 <code>build.rs</code> 后仍能编译，可以使用更保守的 <code>option_env!</code>：</p>
+<figure class="highlight rust"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">const</span> GIT_SHA: &amp;<span class="type">str</span> = <span class="built_in">option_env!</span>(<span class="string">&quot;VERGEN_GIT_SHA&quot;</span>).<span class="title function_ invoke__">unwrap_or</span>(<span class="string">&quot;unknown&quot;</span>);</span><br></pre></td></tr></table></figure>
+
+<p>这些信息可以展示在：</p>
+<ul>
+<li><code>--version</code> 命令输出中；</li>
+<li><code>/version</code> 或 <code>/health</code> 接口中；</li>
+<li>程序启动日志中；</li>
+<li>管理后台的系统信息页面中。</li>
+</ul>
+<p>例如启动时输出：</p>
+<figure class="highlight rust"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">tracing::info!(</span><br><span class="line">    git_sha = <span class="built_in">env!</span>(<span class="string">&quot;VERGEN_GIT_SHA&quot;</span>),</span><br><span class="line">    git_describe = <span class="built_in">env!</span>(<span class="string">&quot;VERGEN_GIT_DESCRIBE&quot;</span>),</span><br><span class="line">    git_commit_date = <span class="built_in">env!</span>(<span class="string">&quot;VERGEN_GIT_COMMIT_DATE&quot;</span>),</span><br><span class="line">    git_branch = <span class="built_in">env!</span>(<span class="string">&quot;VERGEN_GIT_BRANCH&quot;</span>),</span><br><span class="line">    <span class="string">&quot;starting rammal&quot;</span></span><br><span class="line">);</span><br></pre></td></tr></table></figure>
+
+<h2 id="六、几个容易忽略的问题"><a href="#六、几个容易忽略的问题" class="headerlink" title="六、几个容易忽略的问题"></a>六、几个容易忽略的问题</h2><h3 id="1-fail-on-error-和忽略错误不能同时表达严格失败"><a href="#1-fail-on-error-和忽略错误不能同时表达严格失败" class="headerlink" title="1. fail_on_error() 和忽略错误不能同时表达严格失败"></a>1. <code>fail_on_error()</code> 和忽略错误不能同时表达严格失败</h3><p>如果调用了：</p>
+<figure class="highlight rust"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">emitter.<span class="title function_ invoke__">fail_on_error</span>();</span><br></pre></td></tr></table></figure>
+
+<p>却又使用：</p>
+<figure class="highlight rust"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">let</span> <span class="variable">_</span> = emitter.<span class="title function_ invoke__">emit</span>();</span><br></pre></td></tr></table></figure>
+
+<p>那么错误依然被调用方忽略了。既然本文的目标是让缺少 <code>.git</code> 的 Docker 构建继续完成，就不必启用严格失败模式。</p>
+<p>如果希望只有 Git 信息可以失败、其他构建信息必须成功，最好把 Git 和非 Git 信息分开处理，而不是统一忽略所有结果。</p>
+<h3 id="2-Docker-build-arguments-会影响缓存"><a href="#2-Docker-build-arguments-会影响缓存" class="headerlink" title="2. Docker build arguments 会影响缓存"></a>2. Docker build arguments 会影响缓存</h3><p>Git SHA 每次提交都会变化，因此相关构建层的缓存会失效。这是必要的：如果继续使用旧缓存，最终二进制文件里记录的可能是上一次提交。</p>
+<p>当前 Dockerfile 在 <code>cargo build</code> 之前声明并使用这些参数，因此 Git 信息变化会使编译层重新执行。</p>
+<h3 id="3-dirty-只能说明工作区发生过修改"><a href="#3-dirty-只能说明工作区发生过修改" class="headerlink" title="3. --dirty 只能说明工作区发生过修改"></a>3. <code>--dirty</code> 只能说明工作区发生过修改</h3><p><code>git describe --always --dirty</code> 可能得到类似：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">v1.2.0-3-g1a2b3c4-dirty</span><br></pre></td></tr></table></figure>
+
+<p>其中 <code>dirty</code> 只能说明构建时工作区存在未提交修改，并不能记录具体修改内容。因此，使用脏工作区构建出来的镜像不一定能仅凭 commit 完整复现。</p>
+<p>正式发布镜像时，可以增加检查：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">if</span> ! git diff --quiet || ! git diff --cached --quiet; <span class="keyword">then</span></span><br><span class="line">  <span class="built_in">echo</span> <span class="string">&quot;Refusing to build a release image from a dirty working tree.&quot;</span></span><br><span class="line">  <span class="built_in">exit</span> 1</span><br><span class="line"><span class="keyword">fi</span></span><br></pre></td></tr></table></figure>
+
+<p>是否禁止 dirty build，可以根据开发镜像和发布镜像的用途决定。</p>
+<h3 id="4-CI-中可能处于-detached-HEAD"><a href="#4-CI-中可能处于-detached-HEAD" class="headerlink" title="4. CI 中可能处于 detached HEAD"></a>4. CI 中可能处于 detached HEAD</h3><p>CI 经常检出某个具体 commit，而不是停留在本地分支上。这时：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">git branch --show-current</span><br></pre></td></tr></table></figure>
+
+<p>可能返回空字符串，所以脚本需要将空值转换为 <code>unknown</code>，或者优先读取 CI 平台提供的分支环境变量。</p>
+<h3 id="5-不要把密钥作为-build-arguments-传递"><a href="#5-不要把密钥作为-build-arguments-传递" class="headerlink" title="5. 不要把密钥作为 build arguments 传递"></a>5. 不要把密钥作为 build arguments 传递</h3><p>Git SHA、branch 和 commit date 不属于敏感信息，适合通过 build arguments 注入。但密码、token 和私钥不应该使用这种方式传递，因为它们可能出现在镜像历史、构建日志或缓存元数据中。</p>
+<h2 id="七、可以继续做的优化"><a href="#七、可以继续做的优化" class="headerlink" title="七、可以继续做的优化"></a>七、可以继续做的优化</h2><p>当前方案已经能够稳定构建。如果项目后续构建时间变长，还可以继续进行以下优化：</p>
+<ol>
+<li>使用 <code>cargo-chef</code> 缓存依赖编译结果；</li>
+<li>使用 BuildKit cache mount 缓存 Cargo registry 和 <code>target</code>；</li>
+<li>使用 <code>docker buildx</code> 同时构建 <code>linux/amd64</code> 和 <code>linux/arm64</code>；</li>
+<li>给镜像增加 OCI labels，记录 revision、source 和创建时间；</li>
+<li>在 CI 中同时用 Git SHA 和语义化版本创建镜像 tag。</li>
+</ol>
+<p>例如可以给最终镜像添加 revision label：</p>
+<figure class="highlight dockerfile"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">ARG</span> VERGEN_GIT_SHA=unknown</span><br><span class="line"></span><br><span class="line"><span class="keyword">LABEL</span><span class="language-bash"> org.opencontainers.image.revision=<span class="variable">$VERGEN_GIT_SHA</span></span></span><br></pre></td></tr></table></figure>
+
+<p>不过 Docker 的多阶段构建中，<code>ARG</code> 的作用域以阶段为单位。如果要在最终阶段使用它，需要在最终的 <code>FROM</code> 之后重新声明对应的 <code>ARG</code>。</p>
+<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>这套方案的关键不是强行让 Docker 构建环境读取 <code>.git</code>，而是把职责拆开：</p>
+<ul>
+<li>宿主机或 CI 负责读取 Git 仓库；</li>
+<li><code>build.sh</code> 负责传递 Git 元数据；</li>
+<li>Dockerfile 负责提供编译环境；</li>
+<li><code>build.rs</code> 负责把元数据写入 Rust 二进制；</li>
+<li><code>unknown</code> 作为兜底，确保源码包和非 Git 环境仍然可以构建。</li>
+</ul>
+<p>这样既不需要把整个 <code>.git</code> 目录复制进 Docker 构建上下文，也能让每个运行中的二进制文件明确对应到具体的源码版本。对于需要部署和长期维护的 Rust 服务来说，这是一项成本很低、但非常实用的可观测性改进。</p>
+</article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta"><i class="fas fa-circle-user fa-fw"></i>文章作者: </span><span class="post-copyright-info"><a href="http://blog.damingerdai.com">Arthur Ming</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta"><i class="fas fa-square-arrow-up-right fa-fw"></i>文章链接: </span><span class="post-copyright-info"><a href="http://blog.damingerdai.com/2026/07/29/back-end/rust-docker-git-build-metadata/">http://blog.damingerdai.com/2026/07/29/back-end/rust-docker-git-build-metadata/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta"><i class="fas fa-circle-exclamation fa-fw"></i>版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来源 <a href="http://blog.damingerdai.com" target="_blank">Damingerdai's Blog</a>！</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/docker/">docker</a><a class="post-meta__tags" href="/tags/rust/">rust</a><a class="post-meta__tags" href="/tags/git/">git</a><a class="post-meta__tags" href="/tags/vergen/">vergen</a><a class="post-meta__tags" href="/tags/vergen-git2/">vergen_git2</a></div><div class="post-share"><div class="social-share" data-image="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" data-sites="facebook,x,wechat,weibo,qq"></div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/butterfly-extsrc/sharejs/dist/css/share.min.css" media="print" onload="this.media='all'"><script src="https://cdn.jsdelivr.net/npm/butterfly-extsrc/sharejs/dist/js/social-share.min.js" defer></script></div></div><nav class="pagination-post" id="pagination"><a class="pagination-related full-width" href="/2026/07/21/software/fluxcd-gitea-http-bootstrap-solution/" title="内网 GitOps 实践：FluxCD 与 Gitea (HTTP) 集成与 初始化 指南"><img class="cover" src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" onerror="onerror=null;src='/img/404.jpg'" alt="cover of next post"><div class="info text-right"><div class="info-1"><div class="info-item-1">下一篇</div><div class="info-item-2">内网 GitOps 实践：FluxCD 与 Gitea (HTTP) 集成与 初始化 指南</div></div><div class="info-2"><div class="info-item-1">FluxCD 在内网纯 HTTP 环境下与 Gitea 集成并完成初始化（Bootstrap）过程的技术总结  1. 环境背景与技术痛点 基础设施：部署于内网的 Gitea 实例（通过 HTTP 协议暴露服务，地址格式为 http://&lt;IP&gt;:&lt;PORT&gt;）。 网络限制：内网环境未配置 TLS&#x2F;SSL 证书，不支持 HTTPS 通信。 核心拦截点：   协议强校验：新版 Flux CLI 的 flux bootstrap gitea 在调用 Gitea API 时默认强制使用 HTTPS，抛出 http: server gave HTTP response to HTTPS client 错误。 Go-Git 明文传输保护：Flux 底层依赖的 Go-Git 库出于安全限制，禁止在未加密的明文 HTTP 链接中直接发送 Basic Auth 凭证（Token&#x2F;密码），抛出 basic auth cannot be sent over HTTP 错误。   2. 核心解决方案（参考 Discussion #4972）根据 FluxCD ...</div></div></div></a></nav><div class="relatedPosts"><div class="headline"><i class="fas fa-thumbs-up fa-fw"></i><span>相关推荐</span></div><div class="relatedPosts-list"><a class="pagination-related" href="/2026/06/02/software/gitea-upgrade-and-actions-integration/" title="🚀 记一次本地 Homelab 环境 Gitea 升级迁移与 Actions (CI&#x2F;CD) 完美集成实战"><img class="cover" src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-06-02</div><div class="info-item-2">🚀 记一次本地 Homelab 环境 Gitea 升级迁移与 Actions (CI&#x2F;CD) 完美集成实战</div></div><div class="info-2"><div class="info-item-1">🚀 记一次本地 Homelab 环境 Gitea 升级迁移与 Actions (CI&#x2F;CD) 完美集成实战📌 前言最近对本地 Homelab 服务器的私有代码托管平台 Gitea 进行了一次大版本升级迁移（升级至 v1.26）。原本以为只是一次简单的 docker compose up，没想到中间经历了数据库连错库、旧运行器残留、以及 Gitea Actions (Act Runner) 容器网络隔离等一连串经典的暗坑。 本文将完整记录这次迁移过程、踩坑原因以及最终如何完美集成兼容 GitHub Actions 语法的 Gitea Actions 并成功跑通 Go 自动化编译 的全案。  🛠️ 第一阶段：大版本迁移与数据库踩坑在新的服务器上，我准备好了原有的数据卷 ./data 并编写了新的 docker-compose.yaml。然而初次启动后，发现网页端一片空白，原有的代码仓库、组织和用户全都不见了！ 🔍 踩坑原因检查 docker-compose.yaml 发现，在环境变量中误指定了一个全新的数据库名： 12- GITEA__database__NAME=...</div></div></div></a><a class="pagination-related" href="/2024/07/10/back-end/back-end-how-to-backup-postgres-docker-container/" title="使用docker-compose备份Postgres Docker容器的解决方案"><img class="cover" src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2024-07-10</div><div class="info-item-2">使用docker-compose备份Postgres Docker容器的解决方案</div></div><div class="info-2"><div class="info-item-1">使用docker-compose备份Postgres Docker容器的解决方案备份使用pg_dumpall命令备份Postgres数据库。 1docker-compose exec &lt;postgres_service&gt; pg_dumpall -U postgres &gt; dump_`date +%Y-%m-%d&quot;_&quot;%H_%M_%S`.sql   docker-compose exec &lt;postgres_service&gt; 在名为&lt;postgres_service&gt;的Postgres容器上执行命令。 -U postgres 指定数据库的用户名。Docker的默认用户名是postgres，如果你使用不同的用户名，请进行修改。  恢复将dump_date +%Y-%m-%d”“%H%M_%S.sql文件放置在backup文件夹中。 然后使用Docker卷将backup文件夹绑定到Postgres容器上： 12volumes:    - ./backup:/backup  删除现有的Postgres容器并创建一个新的容器： ...</div></div></div></a><a class="pagination-related" href="/2023/02/26/back-end/windows_docker_port_in_use_issues/" title="解决Windows下Docker启动容器时，端口被占用错误"><img class="cover" src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2023-02-26</div><div class="info-item-2">解决Windows下Docker启动容器时，端口被占用错误</div></div><div class="info-2"><div class="info-item-1">解决Windows下Docker启动容器时，端口被占用错误问题描述在使用docker-compose启动mysql的时候遇到一个问题: 1bind: An attempt was made to access a socket in a way forbidden by its access permissions.  然后查了一下是否存在应用占用了3306的端口： 1netstat -ano | findstr 3306  结果很尴尬，并没有。。。 百度了一下，发现是Hyper-V会保留部分tcp端口导致我们自己无法使用这些端口, 使用如下命令查看保留的端口： 123456789101112131415161718192021222324netsh interface ipv4 show excludedportrange protocol=tcp协议 tcp 端口排除范围开始端口    结束端口----------    --------      1026        1125      1126        1225      1226        1325    ...</div></div></div></a><a class="pagination-related" href="/2026/04/27/software/colima-docker-compose-setup/" title="无 Docker Desktop + Colima + Docker Compose v2 标准化方案"><img class="cover" src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-04-27</div><div class="info-item-2">无 Docker Desktop + Colima + Docker Compose v2 标准化方案</div></div><div class="info-2"><div class="info-item-1">无 Docker Desktop + 纯 CLI + Colima + Docker Compose v2 标准化方案一、背景在 macOS 环境中，Docker Desktop 虽然开箱即用，但存在以下问题：  资源占用高（CPU &#x2F; 内存） 启动慢 商业使用存在许可限制 与开发环境（如 k8s &#x2F; 自定义 runtime）耦合较重  因此，采用以下组合替代：  Colima + Docker CLI + Compose v2 Plugin  目标是实现：  轻量级 Docker 运行环境 完整 CLI 操作体验 原生支持 docker compose（v2）   二、整体架构1234567891011121314151617docker CLI   ↓docker context (colima)   ↓unix socket (~/.colima/default/docker.sock)   ↓Colima VM (container runtime)````---## 三、环境安装### 1. 安装基础工具```bashbrew install doc...</div></div></div></a><a class="pagination-related" href="/2026/07/05/software/self-host-tailscale-derp-with-docker-acme-sh/" title="Docker + acme.sh 搭建 Tailscale 自建 DERP 中继节点完整记录"><img class="cover" src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-05</div><div class="info-item-2">Docker + acme.sh 搭建 Tailscale 自建 DERP 中继节点完整记录</div></div><div class="info-2"><div class="info-item-1">Docker + acme.sh 搭建 Tailscale 自建 DERP 中继节点完整记录1. 方案架构为了实现证书自动申请、续期与 DERP 服务无缝衔接，采用 Docker Compose 进行单机编排。acme-sh 容器负责通过 Cloudflare DNS 验证申请 Let’s Encrypt 证书并导出为 DERP 所需的格式；derper 容器挂载相同的证书目录并运行中继服务。 1234567891011121314[Cloudflare DNS-01 验证]       │       ▼ ┌─────────── derp-acme (容器) ───────────┐ │ 使用 CF_Token 申请证书，并将其安装转换为  │ │ derp.example.com.crt / .key             │ └───────────────────┬────────────────────┘                     │ (共享挂载 ./certs)                     ▼ ┌────────── tailscale-...</div></div></div></a><a class="pagination-related" href="/2026/04/18/software/git-multi-account-setup-with-includeif/" title="优雅实现 Git 多账号切换：基于 SSH Config 与 includeIf 的环境隔离方案"><img class="cover" src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-04-18</div><div class="info-item-2">优雅实现 Git 多账号切换：基于 SSH Config 与 includeIf 的环境隔离方案</div></div><div class="info-2"><div class="info-item-1">优雅实现 Git 多账号切换：基于 SSH Config 与 includeIf 的环境隔离方案在日常开发中，我们经常需要在一台电脑上同时处理个人开源项目和公司业务项目。最核心的痛点有两个：  SSH Key 冲突：GitHub 默认只识别一对密钥，多账号如何无感切换？ 提交身份混淆：如何在公司项目中自动使用公司邮箱，在个人项目中自动使用个人邮箱？  本文分享一种“一次配置，永久生效”的自动化方案。 1. 目录结构规划首先，建议按用途将项目存放在不同的父目录下，这是自动化切换的前提。 123Workspaces/├── personal/  # 存放个人项目└── company/   # 存放公司项目  2. 生成独立的 SSH 密钥为每个账号生成专属的密钥对，不要覆盖默认的 id_ed25519。 12345# 生成个人账号密钥ssh-keygen -t ed25519 -C &quot;personal@email.com&quot; -f ~/.ssh/id_ed25519_personal# 生成公司账号密钥ssh-keygen -t ed25519 -C &quot;...</div></div></div></a></div></div></div><div class="aside-content" id="aside-content"><div class="card-widget card-info text-center"><div class="avatar-img"><img src="/img/avatar.png" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="author-info-name">Arthur Ming</div><div class="author-info-description">大明二代的博客</div><div class="site-data"><a href="/archives/"><div class="headline">文章</div><div class="length-num">94</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">142</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">8</div></a></div><a id="card-info-btn" target="_blank" rel="noopener" href="https://github.com/damingerdai"><i class="fab fa-github"></i><span>Follow Me</span></a><div class="card-info-social-icons"><a class="social-icon" href="https://github.com/damingerdai" target="_blank" title="Github"><i class="fab fa-github" style="color: #24292e;"></i></a><a class="social-icon" href="mailto:mingguobin@live.com" target="_blank" title="Email"><i class="fas fa-envelope" style="color: #4a7dbe;"></i></a></div></div><div class="card-widget card-announcement"><div class="item-headline"><i class="fas fa-bullhorn fa-shake"></i><span>公告</span></div><div class="announcement_content">大家好，我是大明二代</div></div><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="item-headline"><i class="fas fa-stream"></i><span>目录</span><span class="toc-percentage"></span></div><div class="toc-content"><ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#%E5%9C%A8-Docker-%E6%9E%84%E5%BB%BA-Rust-%E9%A1%B9%E7%9B%AE%E6%97%B6%E6%B3%A8%E5%85%A5-Git-%E7%89%88%E6%9C%AC%E4%BF%A1%E6%81%AF"><span class="toc-number">1.</span> <span class="toc-text">在 Docker 构建 Rust 项目时注入 Git 版本信息</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%B8%80%E3%80%81%E4%B8%BA%E4%BB%80%E4%B9%88-Docker-%E6%9E%84%E5%BB%BA%E6%97%B6%E5%8F%AF%E8%83%BD%E8%AF%BB%E5%8F%96%E4%B8%8D%E5%88%B0-Git-%E4%BF%A1%E6%81%AF"><span class="toc-number">1.1.</span> <span class="toc-text">一、为什么 Docker 构建时可能读取不到 Git 信息</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%BA%8C%E3%80%81%E4%BD%BF%E7%94%A8-vergen-git2-%E7%94%9F%E6%88%90%E6%9E%84%E5%BB%BA%E4%BF%A1%E6%81%AF"><span class="toc-number">1.2.</span> <span class="toc-text">二、使用 vergen-git2 生成构建信息</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%B8%89%E3%80%81%E7%BC%96%E5%86%99%E5%A4%9A%E9%98%B6%E6%AE%B5-Dockerfile"><span class="toc-number">1.3.</span> <span class="toc-text">三、编写多阶段 Dockerfile</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%9B%9B%E3%80%81%E7%BC%96%E5%86%99%E7%BB%9F%E4%B8%80%E7%9A%84%E6%9E%84%E5%BB%BA%E8%84%9A%E6%9C%AC"><span class="toc-number">1.4.</span> <span class="toc-text">四、编写统一的构建脚本</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%BA%94%E3%80%81%E5%9C%A8-Rust-%E7%A8%8B%E5%BA%8F%E4%B8%AD%E8%AF%BB%E5%8F%96%E6%9E%84%E5%BB%BA%E4%BF%A1%E6%81%AF"><span class="toc-number">1.5.</span> <span class="toc-text">五、在 Rust 程序中读取构建信息</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%85%AD%E3%80%81%E5%87%A0%E4%B8%AA%E5%AE%B9%E6%98%93%E5%BF%BD%E7%95%A5%E7%9A%84%E9%97%AE%E9%A2%98"><span class="toc-number">1.6.</span> <span class="toc-text">六、几个容易忽略的问题</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#1-fail-on-error-%E5%92%8C%E5%BF%BD%E7%95%A5%E9%94%99%E8%AF%AF%E4%B8%8D%E8%83%BD%E5%90%8C%E6%97%B6%E8%A1%A8%E8%BE%BE%E4%B8%A5%E6%A0%BC%E5%A4%B1%E8%B4%A5"><span class="toc-number">1.6.1.</span> <span class="toc-text">1. fail_on_error() 和忽略错误不能同时表达严格失败</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#2-Docker-build-arguments-%E4%BC%9A%E5%BD%B1%E5%93%8D%E7%BC%93%E5%AD%98"><span class="toc-number">1.6.2.</span> <span class="toc-text">2. Docker build arguments 会影响缓存</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-dirty-%E5%8F%AA%E8%83%BD%E8%AF%B4%E6%98%8E%E5%B7%A5%E4%BD%9C%E5%8C%BA%E5%8F%91%E7%94%9F%E8%BF%87%E4%BF%AE%E6%94%B9"><span class="toc-number">1.6.3.</span> <span class="toc-text">3. --dirty 只能说明工作区发生过修改</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#4-CI-%E4%B8%AD%E5%8F%AF%E8%83%BD%E5%A4%84%E4%BA%8E-detached-HEAD"><span class="toc-number">1.6.4.</span> <span class="toc-text">4. CI 中可能处于 detached HEAD</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#5-%E4%B8%8D%E8%A6%81%E6%8A%8A%E5%AF%86%E9%92%A5%E4%BD%9C%E4%B8%BA-build-arguments-%E4%BC%A0%E9%80%92"><span class="toc-number">1.6.5.</span> <span class="toc-text">5. 不要把密钥作为 build arguments 传递</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%B8%83%E3%80%81%E5%8F%AF%E4%BB%A5%E7%BB%A7%E7%BB%AD%E5%81%9A%E7%9A%84%E4%BC%98%E5%8C%96"><span class="toc-number">1.7.</span> <span class="toc-text">七、可以继续做的优化</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E6%80%BB%E7%BB%93"><span class="toc-number">1.8.</span> <span class="toc-text">总结</span></a></li></ol></li></ol></div></div><div class="card-widget card-recent-post"><div class="item-headline"><i class="fas fa-history"></i><span>最新文章</span></div><div class="aside-list"><div class="aside-list-item"><a class="thumbnail" href="/2026/07/29/back-end/rust-docker-git-build-metadata/" title="在 Docker 构建 Rust 项目时注入 Git 版本信息"><img src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="在 Docker 构建 Rust 项目时注入 Git 版本信息"/></a><div class="content"><a class="title" href="/2026/07/29/back-end/rust-docker-git-build-metadata/" title="在 Docker 构建 Rust 项目时注入 Git 版本信息">在 Docker 构建 Rust 项目时注入 Git 版本信息</a><time datetime="2026-07-29T05:46:50.000Z" title="发表于 2026-07-29 13:46:50">2026-07-29</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2026/07/21/software/fluxcd-gitea-http-bootstrap-solution/" title="内网 GitOps 实践：FluxCD 与 Gitea (HTTP) 集成与 初始化 指南"><img src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="内网 GitOps 实践：FluxCD 与 Gitea (HTTP) 集成与 初始化 指南"/></a><div class="content"><a class="title" href="/2026/07/21/software/fluxcd-gitea-http-bootstrap-solution/" title="内网 GitOps 实践：FluxCD 与 Gitea (HTTP) 集成与 初始化 指南">内网 GitOps 实践：FluxCD 与 Gitea (HTTP) 集成与 初始化 指南</a><time datetime="2026-07-21T05:43:22.000Z" title="发表于 2026-07-21 13:43:22">2026-07-21</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2026/07/12/software/garage-s3-alternative-setup-guide/" title="寻找轻量级 S3 替代方案：极简分布式对象存储 Garage 搭建与全线打通指南"><img src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="寻找轻量级 S3 替代方案：极简分布式对象存储 Garage 搭建与全线打通指南"/></a><div class="content"><a class="title" href="/2026/07/12/software/garage-s3-alternative-setup-guide/" title="寻找轻量级 S3 替代方案：极简分布式对象存储 Garage 搭建与全线打通指南">寻找轻量级 S3 替代方案：极简分布式对象存储 Garage 搭建与全线打通指南</a><time datetime="2026-07-12T12:49:12.000Z" title="发表于 2026-07-12 20:49:12">2026-07-12</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2026/07/07/software/docker-network-conflict-172-18-repair/" title="Docker 把我宿主机网络&quot;吃&quot;了：一次 172.18 网段冲突的完整复盘"><img src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="Docker 把我宿主机网络&quot;吃&quot;了：一次 172.18 网段冲突的完整复盘"/></a><div class="content"><a class="title" href="/2026/07/07/software/docker-network-conflict-172-18-repair/" title="Docker 把我宿主机网络&quot;吃&quot;了：一次 172.18 网段冲突的完整复盘">Docker 把我宿主机网络&quot;吃&quot;了：一次 172.18 网段冲突的完整复盘</a><time datetime="2026-07-07T06:33:21.000Z" title="发表于 2026-07-07 14:33:21">2026-07-07</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2026/07/05/software/self-host-tailscale-derp-with-docker-acme-sh/" title="Docker + acme.sh 搭建 Tailscale 自建 DERP 中继节点完整记录"><img src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="Docker + acme.sh 搭建 Tailscale 自建 DERP 中继节点完整记录"/></a><div class="content"><a class="title" href="/2026/07/05/software/self-host-tailscale-derp-with-docker-acme-sh/" title="Docker + acme.sh 搭建 Tailscale 自建 DERP 中继节点完整记录">Docker + acme.sh 搭建 Tailscale 自建 DERP 中继节点完整记录</a><time datetime="2026-07-05T07:22:32.000Z" title="发表于 2026-07-05 15:22:32">2026-07-05</time></div></div></div></div></div></div></main><footer id="footer"><div class="footer-other"><div class="footer-copyright"><span class="copyright">&copy;&nbsp;2020 - 2026 By Arthur Ming</span></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="日间和夜间模式切换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside-config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><button id="go-up" type="button" title="回到顶部"><span class="scroll-percent"></span><i class="fas fa-arrow-up"></i></button></div></div><div><script src="/js/utils.js"></script><script src="/js/main.js"></script><div class="js-pjax"><script>(() => {
+  const parseViewBox = viewBox => {
+    if (!viewBox) return null
+    const parts = viewBox.trim().split(/[\s,]+/).map(n => Number(n))
+    if (parts.length !== 4 || parts.some(n => Number.isNaN(n))) return null
+    return parts
+  }
+
+  const getSvgViewBox = svg => {
+    const attr = parseViewBox(svg.getAttribute('viewBox'))
+    if (attr) return attr
+
+    // Fallback: use bbox to build a viewBox
+    try {
+      const bbox = svg.getBBox()
+      if (bbox && bbox.width && bbox.height) return [bbox.x, bbox.y, bbox.width, bbox.height]
+    } catch (e) {
+      // getBBox may fail on some edge cases; ignore
+    }
+
+    const w = Number(svg.getAttribute('width')) || 0
+    const h = Number(svg.getAttribute('height')) || 0
+    if (w > 0 && h > 0) return [0, 0, w, h]
+    return [0, 0, 100, 100]
+  }
+
+  const setSvgViewBox = (svg, vb) => {
+    svg.setAttribute('viewBox', `${vb[0]} ${vb[1]} ${vb[2]} ${vb[3]}`)
+  }
+
+  const clamp = (v, min, max) => Math.max(min, Math.min(max, v))
+
+  const openSvgInNewTab = ({ source, initViewBox }) => {
+    const getClonedSvg = () => {
+      if (typeof source === 'string') {
+        const template = document.createElement('template')
+        template.innerHTML = source.trim()
+        const svg = template.content.querySelector('svg')
+        return svg ? svg.cloneNode(true) : null
+      }
+      if (source && typeof source.cloneNode === 'function') {
+        return source.cloneNode(true)
+      }
+      return null
+    }
+
+    const clone = getClonedSvg()
+    if (!clone) return
+    if (initViewBox && initViewBox.length === 4) {
+      clone.setAttribute('viewBox', initViewBox.join(' '))
+    }
+    if (!clone.getAttribute('xmlns')) clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg')
+    if (!clone.getAttribute('xmlns:xlink') && clone.outerHTML.includes('xlink:')) {
+      clone.setAttribute('xmlns:xlink', 'http://www.w3.org/1999/xlink')
+    }
+    // inject background to match current theme
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark'
+    const bg = getComputedStyle(document.body).backgroundColor || (isDark ? '#1e1e1e' : '#ffffff')
+    if (!clone.style.background) clone.style.background = bg
+
+    const serializer = new XMLSerializer()
+    const svgSource = serializer.serializeToString(clone)
+    const htmlSource = `<!doctype html><html><head><meta charset="utf-8" />
+      <style>
+        html, body { width: 100%; height: 100%; margin: 0; display: flex; align-items: center; justify-content: center; background: ${bg}; }
+        svg { max-width: 100%; max-height: 100%; height: auto; width: auto; }
+      </style>
+      </head><body>${svgSource}</body></html>`
+    const blob = new Blob([htmlSource], { type: 'text/html;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    window.open(url, '_blank', 'noopener')
+    setTimeout(() => URL.revokeObjectURL(url), 30000)
+  }
+
+  const attachMermaidViewerButton = wrap => {
+    let btn = wrap.querySelector('.mermaid-open-btn')
+    if (!btn) {
+      btn = document.createElement('button')
+      btn.type = 'button'
+      btn.className = 'mermaid-open-btn'
+      wrap.appendChild(btn)
+    }
+
+    btn.innerHTML = '<i class="fa fa-search fa-fw" aria-hidden="true"></i>'
+
+    if (!btn.__mermaidViewerBound) {
+      btn.addEventListener('click', e => {
+        e.preventDefault()
+        e.stopPropagation()
+        const svg = wrap.__mermaidOriginalSvg || wrap.querySelector('svg')
+        if (!svg) return
+        const initViewBox = wrap.__mermaidInitViewBox
+        if (typeof svg === 'string') {
+          openSvgInNewTab({ source: svg, initViewBox })
+          return
+        }
+        openSvgInNewTab({ source: svg, initViewBox })
+      })
+      btn.__mermaidViewerBound = true
+    }
+  }
+
+  // Zoom around a point (px, py) in the SVG viewport (in viewBox coordinates)
+  const zoomAtPoint = (vb, factor, px, py) => {
+    const w = vb[2] * factor
+    const h = vb[3] * factor
+    const nx = px - (px - vb[0]) * factor
+    const ny = py - (py - vb[1]) * factor
+    return [nx, ny, w, h]
+  }
+
+  const initMermaidGestures = wrap => {
+    const svg = wrap.querySelector('svg')
+    if (!svg) return
+
+    // Ensure viewBox exists so gestures always work
+    const initVb = getSvgViewBox(svg)
+    wrap.__mermaidInitViewBox = initVb
+    wrap.__mermaidCurViewBox = initVb.slice()
+    setSvgViewBox(svg, initVb)
+
+    // Avoid binding multiple times on themeChange/pjax
+    if (wrap.__mermaidGestureBound) return
+    wrap.__mermaidGestureBound = true
+
+    // Helper: map client (viewport) coordinate -> viewBox coordinate
+    const clientToViewBox = (clientX, clientY) => {
+      const rect = svg.getBoundingClientRect()
+      const vb = wrap.__mermaidCurViewBox || getSvgViewBox(svg)
+      const x = vb[0] + (clientX - rect.left) * (vb[2] / rect.width)
+      const y = vb[1] + (clientY - rect.top) * (vb[3] / rect.height)
+      return { x, y, rect, vb }
+    }
+
+    const state = {
+      pointers: new Map(),
+      startVb: null,
+      startDist: 0,
+      startCenter: null
+    }
+
+    const clampVb = vb => {
+      const init = wrap.__mermaidInitViewBox || vb
+      const minW = init[2] * 0.1
+      const maxW = init[2] * 10
+      const minH = init[3] * 0.1
+      const maxH = init[3] * 10
+      vb[2] = clamp(vb[2], minW, maxW)
+      vb[3] = clamp(vb[3], minH, maxH)
+      return vb
+    }
+
+    const setCurVb = vb => {
+      vb = clampVb(vb)
+      wrap.__mermaidCurViewBox = vb
+      setSvgViewBox(svg, vb)
+    }
+
+    const onPointerDown = e => {
+      // Allow only primary button for mouse
+      if (e.pointerType === 'mouse' && e.button !== 0) return
+      svg.setPointerCapture(e.pointerId)
+      state.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY })
+
+      if (state.pointers.size === 1) {
+        state.startVb = (wrap.__mermaidCurViewBox || getSvgViewBox(svg)).slice()
+      } else if (state.pointers.size === 2) {
+        const pts = [...state.pointers.values()]
+        const dx = pts[0].x - pts[1].x
+        const dy = pts[0].y - pts[1].y
+        state.startDist = Math.hypot(dx, dy)
+        state.startVb = (wrap.__mermaidCurViewBox || getSvgViewBox(svg)).slice()
+        state.startCenter = { x: (pts[0].x + pts[1].x) / 2, y: (pts[0].y + pts[1].y) / 2 }
+      }
+    }
+
+    const onPointerMove = e => {
+      if (!state.pointers.has(e.pointerId)) return
+      state.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY })
+
+      // Pan with 1 pointer
+      if (state.pointers.size === 1 && state.startVb) {
+        const p = [...state.pointers.values()][0]
+        const prev = { x: e.clientX - e.movementX, y: e.clientY - e.movementY }
+        // movementX/Y unreliable on touch, compute from stored last position
+        const last = wrap.__mermaidLastSinglePointer || p
+        const dxClient = p.x - last.x
+        const dyClient = p.y - last.y
+        wrap.__mermaidLastSinglePointer = p
+
+        const { rect } = clientToViewBox(p.x, p.y)
+        const vb = (wrap.__mermaidCurViewBox || getSvgViewBox(svg)).slice()
+        const dx = dxClient * (vb[2] / rect.width)
+        const dy = dyClient * (vb[3] / rect.height)
+        setCurVb([vb[0] - dx, vb[1] - dy, vb[2], vb[3]])
+        return
+      }
+
+      // Pinch zoom with 2 pointers
+      if (state.pointers.size === 2 && state.startVb && state.startDist > 0) {
+        const pts = [...state.pointers.values()]
+        const dx = pts[0].x - pts[1].x
+        const dy = pts[0].y - pts[1].y
+        const dist = Math.hypot(dx, dy)
+        if (!dist) return
+        const factor = state.startDist / dist // dist bigger => zoom in (viewBox smaller)
+
+        const cx = (pts[0].x + pts[1].x) / 2
+        const cy = (pts[0].y + pts[1].y) / 2
+        const centerClient = { x: cx, y: cy }
+
+        const pxy = clientToViewBox(centerClient.x, centerClient.y)
+        const cpx = pxy.x
+        const cpy = pxy.y
+
+        const vb = zoomAtPoint(state.startVb, factor, cpx, cpy)
+        setCurVb(vb)
+      }
+    }
+
+    const onPointerUpOrCancel = e => {
+      state.pointers.delete(e.pointerId)
+      if (state.pointers.size === 0) {
+        state.startVb = null
+        state.startDist = 0
+        state.startCenter = null
+        wrap.__mermaidLastSinglePointer = null
+      } else if (state.pointers.size === 1) {
+        // reset single pointer baseline to avoid jump
+        wrap.__mermaidLastSinglePointer = [...state.pointers.values()][0]
+      }
+    }
+
+    // Wheel zoom (mouse/trackpad)
+    const onWheel = e => {
+      // ctrlKey on mac trackpad pinch; we treat both as zoom
+      e.preventDefault()
+      const delta = e.deltaY
+      const zoomFactor = delta > 0 ? 1.1 : 0.9
+      const { x, y } = clientToViewBox(e.clientX, e.clientY)
+      const vb = (wrap.__mermaidCurViewBox || getSvgViewBox(svg)).slice()
+      setCurVb(zoomAtPoint(vb, zoomFactor, x, y))
+    }
+
+    const onDblClick = () => {
+      const init = wrap.__mermaidInitViewBox
+      if (!init) return
+      wrap.__mermaidCurViewBox = init.slice()
+      setSvgViewBox(svg, init)
+    }
+
+    svg.addEventListener('pointerdown', onPointerDown)
+    svg.addEventListener('pointermove', onPointerMove)
+    svg.addEventListener('pointerup', onPointerUpOrCancel)
+    svg.addEventListener('pointercancel', onPointerUpOrCancel)
+    svg.addEventListener('wheel', onWheel, { passive: false })
+    svg.addEventListener('dblclick', onDblClick)
+  }
+
+  const runMermaid = ele => {
+    window.loadMermaid = true
+    const theme = document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'default'
+
+    ele.forEach((item, index) => {
+      const mermaidSrc = item.firstElementChild
+
+      // Clear old render (themeChange/pjax will rerun)
+      const oldSvg = item.querySelector('svg')
+      if (oldSvg) oldSvg.remove()
+      item.__mermaidGestureBound = false
+
+      const config = mermaidSrc.dataset.config ? JSON.parse(mermaidSrc.dataset.config) : {}
+      if (!config.theme) {
+        config.theme = theme
+      }
+      const mermaidThemeConfig = `%%{init: ${JSON.stringify(config)}}%%\n`
+      const mermaidID = `mermaid-${index}`
+      const mermaidDefinition = mermaidThemeConfig + mermaidSrc.textContent
+
+      const renderFn = mermaid.render(mermaidID, mermaidDefinition)
+      const renderMermaid = svg => {
+        mermaidSrc.insertAdjacentHTML('afterend', svg)
+        if (true) initMermaidGestures(item)
+        item.__mermaidOriginalSvg = svg
+        if (true) attachMermaidViewerButton(item)
+      }
+
+
+      // mermaid v9 and v10 compatibility
+      typeof renderFn === 'string' ? renderMermaid(renderFn) : renderFn.then(({ svg }) => renderMermaid(svg))
+    })
+  }
+
+  const codeToMermaid = () => {
+    const codeMermaidEle = document.querySelectorAll('pre > code.mermaid')
+    if (codeMermaidEle.length === 0) return
+
+    codeMermaidEle.forEach(ele => {
+      const preEle = document.createElement('pre')
+      preEle.className = 'mermaid-src'
+      preEle.hidden = true
+      preEle.textContent = ele.textContent
+      const newEle = document.createElement('div')
+      newEle.className = 'mermaid-wrap'
+      newEle.appendChild(preEle)
+      ele.parentNode.replaceWith(newEle)
+    })
+  }
+
+  const loadMermaid = () => {
+    if (true) codeToMermaid()
+    const $mermaid = document.querySelectorAll('#article-container .mermaid-wrap')
+    if ($mermaid.length === 0) return
+
+    const runMermaidFn = () => runMermaid($mermaid)
+    btf.addGlobalFn('themeChange', runMermaidFn, 'mermaid')
+    window.loadMermaid ? runMermaidFn() : btf.getScript('https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js').then(runMermaidFn)
+  }
+
+  btf.addGlobalFn('encrypt', loadMermaid, 'mermaid')
+  window.pjax ? loadMermaid() : document.addEventListener('DOMContentLoaded', loadMermaid)
+})()</script></div><script defer="defer" id="ribbon" src="https://cdn.jsdelivr.net/npm/butterfly-extsrc/dist/canvas-ribbon.min.js" size="150" alpha="0.6" zIndex="-1" mobile="false" data-click="true"></script><script async data-pjax src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script></div></body></html>
