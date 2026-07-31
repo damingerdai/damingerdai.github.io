@@ -5,10 +5,6 @@ tags: [docker, docker buildx]
 categories: [后端]
 ---
 
-已将多 Tag（版本号 + `latest`）的最佳实践补充到博客文章中，更新后的完整版本如下：
-
----
-
 # 避坑指南：为什么我的 Docker 镜像在 Docker Hub 上没有多架构（Multi-Arch）支持？
 
 ## 问题现象
