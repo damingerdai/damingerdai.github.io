@@ -400,9 +400,7 @@ dist/node
 dist/edge
 ```
 
-共享的是源码。
-
-不是构建产物。
+共享的是源码, 不是构建产物。
 
 # 总结
 
@@ -426,7 +424,8 @@ dist/edge
 
 # 引用
 
-1. https://reactrouter.com/start/framework/installation
-2. https://reactrouter.com/start/framework/rendering
-3. https://wujie-micro.github.io/doc/guide/
-4. https://module-federation.io/zh/guide/start/index.html
+1. [React Router Framework Mode](https://reactrouter.com/start/framework/installation) 
+2. [[技术债务] Vercel被黑始末：一个第三方AI工具如何撬开了云平台的门](https://zhuanlan.zhihu.com/p/2029697092881229144) 
+3. [微前端是什么](https://wujie-micro.github.io/doc/guide/) 
+4. [什么是 Module Federation？](https://module-federation.io/zh/guide/start/index.html) 
+5. [模块联邦](https://juejin.cn/post/7496340389883265061)
