@@ -1,0 +1,699 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="dark"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1.0,viewport-fit=cover"><title>当 React Router 遇见多运行时：一次关于 React 架构的思考 | Damingerdai's Blog</title><meta name="author" content="Arthur Ming"><meta name="copyright" content="Arthur Ming"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#0d0d0d"><meta name="description" content="起因最近我准备重新开始一个新的 SaaS 平台，技术栈依然选择了 React + React Router + Vite。 一开始，我以为和以前一样，直接： 1npm create vite@latest my-react-app -- --template react  整个架构应该还是： 12345React    ↓React Router    ↓Vite  但是随着需求越来越明确，我在开">
+<meta property="og:type" content="article">
+<meta property="og:title" content="当 React Router 遇见多运行时：一次关于 React 架构的思考">
+<meta property="og:url" content="http://blog.damingerdai.com/2026/08/06/front-end/react-router-meets-multi-runtime/index.html">
+<meta property="og:site_name" content="Damingerdai&#39;s Blog">
+<meta property="og:description" content="起因最近我准备重新开始一个新的 SaaS 平台，技术栈依然选择了 React + React Router + Vite。 一开始，我以为和以前一样，直接： 1npm create vite@latest my-react-app -- --template react  整个架构应该还是： 12345React    ↓React Router    ↓Vite  但是随着需求越来越明确，我在开">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg">
+<meta property="article:published_time" content="2026-08-06T05:28:47.000Z">
+<meta property="article:modified_time" content="2026-08-10T02:38:07.802Z">
+<meta property="article:author" content="Arthur Ming">
+<meta property="article:tag" content="React">
+<meta property="article:tag" content="React Router">
+<meta property="article:tag" content="React 架构">
+<meta property="article:tag" content="Monorepo">
+<meta property="article:tag" content="Runtime">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg"><script type="application/ld+json">{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "当 React Router 遇见多运行时：一次关于 React 架构的思考",
+  "url": "http://blog.damingerdai.com/2026/08/06/front-end/react-router-meets-multi-runtime/",
+  "image": "https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg",
+  "datePublished": "2026-08-06T05:28:47.000Z",
+  "dateModified": "2026-08-10T02:38:07.802Z",
+  "author": [
+    {
+      "@type": "Person",
+      "name": "Arthur Ming",
+      "url": "http://blog.damingerdai.com"
+    }
+  ]
+}</script><link rel="shortcut icon" href="/img/avatar.png"><link rel="canonical" href="http://blog.damingerdai.com/2026/08/06/front-end/react-router-meets-multi-runtime/index.html"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><link rel="stylesheet" href="/css/index.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free/css/all.min.css"><script>
+    (() => {
+      
+    const saveToLocal = {
+      set: (key, value, ttl) => {
+        if (!ttl) return
+        const expiry = Date.now() + ttl * 86400000
+        localStorage.setItem(key, JSON.stringify({ value, expiry }))
+      },
+      get: key => {
+        const itemStr = localStorage.getItem(key)
+        if (!itemStr) return undefined
+        const { value, expiry } = JSON.parse(itemStr)
+        if (Date.now() > expiry) {
+          localStorage.removeItem(key)
+          return undefined
+        }
+        return value
+      }
+    }
+
+    window.btf = {
+      saveToLocal,
+      getScript: (url, attr = {}) => new Promise((resolve, reject) => {
+        const script = document.createElement('script')
+        script.src = url
+        script.async = true
+        Object.entries(attr).forEach(([key, val]) => script.setAttribute(key, val))
+        script.onload = script.onreadystatechange = () => {
+          if (!script.readyState || /loaded|complete/.test(script.readyState)) resolve()
+        }
+        script.onerror = reject
+        document.head.appendChild(script)
+      }),
+      getCSS: (url, id) => new Promise((resolve, reject) => {
+        const link = document.createElement('link')
+        link.rel = 'stylesheet'
+        link.href = url
+        if (id) link.id = id
+        link.onload = link.onreadystatechange = () => {
+          if (!link.readyState || /loaded|complete/.test(link.readyState)) resolve()
+        }
+        link.onerror = reject
+        document.head.appendChild(link)
+      }),
+      addGlobalFn: (key, fn, name = false, parent = window) => {
+        if (!false && key.startsWith('pjax')) return
+        const globalFn = parent.globalFn || {}
+        globalFn[key] = globalFn[key] || {}
+        globalFn[key][name || Object.keys(globalFn[key]).length] = fn
+        parent.globalFn = globalFn
+      }
+    }
+  
+      
+      const activateDarkMode = () => {
+        document.documentElement.setAttribute('data-theme', 'dark')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+        }
+      }
+      const activateLightMode = () => {
+        document.documentElement.setAttribute('data-theme', 'light')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#ffffff')
+        }
+      }
+
+      btf.activateDarkMode = activateDarkMode
+      btf.activateLightMode = activateLightMode
+
+      const theme = saveToLocal.get('theme')
+    
+          const mediaQueryDark = window.matchMedia('(prefers-color-scheme: dark)')
+          const mediaQueryLight = window.matchMedia('(prefers-color-scheme: light)')
+
+          if (theme === undefined) {
+            if (mediaQueryLight.matches) activateLightMode()
+            else if (mediaQueryDark.matches) activateDarkMode()
+            else {
+              const hour = new Date().getHours()
+              const isNight = hour <= 6 || hour >= 18
+              isNight ? activateDarkMode() : activateLightMode()
+            }
+            mediaQueryDark.addEventListener('change', () => {
+              if (saveToLocal.get('theme') === undefined) {
+                e.matches ? activateDarkMode() : activateLightMode()
+              }
+            })
+          } else {
+            theme === 'light' ? activateLightMode() : activateDarkMode()
+          }
+        
+      
+      const asideStatus = saveToLocal.get('aside-status')
+      if (asideStatus !== undefined) {
+        document.documentElement.classList.toggle('hide-aside', asideStatus === 'hide')
+      }
+    
+      
+    const detectApple = () => {
+      if (/iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent)) {
+        document.documentElement.classList.add('apple')
+      }
+    }
+    detectApple()
+  
+    })()
+  </script><script>const GLOBAL_CONFIG = {
+  root: '/',
+  algolia: undefined,
+  localSearch: undefined,
+  translate: undefined,
+  highlight: {"plugin":"highlight.js","highlightCopy":true,"highlightLang":true,"highlightHeightLimit":false,"highlightFullpage":false,"highlightMacStyle":false},
+  copy: {
+    success: '复制成功',
+    error: '复制失败',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '',
+  dateSuffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: undefined,
+  lightbox: 'null',
+  Snackbar: undefined,
+  infinitegrid: {
+    js: 'https://cdn.jsdelivr.net/npm/@egjs/infinitegrid/dist/infinitegrid.min.js',
+    buttonText: '加载更多'
+  },
+  isPhotoFigcaption: false,
+  islazyloadPlugin: false,
+  isAnchor: false,
+  percent: {
+    toc: true,
+    rightside: false,
+  },
+  autoDarkmode: true
+}</script><script id="config-diff">var GLOBAL_CONFIG_SITE = {
+  title: '当 React Router 遇见多运行时：一次关于 React 架构的思考',
+  isHighlightShrink: false,
+  isToc: true,
+  pageType: 'post'
+}</script><link rel="stylesheet" href="/css/styles.css"><meta name="generator" content="Hexo 7.3.0"></head><body><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="avatar-img text-center"><img src="/img/avatar.png" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="site-data text-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">96</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">147</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">8</div></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归类</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><span class="site-page group"><i class="fa-fw fas fa-list"></i><span> 其他</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><li><a class="site-page child" href="/others/learning"><i class="fa-fw fas fa-graduation-cap"></i><span> 学习课程</span></a></li><li><a class="site-page child" href="/others/link/"><i class="fa-fw fas fa-link"></i><span> 链接</span></a></li><li><a class="site-page child" href="/others/interview/"><i class="fa-fw fas fa-glide"></i><span> 面试</span></a></li></ul></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于</span></a></div></div></div></div><div class="post" id="body-wrap"><header class="post-bg" id="page-header" style="background-image: url(https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg);"><nav id="nav"><span id="blog-info"><a class="nav-site-title" href="/"><span class="site-name">Damingerdai's Blog</span></a><a class="nav-page-title" href="/"><span class="site-name">当 React Router 遇见多运行时：一次关于 React 架构的思考</span><span class="site-name"><i class="fa-solid fa-circle-arrow-left"></i><span>  返回首页</span></span></a></span><div id="menus"><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归类</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><span class="site-page group"><i class="fa-fw fas fa-list"></i><span> 其他</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><li><a class="site-page child" href="/others/learning"><i class="fa-fw fas fa-graduation-cap"></i><span> 学习课程</span></a></li><li><a class="site-page child" href="/others/link/"><i class="fa-fw fas fa-link"></i><span> 链接</span></a></li><li><a class="site-page child" href="/others/interview/"><i class="fa-fw fas fa-glide"></i><span> 面试</span></a></li></ul></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于</span></a></div></div><div id="toggle-menu"><span class="site-page"><i class="fas fa-bars fa-fw"></i></span></div></div></nav><div id="post-info"><h1 class="post-title">当 React Router 遇见多运行时：一次关于 React 架构的思考</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2026-08-06T05:28:47.000Z" title="发表于 2026-08-06 13:28:47">2026-08-06</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2026-08-10T02:38:07.802Z" title="更新于 2026-08-10 10:38:07">2026-08-10</time></span><span class="post-meta-categories"><span class="post-meta-separator">|</span><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/%E5%89%8D%E7%AB%AF/">前端</a></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-pv-cv" id="" data-flag-title=""><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">浏览量:</span><span id="busuanzi_value_page_pv"><i class="fa-solid fa-spinner fa-spin"></i></span></span></div></div></div></header><main class="layout" id="content-inner"><div id="post"><article class="container post-content" id="article-container"><h1 id="起因"><a href="#起因" class="headerlink" title="起因"></a>起因</h1><p>最近我准备重新开始一个新的 SaaS 平台，技术栈依然选择了 React + React Router + Vite。</p>
+<p>一开始，我以为和以前一样，直接：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">npm create vite@latest my-react-app -- --template react</span><br></pre></td></tr></table></figure>
+
+<p>整个架构应该还是：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">React</span><br><span class="line">    ↓</span><br><span class="line">React Router</span><br><span class="line">    ↓</span><br><span class="line">Vite</span><br></pre></td></tr></table></figure>
+
+<p>但是随着需求越来越明确，我在开发过程中发现了几个问题，也让我开始重新思考 React 应用到底应该怎么组织。</p>
+<h1 id="问题"><a href="#问题" class="headerlink" title="问题"></a>问题</h1><h2 id="第一个问题：同一个应用，不同页面应该采用不同渲染策略"><a href="#第一个问题：同一个应用，不同页面应该采用不同渲染策略" class="headerlink" title="第一个问题：同一个应用，不同页面应该采用不同渲染策略"></a>第一个问题：同一个应用，不同页面应该采用不同渲染策略</h2><p>以前我一直觉得，一个 React 应用选择 SSR、CSR 或 SSG 其中一种就可以了。</p>
+<p>后来发现并不是这样。</p>
+<p>对于一个 SaaS 平台来说，不同页面关注点完全不同。</p>
+<p>例如：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">首页</span><br><span class="line">    SSG / Prerender</span><br><span class="line"></span><br><span class="line">商品详情</span><br><span class="line">    SSR</span><br><span class="line"></span><br><span class="line">Dashboard</span><br><span class="line">    CSR</span><br><span class="line"></span><br><span class="line">后台管理</span><br><span class="line">    SPA Mode</span><br></pre></td></tr></table></figure>
+
+<p>首页主要承担品牌展示和 SEO，更适合静态生成。</p>
+<p>商品详情既需要搜索引擎能够抓取，又希望数据能够尽可能实时，因此 SSR 会更加合适。</p>
+<p>Dashboard 更关注交互体验，大部分数据本身也是通过接口获取，因此 CSR 已经足够。</p>
+<p>后台管理基本没有 SEO 的需求，更适合 SPA Mode。</p>
+<p>因此我越来越觉得：</p>
+<blockquote>
+<p>一个 React 应用，不应该只有一种渲染策略。</p>
+</blockquote>
+<p>渲染策略本身没有绝对优劣，它本质上是在 SEO、首屏速度、服务器成本、实时性以及交互体验之间做权衡。</p>
+<p>不同业务模块，本来就应该拥有不同的最优解。</p>
+<p>由于我们使用的是 React Router，因此我开始调研 React Router 的 Framework Mode。</p>
+<p>Framework Mode 在 Data Mode 的基础上，通过 Vite Plugin 提供了 SSR、SPA Mode、Prerender 等能力，让不同页面能够采用不同的渲染策略。</p>
+<hr>
+<h2 id="第二个问题：同一个应用可能需要部署到不同-Runtime"><a href="#第二个问题：同一个应用可能需要部署到不同-Runtime" class="headerlink" title="第二个问题：同一个应用可能需要部署到不同 Runtime"></a>第二个问题：同一个应用可能需要部署到不同 Runtime</h2><p>我们目前计划部署在 Vercel。</p>
+<p>但是我并不希望未来只能部署在 Vercel。</p>
+<p>以后完全有可能迁移到：</p>
+<ul>
+<li>Cloudflare Workers</li>
+<li>自建 Node.js</li>
+<li>Kubernetes</li>
+</ul>
+<p>于是第二个问题出现了。</p>
+<blockquote>
+<p>我的业务代码，为什么要绑定到某一个 Runtime？</p>
+</blockquote>
+<p>Browser、Node.js、Edge Runtime 都只是代码运行的位置。</p>
+<p>理论上，真正的业务逻辑并不应该关心自己运行在哪里。</p>
+<p>真正发生变化的，只应该是 Runtime 提供的能力。</p>
+<p>例如：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">Browser Runtime</span><br><span class="line"></span><br><span class="line">Node.js Runtime</span><br><span class="line"></span><br><span class="line">Edge Runtime</span><br></pre></td></tr></table></figure>
+
+<p>不同 Runtime 有不同 API。</p>
+<p>但是业务逻辑应该保持一致。</p>
+<hr>
+<h2 id="第三个问题：现有方案是不是已经解决了？"><a href="#第三个问题：现有方案是不是已经解决了？" class="headerlink" title="第三个问题：现有方案是不是已经解决了？"></a>第三个问题：现有方案是不是已经解决了？</h2><h3 id="Next-js"><a href="#Next-js" class="headerlink" title="Next.js"></a>Next.js</h3><p>Next.js 是一个非常优秀的全栈框架。</p>
+<p>采用 Next.js 并没有问题，它同样支持部署到不同的平台。</p>
+<p>但是它很多能力都围绕自身的运行时和生态进行设计。</p>
+<p>而我的目标更偏向于 Runtime Agnostic（运行时无关）。</p>
+<p>也就是说，我更希望业务代码能够尽可能脱离具体平台。</p>
+<p>因此目前我并没有选择 Next.js。</p>
+<hr>
+<h3 id="微前端"><a href="#微前端" class="headerlink" title="微前端"></a>微前端</h3><p>在寻找方案的时候，第一个想到的是微前端。</p>
+<p>微前端主要解决的是：</p>
+<ul>
+<li>多团队协作</li>
+<li>独立开发</li>
+<li>独立部署</li>
+<li>技术栈自由</li>
+<li>增量升级</li>
+</ul>
+<p>但是这些都不是我当前真正的问题。</p>
+<p>我真正想解决的是：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">Runtime</span><br><span class="line"></span><br><span class="line">↓</span><br><span class="line"></span><br><span class="line">Rendering</span><br><span class="line"></span><br><span class="line">↓</span><br><span class="line"></span><br><span class="line">Deployment</span><br></pre></td></tr></table></figure>
+
+<p>也就是说：</p>
+<ul>
+<li>支持不同 Runtime</li>
+<li>支持不同渲染策略</li>
+<li>支持不同部署平台</li>
+</ul>
+<p>这和微前端解决的问题并不相同。</p>
+<hr>
+<h3 id="Module-Federation"><a href="#Module-Federation" class="headerlink" title="Module Federation"></a>Module Federation</h3><p>第二个想到的是 Module Federation。</p>
+<p>Module Federation 更偏向于：</p>
+<blockquote>
+<p>多个应用之间如何在运行时共享模块。</p>
+</blockquote>
+<p>例如共享：</p>
+<ul>
+<li>React 组件</li>
+<li>页面</li>
+<li>工具库</li>
+<li>UI</li>
+</ul>
+<p>而我的需求并不是运行时共享。</p>
+<p>我更希望共享的是：</p>
+<ul>
+<li>Domain</li>
+<li>Use Case</li>
+<li>UI</li>
+<li>API</li>
+<li>业务逻辑</li>
+</ul>
+<p>然后根据不同 Runtime 构建不同的产物。</p>
+<p>也就是说，我需要的是构建阶段共享，而不是运行时共享。</p>
+<p>因此 Module Federation 对我来说有点”用力过猛”。</p>
+<hr>
+<h2 id="最后，我又重新回到了-React-Router"><a href="#最后，我又重新回到了-React-Router" class="headerlink" title="最后，我又重新回到了 React Router"></a>最后，我又重新回到了 React Router</h2><p>绕了一圈以后，我发现：</p>
+<p>React Router 本来就在解决 Route 的问题。</p>
+<p>Framework Mode 又提供了 SSR、SPA Mode、Prerender 等能力。</p>
+<p>如果再结合 Monorepo，其实已经能够满足我目前的大部分需求。</p>
+<h1 id="思路"><a href="#思路" class="headerlink" title="思路"></a>思路</h1><p>我想实现的大概是这样子的设计：</p>
+<p><img src="/images/react-router-meets-multi-runtime/1.png" alt="架构图"></p>
+<p>整个思路其实可以总结成下面这样：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><span class="line">业务需求</span><br><span class="line"></span><br><span class="line">↓</span><br><span class="line"></span><br><span class="line">不同页面需要不同渲染策略</span><br><span class="line"></span><br><span class="line">↓</span><br><span class="line"></span><br><span class="line">不同 Runtime 需要不同入口</span><br><span class="line"></span><br><span class="line">↓</span><br><span class="line"></span><br><span class="line">希望共享业务代码</span><br><span class="line"></span><br><span class="line">↓</span><br><span class="line"></span><br><span class="line">React Router Framework Mode</span><br><span class="line"></span><br><span class="line">↓</span><br><span class="line"></span><br><span class="line">Monorepo</span><br><span class="line"></span><br><span class="line">↓</span><br><span class="line"></span><br><span class="line">Multi Runtime</span><br></pre></td></tr></table></figure>
+
+<p>为了实现<strong>业务共享 → UI 共享 → Use Case 共享 → Runtime 不同</strong>，我目前更倾向于下面这样的目录结构：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">apps/</span><br><span class="line">    web-node/</span><br><span class="line">    web-edge/</span><br><span class="line"></span><br><span class="line">packages/</span><br><span class="line">    domain/</span><br><span class="line">    application/</span><br><span class="line">    ui/</span><br><span class="line">    api/</span><br><span class="line">    utils/</span><br></pre></td></tr></table></figure>
+
+<p>其中：</p>
+<ul>
+<li>apps 用来解决 Runtime。</li>
+<li>packages 用来解决共享。</li>
+</ul>
+<p>不同 Runtime 只是不同的入口。</p>
+<p>真正的业务代码全部放到 packages。</p>
+<hr>
+<h2 id="真正需要隔离的是-Runtime"><a href="#真正需要隔离的是-Runtime" class="headerlink" title="真正需要隔离的是 Runtime"></a>真正需要隔离的是 Runtime</h2><p>后来我发现，真正需要隔离的其实不是 React。</p>
+<p>而是 Runtime。</p>
+<p>例如：</p>
+<ul>
+<li>Session</li>
+<li>Cache</li>
+<li>Storage</li>
+<li>Queue</li>
+<li>Email</li>
+<li>Logger</li>
+</ul>
+<p>这些能力，在 Browser、Node.js 和 Edge Runtime 中都可能存在不同的实现。</p>
+<p>因此 packages 不应该直接依赖具体 Runtime。</p>
+<p>而应该依赖抽象。</p>
+<p>例如：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">Cache</span><br><span class="line"></span><br><span class="line">Storage</span><br><span class="line"></span><br><span class="line">Session</span><br></pre></td></tr></table></figure>
+
+<p>然后不同 Runtime 再分别提供自己的实现。</p>
+<p>例如：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">Node.js Runtime</span><br><span class="line"></span><br><span class="line">↓</span><br><span class="line"></span><br><span class="line">Redis</span><br><span class="line"></span><br><span class="line">Edge Runtime</span><br><span class="line"></span><br><span class="line">↓</span><br><span class="line"></span><br><span class="line">KV</span><br></pre></td></tr></table></figure>
+
+<p>这样真正变化的只有 Runtime。</p>
+<p>业务逻辑本身完全不需要修改。</p>
+<hr>
+<h2 id="Monorepo-并不能解决-Runtime"><a href="#Monorepo-并不能解决-Runtime" class="headerlink" title="Monorepo 并不能解决 Runtime"></a>Monorepo 并不能解决 Runtime</h2><p>很多人会把 Monorepo 当成万能方案。</p>
+<p>但我觉得并不是。</p>
+<p>Monorepo 解决的是：</p>
+<ul>
+<li>代码组织</li>
+<li>依赖管理</li>
+<li>统一构建</li>
+<li>统一版本</li>
+</ul>
+<p>它并不会自动解决 Runtime 差异。</p>
+<p>真正解决 Runtime 的，是不同 Runtime 的入口以及对应的 Adapter。</p>
+<p>Monorepo 只是让这一切更容易维护。</p>
+<hr>
+<h2 id="一个代码仓库，不代表只有一个构建产物"><a href="#一个代码仓库，不代表只有一个构建产物" class="headerlink" title="一个代码仓库，不代表只有一个构建产物"></a>一个代码仓库，不代表只有一个构建产物</h2><p>很多人会觉得：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">一套代码</span><br><span class="line"></span><br><span class="line">↓</span><br><span class="line"></span><br><span class="line">一个构建产物</span><br><span class="line"></span><br><span class="line">↓</span><br><span class="line"></span><br><span class="line">部署 everywhere</span><br></pre></td></tr></table></figure>
+
+<p>实际上我认为更合理的是：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">共享业务代码</span><br><span class="line"></span><br><span class="line">↓</span><br><span class="line"></span><br><span class="line">不同 Runtime</span><br><span class="line"></span><br><span class="line">↓</span><br><span class="line"></span><br><span class="line">分别构建</span><br><span class="line"></span><br><span class="line">↓</span><br><span class="line"></span><br><span class="line">不同部署产物</span><br></pre></td></tr></table></figure>
+
+<p>例如：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">pnpm build:node</span><br><span class="line"></span><br><span class="line">pnpm build:edge</span><br></pre></td></tr></table></figure>
+
+<p>最终得到：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">dist/node</span><br><span class="line"></span><br><span class="line">dist/edge</span><br></pre></td></tr></table></figure>
+
+<p>共享的是源码, 不是构建产物。</p>
+<h1 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h1><p>这是我最近对于 React 架构的一次思考。</p>
+<p>目前来看，我更希望最终形成这样的架构：</p>
+<ul>
+<li>不同页面，可以自由选择不同渲染策略；</li>
+<li>不同 Runtime，只需要更换入口和 Adapter；</li>
+<li>业务代码尽可能共享；</li>
+<li>部署平台尽可能自由。</li>
+</ul>
+<p>当然，目前还有不少问题没有真正验证：</p>
+<ol>
+<li>还没有在线上大规模实践；</li>
+<li>Cloudflare 和 Node.js Runtime 目前仍然存在能力差异；</li>
+<li>React Router 后续的发展方向还需要继续观察；</li>
+<li>TanStack Start 或许也是一个值得继续研究的方向。</li>
+</ol>
+<p>至少目前来看，我觉得 React Router Framework Mode + Monorepo 已经能够满足我目前对于 React 架构的大部分设想。</p>
+<h1 id="引用"><a href="#引用" class="headerlink" title="引用"></a>引用</h1><ol>
+<li><a target="_blank" rel="noopener" href="https://reactrouter.com/start/framework/installation">React Router Framework Mode</a> </li>
+<li><a target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/2029697092881229144">[技术债务] Vercel被黑始末：一个第三方AI工具如何撬开了云平台的门</a> </li>
+<li><a target="_blank" rel="noopener" href="https://wujie-micro.github.io/doc/guide/">微前端是什么</a> </li>
+<li><a target="_blank" rel="noopener" href="https://module-federation.io/zh/guide/start/index.html">什么是 Module Federation？</a> </li>
+<li><a target="_blank" rel="noopener" href="https://juejin.cn/post/7496340389883265061">模块联邦</a></li>
+</ol>
+</article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta"><i class="fas fa-circle-user fa-fw"></i>文章作者: </span><span class="post-copyright-info"><a href="http://blog.damingerdai.com">Arthur Ming</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta"><i class="fas fa-square-arrow-up-right fa-fw"></i>文章链接: </span><span class="post-copyright-info"><a href="http://blog.damingerdai.com/2026/08/06/front-end/react-router-meets-multi-runtime/">http://blog.damingerdai.com/2026/08/06/front-end/react-router-meets-multi-runtime/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta"><i class="fas fa-circle-exclamation fa-fw"></i>版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来源 <a href="http://blog.damingerdai.com" target="_blank">Damingerdai's Blog</a>！</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/React/">React</a><a class="post-meta__tags" href="/tags/React-Router/">React Router</a><a class="post-meta__tags" href="/tags/React-%E6%9E%B6%E6%9E%84/">React 架构</a><a class="post-meta__tags" href="/tags/Monorepo/">Monorepo</a><a class="post-meta__tags" href="/tags/Runtime/">Runtime</a></div><div class="post-share"><div class="social-share" data-image="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" data-sites="facebook,x,wechat,weibo,qq"></div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/butterfly-extsrc/sharejs/dist/css/share.min.css" media="print" onload="this.media='all'"><script src="https://cdn.jsdelivr.net/npm/butterfly-extsrc/sharejs/dist/js/social-share.min.js" defer></script></div></div><nav class="pagination-post" id="pagination"><a class="pagination-related full-width" href="/2026/07/31/back-end/docker-multi-arch-buildx-guide/" title="避坑指南：为什么我的 Docker 镜像在 Docker Hub 上没有多架构（Multi-Arch）支持？"><img class="cover" src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" onerror="onerror=null;src='/img/404.jpg'" alt="cover of next post"><div class="info text-right"><div class="info-1"><div class="info-item-1">下一篇</div><div class="info-item-2">避坑指南：为什么我的 Docker 镜像在 Docker Hub 上没有多架构（Multi-Arch）支持？</div></div><div class="info-2"><div class="info-item-1">避坑指南：为什么我的 Docker 镜像在 Docker Hub 上没有多架构（Multi-Arch）支持？问题现象在 Mac (Apple Silicon &#x2F; M1&#x2F;M2&#x2F;M3) 上编译并推送 Docker 镜像时： 12docker push docker.io/damingerdai/rammal:v0.0.1-alpha.0  发现 Docker Hub 页面上的 Tag 只显示 linux/arm64，并没有预期的 linux/amd64 与 linux/arm64 共存。重新针对 amd64 推送后，原有的 arm64 镜像反而被覆盖掉了。  原因分析1. 默认构建引擎（Driver）的局限运行 docker buildx ls 会发现，默认使用的是 default 实例，其驱动为 docker 引擎： 123NAME/NODE      DRIVER/ENDPOINTdefault*       docker   原生 docker 驱动使用的是 Docker Engine 本地的镜像存储（Image Store）。 本地存储设计初衷是...</div></div></div></a></nav><div class="relatedPosts"><div class="headline"><i class="fas fa-thumbs-up fa-fw"></i><span>相关推荐</span></div><div class="relatedPosts-list"><a class="pagination-related" href="/2026/02/25/front-end/from-3s-white-screen-to-first-paint-react-performance-optimization/" title="从 3 秒白屏到首屏可见 —— 一次基于 Chrome Performance Call Tree 的深度优化复盘"><img class="cover" src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-02-26</div><div class="info-item-2">从 3 秒白屏到首屏可见 —— 一次基于 Chrome Performance Call Tree 的深度优化复盘</div></div><div class="info-2"><div class="info-item-1">🎯 从 3 秒白屏到首屏可见 —— 一次基于 Chrome Performance Call Tree 的深度优化复盘 一、问题现象 页面首次进入白屏约 3 秒 300 个 Card 同步渲染 每个 Card 内嵌流程图组件 数据量 &lt; 1000  现象不是掉帧，而是：  页面完全不可见，直到 JS 执行完成。   二、使用 Chrome DevTools Performance 分析1️⃣ 录制方式 打开 Performance 面板 录制页面加载过程 停止录制 切换到 Call Tree 视图   三、关键截图分析（Call Tree） 从 Call Tree 中可以看到几个关键点： 🔴 1. 主线程长时间被占用顶部可以看到：  Function call performWorkUntilDeadline Run console task beginWork  说明：  这是一次 React 同步渲染过程。   🔴 2. React 渲染链路非常清晰调用栈结构大致如下： 12345678910performWorkUntilDeadline└── beginWor...</div></div></div></a></div></div></div><div class="aside-content" id="aside-content"><div class="card-widget card-info text-center"><div class="avatar-img"><img src="/img/avatar.png" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="author-info-name">Arthur Ming</div><div class="author-info-description">大明二代的博客</div><div class="site-data"><a href="/archives/"><div class="headline">文章</div><div class="length-num">96</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">147</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">8</div></a></div><a id="card-info-btn" target="_blank" rel="noopener" href="https://github.com/damingerdai"><i class="fab fa-github"></i><span>Follow Me</span></a><div class="card-info-social-icons"><a class="social-icon" href="https://github.com/damingerdai" target="_blank" title="Github"><i class="fab fa-github" style="color: #24292e;"></i></a><a class="social-icon" href="mailto:mingguobin@live.com" target="_blank" title="Email"><i class="fas fa-envelope" style="color: #4a7dbe;"></i></a></div></div><div class="card-widget card-announcement"><div class="item-headline"><i class="fas fa-bullhorn fa-shake"></i><span>公告</span></div><div class="announcement_content">大家好，我是大明二代</div></div><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="item-headline"><i class="fas fa-stream"></i><span>目录</span><span class="toc-percentage"></span></div><div class="toc-content"><ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#%E8%B5%B7%E5%9B%A0"><span class="toc-number">1.</span> <span class="toc-text">起因</span></a></li><li class="toc-item toc-level-1"><a class="toc-link" href="#%E9%97%AE%E9%A2%98"><span class="toc-number">2.</span> <span class="toc-text">问题</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E7%AC%AC%E4%B8%80%E4%B8%AA%E9%97%AE%E9%A2%98%EF%BC%9A%E5%90%8C%E4%B8%80%E4%B8%AA%E5%BA%94%E7%94%A8%EF%BC%8C%E4%B8%8D%E5%90%8C%E9%A1%B5%E9%9D%A2%E5%BA%94%E8%AF%A5%E9%87%87%E7%94%A8%E4%B8%8D%E5%90%8C%E6%B8%B2%E6%9F%93%E7%AD%96%E7%95%A5"><span class="toc-number">2.1.</span> <span class="toc-text">第一个问题：同一个应用，不同页面应该采用不同渲染策略</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E7%AC%AC%E4%BA%8C%E4%B8%AA%E9%97%AE%E9%A2%98%EF%BC%9A%E5%90%8C%E4%B8%80%E4%B8%AA%E5%BA%94%E7%94%A8%E5%8F%AF%E8%83%BD%E9%9C%80%E8%A6%81%E9%83%A8%E7%BD%B2%E5%88%B0%E4%B8%8D%E5%90%8C-Runtime"><span class="toc-number">2.2.</span> <span class="toc-text">第二个问题：同一个应用可能需要部署到不同 Runtime</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E7%AC%AC%E4%B8%89%E4%B8%AA%E9%97%AE%E9%A2%98%EF%BC%9A%E7%8E%B0%E6%9C%89%E6%96%B9%E6%A1%88%E6%98%AF%E4%B8%8D%E6%98%AF%E5%B7%B2%E7%BB%8F%E8%A7%A3%E5%86%B3%E4%BA%86%EF%BC%9F"><span class="toc-number">2.3.</span> <span class="toc-text">第三个问题：现有方案是不是已经解决了？</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#Next-js"><span class="toc-number">2.3.1.</span> <span class="toc-text">Next.js</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%BE%AE%E5%89%8D%E7%AB%AF"><span class="toc-number">2.3.2.</span> <span class="toc-text">微前端</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Module-Federation"><span class="toc-number">2.3.3.</span> <span class="toc-text">Module Federation</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E6%9C%80%E5%90%8E%EF%BC%8C%E6%88%91%E5%8F%88%E9%87%8D%E6%96%B0%E5%9B%9E%E5%88%B0%E4%BA%86-React-Router"><span class="toc-number">2.4.</span> <span class="toc-text">最后，我又重新回到了 React Router</span></a></li></ol></li><li class="toc-item toc-level-1"><a class="toc-link" href="#%E6%80%9D%E8%B7%AF"><span class="toc-number">3.</span> <span class="toc-text">思路</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E7%9C%9F%E6%AD%A3%E9%9C%80%E8%A6%81%E9%9A%94%E7%A6%BB%E7%9A%84%E6%98%AF-Runtime"><span class="toc-number">3.1.</span> <span class="toc-text">真正需要隔离的是 Runtime</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Monorepo-%E5%B9%B6%E4%B8%8D%E8%83%BD%E8%A7%A3%E5%86%B3-Runtime"><span class="toc-number">3.2.</span> <span class="toc-text">Monorepo 并不能解决 Runtime</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%B8%80%E4%B8%AA%E4%BB%A3%E7%A0%81%E4%BB%93%E5%BA%93%EF%BC%8C%E4%B8%8D%E4%BB%A3%E8%A1%A8%E5%8F%AA%E6%9C%89%E4%B8%80%E4%B8%AA%E6%9E%84%E5%BB%BA%E4%BA%A7%E7%89%A9"><span class="toc-number">3.3.</span> <span class="toc-text">一个代码仓库，不代表只有一个构建产物</span></a></li></ol></li><li class="toc-item toc-level-1"><a class="toc-link" href="#%E6%80%BB%E7%BB%93"><span class="toc-number">4.</span> <span class="toc-text">总结</span></a></li><li class="toc-item toc-level-1"><a class="toc-link" href="#%E5%BC%95%E7%94%A8"><span class="toc-number">5.</span> <span class="toc-text">引用</span></a></li></ol></div></div><div class="card-widget card-recent-post"><div class="item-headline"><i class="fas fa-history"></i><span>最新文章</span></div><div class="aside-list"><div class="aside-list-item"><a class="thumbnail" href="/2026/08/06/front-end/react-router-meets-multi-runtime/" title="当 React Router 遇见多运行时：一次关于 React 架构的思考"><img src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="当 React Router 遇见多运行时：一次关于 React 架构的思考"/></a><div class="content"><a class="title" href="/2026/08/06/front-end/react-router-meets-multi-runtime/" title="当 React Router 遇见多运行时：一次关于 React 架构的思考">当 React Router 遇见多运行时：一次关于 React 架构的思考</a><time datetime="2026-08-06T05:28:47.000Z" title="发表于 2026-08-06 13:28:47">2026-08-06</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2026/07/31/back-end/docker-multi-arch-buildx-guide/" title="避坑指南：为什么我的 Docker 镜像在 Docker Hub 上没有多架构（Multi-Arch）支持？"><img src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="避坑指南：为什么我的 Docker 镜像在 Docker Hub 上没有多架构（Multi-Arch）支持？"/></a><div class="content"><a class="title" href="/2026/07/31/back-end/docker-multi-arch-buildx-guide/" title="避坑指南：为什么我的 Docker 镜像在 Docker Hub 上没有多架构（Multi-Arch）支持？">避坑指南：为什么我的 Docker 镜像在 Docker Hub 上没有多架构（Multi-Arch）支持？</a><time datetime="2026-07-31T09:36:44.000Z" title="发表于 2026-07-31 17:36:44">2026-07-31</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2026/07/29/back-end/rust-docker-git-build-metadata/" title="在 Docker 构建 Rust 项目时注入 Git 版本信息"><img src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="在 Docker 构建 Rust 项目时注入 Git 版本信息"/></a><div class="content"><a class="title" href="/2026/07/29/back-end/rust-docker-git-build-metadata/" title="在 Docker 构建 Rust 项目时注入 Git 版本信息">在 Docker 构建 Rust 项目时注入 Git 版本信息</a><time datetime="2026-07-29T05:46:50.000Z" title="发表于 2026-07-29 13:46:50">2026-07-29</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2026/07/21/software/fluxcd-gitea-http-bootstrap-solution/" title="内网 GitOps 实践：FluxCD 与 Gitea (HTTP) 集成与 初始化 指南"><img src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="内网 GitOps 实践：FluxCD 与 Gitea (HTTP) 集成与 初始化 指南"/></a><div class="content"><a class="title" href="/2026/07/21/software/fluxcd-gitea-http-bootstrap-solution/" title="内网 GitOps 实践：FluxCD 与 Gitea (HTTP) 集成与 初始化 指南">内网 GitOps 实践：FluxCD 与 Gitea (HTTP) 集成与 初始化 指南</a><time datetime="2026-07-21T05:43:22.000Z" title="发表于 2026-07-21 13:43:22">2026-07-21</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2026/07/12/software/garage-s3-alternative-setup-guide/" title="寻找轻量级 S3 替代方案：极简分布式对象存储 Garage 搭建与全线打通指南"><img src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="寻找轻量级 S3 替代方案：极简分布式对象存储 Garage 搭建与全线打通指南"/></a><div class="content"><a class="title" href="/2026/07/12/software/garage-s3-alternative-setup-guide/" title="寻找轻量级 S3 替代方案：极简分布式对象存储 Garage 搭建与全线打通指南">寻找轻量级 S3 替代方案：极简分布式对象存储 Garage 搭建与全线打通指南</a><time datetime="2026-07-12T12:49:12.000Z" title="发表于 2026-07-12 20:49:12">2026-07-12</time></div></div></div></div></div></div></main><footer id="footer"><div class="footer-other"><div class="footer-copyright"><span class="copyright">&copy;&nbsp;2020 - 2026 By Arthur Ming</span></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="日间和夜间模式切换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside-config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><button id="go-up" type="button" title="回到顶部"><span class="scroll-percent"></span><i class="fas fa-arrow-up"></i></button></div></div><div><script src="/js/utils.js"></script><script src="/js/main.js"></script><div class="js-pjax"><script>(() => {
+  const parseViewBox = viewBox => {
+    if (!viewBox) return null
+    const parts = viewBox.trim().split(/[\s,]+/).map(n => Number(n))
+    if (parts.length !== 4 || parts.some(n => Number.isNaN(n))) return null
+    return parts
+  }
+
+  const getSvgViewBox = svg => {
+    const attr = parseViewBox(svg.getAttribute('viewBox'))
+    if (attr) return attr
+
+    // Fallback: use bbox to build a viewBox
+    try {
+      const bbox = svg.getBBox()
+      if (bbox && bbox.width && bbox.height) return [bbox.x, bbox.y, bbox.width, bbox.height]
+    } catch (e) {
+      // getBBox may fail on some edge cases; ignore
+    }
+
+    const w = Number(svg.getAttribute('width')) || 0
+    const h = Number(svg.getAttribute('height')) || 0
+    if (w > 0 && h > 0) return [0, 0, w, h]
+    return [0, 0, 100, 100]
+  }
+
+  const setSvgViewBox = (svg, vb) => {
+    svg.setAttribute('viewBox', `${vb[0]} ${vb[1]} ${vb[2]} ${vb[3]}`)
+  }
+
+  const clamp = (v, min, max) => Math.max(min, Math.min(max, v))
+
+  const openSvgInNewTab = ({ source, initViewBox }) => {
+    const getClonedSvg = () => {
+      if (typeof source === 'string') {
+        const template = document.createElement('template')
+        template.innerHTML = source.trim()
+        const svg = template.content.querySelector('svg')
+        return svg ? svg.cloneNode(true) : null
+      }
+      if (source && typeof source.cloneNode === 'function') {
+        return source.cloneNode(true)
+      }
+      return null
+    }
+
+    const clone = getClonedSvg()
+    if (!clone) return
+    if (initViewBox && initViewBox.length === 4) {
+      clone.setAttribute('viewBox', initViewBox.join(' '))
+    }
+    if (!clone.getAttribute('xmlns')) clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg')
+    if (!clone.getAttribute('xmlns:xlink') && clone.outerHTML.includes('xlink:')) {
+      clone.setAttribute('xmlns:xlink', 'http://www.w3.org/1999/xlink')
+    }
+    // inject background to match current theme
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark'
+    const bg = getComputedStyle(document.body).backgroundColor || (isDark ? '#1e1e1e' : '#ffffff')
+    if (!clone.style.background) clone.style.background = bg
+
+    const serializer = new XMLSerializer()
+    const svgSource = serializer.serializeToString(clone)
+    const htmlSource = `<!doctype html><html><head><meta charset="utf-8" />
+      <style>
+        html, body { width: 100%; height: 100%; margin: 0; display: flex; align-items: center; justify-content: center; background: ${bg}; }
+        svg { max-width: 100%; max-height: 100%; height: auto; width: auto; }
+      </style>
+      </head><body>${svgSource}</body></html>`
+    const blob = new Blob([htmlSource], { type: 'text/html;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    window.open(url, '_blank', 'noopener')
+    setTimeout(() => URL.revokeObjectURL(url), 30000)
+  }
+
+  const attachMermaidViewerButton = wrap => {
+    let btn = wrap.querySelector('.mermaid-open-btn')
+    if (!btn) {
+      btn = document.createElement('button')
+      btn.type = 'button'
+      btn.className = 'mermaid-open-btn'
+      wrap.appendChild(btn)
+    }
+
+    btn.innerHTML = '<i class="fa fa-search fa-fw" aria-hidden="true"></i>'
+
+    if (!btn.__mermaidViewerBound) {
+      btn.addEventListener('click', e => {
+        e.preventDefault()
+        e.stopPropagation()
+        const svg = wrap.__mermaidOriginalSvg || wrap.querySelector('svg')
+        if (!svg) return
+        const initViewBox = wrap.__mermaidInitViewBox
+        if (typeof svg === 'string') {
+          openSvgInNewTab({ source: svg, initViewBox })
+          return
+        }
+        openSvgInNewTab({ source: svg, initViewBox })
+      })
+      btn.__mermaidViewerBound = true
+    }
+  }
+
+  // Zoom around a point (px, py) in the SVG viewport (in viewBox coordinates)
+  const zoomAtPoint = (vb, factor, px, py) => {
+    const w = vb[2] * factor
+    const h = vb[3] * factor
+    const nx = px - (px - vb[0]) * factor
+    const ny = py - (py - vb[1]) * factor
+    return [nx, ny, w, h]
+  }
+
+  const initMermaidGestures = wrap => {
+    const svg = wrap.querySelector('svg')
+    if (!svg) return
+
+    // Ensure viewBox exists so gestures always work
+    const initVb = getSvgViewBox(svg)
+    wrap.__mermaidInitViewBox = initVb
+    wrap.__mermaidCurViewBox = initVb.slice()
+    setSvgViewBox(svg, initVb)
+
+    // Avoid binding multiple times on themeChange/pjax
+    if (wrap.__mermaidGestureBound) return
+    wrap.__mermaidGestureBound = true
+
+    // Helper: map client (viewport) coordinate -> viewBox coordinate
+    const clientToViewBox = (clientX, clientY) => {
+      const rect = svg.getBoundingClientRect()
+      const vb = wrap.__mermaidCurViewBox || getSvgViewBox(svg)
+      const x = vb[0] + (clientX - rect.left) * (vb[2] / rect.width)
+      const y = vb[1] + (clientY - rect.top) * (vb[3] / rect.height)
+      return { x, y, rect, vb }
+    }
+
+    const state = {
+      pointers: new Map(),
+      startVb: null,
+      startDist: 0,
+      startCenter: null
+    }
+
+    const clampVb = vb => {
+      const init = wrap.__mermaidInitViewBox || vb
+      const minW = init[2] * 0.1
+      const maxW = init[2] * 10
+      const minH = init[3] * 0.1
+      const maxH = init[3] * 10
+      vb[2] = clamp(vb[2], minW, maxW)
+      vb[3] = clamp(vb[3], minH, maxH)
+      return vb
+    }
+
+    const setCurVb = vb => {
+      vb = clampVb(vb)
+      wrap.__mermaidCurViewBox = vb
+      setSvgViewBox(svg, vb)
+    }
+
+    const onPointerDown = e => {
+      // Allow only primary button for mouse
+      if (e.pointerType === 'mouse' && e.button !== 0) return
+      svg.setPointerCapture(e.pointerId)
+      state.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY })
+
+      if (state.pointers.size === 1) {
+        state.startVb = (wrap.__mermaidCurViewBox || getSvgViewBox(svg)).slice()
+      } else if (state.pointers.size === 2) {
+        const pts = [...state.pointers.values()]
+        const dx = pts[0].x - pts[1].x
+        const dy = pts[0].y - pts[1].y
+        state.startDist = Math.hypot(dx, dy)
+        state.startVb = (wrap.__mermaidCurViewBox || getSvgViewBox(svg)).slice()
+        state.startCenter = { x: (pts[0].x + pts[1].x) / 2, y: (pts[0].y + pts[1].y) / 2 }
+      }
+    }
+
+    const onPointerMove = e => {
+      if (!state.pointers.has(e.pointerId)) return
+      state.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY })
+
+      // Pan with 1 pointer
+      if (state.pointers.size === 1 && state.startVb) {
+        const p = [...state.pointers.values()][0]
+        const prev = { x: e.clientX - e.movementX, y: e.clientY - e.movementY }
+        // movementX/Y unreliable on touch, compute from stored last position
+        const last = wrap.__mermaidLastSinglePointer || p
+        const dxClient = p.x - last.x
+        const dyClient = p.y - last.y
+        wrap.__mermaidLastSinglePointer = p
+
+        const { rect } = clientToViewBox(p.x, p.y)
+        const vb = (wrap.__mermaidCurViewBox || getSvgViewBox(svg)).slice()
+        const dx = dxClient * (vb[2] / rect.width)
+        const dy = dyClient * (vb[3] / rect.height)
+        setCurVb([vb[0] - dx, vb[1] - dy, vb[2], vb[3]])
+        return
+      }
+
+      // Pinch zoom with 2 pointers
+      if (state.pointers.size === 2 && state.startVb && state.startDist > 0) {
+        const pts = [...state.pointers.values()]
+        const dx = pts[0].x - pts[1].x
+        const dy = pts[0].y - pts[1].y
+        const dist = Math.hypot(dx, dy)
+        if (!dist) return
+        const factor = state.startDist / dist // dist bigger => zoom in (viewBox smaller)
+
+        const cx = (pts[0].x + pts[1].x) / 2
+        const cy = (pts[0].y + pts[1].y) / 2
+        const centerClient = { x: cx, y: cy }
+
+        const pxy = clientToViewBox(centerClient.x, centerClient.y)
+        const cpx = pxy.x
+        const cpy = pxy.y
+
+        const vb = zoomAtPoint(state.startVb, factor, cpx, cpy)
+        setCurVb(vb)
+      }
+    }
+
+    const onPointerUpOrCancel = e => {
+      state.pointers.delete(e.pointerId)
+      if (state.pointers.size === 0) {
+        state.startVb = null
+        state.startDist = 0
+        state.startCenter = null
+        wrap.__mermaidLastSinglePointer = null
+      } else if (state.pointers.size === 1) {
+        // reset single pointer baseline to avoid jump
+        wrap.__mermaidLastSinglePointer = [...state.pointers.values()][0]
+      }
+    }
+
+    // Wheel zoom (mouse/trackpad)
+    const onWheel = e => {
+      // ctrlKey on mac trackpad pinch; we treat both as zoom
+      e.preventDefault()
+      const delta = e.deltaY
+      const zoomFactor = delta > 0 ? 1.1 : 0.9
+      const { x, y } = clientToViewBox(e.clientX, e.clientY)
+      const vb = (wrap.__mermaidCurViewBox || getSvgViewBox(svg)).slice()
+      setCurVb(zoomAtPoint(vb, zoomFactor, x, y))
+    }
+
+    const onDblClick = () => {
+      const init = wrap.__mermaidInitViewBox
+      if (!init) return
+      wrap.__mermaidCurViewBox = init.slice()
+      setSvgViewBox(svg, init)
+    }
+
+    svg.addEventListener('pointerdown', onPointerDown)
+    svg.addEventListener('pointermove', onPointerMove)
+    svg.addEventListener('pointerup', onPointerUpOrCancel)
+    svg.addEventListener('pointercancel', onPointerUpOrCancel)
+    svg.addEventListener('wheel', onWheel, { passive: false })
+    svg.addEventListener('dblclick', onDblClick)
+  }
+
+  const runMermaid = ele => {
+    window.loadMermaid = true
+    const theme = document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'default'
+
+    ele.forEach((item, index) => {
+      const mermaidSrc = item.firstElementChild
+
+      // Clear old render (themeChange/pjax will rerun)
+      const oldSvg = item.querySelector('svg')
+      if (oldSvg) oldSvg.remove()
+      item.__mermaidGestureBound = false
+
+      const config = mermaidSrc.dataset.config ? JSON.parse(mermaidSrc.dataset.config) : {}
+      if (!config.theme) {
+        config.theme = theme
+      }
+      const mermaidThemeConfig = `%%{init: ${JSON.stringify(config)}}%%\n`
+      const mermaidID = `mermaid-${index}`
+      const mermaidDefinition = mermaidThemeConfig + mermaidSrc.textContent
+
+      const renderFn = mermaid.render(mermaidID, mermaidDefinition)
+      const renderMermaid = svg => {
+        mermaidSrc.insertAdjacentHTML('afterend', svg)
+        if (true) initMermaidGestures(item)
+        item.__mermaidOriginalSvg = svg
+        if (true) attachMermaidViewerButton(item)
+      }
+
+
+      // mermaid v9 and v10 compatibility
+      typeof renderFn === 'string' ? renderMermaid(renderFn) : renderFn.then(({ svg }) => renderMermaid(svg))
+    })
+  }
+
+  const codeToMermaid = () => {
+    const codeMermaidEle = document.querySelectorAll('pre > code.mermaid')
+    if (codeMermaidEle.length === 0) return
+
+    codeMermaidEle.forEach(ele => {
+      const preEle = document.createElement('pre')
+      preEle.className = 'mermaid-src'
+      preEle.hidden = true
+      preEle.textContent = ele.textContent
+      const newEle = document.createElement('div')
+      newEle.className = 'mermaid-wrap'
+      newEle.appendChild(preEle)
+      ele.parentNode.replaceWith(newEle)
+    })
+  }
+
+  const loadMermaid = () => {
+    if (true) codeToMermaid()
+    const $mermaid = document.querySelectorAll('#article-container .mermaid-wrap')
+    if ($mermaid.length === 0) return
+
+    const runMermaidFn = () => runMermaid($mermaid)
+    btf.addGlobalFn('themeChange', runMermaidFn, 'mermaid')
+    window.loadMermaid ? runMermaidFn() : btf.getScript('https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js').then(runMermaidFn)
+  }
+
+  btf.addGlobalFn('encrypt', loadMermaid, 'mermaid')
+  window.pjax ? loadMermaid() : document.addEventListener('DOMContentLoaded', loadMermaid)
+})()</script></div><script defer="defer" id="ribbon" src="https://cdn.jsdelivr.net/npm/butterfly-extsrc/dist/canvas-ribbon.min.js" size="150" alpha="0.6" zIndex="-1" mobile="false" data-click="true"></script><script async data-pjax src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script></div></body></html>
