@@ -1080,6 +1080,245 @@ Authenticated pages   → CSR
 
 ---
 
+# 18. Prerender 不等于完整的 SEO
+
+前面的实现解决了一个重要问题：
+
+```text
+普通 SPA
+
+<div id="root"></div>
+
+        ↓
+
+Prerender
+
+<div id="root">
+  <main>
+    页面正文
+  </main>
+</div>
+```
+
+搜索引擎和其他不执行 JavaScript 的客户端现在可以直接读取页面正文。
+
+但这并不意味着 SEO 工作已经完成。
+
+一个公开页面通常还需要正确输出：
+
+```html
+<title>...</title>
+
+<meta
+  name="description"
+  content="..."
+>
+
+<link
+  rel="canonical"
+  href="..."
+>
+
+<meta
+  property="og:title"
+  content="..."
+>
+
+<meta
+  property="og:description"
+  content="..."
+>
+
+<meta
+  property="og:url"
+  content="..."
+>
+
+<meta
+  property="og:image"
+  content="..."
+>
+```
+
+如果使用结构化数据，还可能包含：
+
+```html
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Organization"
+}
+</script>
+```
+
+因此，一个真正可用于 SEO 的 prerender 页面至少需要考虑两个部分：
+
+```text
+HTML Document
+│
+├── <head>
+│   ├── title
+│   ├── description
+│   ├── canonical
+│   ├── Open Graph
+│   └── structured data
+│
+└── <body>
+    └── #root
+        └── 页面正文
+```
+
+## React 19 的 Metadata Hoisting
+
+如果使用 React 19，可以直接在组件中声明：
+
+```tsx
+function SubscriptionsPage() {
+  return (
+    <>
+      <title>Plans & Pricing | Intelligent Brand</title>
+
+      <meta
+        name="description"
+        content="Choose the Intelligent Brand plan that fits your business."
+      />
+
+      <meta
+        property="og:title"
+        content="Plans & Pricing | Intelligent Brand"
+      />
+
+      <meta
+        property="og:description"
+        content="Choose the Intelligent Brand plan that fits your business."
+      />
+
+      <main>
+        ...
+      </main>
+    </>
+  );
+}
+```
+
+React 会处理这些 metadata 元素，而不需要为了 `<title>` 单独操作 `document.title`。
+
+这点对于 prerender 尤其重要。
+
+如果 SPA 使用：
+
+```ts
+useEffect(() => {
+  document.title = 'Plans & Pricing';
+}, []);
+```
+
+标题只能在浏览器 JavaScript 执行之后修改。
+
+而 prerender 的目标恰恰是：
+
+> 在 JavaScript 执行之前，HTML Document 本身就已经包含 SEO 信息。
+
+因此对于需要 prerender 的公开页面，SEO metadata 最好也进入 React 的静态渲染过程。
+
+## Prerender Verification 也应该检查 `<head>`
+
+这也意味着 `verify-prerender.mjs` 不应该只验证：
+
+```text
+✓ 页面正文存在
+✓ <h1> 存在
+✓ hydration data 存在
+✓ data-prerendered 正确
+```
+
+还应该验证 SEO metadata。
+
+例如：
+
+```text
+/subscriptions
+
+✓ <title> 非空
+✓ meta[name="description"] 非空
+✓ canonical URL 正确
+✓ og:title 存在
+✓ og:description 存在
+✓ og:url 正确
+✓ 必要时检查 og:image
+✓ 必要时检查 JSON-LD
+```
+
+最终可以把 verification 分成三个层次：
+
+```text
+1. Prerender Correctness
+   ├── React 输出非空
+   ├── data-prerendered 正确
+   └── 没有 client-render fallback
+
+2. Hydration Correctness
+   ├── __staticRouterHydrationData 存在
+   ├── React hydrateRoot 正常
+   └── Router hydration 正常
+
+3. SEO Correctness
+   ├── title
+   ├── description
+   ├── canonical
+   ├── Open Graph
+   ├── structured data
+   └── 页面语义，例如唯一 h1
+```
+
+这样 `<h1>` 的定位也更加清楚。
+
+它不应该被用来证明：
+
+```text
+Prerender 成功
+```
+
+而应该被用来验证：
+
+```text
+页面的 HTML 语义 / SEO 规则符合预期
+```
+
+## 最终目标
+
+因此，这套方案真正要达到的效果不是简单地：
+
+```text
+SPA → HTML 有内容
+```
+
+而应该是：
+
+```text
+              Prerendered HTML
+                     │
+          ┌──────────┴──────────┐
+          │                     │
+        <head>                 <body>
+          │                     │
+    SEO Metadata            页面正文
+          │                     │
+    title                   semantic HTML
+    description             h1
+    canonical               main
+    Open Graph              links
+    JSON-LD                 content
+```
+
+这样生成出来的才是一个真正适合作为公开 SEO Landing Page 的静态 HTML。
+
+因此更准确地说：
+
+> **Prerender 解决的是 SPA SEO 的“初始 HTML 不包含页面内容和 metadata”问题，而不是 SEO 的全部问题。**
+
+关键词研究、内容质量、内部链接、Sitemap、robots.txt、Core Web Vitals、结构化数据质量等，仍然属于 Prerender 之外的 SEO 工作。
+
 # 总结
 
 整个方案最重要的并不是 `vite build --ssr` 本身，而是把不同职责拆开：
