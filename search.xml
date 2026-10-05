@@ -116,48 +116,36 @@ k3s配置ingress使用ssl证书
       </tags>
   </entry>
   <entry>
-    <title>Bazel 8 Bzlmod 迁移记录：从 WORKSPACE 到 MODULE.bazel</title>
-    <url>/2025/11/03/back-end/bazel8-bzlmod-migration/</url>
-    <content><![CDATA[Bazel 8 Bzlmod 迁移记录：从 WORKSPACE 到 MODULE.bazel本文档记录了项目 hoteler 从 Bazel 旧版 WORKSPACE 机制迁移到 Bazel 8 Bzlmod（Bazel 模块系统）的完整过程，重点记录了在迁移 Java 和 Maven 依赖时遇到的关键问题及其解决方案。
-1. 迁移背景与目标
-原 Bazel 版本: Bazel 7.x
-目标 Bazel 版本: Bazel 8.4.2 
-目标: 完全移除 WORKSPACE 文件，将所有外部依赖（包括规则集和 Maven Artifacts）迁移到 MODULE.bazel 文件中进行管理。
-涉及的关键规则集: rules_java、rules_jvm_external、rules_spring。
+    <title>使用docker-compose备份Postgres Docker容器的解决方案</title>
+    <url>/2024/07/10/back-end/back-end-how-to-backup-postgres-docker-container/</url>
+    <content><![CDATA[使用docker-compose备份Postgres Docker容器的解决方案备份使用pg_dumpall命令备份Postgres数据库。
+docker-compose exec &lt;postgres_service&gt; pg_dumpall -U postgres &gt; dump_`date +%Y-%m-%d&quot;_&quot;%H_%M_%S`.sql
 
-2. 原始 WORKSPACE 结构概述项目原先使用传统的 WORKSPACE 文件管理依赖，主要依赖 http_archive 引入规则集，并使用 rules_jvm_external 的 maven_install 函数定义所有 Maven 依赖。
-# WORKSPACE (简化结构)workspace(name = &quot;hoteler&quot;)# 通过 http_archive 引入 rules_jvm_external 和 rules_springload(&quot;@bazel_tools//tools/build_defs/repo:http.bzl&quot;, &quot;http_archive&quot;)http_archive(...) # rules_jvm_externalhttp_archive(...) # rules_spring# 使用 maven_install 定义所有 Maven 依赖，并将其暴露为 @maven 代码库load(&quot;@rules_jvm_external//:defs.bzl&quot;, &quot;maven_install&quot;)maven_install(    artifacts = [...], # 包含 Spring Boot, Mybatis, JWT 等所有依赖    maven_install_json = &quot;@//:maven_install.json&quot;,)load(&quot;@maven//:defs.bzl&quot;, &quot;pinned_maven_install&quot;)pinned_maven_install()
 
-3. Bzlmod 迁移与问题记录迁移过程主要集中在 MODULE.bazel 文件的创建和调整上，遇到了 Bazel 8 Bzlmod 机制的多个严格限制。
-3.1 遇到的第一个问题：load 语句限制问题描述:尝试在 MODULE.bazel 文件中直接使用 load 语句引入 rules_jvm_external 扩展和本地 .bzl 文件时，Bazel 报错 load statements may not be used in MODULE.bazel files。
-原因分析:MODULE.bazel 文件只允许使用声明性语句如 module(), bazel_dep(), 和 use_extension()。任何形式的 load 语句（包括加载模块扩展）都必须被重写为 use_extension 模式。
-初步解决方案 (失败)：最初尝试将 load 用于模块扩展也失败，因为它与 use_extension 的语法要求不符。
-3.2 遇到的第二个问题：核心依赖缺失 (rules_java)问题描述:在成功引入 rules_jvm_external 后，构建失败，报错 No repository visible as &#39;@rules_java&#39; from main repository。
-原因分析:在 Bzlmod 中，即使是 Java 项目的核心规则集 rules_java 也需要被显式声明。rules_jvm_external 和 rules_spring 都依赖于它。
-解决方案:在 MODULE.bazel 中显式添加 rules_java 依赖，并根据最终构建需求将其版本设置为 8.16.1。
-bazel_dep(    name = &quot;rules_java&quot;,    version = &quot;8.16.1&quot;, )
+docker-compose exec &lt;postgres_service&gt; 在名为&lt;postgres_service&gt;的Postgres容器上执行命令。
+-U postgres 指定数据库的用户名。Docker的默认用户名是postgres，如果你使用不同的用户名，请进行修改。
 
-3.3 遇到的第三个问题：@maven 仓库可见性问题问题描述:在 BUILD.bazel 文件中引用 Maven 依赖时，持续收到错误 No repository visible as &#39;@maven&#39; from main repository 或 No repository visible as &#39;@unpinned_maven&#39; from main repository。
-原因分析:在 Bzlmod 中，模块扩展（如 rules_jvm_external 的 maven 扩展）创建的代码库（如 @maven）不会自动对主模块可见。需要一个额外的步骤来将该代码库导入到主模块的命名空间。
-解决方案 (最终):使用 use_repo 函数将模块扩展生成的 maven 仓库导入。这是 rules_jvm_external 在 Bazel 8 中推荐的 Bzlmod 导入方式:
-# MODULE.bazel (最终结构的关键变动)maven = use_extension(&quot;@rules_jvm_external//:extensions.bzl&quot;, &quot;maven&quot;)# 使用 use_repo 将扩展生成的 &#x27;maven&#x27; 仓库导入主模块use_repo(maven, &quot;maven&quot;)maven.install(    lock_file = &quot;//:maven_install.json&quot;, # 修正了参数名    artifacts = [...],    # ...)
+恢复将dump_date +%Y-%m-%d”“%H%M_%S.sql文件放置在backup文件夹中。
+然后使用Docker卷将backup文件夹绑定到Postgres容器上：
+volumes:    - ./backup:/backup
 
-4. 最终 Bzlmod 配置与 BUILD 文件以下是完成迁移后项目的最终依赖管理文件。
-4.1 最终的 MODULE.bazel 文件该文件集成了所有规则集依赖、版本修正和 Maven 扩展配置。
-module(    name = &quot;hoteler&quot;,    compatibility_level = 1,)bazel_dep(    name = &quot;rules_java&quot;,    version = &quot;8.16.1&quot;, )bazel_dep(    name = &quot;rules_jvm_external&quot;,    version = &quot;6.7&quot;, # 解决版本冲突)bazel_dep(    name = &quot;rules_spring&quot;,    version = &quot;2.6.3&quot;,)# 使用 use_extension 激活 Maven 扩展maven = use_extension(&quot;@rules_jvm_external//:extensions.bzl&quot;, &quot;maven&quot;)# 导入 Maven 仓库，使其在 BUILD 文件中可见为 @mavenuse_repo(maven, &quot;maven&quot;)# 配置 Maven 依赖maven.install(    lock_file = &quot;//:maven_install.json&quot;,    artifacts = [        &quot;org.springframework.boot:spring-boot-starter-web:3.5.5&quot;,        # ... (所有 Maven 依赖项，包括补充的 cn.hutool:hutool-crypto 等)    ],    fetch_sources = True,    repositories = [        &quot;https://maven.aliyun.com/repository/central&quot;,        # ... (所有仓库)    ],)
+删除现有的Postgres容器并创建一个新的容器：
+docker-compose down &amp;&amp; docker-compose up -d
 
-4.2 最终的 BUILD.bazel 引用在 BUILD.bazel 文件中，所有对 Maven 依赖的引用都保持使用 @maven//:... 别名，因为 MODULE.bazel 文件已通过 use_repo(maven, &quot;maven&quot;) 语句确保了 maven 代码库的可见性。
-# BUILD.bazel (部分内容)java_library(    name = &quot;java-maven-lib&quot;,    srcs = glob([&quot;src/main/java/org/daming/hoteler/*.java&quot;]),    deps = [        &quot;@maven//:org_springframework_boot_spring_boot_starter_web&quot;,        &quot;@maven//:io_jsonwebtoken_jjwt_api&quot;,        # ... (所有其他 @maven 引用)    ],    # ...)
+执行数据库导入命令：
+docker-compose exec postgres psql -f /backup/dump_xxx.sql postgres -U postgres
 
-5. 结论通过将规则集定义从 http_archive 迁移到 bazel_dep，并将 maven_install 逻辑封装到 use_extension 和 use_repo 组合中，项目成功实现了到 Bazel 8 Bzlmod 的完全迁移，并移除了 WORKSPACE 文件。迁移的关键在于理解 Bazel 8 对依赖导入和名称空间可见性的严格要求。
+参考资料
+使用docker-compose备份和恢复Postgres数据库
+
 ]]></content>
       <categories>
         <category>后端</category>
       </categories>
       <tags>
-        <tag>spring boot</tag>
-        <tag>bazel</tag>
-        <tag>bzlmod</tag>
+        <tag>docker</tag>
+        <tag>docker-compose</tag>
+        <tag>postgres</tag>
       </tags>
   </entry>
   <entry>
@@ -213,36 +201,48 @@ docker buildx build --platform ... --push 才是打包多架构镜像的标准�
       </tags>
   </entry>
   <entry>
-    <title>使用docker-compose备份Postgres Docker容器的解决方案</title>
-    <url>/2024/07/10/back-end/back-end-how-to-backup-postgres-docker-container/</url>
-    <content><![CDATA[使用docker-compose备份Postgres Docker容器的解决方案备份使用pg_dumpall命令备份Postgres数据库。
-docker-compose exec &lt;postgres_service&gt; pg_dumpall -U postgres &gt; dump_`date +%Y-%m-%d&quot;_&quot;%H_%M_%S`.sql
+    <title>Bazel 8 Bzlmod 迁移记录：从 WORKSPACE 到 MODULE.bazel</title>
+    <url>/2025/11/03/back-end/bazel8-bzlmod-migration/</url>
+    <content><![CDATA[Bazel 8 Bzlmod 迁移记录：从 WORKSPACE 到 MODULE.bazel本文档记录了项目 hoteler 从 Bazel 旧版 WORKSPACE 机制迁移到 Bazel 8 Bzlmod（Bazel 模块系统）的完整过程，重点记录了在迁移 Java 和 Maven 依赖时遇到的关键问题及其解决方案。
+1. 迁移背景与目标
+原 Bazel 版本: Bazel 7.x
+目标 Bazel 版本: Bazel 8.4.2 
+目标: 完全移除 WORKSPACE 文件，将所有外部依赖（包括规则集和 Maven Artifacts）迁移到 MODULE.bazel 文件中进行管理。
+涉及的关键规则集: rules_java、rules_jvm_external、rules_spring。
 
+2. 原始 WORKSPACE 结构概述项目原先使用传统的 WORKSPACE 文件管理依赖，主要依赖 http_archive 引入规则集，并使用 rules_jvm_external 的 maven_install 函数定义所有 Maven 依赖。
+# WORKSPACE (简化结构)workspace(name = &quot;hoteler&quot;)# 通过 http_archive 引入 rules_jvm_external 和 rules_springload(&quot;@bazel_tools//tools/build_defs/repo:http.bzl&quot;, &quot;http_archive&quot;)http_archive(...) # rules_jvm_externalhttp_archive(...) # rules_spring# 使用 maven_install 定义所有 Maven 依赖，并将其暴露为 @maven 代码库load(&quot;@rules_jvm_external//:defs.bzl&quot;, &quot;maven_install&quot;)maven_install(    artifacts = [...], # 包含 Spring Boot, Mybatis, JWT 等所有依赖    maven_install_json = &quot;@//:maven_install.json&quot;,)load(&quot;@maven//:defs.bzl&quot;, &quot;pinned_maven_install&quot;)pinned_maven_install()
 
-docker-compose exec &lt;postgres_service&gt; 在名为&lt;postgres_service&gt;的Postgres容器上执行命令。
--U postgres 指定数据库的用户名。Docker的默认用户名是postgres，如果你使用不同的用户名，请进行修改。
+3. Bzlmod 迁移与问题记录迁移过程主要集中在 MODULE.bazel 文件的创建和调整上，遇到了 Bazel 8 Bzlmod 机制的多个严格限制。
+3.1 遇到的第一个问题：load 语句限制问题描述:尝试在 MODULE.bazel 文件中直接使用 load 语句引入 rules_jvm_external 扩展和本地 .bzl 文件时，Bazel 报错 load statements may not be used in MODULE.bazel files。
+原因分析:MODULE.bazel 文件只允许使用声明性语句如 module(), bazel_dep(), 和 use_extension()。任何形式的 load 语句（包括加载模块扩展）都必须被重写为 use_extension 模式。
+初步解决方案 (失败)：最初尝试将 load 用于模块扩展也失败，因为它与 use_extension 的语法要求不符。
+3.2 遇到的第二个问题：核心依赖缺失 (rules_java)问题描述:在成功引入 rules_jvm_external 后，构建失败，报错 No repository visible as &#39;@rules_java&#39; from main repository。
+原因分析:在 Bzlmod 中，即使是 Java 项目的核心规则集 rules_java 也需要被显式声明。rules_jvm_external 和 rules_spring 都依赖于它。
+解决方案:在 MODULE.bazel 中显式添加 rules_java 依赖，并根据最终构建需求将其版本设置为 8.16.1。
+bazel_dep(    name = &quot;rules_java&quot;,    version = &quot;8.16.1&quot;, )
 
-恢复将dump_date +%Y-%m-%d”“%H%M_%S.sql文件放置在backup文件夹中。
-然后使用Docker卷将backup文件夹绑定到Postgres容器上：
-volumes:    - ./backup:/backup
+3.3 遇到的第三个问题：@maven 仓库可见性问题问题描述:在 BUILD.bazel 文件中引用 Maven 依赖时，持续收到错误 No repository visible as &#39;@maven&#39; from main repository 或 No repository visible as &#39;@unpinned_maven&#39; from main repository。
+原因分析:在 Bzlmod 中，模块扩展（如 rules_jvm_external 的 maven 扩展）创建的代码库（如 @maven）不会自动对主模块可见。需要一个额外的步骤来将该代码库导入到主模块的命名空间。
+解决方案 (最终):使用 use_repo 函数将模块扩展生成的 maven 仓库导入。这是 rules_jvm_external 在 Bazel 8 中推荐的 Bzlmod 导入方式:
+# MODULE.bazel (最终结构的关键变动)maven = use_extension(&quot;@rules_jvm_external//:extensions.bzl&quot;, &quot;maven&quot;)# 使用 use_repo 将扩展生成的 &#x27;maven&#x27; 仓库导入主模块use_repo(maven, &quot;maven&quot;)maven.install(    lock_file = &quot;//:maven_install.json&quot;, # 修正了参数名    artifacts = [...],    # ...)
 
-删除现有的Postgres容器并创建一个新的容器：
-docker-compose down &amp;&amp; docker-compose up -d
+4. 最终 Bzlmod 配置与 BUILD 文件以下是完成迁移后项目的最终依赖管理文件。
+4.1 最终的 MODULE.bazel 文件该文件集成了所有规则集依赖、版本修正和 Maven 扩展配置。
+module(    name = &quot;hoteler&quot;,    compatibility_level = 1,)bazel_dep(    name = &quot;rules_java&quot;,    version = &quot;8.16.1&quot;, )bazel_dep(    name = &quot;rules_jvm_external&quot;,    version = &quot;6.7&quot;, # 解决版本冲突)bazel_dep(    name = &quot;rules_spring&quot;,    version = &quot;2.6.3&quot;,)# 使用 use_extension 激活 Maven 扩展maven = use_extension(&quot;@rules_jvm_external//:extensions.bzl&quot;, &quot;maven&quot;)# 导入 Maven 仓库，使其在 BUILD 文件中可见为 @mavenuse_repo(maven, &quot;maven&quot;)# 配置 Maven 依赖maven.install(    lock_file = &quot;//:maven_install.json&quot;,    artifacts = [        &quot;org.springframework.boot:spring-boot-starter-web:3.5.5&quot;,        # ... (所有 Maven 依赖项，包括补充的 cn.hutool:hutool-crypto 等)    ],    fetch_sources = True,    repositories = [        &quot;https://maven.aliyun.com/repository/central&quot;,        # ... (所有仓库)    ],)
 
-执行数据库导入命令：
-docker-compose exec postgres psql -f /backup/dump_xxx.sql postgres -U postgres
+4.2 最终的 BUILD.bazel 引用在 BUILD.bazel 文件中，所有对 Maven 依赖的引用都保持使用 @maven//:... 别名，因为 MODULE.bazel 文件已通过 use_repo(maven, &quot;maven&quot;) 语句确保了 maven 代码库的可见性。
+# BUILD.bazel (部分内容)java_library(    name = &quot;java-maven-lib&quot;,    srcs = glob([&quot;src/main/java/org/daming/hoteler/*.java&quot;]),    deps = [        &quot;@maven//:org_springframework_boot_spring_boot_starter_web&quot;,        &quot;@maven//:io_jsonwebtoken_jjwt_api&quot;,        # ... (所有其他 @maven 引用)    ],    # ...)
 
-参考资料
-使用docker-compose备份和恢复Postgres数据库
-
+5. 结论通过将规则集定义从 http_archive 迁移到 bazel_dep，并将 maven_install 逻辑封装到 use_extension 和 use_repo 组合中，项目成功实现了到 Bazel 8 Bzlmod 的完全迁移，并移除了 WORKSPACE 文件。迁移的关键在于理解 Bazel 8 对依赖导入和名称空间可见性的严格要求。
 ]]></content>
       <categories>
         <category>后端</category>
       </categories>
       <tags>
-        <tag>docker</tag>
-        <tag>docker-compose</tag>
-        <tag>postgres</tag>
+        <tag>spring boot</tag>
+        <tag>bazel</tag>
+        <tag>bzlmod</tag>
       </tags>
   </entry>
   <entry>
@@ -257,6 +257,38 @@ DaoAuthenticationProviderDaoAuthenticationProvider是用于实现用户名密码
 @Beanpublic AuthenticationManager authenticationManager(HotelerAuthenticationProvider authenticationProvider) &#123;;    ProviderManager pm = new ProviderManager(authenticationProvider);    return pm;&#125;]]></content>
       <tags>
         <tag>Spring Security</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>使用github action推送到docker的镜像仓库</title>
+    <url>/2022/04/16/back-end/github-action-push-docker-image-to-github-packages/</url>
+    <content><![CDATA[准备请在github的设置页面上创建一个token，并确保有以下的权限：
+
+repo
+read:packages
+write:packages
+
+
+请保存好该token，因为github将隐藏该值
+
+在github的仓库的secrets设置页面(例：https://github.com/{your_username}/{your_repository_name}/settings/secrets/actions)里创建一个名为GHCR_PAT的secrets
+
+创建GitHub Action文件在.github/workflow中创建一个build-and-publish.yml:
+name: Build and Publishon:  push:    branches: [ master ]jobs:  build-and-push-docker-image:    name: Build Docker image and push to repositories    runs-on: ubuntu-latest    steps:      - name: Checkout code        uses: actions/checkout@v2      - name: Set up Docker Buildx        id: buildx        uses: docker/setup-buildx-action@v1      - name: Login to Github Packages        uses: docker/login-action@v1        with:          registry: ghcr.io          username: $&#123;&#123; github.actor &#125;&#125;          password: $&#123;&#123; secrets.GHCR_PAT &#125;&#125;      - name: Build image and push to GitHub Container Registry        uses: docker/build-push-action@v2        id: docker_build        with:          context: .          tags: |            # 将usernmae和repository改成你自己的github账号和仓库名            ghcr.io/&#123;usernmae&#125;/&#123;repository&#125;:$&#123;&#123; github.sha &#125;&#125;            # 当且只有运行在master分支时才需要推送到github容器仓库          push: $&#123;&#123; github.ref == &#x27;refs/heads/master&#x27; &#125;&#125;      - name: Image digest        run: echo $&#123;&#123; steps.docker_build.outputs.digest &#125;&#125;
+
+默认推送的镜像是私有，想要公开，可以在https://github.com/users/&#123;your_username&#125;/packages/container/&#123;your_repository_name&#125;/settings下面的Danger Zone中的Change package visibility设置成public还是private。
+参考资料
+How to build and push Docker image with GitHub actions?
+Hoteler
+
+]]></content>
+      <categories>
+        <category>后端</category>
+      </categories>
+      <tags>
+        <tag>docker</tag>
+        <tag>github</tag>
+        <tag>github action</tag>
       </tags>
   </entry>
   <entry>
@@ -324,38 +356,6 @@ Code Review 后的重构 TODO 列表以下是目前首版代码里暴露出来�
       </tags>
   </entry>
   <entry>
-    <title>使用github action推送到docker的镜像仓库</title>
-    <url>/2022/04/16/back-end/github-action-push-docker-image-to-github-packages/</url>
-    <content><![CDATA[准备请在github的设置页面上创建一个token，并确保有以下的权限：
-
-repo
-read:packages
-write:packages
-
-
-请保存好该token，因为github将隐藏该值
-
-在github的仓库的secrets设置页面(例：https://github.com/{your_username}/{your_repository_name}/settings/secrets/actions)里创建一个名为GHCR_PAT的secrets
-
-创建GitHub Action文件在.github/workflow中创建一个build-and-publish.yml:
-name: Build and Publishon:  push:    branches: [ master ]jobs:  build-and-push-docker-image:    name: Build Docker image and push to repositories    runs-on: ubuntu-latest    steps:      - name: Checkout code        uses: actions/checkout@v2      - name: Set up Docker Buildx        id: buildx        uses: docker/setup-buildx-action@v1      - name: Login to Github Packages        uses: docker/login-action@v1        with:          registry: ghcr.io          username: $&#123;&#123; github.actor &#125;&#125;          password: $&#123;&#123; secrets.GHCR_PAT &#125;&#125;      - name: Build image and push to GitHub Container Registry        uses: docker/build-push-action@v2        id: docker_build        with:          context: .          tags: |            # 将usernmae和repository改成你自己的github账号和仓库名            ghcr.io/&#123;usernmae&#125;/&#123;repository&#125;:$&#123;&#123; github.sha &#125;&#125;            # 当且只有运行在master分支时才需要推送到github容器仓库          push: $&#123;&#123; github.ref == &#x27;refs/heads/master&#x27; &#125;&#125;      - name: Image digest        run: echo $&#123;&#123; steps.docker_build.outputs.digest &#125;&#125;
-
-默认推送的镜像是私有，想要公开，可以在https://github.com/users/&#123;your_username&#125;/packages/container/&#123;your_repository_name&#125;/settings下面的Danger Zone中的Change package visibility设置成public还是private。
-参考资料
-How to build and push Docker image with GitHub actions?
-Hoteler
-
-]]></content>
-      <categories>
-        <category>后端</category>
-      </categories>
-      <tags>
-        <tag>docker</tag>
-        <tag>github</tag>
-        <tag>github action</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>实践分享：在 Go 项目中实现一个安全的密码重置流程</title>
     <url>/2026/02/08/back-end/go-secure-password-reset-atomic-transaction/</url>
     <content><![CDATA[实践分享：在 Go 项目中实现一个安全的密码重置流程1. 业务场景在我们的 health-master 项目中，我们需要一个安全且用户体验良好的密码重置功能。用户流程如下：
@@ -419,6 +419,43 @@ gradle.projectsLoaded &#123;    rootProject.allprojects &#123;        buildscrip
       </categories>
       <tags>
         <tag>gradle</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>在k8s中如何强制删除处于Terminating状态的namesapce</title>
+    <url>/2025/02/13/back-end/how-to-forcefully-delete-a-namespace-that-is-stuck-in-the-Terminating-state/</url>
+    <content><![CDATA[概述在k3s中删除一个namespace十分简单，就是一个命令的事儿：
+kubectl delete ns $&#123;namespace&#125;
+
+但是可能存在删除失败或者namespace一直处于Terminating状态的话，那么上面的命令可能行不通。这里介绍两种实用的解决方案去帮助我们解决。
+注意: 这两种方案可能存在错误删除的情况，请谨慎操作。
+强制删除kubectl提供force和grace-period&#x3D;0两个参数帮助我们强制删除namespace：
+kubectl delete ns $&#123;namespace&#125; --force --grace-period=0
+
+说明：
+
+–force：强制删除资源，跳过正常的删除流程。
+
+–grace-period&#x3D;0：立即删除资源，不等待任何清理操作。
+
+
+使用Kubernetes API 删除获取处于Terminating状态的namespace：
+kubectl get ns |grep Terminating |awk &#123;&#x27;print $1&#x27;&#125;
+
+调用Kubernetes API 删除指定的namespace
+kubectl get ns $&#123;namespace&#125; -o json &gt;$&#123;namespace&#125;.jsonsed -i &#x27;/&quot;kubernetes&quot;/d&#x27; $&#123;namespace&#125;.jsonkubectl replace --raw &quot;/api/v1/namespaces/$&#123;namespace&#125;/finalize&quot; -f $&#123;namespace&#125;.json
+
+参考资料
+Kubernetes 的 NameSpace 无法删除应该怎么办
+kubernetes批量删除长期处于Terminating状态的namespace
+
+]]></content>
+      <categories>
+        <category>后端</category>
+      </categories>
+      <tags>
+        <tag>k8s</tag>
+        <tag>k3s</tag>
       </tags>
   </entry>
   <entry>
@@ -493,43 +530,6 @@ task checkDependencies &#123;    doLast &#123;        configurations.compileClas
       <tags>
         <tag>spring boot</tag>
         <tag>gradle</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>在k8s中如何强制删除处于Terminating状态的namesapce</title>
-    <url>/2025/02/13/back-end/how-to-forcefully-delete-a-namespace-that-is-stuck-in-the-Terminating-state/</url>
-    <content><![CDATA[概述在k3s中删除一个namespace十分简单，就是一个命令的事儿：
-kubectl delete ns $&#123;namespace&#125;
-
-但是可能存在删除失败或者namespace一直处于Terminating状态的话，那么上面的命令可能行不通。这里介绍两种实用的解决方案去帮助我们解决。
-注意: 这两种方案可能存在错误删除的情况，请谨慎操作。
-强制删除kubectl提供force和grace-period&#x3D;0两个参数帮助我们强制删除namespace：
-kubectl delete ns $&#123;namespace&#125; --force --grace-period=0
-
-说明：
-
-–force：强制删除资源，跳过正常的删除流程。
-
-–grace-period&#x3D;0：立即删除资源，不等待任何清理操作。
-
-
-使用Kubernetes API 删除获取处于Terminating状态的namespace：
-kubectl get ns |grep Terminating |awk &#123;&#x27;print $1&#x27;&#125;
-
-调用Kubernetes API 删除指定的namespace
-kubectl get ns $&#123;namespace&#125; -o json &gt;$&#123;namespace&#125;.jsonsed -i &#x27;/&quot;kubernetes&quot;/d&#x27; $&#123;namespace&#125;.jsonkubectl replace --raw &quot;/api/v1/namespaces/$&#123;namespace&#125;/finalize&quot; -f $&#123;namespace&#125;.json
-
-参考资料
-Kubernetes 的 NameSpace 无法删除应该怎么办
-kubernetes批量删除长期处于Terminating状态的namespace
-
-]]></content>
-      <categories>
-        <category>后端</category>
-      </categories>
-      <tags>
-        <tag>k8s</tag>
-        <tag>k3s</tag>
       </tags>
   </entry>
   <entry>
@@ -1229,50 +1229,6 @@ private Components components() &#123;    return new Components()            .ad
       </tags>
   </entry>
   <entry>
-    <title>Spring WebFlux 文件上传：从本地存储到 MinIO 集成 🚀</title>
-    <url>/2025/09/27/back-end/spring-webflux-file-upload-to-minio/</url>
-    <content><![CDATA[前言在现代 Web 应用中，高效可靠的文件存储是必不可少的一环。在 Spring WebFlux 响应式编程模型下，处理文件上传需要特别注意流（Flux）和非阻塞操作。
-本文将基于一个 Spring WebFlux 的文件上传接口，演示如何从最初的本地文件系统存储方案，平滑地迁移并集成到 MinIO 对象存储服务，实现更具可扩展性和稳定性的文件存储。
-🎯 方案切换：为何选择 MinIO？最初的文件上传方案通常是将文件直接存储在服务器的本地文件系统。对于生产环境或需要横向扩展的应用，MinIO（或其他兼容 S3 协议的对象存储）是更优的选择，它提供了高可用、高扩展性和可靠性强的优势，同时解耦了应用和存储。
-🛠️ 第一步：部署 MinIO 服务在本地开发或测试环境中，最便捷的部署 MinIO 的方式是使用 Docker Compose。
-将以下配置保存为 docker-compose.yaml 文件：
-services:  minio:    image: minio/minio:RELEASE.2025-04-22T22-12-26Z    container_name: minio_server    restart: unless-stopped    ports:      # 映射 MinIO API 端口      - &quot;19000:9000&quot;      # 映射 MinIO Console/UI 端口      - &quot;19001:9001&quot;    environment:      # 保持与 application.yaml 中配置一致      MINIO_ROOT_USER: admin      MINIO_ROOT_PASSWORD: 12345678    volumes:      # 将 MinIO 数据持久化到本地目录      - ./minio_data:/data    command: server /data --console-address &quot;:9001&quot;    healthcheck:      test: [&quot;CMD&quot;, &quot;curl&quot;, &quot;-f&quot;, &quot;http://localhost:9000/minio/health/live&quot;]      interval: 30s      timeout: 5s      retries: 3
-
-运行以下命令启动 MinIO 服务：
-docker compose up -d
-
-服务启动后，您可以通过浏览器访问 http://localhost:19001 进入 MinIO 控制台。
-⚙️ 第二步：引入依赖与配置连接引入 MinIO 依赖在 build.gradle 中引入 MinIO Java 客户端：
-dependencies &#123;    // ... 其他依赖    implementation &#x27;io.minio:minio:8.5.17&#x27;     // ...&#125;
-配置 Spring 应用在 application.yaml 中配置 MinIO 的连接信息，确保这里的配置与 Docker Compose 中的 environment 变量保持一致。
-minio:  # 注意：这里配置的是 MinIO API 映射出来的端口 19000  endpoint: http://192.168.31.220:19000  access: admin  secret: 12345678  bucket: batcher-dev
-
-定义MinioProps获取 application.yaml 中配置 MinIO 的连接信息。
-@Component@ConfigurationProperties(prefix = &quot;minio&quot;)public class MinioProps &#123;    private String endpoint;    private String access;    private String secret;    private String bucket;    get/set method...&#125;
-
-自定义MinioConfig配置类将MinioClient注入spring bean中。
-@Configurationpublic class MinioConfig &#123;    private Logger logger = LoggerFactory.getLogger(MinioConfig.class);    private MinioProps minioProperties;    @Bean(name = &quot;minioClient&quot;)    public MinioClient minioClient() throws Exception &#123;        this.logger.debug(&quot;---------- load minio client ----------&quot;);        MinioClient minioClient = MinioClient.builder()                .endpoint(this.minioProperties.getEndpoint())                .credentials(this.minioProperties.getAccess(), this.minioProperties.getSecret())                .build();        boolean isExist = minioClient.bucketExists(BucketExistsArgs.builder().bucket(minioProperties.getBucket()).build());        if (isExist) &#123;            logger.warn(&quot;---------- minio client bucket is existed ----------&quot;);        &#125; else &#123;            minioClient.makeBucket(MakeBucketArgs.builder().bucket(this.minioProperties.getBucket()).build());            logger.debug(&quot;---------- minio client bucket is created ----------&quot;);        &#125;        logger.debug(&quot;---------- minio client is loaded ----------&quot;);        return minioClient;    &#125;    @Autowired    public void setMinioProperties(MinioProps minioProperties) &#123;        this.minioProperties = minioProperties;    &#125;&#125;
-
-💻 第三步：重构文件上传控制器核心变动在于 FileController，我们将注入 MinioClient 和 MinioProps，并重写 uploadFile 方法，将文件流导向 MinIO。
-注入 MinIO 客户端通过构造器注入 MinioClient，以便在上传方法中使用
-@RestController@Tag(name = &quot;File Upload&quot;, description = &quot;APIs for uploading files&quot;)public class FileController &#123;    private final MinioClient minioClient;    private final MinioProps minioProps;    public FileController(MinioClient minioClient, MinioProps minioProps) &#123;        this.minioClient = minioClient;        this.minioProps = minioProps;    &#125;    // ...&#125;
-
-实现 MinIO 响应式上传逻辑利用 Reactor 将 WebFlux 的 Flux 文件流转换为 MinIO 需要的 InputStream，并包装 MinIO 的阻塞调用以保持非阻塞性。
-@PostMapping(&quot;/file&quot;)// ... 省略 Swagger 注解public Mono&lt;String&gt; uploadFile(@RequestPart(&quot;file&quot;) Mono&lt;FilePart&gt; filePartMono) &#123;    var bucketName = minioProps.getBucket();    return filePartMono.flatMap(filePart -&gt; &#123;        var fileName = filePart.filename();        var contentType = Objects.requireNonNull(filePart.headers().getContentType()).toString();        // 1. 检查并创建 MinIO 存储桶（包装阻塞操作）        return Mono.fromCallable(() -&gt; &#123;            boolean found = minioClient.bucketExists(BucketExistsArgs.builder().bucket(bucketName).build());            if (!found) &#123;                minioClient.makeBucket(MakeBucketArgs.builder().bucket(bucketName).build());            &#125;            return true;        &#125;).flatMap(result -&gt;             // 2. 将 Flux&lt;DataBuffer&gt; 转换为 List&lt;InputStream&gt;            filePart.content()                    .map(DataBuffer::asInputStream)                    .collectList()                    // 3. 将 List&lt;InputStream&gt; 合并为单个 SequenceInputStream 并执行上传                    .flatMap(inputStreams -&gt; &#123;                        try (var combinedInputStream = new SequenceInputStream(Collections.enumeration(inputStreams))) &#123;                            // 使用 -1 告诉 MinIO 客户端进行分块上传                            var res = minioClient.putObject(PutObjectArgs.builder()                                    .bucket(bucketName)                                    .object(fileName)                                    .stream(combinedInputStream, -1, 10485760)                                     .contentType(contentType)                                    .build());                            return Mono.just(res.etag());                        &#125; catch (Exception e) &#123;                            return Mono.error(new RuntimeException(&quot;MinIO upload failed: &quot; + e.getMessage(), e));                        &#125;                    &#125;)        );    &#125;);&#125;
-
-总结通过在 Spring WebFlux 中集成 MinIO，我们成功地将文件上传从易受限制的本地文件系统迁移到了健壮、可扩展的对象存储平台。这种方法利用了 Reactor 的响应式流处理能力，同时优雅地处理了 MinIO 客户端的阻塞 I&#x2F;O 操作，实现了高效且非阻塞的文件上传链路。
-]]></content>
-      <categories>
-        <category>后端</category>
-      </categories>
-      <tags>
-        <tag>spring boot</tag>
-        <tag>gradle</tag>
-        <tag>spring webflux</tag>
-        <tag>文件上传</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>Spring Cloud Gateway 聚合 Swagger UI：实现微服务统一 API 文档入口</title>
     <url>/2026/01/07/back-end/spring-cloud-gateway-swagger-ui-aggregation/</url>
     <content><![CDATA[🚀 前言在微服务架构中，随着服务数量的增加，每个业务服务（如 auth、workflow）都有自己独立的 Swagger UI 页面。对于开发者和测试人员来说，频繁切换不同的 URL 和端口来查看 API 文档非常低效。
@@ -1319,6 +1275,106 @@ urls 列表中的 url 属性必须能够被网关路由规则匹配。
         <tag>spring cloud</tag>
         <tag>spring cloud gateway</tag>
         <tag>open api</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Spring WebFlux 文件上传：从本地存储到 MinIO 集成 🚀</title>
+    <url>/2025/09/27/back-end/spring-webflux-file-upload-to-minio/</url>
+    <content><![CDATA[前言在现代 Web 应用中，高效可靠的文件存储是必不可少的一环。在 Spring WebFlux 响应式编程模型下，处理文件上传需要特别注意流（Flux）和非阻塞操作。
+本文将基于一个 Spring WebFlux 的文件上传接口，演示如何从最初的本地文件系统存储方案，平滑地迁移并集成到 MinIO 对象存储服务，实现更具可扩展性和稳定性的文件存储。
+🎯 方案切换：为何选择 MinIO？最初的文件上传方案通常是将文件直接存储在服务器的本地文件系统。对于生产环境或需要横向扩展的应用，MinIO（或其他兼容 S3 协议的对象存储）是更优的选择，它提供了高可用、高扩展性和可靠性强的优势，同时解耦了应用和存储。
+🛠️ 第一步：部署 MinIO 服务在本地开发或测试环境中，最便捷的部署 MinIO 的方式是使用 Docker Compose。
+将以下配置保存为 docker-compose.yaml 文件：
+services:  minio:    image: minio/minio:RELEASE.2025-04-22T22-12-26Z    container_name: minio_server    restart: unless-stopped    ports:      # 映射 MinIO API 端口      - &quot;19000:9000&quot;      # 映射 MinIO Console/UI 端口      - &quot;19001:9001&quot;    environment:      # 保持与 application.yaml 中配置一致      MINIO_ROOT_USER: admin      MINIO_ROOT_PASSWORD: 12345678    volumes:      # 将 MinIO 数据持久化到本地目录      - ./minio_data:/data    command: server /data --console-address &quot;:9001&quot;    healthcheck:      test: [&quot;CMD&quot;, &quot;curl&quot;, &quot;-f&quot;, &quot;http://localhost:9000/minio/health/live&quot;]      interval: 30s      timeout: 5s      retries: 3
+
+运行以下命令启动 MinIO 服务：
+docker compose up -d
+
+服务启动后，您可以通过浏览器访问 http://localhost:19001 进入 MinIO 控制台。
+⚙️ 第二步：引入依赖与配置连接引入 MinIO 依赖在 build.gradle 中引入 MinIO Java 客户端：
+dependencies &#123;    // ... 其他依赖    implementation &#x27;io.minio:minio:8.5.17&#x27;     // ...&#125;
+配置 Spring 应用在 application.yaml 中配置 MinIO 的连接信息，确保这里的配置与 Docker Compose 中的 environment 变量保持一致。
+minio:  # 注意：这里配置的是 MinIO API 映射出来的端口 19000  endpoint: http://192.168.31.220:19000  access: admin  secret: 12345678  bucket: batcher-dev
+
+定义MinioProps获取 application.yaml 中配置 MinIO 的连接信息。
+@Component@ConfigurationProperties(prefix = &quot;minio&quot;)public class MinioProps &#123;    private String endpoint;    private String access;    private String secret;    private String bucket;    get/set method...&#125;
+
+自定义MinioConfig配置类将MinioClient注入spring bean中。
+@Configurationpublic class MinioConfig &#123;    private Logger logger = LoggerFactory.getLogger(MinioConfig.class);    private MinioProps minioProperties;    @Bean(name = &quot;minioClient&quot;)    public MinioClient minioClient() throws Exception &#123;        this.logger.debug(&quot;---------- load minio client ----------&quot;);        MinioClient minioClient = MinioClient.builder()                .endpoint(this.minioProperties.getEndpoint())                .credentials(this.minioProperties.getAccess(), this.minioProperties.getSecret())                .build();        boolean isExist = minioClient.bucketExists(BucketExistsArgs.builder().bucket(minioProperties.getBucket()).build());        if (isExist) &#123;            logger.warn(&quot;---------- minio client bucket is existed ----------&quot;);        &#125; else &#123;            minioClient.makeBucket(MakeBucketArgs.builder().bucket(this.minioProperties.getBucket()).build());            logger.debug(&quot;---------- minio client bucket is created ----------&quot;);        &#125;        logger.debug(&quot;---------- minio client is loaded ----------&quot;);        return minioClient;    &#125;    @Autowired    public void setMinioProperties(MinioProps minioProperties) &#123;        this.minioProperties = minioProperties;    &#125;&#125;
+
+💻 第三步：重构文件上传控制器核心变动在于 FileController，我们将注入 MinioClient 和 MinioProps，并重写 uploadFile 方法，将文件流导向 MinIO。
+注入 MinIO 客户端通过构造器注入 MinioClient，以便在上传方法中使用
+@RestController@Tag(name = &quot;File Upload&quot;, description = &quot;APIs for uploading files&quot;)public class FileController &#123;    private final MinioClient minioClient;    private final MinioProps minioProps;    public FileController(MinioClient minioClient, MinioProps minioProps) &#123;        this.minioClient = minioClient;        this.minioProps = minioProps;    &#125;    // ...&#125;
+
+实现 MinIO 响应式上传逻辑利用 Reactor 将 WebFlux 的 Flux 文件流转换为 MinIO 需要的 InputStream，并包装 MinIO 的阻塞调用以保持非阻塞性。
+@PostMapping(&quot;/file&quot;)// ... 省略 Swagger 注解public Mono&lt;String&gt; uploadFile(@RequestPart(&quot;file&quot;) Mono&lt;FilePart&gt; filePartMono) &#123;    var bucketName = minioProps.getBucket();    return filePartMono.flatMap(filePart -&gt; &#123;        var fileName = filePart.filename();        var contentType = Objects.requireNonNull(filePart.headers().getContentType()).toString();        // 1. 检查并创建 MinIO 存储桶（包装阻塞操作）        return Mono.fromCallable(() -&gt; &#123;            boolean found = minioClient.bucketExists(BucketExistsArgs.builder().bucket(bucketName).build());            if (!found) &#123;                minioClient.makeBucket(MakeBucketArgs.builder().bucket(bucketName).build());            &#125;            return true;        &#125;).flatMap(result -&gt;             // 2. 将 Flux&lt;DataBuffer&gt; 转换为 List&lt;InputStream&gt;            filePart.content()                    .map(DataBuffer::asInputStream)                    .collectList()                    // 3. 将 List&lt;InputStream&gt; 合并为单个 SequenceInputStream 并执行上传                    .flatMap(inputStreams -&gt; &#123;                        try (var combinedInputStream = new SequenceInputStream(Collections.enumeration(inputStreams))) &#123;                            // 使用 -1 告诉 MinIO 客户端进行分块上传                            var res = minioClient.putObject(PutObjectArgs.builder()                                    .bucket(bucketName)                                    .object(fileName)                                    .stream(combinedInputStream, -1, 10485760)                                     .contentType(contentType)                                    .build());                            return Mono.just(res.etag());                        &#125; catch (Exception e) &#123;                            return Mono.error(new RuntimeException(&quot;MinIO upload failed: &quot; + e.getMessage(), e));                        &#125;                    &#125;)        );    &#125;);&#125;
+
+总结通过在 Spring WebFlux 中集成 MinIO，我们成功地将文件上传从易受限制的本地文件系统迁移到了健壮、可扩展的对象存储平台。这种方法利用了 Reactor 的响应式流处理能力，同时优雅地处理了 MinIO 客户端的阻塞 I&#x2F;O 操作，实现了高效且非阻塞的文件上传链路。
+]]></content>
+      <categories>
+        <category>后端</category>
+      </categories>
+      <tags>
+        <tag>spring boot</tag>
+        <tag>gradle</tag>
+        <tag>spring webflux</tag>
+        <tag>文件上传</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>在 Spring WebFlux 项目中将 JDBC 迁移到 R2DBC</title>
+    <url>/2026/03/31/back-end/spring-webflux-jdbc-to-r2dbc-migration/</url>
+    <content><![CDATA[前言在最近的项目中，我尝试将原本使用 JDBC 的数据访问迁移到 R2DBC，以充分发挥 Spring WebFlux 的响应式优势。在这个过程中，我记录了迁移的理由、步骤、遇到的坑以及一些遗憾，希望对同样做迁移的同学有所帮助。
+迁移理由不熟悉 R2DBC在项目最初阶段，我完全没有接触过 R2DBC，对响应式数据库访问不了解，所以直接使用了 JDBC
+既然使用 WebFlux，就应该使用非堵塞式语法Spring WebFlux 的核心优势在于非阻塞、异步。JDBC 是阻塞式的，如果在 WebFlux 中使用，会阻塞 Netty 的 EventLoop，导致性能无法提升。迁移到 R2DBC 可以充分利用响应式编程和事件循环模型
+迁移步骤示例以 WorkerDao 为例，原先使用 JDBC：public List&lt;Worker&gt; list() &#123;    var sql = &quot;SELECT * FROM workers WHERE id = ? deleted_at IS NULL&quot;;    return jdbcTemplate.query(sql, (rs, i) -&gt; &#123;        var worker = new Worker();        worker.setId(rs.getString(&quot;id&quot;));        worker.setEmployeeNumber(rs.getString(&quot;employee_number&quot;));        // ... 其他字段        return worker;    &#125;);&#125;
+
+迁移到 R2DBC 后：
+public Flux&lt;Worker&gt; list() &#123;    var sql = &quot;SELECT * FROM workers WHERE id = :id deleted_at IS NULL&quot;;    return databaseClient.sql(sql)        .map((row, metadata) -&gt; &#123;            var worker = new Worker();            worker.setId(row.get(&quot;id&quot;, String.class));            worker.setEmployeeNumber(row.get(&quot;employee_number&quot;, String.class));            // ... 其他字段            return worker;        &#125;)        .all(); // 这里返回 Flux&lt;Worker&gt;&#125;
+
+注意点：
+Flux 替代了 List，Mono 替代了单个返回值。
+不要在 subscribe() 中直接做阻塞操作，否则会堵塞 Netty 的 EventLoop。
+
+处理分页原来的 JDBC：
+public List&lt;Worker&gt; list(Pageable page) &#123;    var sql = &quot;SELECT * FROM workers ORDER BY updated_at DESC LIMIT ? OFFSET ?&quot;;    return jdbcTemplate.query(sql, (rs, i) -&gt; mapRow(rs), page.limit(), page.offset());&#125;
+
+R2DBC 写法：
+public Flux&lt;Worker&gt; list(Pageable page) &#123;    var sql = &quot;SELECT * FROM workers ORDER BY updated_at DESC LIMIT :limit OFFSET :offset&quot;;    return databaseClient.sql(sql)        .bind(&quot;limit&quot;, page.limit())        .bind(&quot;offset&quot;, page.offset())        .map((row, meta) -&gt; mapRow(row))        .all();&#125;
+
+计数示例 public Mono&lt;Long&gt; count() &#123;    var sql = &quot;select count(*) as cnt from workers where deleted_at is null&quot;;    return databaseClient.sql(sql)            .map((row, meta) -&gt; &#123;                Number n = row.get(&quot;cnt&quot;, Number.class);                return n != null ? n.longValue() : 0L;            &#125;)            .one();&#125;
+
+遇到的问题和解决方案1. Quartz 仍然需要 JDBC错误示例：
+org.quartz.SchedulerConfigException: No local DataSource found for configuration - &#x27;dataSource&#x27; property must be set on SchedulerFactoryBean
+
+解决方案：手动配置一个 JDBC DataSource Bean 给 Quartz：
+@Beanpublic DataSource quartzDataSource(            @Value(&quot;$&#123;spring.datasource.url&#125;&quot;) String url,            @Value(&quot;$&#123;spring.datasource.username&#125;&quot;) String username,            @Value(&quot;$&#123;spring.datasource.password&#125;&quot;) String password    ) &#123;        var ds = new HikariDataSource();        ds.setJdbcUrl(url);        ds.setUsername(username);        ds.setPassword(password);        ds.setDriverClassName(&quot;org.postgresql.Driver&quot;);        ds.setMaximumPoolSize(10);        return ds;    &#125;@Beanpublic SchedulerFactoryBean schedulerFactoryBean(DataSource quartzDataSource) &#123;    SchedulerFactoryBean factory = new SchedulerFactoryBean();    factory.setDataSource(quartzDataSource);    factory.setOverwriteExistingJobs(true);    factory.setStartupDelay(5);    return factory;&#125;
+
+2. WebFlux 中阻塞操作在迁移过程中，如果使用了 jdbcTemplate.query() 或 subscribe() 内部有阻塞方法，可能会导致 Netty EventLoop 堵塞。
+解决方案：尽量把 JDBC 调用封装成Mono.fromCallable(...).subscribeOn(Schedulers.boundedElastic())，或者直接迁移到 R2DBC。
+3. 自动配置冲突当同时引入 spring-boot-starter-jdbc 和 spring-boot-starter-data-r2dbc 时，Spring Boot 的自动配置可能不会自动创建 DataSource，导致 Quartz 启动报错。
+解决方案：手动创建 DataSource Bean（如上），明确指定 JDBC 的配置。
+遗憾
+虽然业务代码可以完全迁移到 R2DBC，但 Quartz 仍然依赖 JDBC，导致项目中不能完全删除 JDBC 依赖。
+如果未来需要完全响应式的调度方案，可能要考虑其他 Quartz 替代方案或者等待 Quartz 支持 R2DBC。
+
+总结通过这次迁移，我收获了以下几点：
+
+了解了 R2DBC 的使用方式和响应式数据库访问思路。
+熟悉了 Flux&#x2F;Mono 在 DAO 层的应用，以及与 Pageable、计数等配合使用的方法。
+意识到在 WebFlux 项目中，阻塞操作必须谨慎处理。
+学会了在 Spring Boot 中 手动创建 DataSource Bean 来解决 Quartz 的兼容性问题。
+
+虽然 Quartz 还依赖 JDBC，但业务层已经实现了完全非阻塞的访问，这是向 WebFlux 响应式世界迈出的第一步。
+]]></content>
+      <categories>
+        <category>后端</category>
+      </categories>
+      <tags>
+        <tag>spring boot</tag>
+        <tag>gradle</tag>
+        <tag>spring webflux</tag>
+        <tag>r2dbc</tag>
       </tags>
   </entry>
   <entry>
@@ -1395,62 +1451,6 @@ kubectl port-forward deployment/myapp 8080:8080
       </tags>
   </entry>
   <entry>
-    <title>在 Spring WebFlux 项目中将 JDBC 迁移到 R2DBC</title>
-    <url>/2026/03/31/back-end/spring-webflux-jdbc-to-r2dbc-migration/</url>
-    <content><![CDATA[前言在最近的项目中，我尝试将原本使用 JDBC 的数据访问迁移到 R2DBC，以充分发挥 Spring WebFlux 的响应式优势。在这个过程中，我记录了迁移的理由、步骤、遇到的坑以及一些遗憾，希望对同样做迁移的同学有所帮助。
-迁移理由不熟悉 R2DBC在项目最初阶段，我完全没有接触过 R2DBC，对响应式数据库访问不了解，所以直接使用了 JDBC
-既然使用 WebFlux，就应该使用非堵塞式语法Spring WebFlux 的核心优势在于非阻塞、异步。JDBC 是阻塞式的，如果在 WebFlux 中使用，会阻塞 Netty 的 EventLoop，导致性能无法提升。迁移到 R2DBC 可以充分利用响应式编程和事件循环模型
-迁移步骤示例以 WorkerDao 为例，原先使用 JDBC：public List&lt;Worker&gt; list() &#123;    var sql = &quot;SELECT * FROM workers WHERE id = ? deleted_at IS NULL&quot;;    return jdbcTemplate.query(sql, (rs, i) -&gt; &#123;        var worker = new Worker();        worker.setId(rs.getString(&quot;id&quot;));        worker.setEmployeeNumber(rs.getString(&quot;employee_number&quot;));        // ... 其他字段        return worker;    &#125;);&#125;
-
-迁移到 R2DBC 后：
-public Flux&lt;Worker&gt; list() &#123;    var sql = &quot;SELECT * FROM workers WHERE id = :id deleted_at IS NULL&quot;;    return databaseClient.sql(sql)        .map((row, metadata) -&gt; &#123;            var worker = new Worker();            worker.setId(row.get(&quot;id&quot;, String.class));            worker.setEmployeeNumber(row.get(&quot;employee_number&quot;, String.class));            // ... 其他字段            return worker;        &#125;)        .all(); // 这里返回 Flux&lt;Worker&gt;&#125;
-
-注意点：
-Flux 替代了 List，Mono 替代了单个返回值。
-不要在 subscribe() 中直接做阻塞操作，否则会堵塞 Netty 的 EventLoop。
-
-处理分页原来的 JDBC：
-public List&lt;Worker&gt; list(Pageable page) &#123;    var sql = &quot;SELECT * FROM workers ORDER BY updated_at DESC LIMIT ? OFFSET ?&quot;;    return jdbcTemplate.query(sql, (rs, i) -&gt; mapRow(rs), page.limit(), page.offset());&#125;
-
-R2DBC 写法：
-public Flux&lt;Worker&gt; list(Pageable page) &#123;    var sql = &quot;SELECT * FROM workers ORDER BY updated_at DESC LIMIT :limit OFFSET :offset&quot;;    return databaseClient.sql(sql)        .bind(&quot;limit&quot;, page.limit())        .bind(&quot;offset&quot;, page.offset())        .map((row, meta) -&gt; mapRow(row))        .all();&#125;
-
-计数示例 public Mono&lt;Long&gt; count() &#123;    var sql = &quot;select count(*) as cnt from workers where deleted_at is null&quot;;    return databaseClient.sql(sql)            .map((row, meta) -&gt; &#123;                Number n = row.get(&quot;cnt&quot;, Number.class);                return n != null ? n.longValue() : 0L;            &#125;)            .one();&#125;
-
-遇到的问题和解决方案1. Quartz 仍然需要 JDBC错误示例：
-org.quartz.SchedulerConfigException: No local DataSource found for configuration - &#x27;dataSource&#x27; property must be set on SchedulerFactoryBean
-
-解决方案：手动配置一个 JDBC DataSource Bean 给 Quartz：
-@Beanpublic DataSource quartzDataSource(            @Value(&quot;$&#123;spring.datasource.url&#125;&quot;) String url,            @Value(&quot;$&#123;spring.datasource.username&#125;&quot;) String username,            @Value(&quot;$&#123;spring.datasource.password&#125;&quot;) String password    ) &#123;        var ds = new HikariDataSource();        ds.setJdbcUrl(url);        ds.setUsername(username);        ds.setPassword(password);        ds.setDriverClassName(&quot;org.postgresql.Driver&quot;);        ds.setMaximumPoolSize(10);        return ds;    &#125;@Beanpublic SchedulerFactoryBean schedulerFactoryBean(DataSource quartzDataSource) &#123;    SchedulerFactoryBean factory = new SchedulerFactoryBean();    factory.setDataSource(quartzDataSource);    factory.setOverwriteExistingJobs(true);    factory.setStartupDelay(5);    return factory;&#125;
-
-2. WebFlux 中阻塞操作在迁移过程中，如果使用了 jdbcTemplate.query() 或 subscribe() 内部有阻塞方法，可能会导致 Netty EventLoop 堵塞。
-解决方案：尽量把 JDBC 调用封装成Mono.fromCallable(...).subscribeOn(Schedulers.boundedElastic())，或者直接迁移到 R2DBC。
-3. 自动配置冲突当同时引入 spring-boot-starter-jdbc 和 spring-boot-starter-data-r2dbc 时，Spring Boot 的自动配置可能不会自动创建 DataSource，导致 Quartz 启动报错。
-解决方案：手动创建 DataSource Bean（如上），明确指定 JDBC 的配置。
-遗憾
-虽然业务代码可以完全迁移到 R2DBC，但 Quartz 仍然依赖 JDBC，导致项目中不能完全删除 JDBC 依赖。
-如果未来需要完全响应式的调度方案，可能要考虑其他 Quartz 替代方案或者等待 Quartz 支持 R2DBC。
-
-总结通过这次迁移，我收获了以下几点：
-
-了解了 R2DBC 的使用方式和响应式数据库访问思路。
-熟悉了 Flux&#x2F;Mono 在 DAO 层的应用，以及与 Pageable、计数等配合使用的方法。
-意识到在 WebFlux 项目中，阻塞操作必须谨慎处理。
-学会了在 Spring Boot 中 手动创建 DataSource Bean 来解决 Quartz 的兼容性问题。
-
-虽然 Quartz 还依赖 JDBC，但业务层已经实现了完全非阻塞的访问，这是向 WebFlux 响应式世界迈出的第一步。
-]]></content>
-      <categories>
-        <category>后端</category>
-      </categories>
-      <tags>
-        <tag>spring boot</tag>
-        <tag>gradle</tag>
-        <tag>spring webflux</tag>
-        <tag>r2dbc</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>使用apache commons-csv读写csv文件</title>
     <url>/2025/04/07/back-end/use-apache-commons-csv-read-write-files/</url>
     <content><![CDATA[使用apache commons-csv读写csv文件前言本文的目的是使用apache commons-csv读写csv文件。
@@ -1520,67 +1520,6 @@ commons-csv mvaen repository.
       <tags>
         <tag>java</tag>
         <tag>commons-csv</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>在 Spring WebFlux 中实现文件上传到本地</title>
-    <url>/2025/09/08/back-end/upload-file-into-local-in-spring-webflux/</url>
-    <content><![CDATA[在 Spring WebFlux 中实现文件上传到本地引言本文旨在介绍如何在 Spring WebFlux 框架下，实现将文件上传至本地服务器的功能。虽然目前的代码示例侧重于本地存储，但其设计思路也为未来扩展至对象存储服务（如 MinIO）奠定了基础。通过本文的学习，您将掌握在响应式编程模型下处理文件上传的关键技术。
-
-具体实现过程1. 项目搭建与依赖引入首先，您需要一个基于 Spring Boot 3.5.0 的项目。如果您使用 Gradle 作为构建工具，可以在 build.gradle 文件中添加以下依赖：
-dependencies &#123;    // ... 其他 Spring Boot 依赖    implementation &#x27;org.springframework.boot:spring-boot-starter-webflux&#x27;    // Swagger UI 依赖    implementation &#x27;org.springdoc:springdoc-openapi-starter-webflux-ui:2.8.6&#x27; // 请检查最新版本    // ...&#125;
-
-spring-boot-starter-webflux 提供了构建响应式 Web 应用所需的核心功能，springdoc-openapi-starter-webfluxui 则是集成 Swagger UI 所需的依赖。
-2. 编写 Controller接下来，我们将编写 FileController 来处理文件上传请求。
-import org.springframework.core.io.buffer.DataBufferUtils;import org.springframework.http.codec.multipart.FilePart;import org.springframework.web.bind.annotation.PostMapping;import org.springframework.web.bind.annotation.RequestPart;import org.springframework.web.bind.annotation.RestController;import reactor.core.publisher.Mono;import java.nio.file.Files;import java.nio.file.Paths;import java.io.IOException;Controllerpublic class FileController &#123;    @PostMapping(&quot;/file&quot;)    public Mono&lt;String&gt; uploadFile(@RequestPart(&quot;file&quot;) Mono&lt;FilePart&gt; filePartMono) &#123;        return filePartMono.flatMap(filePart -&gt; &#123;            // 获取用户目录            var userDir = System.getProperty(&quot;user.dir&quot;);            // 构建文件保存路径，这里假设保存在项目根目录下的 nfs 文件夹中            // 您可以根据实际需求修改路径            var path = Paths.get(userDir, &quot;nfs&quot;, filePart.filename());            // 确保 nfs 目录存在，如果不存在则创建            try &#123;                Files.createDirectories(path.getParent());            &#125; catch (IOException e) &#123;                return Mono.error(new RuntimeException(&quot;Failed to create upload directory&quot;, e));            &#125;            // 使用 transferTo 将文件内容写入到指定路径            // transferTo 方法返回一个 Mono&lt;Void&gt;，表示操作的完成            return filePart.transferTo(path)                    // then 方法用于在前一个 Mono 完成后执行下一个操作                    // 这里我们返回一个包含成功消息的 Mono&lt;String&gt;                    .then(Mono.just(&quot;File uploaded successfully: &quot; + filePart.filename()));        &#125;);    &#125;&#125;
-
-关键点解析：
-
-@PostMapping(&quot;/file&quot;): 指定该方法处理 HTTP POST 请求到 /file 路径。
-@RequestPart(&quot;file&quot;) Mono&lt;FilePart&gt; filePartMono:
-@RequestPart 注解用于接收 multipart/form-data 请求中的部分。这里的 &quot;file&quot; 对应 HTML form 表单中 &lt;input type=&quot;file&quot; name=&quot;file&quot;&gt; 的 name 属性。
-Mono&lt;FilePart&gt; 表示这是一个异步的、最多包含一个元素的发布者，代表上传的文件。Spring WebFlux 使用 Reactor 库进行响应式编程，Mono 是其核心组件之一。
-
-
-filePart.transferTo(path):
-这是 Spring WebFlux 提供的用于将上传的文件内容 直接传输 到指定 Path 的方法。
-它返回一个 Mono&lt;Void&gt;，表示文件传输操作的完成，但不会返回任何数据。在响应式流中，Void 表示一个操作的完成信号。
-
-
-.then(...):
-then() 操作符用于在源 Mono（在这里是 filePart.transferTo(path)）完成（发出完成信号）后，执行另一个 Mono。
-Mono.just(&quot;File uploaded successfully: &quot; + filePart.filename()) 创建了一个新的 Mono，它会发出一个包含成功消息的字符串。
-因此，.then(...) 确保了文件传输完成后，再发出成功上传的消息。
-
-
-
-3. 使用 cURL 调用您可以使用 curl 命令来测试这个上传接口：
-curl -X &#x27;POST&#x27; \  &#x27;http://localhost:8080/file&#x27; \  -H &#x27;accept: application/json&#x27; \  -H &#x27;Content-Type: multipart/form-data&#x27; \  -F &#x27;file=@Arthur-Ming-FlowCV-Resume-20241101.pdf;type=application/pdf&#x27;
-
-将Arthur-Ming-FlowCV-Resume-20241101.pdf改成实际文件路径就即可
-
-Swagger UI 支持为了方便 API 的可视化和测试，我们可以为其添加 Swagger UI 支持。
-1. 添加依赖如前所述，在 build.gradle 中添加 springdoc-openapi-starter-webfluxui 依赖：
-dependencies &#123;    // ...    implementation &#x27;org.springdoc:springdoc-openapi-starter-webflux-ui:2.8.6&#x27; // 请检查最新版本    // ...&#125;
-
-2. 配置 Controller 注解springdoc-openapi 库会自动扫描带有 Spring MVC 或 Spring WebFlux 注解的 Controller。您只需要确保您的 Controller 和方法使用了标准的 Spring WebFlux 注解（如 @RestController, @PostMapping, @RequestPart 等），springdoc-openapi 就会自动为您生成 OpenAPI 文档，并在启动后通过访问 /swagger-ui.html （或其他默认路径，具体取决于版本和配置）来查看。
-@Operation(    summary = &quot;Upload a single file&quot;,    description = &quot;Uploads a single file to the server&#x27;s NFS directory.&quot;,    requestBody = @RequestBody(            description = &quot;File to upload&quot;,            required = true,            content = @Content(                    mediaType = &quot;multipart/form-data&quot;,                    schema = @Schema(implementation = FileUploadRequest.class) // Use a custom schema            )    ),    responses = &#123;            @ApiResponse(responseCode = &quot;200&quot;, description = &quot;File uploaded successfully&quot;,                    content = @Content(mediaType = &quot;application/json&quot;, schema = @Schema(type = &quot;string&quot;))),            @ApiResponse(responseCode = &quot;400&quot;, description = &quot;Bad Request&quot;),            @ApiResponse(responseCode = &quot;500&quot;, description = &quot;Internal Server Error&quot;)    &#125;)
-
-FileUploadRequest定义如下：
-import io.swagger.v3.oas.annotations.media.Schema;import org.springframework.http.codec.multipart.FilePart;public class FileUploadRequest &#123;    @Schema(type = &quot;string&quot;, format = &quot;binary&quot;, description = &quot;The file to be uploaded&quot;)    private FilePart file; // The name &quot;file&quot; here should match the @RequestPart name in your controller    // Getters and setters are not strictly necessary for springdoc to pick up the schema,    // but it&#x27;s good practice if you were to use this class for other purposes.    public FilePart getFile() &#123;        return file;    &#125;    public void setFile(FilePart file) &#123;        this.file = file;    &#125;&#125;
-
-在项目启动后，访问 http://localhost:8080/swagger-ui.html （假设您的应用运行在 8080 端口），您就可以看到文件上传接口的 Swagger UI 界面了。
-
-通过以上步骤，您就成功地在 Spring WebFlux 中实现了一个文件上传到本地的功能，并为其添加了 Swagger UI 支持。您可以基于此进一步扩展，例如添加文件类型校验、大小限制，以及将文件存储目标切换为 MinIO 等对象存储服务。
-]]></content>
-      <categories>
-        <category>后端</category>
-      </categories>
-      <tags>
-        <tag>spring boot</tag>
-        <tag>gradle</tag>
-        <tag>spring webflux</tag>
-        <tag>文件上传</tag>
       </tags>
   </entry>
   <entry>
@@ -1659,6 +1598,67 @@ New Java Project With Bazel
       </tags>
   </entry>
   <entry>
+    <title>在 Spring WebFlux 中实现文件上传到本地</title>
+    <url>/2025/09/08/back-end/upload-file-into-local-in-spring-webflux/</url>
+    <content><![CDATA[在 Spring WebFlux 中实现文件上传到本地引言本文旨在介绍如何在 Spring WebFlux 框架下，实现将文件上传至本地服务器的功能。虽然目前的代码示例侧重于本地存储，但其设计思路也为未来扩展至对象存储服务（如 MinIO）奠定了基础。通过本文的学习，您将掌握在响应式编程模型下处理文件上传的关键技术。
+
+具体实现过程1. 项目搭建与依赖引入首先，您需要一个基于 Spring Boot 3.5.0 的项目。如果您使用 Gradle 作为构建工具，可以在 build.gradle 文件中添加以下依赖：
+dependencies &#123;    // ... 其他 Spring Boot 依赖    implementation &#x27;org.springframework.boot:spring-boot-starter-webflux&#x27;    // Swagger UI 依赖    implementation &#x27;org.springdoc:springdoc-openapi-starter-webflux-ui:2.8.6&#x27; // 请检查最新版本    // ...&#125;
+
+spring-boot-starter-webflux 提供了构建响应式 Web 应用所需的核心功能，springdoc-openapi-starter-webfluxui 则是集成 Swagger UI 所需的依赖。
+2. 编写 Controller接下来，我们将编写 FileController 来处理文件上传请求。
+import org.springframework.core.io.buffer.DataBufferUtils;import org.springframework.http.codec.multipart.FilePart;import org.springframework.web.bind.annotation.PostMapping;import org.springframework.web.bind.annotation.RequestPart;import org.springframework.web.bind.annotation.RestController;import reactor.core.publisher.Mono;import java.nio.file.Files;import java.nio.file.Paths;import java.io.IOException;Controllerpublic class FileController &#123;    @PostMapping(&quot;/file&quot;)    public Mono&lt;String&gt; uploadFile(@RequestPart(&quot;file&quot;) Mono&lt;FilePart&gt; filePartMono) &#123;        return filePartMono.flatMap(filePart -&gt; &#123;            // 获取用户目录            var userDir = System.getProperty(&quot;user.dir&quot;);            // 构建文件保存路径，这里假设保存在项目根目录下的 nfs 文件夹中            // 您可以根据实际需求修改路径            var path = Paths.get(userDir, &quot;nfs&quot;, filePart.filename());            // 确保 nfs 目录存在，如果不存在则创建            try &#123;                Files.createDirectories(path.getParent());            &#125; catch (IOException e) &#123;                return Mono.error(new RuntimeException(&quot;Failed to create upload directory&quot;, e));            &#125;            // 使用 transferTo 将文件内容写入到指定路径            // transferTo 方法返回一个 Mono&lt;Void&gt;，表示操作的完成            return filePart.transferTo(path)                    // then 方法用于在前一个 Mono 完成后执行下一个操作                    // 这里我们返回一个包含成功消息的 Mono&lt;String&gt;                    .then(Mono.just(&quot;File uploaded successfully: &quot; + filePart.filename()));        &#125;);    &#125;&#125;
+
+关键点解析：
+
+@PostMapping(&quot;/file&quot;): 指定该方法处理 HTTP POST 请求到 /file 路径。
+@RequestPart(&quot;file&quot;) Mono&lt;FilePart&gt; filePartMono:
+@RequestPart 注解用于接收 multipart/form-data 请求中的部分。这里的 &quot;file&quot; 对应 HTML form 表单中 &lt;input type=&quot;file&quot; name=&quot;file&quot;&gt; 的 name 属性。
+Mono&lt;FilePart&gt; 表示这是一个异步的、最多包含一个元素的发布者，代表上传的文件。Spring WebFlux 使用 Reactor 库进行响应式编程，Mono 是其核心组件之一。
+
+
+filePart.transferTo(path):
+这是 Spring WebFlux 提供的用于将上传的文件内容 直接传输 到指定 Path 的方法。
+它返回一个 Mono&lt;Void&gt;，表示文件传输操作的完成，但不会返回任何数据。在响应式流中，Void 表示一个操作的完成信号。
+
+
+.then(...):
+then() 操作符用于在源 Mono（在这里是 filePart.transferTo(path)）完成（发出完成信号）后，执行另一个 Mono。
+Mono.just(&quot;File uploaded successfully: &quot; + filePart.filename()) 创建了一个新的 Mono，它会发出一个包含成功消息的字符串。
+因此，.then(...) 确保了文件传输完成后，再发出成功上传的消息。
+
+
+
+3. 使用 cURL 调用您可以使用 curl 命令来测试这个上传接口：
+curl -X &#x27;POST&#x27; \  &#x27;http://localhost:8080/file&#x27; \  -H &#x27;accept: application/json&#x27; \  -H &#x27;Content-Type: multipart/form-data&#x27; \  -F &#x27;file=@Arthur-Ming-FlowCV-Resume-20241101.pdf;type=application/pdf&#x27;
+
+将Arthur-Ming-FlowCV-Resume-20241101.pdf改成实际文件路径就即可
+
+Swagger UI 支持为了方便 API 的可视化和测试，我们可以为其添加 Swagger UI 支持。
+1. 添加依赖如前所述，在 build.gradle 中添加 springdoc-openapi-starter-webfluxui 依赖：
+dependencies &#123;    // ...    implementation &#x27;org.springdoc:springdoc-openapi-starter-webflux-ui:2.8.6&#x27; // 请检查最新版本    // ...&#125;
+
+2. 配置 Controller 注解springdoc-openapi 库会自动扫描带有 Spring MVC 或 Spring WebFlux 注解的 Controller。您只需要确保您的 Controller 和方法使用了标准的 Spring WebFlux 注解（如 @RestController, @PostMapping, @RequestPart 等），springdoc-openapi 就会自动为您生成 OpenAPI 文档，并在启动后通过访问 /swagger-ui.html （或其他默认路径，具体取决于版本和配置）来查看。
+@Operation(    summary = &quot;Upload a single file&quot;,    description = &quot;Uploads a single file to the server&#x27;s NFS directory.&quot;,    requestBody = @RequestBody(            description = &quot;File to upload&quot;,            required = true,            content = @Content(                    mediaType = &quot;multipart/form-data&quot;,                    schema = @Schema(implementation = FileUploadRequest.class) // Use a custom schema            )    ),    responses = &#123;            @ApiResponse(responseCode = &quot;200&quot;, description = &quot;File uploaded successfully&quot;,                    content = @Content(mediaType = &quot;application/json&quot;, schema = @Schema(type = &quot;string&quot;))),            @ApiResponse(responseCode = &quot;400&quot;, description = &quot;Bad Request&quot;),            @ApiResponse(responseCode = &quot;500&quot;, description = &quot;Internal Server Error&quot;)    &#125;)
+
+FileUploadRequest定义如下：
+import io.swagger.v3.oas.annotations.media.Schema;import org.springframework.http.codec.multipart.FilePart;public class FileUploadRequest &#123;    @Schema(type = &quot;string&quot;, format = &quot;binary&quot;, description = &quot;The file to be uploaded&quot;)    private FilePart file; // The name &quot;file&quot; here should match the @RequestPart name in your controller    // Getters and setters are not strictly necessary for springdoc to pick up the schema,    // but it&#x27;s good practice if you were to use this class for other purposes.    public FilePart getFile() &#123;        return file;    &#125;    public void setFile(FilePart file) &#123;        this.file = file;    &#125;&#125;
+
+在项目启动后，访问 http://localhost:8080/swagger-ui.html （假设您的应用运行在 8080 端口），您就可以看到文件上传接口的 Swagger UI 界面了。
+
+通过以上步骤，您就成功地在 Spring WebFlux 中实现了一个文件上传到本地的功能，并为其添加了 Swagger UI 支持。您可以基于此进一步扩展，例如添加文件类型校验、大小限制，以及将文件存储目标切换为 MinIO 等对象存储服务。
+]]></content>
+      <categories>
+        <category>后端</category>
+      </categories>
+      <tags>
+        <tag>spring boot</tag>
+        <tag>gradle</tag>
+        <tag>spring webflux</tag>
+        <tag>文件上传</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>使用systemd部署podman的容器</title>
     <url>/2025/07/20/back-end/use-systemd-to-deploy-podman-build-by-podman/</url>
     <content><![CDATA[podman的问题podman是一个容器运行时环境，提供与 Docker 非常相似的功能并不需要在你的系统上运行任何守护进程。没有守护进程就意味着如果你想使用podman部署容器，是没有办法使用类似docker的方式去实现自动重启功能。如果使用k8s部署容器那问题不大，如果就纯容器部署，可以使用podman给出的方案：
@@ -1723,6 +1723,64 @@ dism.exe /Online /Enable-Feature:Microsoft-Hyper-V /All
         <tag>docker</tag>
         <tag>windows</tag>
         <tag>docker desktop</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>2026年5月8号面试总结</title>
+    <url>/2026/05/08/front-end/2026-0508-interview/</url>
+    <content><![CDATA[前言2026年5月8号有一场面试，是对方架构师来面试的我。总的来说，面试的效果不是很好。面试的岗位是前端岗位，但是问的很多是后端架构的设计，我认为我的准备不是很好，我需要继续努力补全自己。
+问题Java的虚拟线程问题：Java的虚拟线程是什么，怎么创建？
+回答如下：
+在Java 21中，引入了虚拟线程（Virtual Threads）来简化和增强并发性，这使得在Java中编程并发程序更容易、更高效。
+虚拟线程，也称为“用户模式线程（user-mode threads）”或“纤程（fibers）”。该功能旨在简化并发编程并提供更好的可扩展性。虚拟线程是轻量级的，这意味着它们可以比传统线程创建更多数量，并且开销要少得多。这使得在自己的线程中运行单独任务或请求变得更加实用，即使在高吞吐量的程序中也是如此。
+在Java 21中创建和使用虚拟线程有多种方法：
+1. 使用静态构建器方法Thread.startVirtualThread方法将可运行对象作为参数来创建，并立即启动虚拟线程，具体如下代码：
+Runnable runnable = () -&gt; &#123;    System.out.println(&quot;Hello, www.didispace.com&quot;);&#125;;// 使用静态构建器方法Thread virtualThread = Thread.startVirtualThread(runnable);
+
+也可以使用Thread.ofVirtual()来创建，这里还可以设置一些属性，比如：线程名称。具体如下代码：
+Thread.ofVirtual()        .name(&quot;didispace-virtual-thread&quot;)        .start(runnable);
+
+2. 与ExecutorService结合使用从Java 5开始，就推荐开发人员使用ExecutorServices而不是直接使用Thread类了。现在，Java 21中引入了使用虚拟线程，所以也有了新的ExecutorService来适配，看看下面的例子：
+Runnable runnable = () -&gt; &#123;    System.out.println(&quot;Hello, www.didispace.com&quot;);&#125;;try (ExecutorService executorService = Executors.newVirtualThreadPerTaskExecutor()) &#123;    for (int i = 0; i &lt; 100; i++) &#123;        executorService.submit(runnable);    &#125;&#125;
+
+3. 使用虚拟线程工厂开发者还可以创建一个生成虚拟线程的工厂来管理，具体看下面的例子例子：
+Runnable runnable = () -&gt; &#123;    System.out.println(&quot;Hello, www.didispace.com&quot;);&#125;;ThreadFactory virtualThreadFactory = Thread.ofVirtual()        .name(&quot;didispace&quot;, 0)        .factory();Thread factoryThread = virtualThreadFactory.newThread(runnable);factoryThread.start;
+
+对于虚拟线程的概念，你只需要有一个基本的认识。
+
+虚拟线程是由JVM管理的轻量级线程。
+虚拟线程不需要任何显式分配或调度。
+虚拟线程非常适合I&#x2F;O密集型任务或需要大量并行性的任务。
+虚拟线程也可以用来实现异步操作。
+
+Golang的cmp模型GMP 是 Go 运行时（Runtime）层面的调度模型，它实现了用户态线程（Goroutine）与内核态线程（M）之间的多对多复用，是 Go 能够支持高并发的核心原因
+
+G (Goroutine): 协程。它是待执行的任务，存储了协程的栈、状态及指向任务函数的指针。G 的体积很小（初始仅 2KB），由 Go 运行时管理。
+M (Machine): 操作系统的物理线程。协程最终必须绑定到 M 上才能在 CPU 上运行。M 并不保存状态，它只是一个执行体。
+P (Processor): 逻辑处理器。它是 G 和 M 之间的“中介”或“本地资源池”。P 维护着一个本地就绪队列（Local Runqueue）。M 必须获取到 P 才能执行 G。
+在早期（Go 1.1 之前）只有 GM 模型，由于所有 M 都要抢夺全局队列的锁来获取 G，导致严重的锁竞争。引入 P 后，每个 P 都有本地队列，减少了锁竞争，并实现了 Work Stealing 和 Hand Off 机制，大大提升了效率
+
+
+gemini帮我回答的
+
+MySQL 事务隔离级别SQL:1992 标准定义了四种事务隔离级别，分别是读未提交（Read Uncommitted）、读已提交（Read Committed）、可重复读（Repeatable Read）和串行化（Serializable）。不同的隔离级别下会产生脏读、幻读、不可重复读等相关问题，因此在选择隔离级别的时候要根据应用场景来决定，使用合适的隔离级别。MySQL 中的 InnoDB 存储引擎提供了 SQL 标准所描述的四种事务隔离级别，默认事务隔离级别是可重复读（Repeatable Read）。
+
+读未提交（Read Uncommitted）允许脏读，就是在该隔离级别下，可能读到其他会话未提交事务修改的数据，存在脏读、不可重读读、幻读的问题。
+读已提交（Read Committed）只能查询到已提交的数据。这是 Oracle 数据库默认的事务隔离级别。存在不可重读读、幻读的问题。
+可重复读（Repeatable Read）就是在一个事务里相同条件下，无论何时查到的数据都和第一次查到的数据一致。这是 MySQL 数据库 InnoDB 引擎默认的事务隔离级别。在范围查询时存在幻读的问题。
+串行化（Serializable）是最高的事务隔离级别，它严格服从 ACID 特性的隔离级别。所有的事务依次逐个执行，事务之间互不干扰，该级别可以防止脏读、不可重复读以及幻读。但每个事务读数据时都需要获取表级的共享锁，导致读和写都会阻塞，性能极低。
+
+参考资料
+Java 21 新特性：虚拟线程（Virtual Threads）
+MySQL | 事务隔离级别详解
+
+]]></content>
+      <categories>
+        <category>前端</category>
+      </categories>
+      <tags>
+        <tag>高级前端工程师</tag>
+        <tag>面试</tag>
       </tags>
   </entry>
   <entry>
@@ -1854,64 +1912,6 @@ GSS Data Store使用Podman部署问题：你提到在虚拟机上通过 Podman s
 利用 podman generate systemd 命令将容器的生命周期挂载到系统的 systemd 服务中。
 在 systemd 的配置中设置 Restart&#x3D;always 和 StartLimitInterval。这样即使容器因为宿主机每周末定期重启，宿主机的操作系统内核会自动检测并重新拉起服务。
 相比于简单的脚本，systemctl 提供了成熟的状态检查（Status Check）和日志回溯（Journald），能确保在没有 K8s 控制平面监控的情况下，服务依然具备基本的健壮性
-
-]]></content>
-      <categories>
-        <category>前端</category>
-      </categories>
-      <tags>
-        <tag>高级前端工程师</tag>
-        <tag>面试</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>2026年5月8号面试总结</title>
-    <url>/2026/05/08/front-end/2026-0508-interview/</url>
-    <content><![CDATA[前言2026年5月8号有一场面试，是对方架构师来面试的我。总的来说，面试的效果不是很好。面试的岗位是前端岗位，但是问的很多是后端架构的设计，我认为我的准备不是很好，我需要继续努力补全自己。
-问题Java的虚拟线程问题：Java的虚拟线程是什么，怎么创建？
-回答如下：
-在Java 21中，引入了虚拟线程（Virtual Threads）来简化和增强并发性，这使得在Java中编程并发程序更容易、更高效。
-虚拟线程，也称为“用户模式线程（user-mode threads）”或“纤程（fibers）”。该功能旨在简化并发编程并提供更好的可扩展性。虚拟线程是轻量级的，这意味着它们可以比传统线程创建更多数量，并且开销要少得多。这使得在自己的线程中运行单独任务或请求变得更加实用，即使在高吞吐量的程序中也是如此。
-在Java 21中创建和使用虚拟线程有多种方法：
-1. 使用静态构建器方法Thread.startVirtualThread方法将可运行对象作为参数来创建，并立即启动虚拟线程，具体如下代码：
-Runnable runnable = () -&gt; &#123;    System.out.println(&quot;Hello, www.didispace.com&quot;);&#125;;// 使用静态构建器方法Thread virtualThread = Thread.startVirtualThread(runnable);
-
-也可以使用Thread.ofVirtual()来创建，这里还可以设置一些属性，比如：线程名称。具体如下代码：
-Thread.ofVirtual()        .name(&quot;didispace-virtual-thread&quot;)        .start(runnable);
-
-2. 与ExecutorService结合使用从Java 5开始，就推荐开发人员使用ExecutorServices而不是直接使用Thread类了。现在，Java 21中引入了使用虚拟线程，所以也有了新的ExecutorService来适配，看看下面的例子：
-Runnable runnable = () -&gt; &#123;    System.out.println(&quot;Hello, www.didispace.com&quot;);&#125;;try (ExecutorService executorService = Executors.newVirtualThreadPerTaskExecutor()) &#123;    for (int i = 0; i &lt; 100; i++) &#123;        executorService.submit(runnable);    &#125;&#125;
-
-3. 使用虚拟线程工厂开发者还可以创建一个生成虚拟线程的工厂来管理，具体看下面的例子例子：
-Runnable runnable = () -&gt; &#123;    System.out.println(&quot;Hello, www.didispace.com&quot;);&#125;;ThreadFactory virtualThreadFactory = Thread.ofVirtual()        .name(&quot;didispace&quot;, 0)        .factory();Thread factoryThread = virtualThreadFactory.newThread(runnable);factoryThread.start;
-
-对于虚拟线程的概念，你只需要有一个基本的认识。
-
-虚拟线程是由JVM管理的轻量级线程。
-虚拟线程不需要任何显式分配或调度。
-虚拟线程非常适合I&#x2F;O密集型任务或需要大量并行性的任务。
-虚拟线程也可以用来实现异步操作。
-
-Golang的cmp模型GMP 是 Go 运行时（Runtime）层面的调度模型，它实现了用户态线程（Goroutine）与内核态线程（M）之间的多对多复用，是 Go 能够支持高并发的核心原因
-
-G (Goroutine): 协程。它是待执行的任务，存储了协程的栈、状态及指向任务函数的指针。G 的体积很小（初始仅 2KB），由 Go 运行时管理。
-M (Machine): 操作系统的物理线程。协程最终必须绑定到 M 上才能在 CPU 上运行。M 并不保存状态，它只是一个执行体。
-P (Processor): 逻辑处理器。它是 G 和 M 之间的“中介”或“本地资源池”。P 维护着一个本地就绪队列（Local Runqueue）。M 必须获取到 P 才能执行 G。
-在早期（Go 1.1 之前）只有 GM 模型，由于所有 M 都要抢夺全局队列的锁来获取 G，导致严重的锁竞争。引入 P 后，每个 P 都有本地队列，减少了锁竞争，并实现了 Work Stealing 和 Hand Off 机制，大大提升了效率
-
-
-gemini帮我回答的
-
-MySQL 事务隔离级别SQL:1992 标准定义了四种事务隔离级别，分别是读未提交（Read Uncommitted）、读已提交（Read Committed）、可重复读（Repeatable Read）和串行化（Serializable）。不同的隔离级别下会产生脏读、幻读、不可重复读等相关问题，因此在选择隔离级别的时候要根据应用场景来决定，使用合适的隔离级别。MySQL 中的 InnoDB 存储引擎提供了 SQL 标准所描述的四种事务隔离级别，默认事务隔离级别是可重复读（Repeatable Read）。
-
-读未提交（Read Uncommitted）允许脏读，就是在该隔离级别下，可能读到其他会话未提交事务修改的数据，存在脏读、不可重读读、幻读的问题。
-读已提交（Read Committed）只能查询到已提交的数据。这是 Oracle 数据库默认的事务隔离级别。存在不可重读读、幻读的问题。
-可重复读（Repeatable Read）就是在一个事务里相同条件下，无论何时查到的数据都和第一次查到的数据一致。这是 MySQL 数据库 InnoDB 引擎默认的事务隔离级别。在范围查询时存在幻读的问题。
-串行化（Serializable）是最高的事务隔离级别，它严格服从 ACID 特性的隔离级别。所有的事务依次逐个执行，事务之间互不干扰，该级别可以防止脏读、不可重复读以及幻读。但每个事务读数据时都需要获取表级的共享锁，导致读和写都会阻塞，性能极低。
-
-参考资料
-Java 21 新特性：虚拟线程（Virtual Threads）
-MySQL | 事务隔离级别详解
 
 ]]></content>
       <categories>
@@ -2435,6 +2435,46 @@ Angular Material
   </entry>
   <entry>
     <title>在windows上构建angular项目(上)</title>
+    <url>/2021/05/13/front-end/build-angular-on-windows-01/</url>
+    <content><![CDATA[在windows上构建angular项目 (上)前端三大框架( angular, reac, vue )中，angular一直都是一个很独特的存在。首先，angular的概念很多，服务、依赖注入、模块，指令等，都是在前端圈不是很常用的，此外，angular使用了bazel作为构建工具，而react和vue都是使用了rollup，因此在本地编译构建angular将会远远超过react和vue，如果你是用的windows平台，那么一个个坑需要自己慢慢来填。。。
+Bazel是什么？根据官网的定义，Bazel是类似于Make，Maven和Gradle的开源构建和测试工具。它使用人类可读的高级构建语言Starlark(一种基于python的方言)。 Bazel支持多种语言的项目，并为多种平台构建输出。 
+从我个人角度来看，bazel是一个强大且复杂的构建系统，通过build rule的概念，支持多种语言、不同平台，支持构建C&#x2F;C++,Java,Android,IOS,Golang,Nodejs,Docker项目
+安装Bazel官方支持Windows，macOS, Ubuntu Linux三大平台，这也是开发人员比较常用的本地开发平台。
+在社区的支持下，bazel还支持其他平台，具体信息可以看一下官网。这里我仅仅介绍如何在windows上安装。
+安装要求在安装前，请确保你windows系统符合要求：
+
+推荐使用64位的windows10，版本号不能低于1703
+64位的Windows 7以上
+64位的Windows Server 2008 R2以上
+
+此外，请事先安装Visual C++ Redistributable for Visual Studio 2015
+下载安装Bazel我们需要在github选择下载bazel-&lt;version&gt;-windows-x86_64.exe，然后将该文件路径放在path环境变量中。
+在终端中执行
+$ bazel version
+
+显示类似效果就是可以了
+Build label: 4.0.0Build target: bazel-out/x64_windows-opt/bin/src/main/java/com/google/devtools/build/lib/bazel/BazelServer_deploy.jarBuild time: Thu Jan 21 07:39:16 2021 (1611214756)Build timestamp: 1611214756Build timestamp as int: 1611214756
+
+安装编译和语言运行时根据不同语言的编译需要，我们可能需要以下的工具：
+
+MSYS2 x86_64
+Build Tools for Visual Studio 2019
+Java SE Development Kit 11 (JDK) for Windows x64
+Python 3.6 for Windows x86-64
+
+如果你想在window平台编译构建angular，后三者必须的，JDK16和Python 3.9.5也能满足自己的需求。
+总结当完成以上步骤的时候，我们基本上就可以开始尝试在windows本地进行编译angular。
+]]></content>
+      <categories>
+        <category>前端</category>
+      </categories>
+      <tags>
+        <tag>bazel</tag>
+        <tag>angular</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>在windows上构建angular项目(上)</title>
     <url>/2021/05/17/front-end/build-angular-on-windows-02/</url>
     <content><![CDATA[在windows上构建angular项目 (下)当完成bazel的安装之后，我们还需要安装nodejs就可以开始编译angular了。
 Nodejs目前angular仅支持nodejs12和nodejs14这两个版本，推荐使用node14这个版本。
@@ -2534,46 +2574,6 @@ helle daming]]></content>
       </tags>
   </entry>
   <entry>
-    <title>在windows上构建angular项目(上)</title>
-    <url>/2021/05/13/front-end/build-angular-on-windows-01/</url>
-    <content><![CDATA[在windows上构建angular项目 (上)前端三大框架( angular, reac, vue )中，angular一直都是一个很独特的存在。首先，angular的概念很多，服务、依赖注入、模块，指令等，都是在前端圈不是很常用的，此外，angular使用了bazel作为构建工具，而react和vue都是使用了rollup，因此在本地编译构建angular将会远远超过react和vue，如果你是用的windows平台，那么一个个坑需要自己慢慢来填。。。
-Bazel是什么？根据官网的定义，Bazel是类似于Make，Maven和Gradle的开源构建和测试工具。它使用人类可读的高级构建语言Starlark(一种基于python的方言)。 Bazel支持多种语言的项目，并为多种平台构建输出。 
-从我个人角度来看，bazel是一个强大且复杂的构建系统，通过build rule的概念，支持多种语言、不同平台，支持构建C&#x2F;C++,Java,Android,IOS,Golang,Nodejs,Docker项目
-安装Bazel官方支持Windows，macOS, Ubuntu Linux三大平台，这也是开发人员比较常用的本地开发平台。
-在社区的支持下，bazel还支持其他平台，具体信息可以看一下官网。这里我仅仅介绍如何在windows上安装。
-安装要求在安装前，请确保你windows系统符合要求：
-
-推荐使用64位的windows10，版本号不能低于1703
-64位的Windows 7以上
-64位的Windows Server 2008 R2以上
-
-此外，请事先安装Visual C++ Redistributable for Visual Studio 2015
-下载安装Bazel我们需要在github选择下载bazel-&lt;version&gt;-windows-x86_64.exe，然后将该文件路径放在path环境变量中。
-在终端中执行
-$ bazel version
-
-显示类似效果就是可以了
-Build label: 4.0.0Build target: bazel-out/x64_windows-opt/bin/src/main/java/com/google/devtools/build/lib/bazel/BazelServer_deploy.jarBuild time: Thu Jan 21 07:39:16 2021 (1611214756)Build timestamp: 1611214756Build timestamp as int: 1611214756
-
-安装编译和语言运行时根据不同语言的编译需要，我们可能需要以下的工具：
-
-MSYS2 x86_64
-Build Tools for Visual Studio 2019
-Java SE Development Kit 11 (JDK) for Windows x64
-Python 3.6 for Windows x86-64
-
-如果你想在window平台编译构建angular，后三者必须的，JDK16和Python 3.9.5也能满足自己的需求。
-总结当完成以上步骤的时候，我们基本上就可以开始尝试在windows本地进行编译angular。
-]]></content>
-      <categories>
-        <category>前端</category>
-      </categories>
-      <tags>
-        <tag>bazel</tag>
-        <tag>angular</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>css的模拟面试</title>
     <url>/2024/10/30/front-end/css-mock-interview/</url>
     <content><![CDATA[css变量是什么CSS 变量（也称为自定义属性）是 CSS 中用于定义可重用值的特性。它们使用 -- 前缀定义，可以在整个样式表中被引用和复用，从而提高代码的灵活性和可维护性。
@@ -2625,6 +2625,224 @@ document.documentElement.style.setProperty(&#x27;--primary-color&#x27;, &#x27;#e
       <tags>
         <tag>面试</tag>
         <tag>css</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>从 3 秒白屏到首屏可见 —— 一次基于 Chrome Performance Call Tree 的深度优化复盘</title>
+    <url>/2026/02/25/front-end/from-3s-white-screen-to-first-paint-react-performance-optimization/</url>
+    <content><![CDATA[🎯 从 3 秒白屏到首屏可见 —— 一次基于 Chrome Performance Call Tree 的深度优化复盘
+一、问题现象
+页面首次进入白屏约 3 秒
+300 个 Card 同步渲染
+每个 Card 内嵌流程图组件
+数据量 &lt; 1000
+
+现象不是掉帧，而是：
+
+页面完全不可见，直到 JS 执行完成。
+
+
+二、使用 Chrome DevTools Performance 分析1️⃣ 录制方式
+打开 Performance 面板
+录制页面加载过程
+停止录制
+切换到 Call Tree 视图
+
+
+三、关键截图分析（Call Tree）
+从 Call Tree 中可以看到几个关键点：
+🔴 1. 主线程长时间被占用顶部可以看到：
+
+Function call
+performWorkUntilDeadline
+Run console task
+beginWork
+
+说明：
+
+这是一次 React 同步渲染过程。
+
+
+🔴 2. React 渲染链路非常清晰调用栈结构大致如下：
+performWorkUntilDeadline└── beginWork└── customNode.tsx├── useRequiredChecker├── useModuleHandle├── useSelector├── useFormikContext└── ...
+
+这说明：
+
+大量时间消耗在 React Fiber 的 beginWork 阶段
+组件内部 hook 执行次数非常多
+每个节点渲染都触发多个 hook
+
+
+🔴 3. 重组件被重复执行从截图中可以看到：
+
+customNode.tsx
+useRequiredChecker.ts
+useModuleHandle.tsx
+useSelector2
+useFormikContext
+ReactFlow
+
+这说明：
+
+每个流程图节点本身就非常重。
+
+而现在：
+
+300 个 Card
+每个 Card 一个 ReactFlow
+每个 ReactFlow 多个 node
+每个 node 多个 hook
+
+这是一个典型的：
+
+同步重渲染风暴
+
+
+四、浏览器角度的本质分析从 Performance 时间轴可以推断：
+
+Main Thread 出现长达 ~1000ms+ 的连续执行
+期间没有明显 idle
+浏览器无法执行 Paint
+
+浏览器渲染流程：
+
+JS 执行
+Style
+Layout
+Paint
+
+问题是：
+
+JS 执行阶段持续时间过长浏览器无法进入 Paint 阶段
+
+所以出现：
+
+页面白屏
+直到所有组件 render + commit 完成
+
+
+五、React 调度机制的角度截图中出现：
+performWorkUntilDeadline
+
+这是 React Scheduler 的调度函数。
+说明：
+
+React 正在同步执行任务
+当前更新优先级较高
+未被打断
+
+在同步模式下：
+
+beginWork 会遍历 Fiber 树
+计算所有子组件
+commit 阶段不可中断
+
+当组件数量 × 单组件复杂度 同时偏大时：
+
+很容易形成长任务
+
+
+六、关键结论这次问题不是：
+
+数据量大
+列表太多
+算法问题
+
+而是：
+
+同步渲染了大量 CPU 密集型 UI 组件
+
+这是一个：
+
+主线程调度问题
+
+而不是：
+
+数据结构问题
+
+
+七、方案对比回顾❌ 虚拟列表
+可以减少数量
+但改造成本高
+未必击中根因
+
+
+⚠️ 分片渲染
+可缓解长任务
+但每片仍包含重组件
+
+
+✅ 延迟重组件渲染（最终方案）核心思想：
+
+让轻内容先完成渲染
+重组件延迟到下一帧
+使用 Skeleton 占位
+打破长任务链路
+
+本质：
+
+把 3000ms 的连续长任务拆成多个小任务
+
+让浏览器获得 Paint 机会。
+
+八、优化后的变化优化前：
+
+Main Thread 长时间连续执行
+无法 Paint
+白屏 3 秒
+
+优化后：
+
+主线程任务被拆散
+首屏快速可见
+重组件分布到后续帧
+用户感知明显改善
+
+注意：
+
+总计算量变化不大但渲染节奏改变了
+
+
+九、架构层升维总结这次优化的本质是：
+
+控制 UI 渲染节奏而不是减少数据量
+
+真正重要的是理解：
+
+浏览器渲染模型
+主线程竞争
+React Fiber 调度
+长任务对 Paint 的阻塞机制
+
+
+🔚 终极总结性能优化的成熟思维是：
+
+不凭直觉选方案
+不迷信虚拟列表
+不盲目上并发特性
+先看 Call Tree
+找到真正的长任务
+从调度层面解决问题
+
+当你开始关注：
+
+主线程时间片而不是组件数量  
+
+你就进入了更高维度的性能优化阶段。
+]]></content>
+      <categories>
+        <category>前端</category>
+      </categories>
+      <tags>
+        <tag>Chrome Performance Call Tree</tag>
+        <tag>React</tag>
+        <tag>Chrome</tag>
+        <tag>Performance</tag>
+        <tag>首屏可见</tag>
+        <tag>首屏</tag>
+        <tag>白屏</tag>
+        <tag>优化</tag>
+        <tag>复盘</tag>
       </tags>
   </entry>
   <entry>
@@ -2879,285 +3097,6 @@ const app = express();const server = new ApolloServer(&#123;...&#125;);await ser
       </tags>
   </entry>
   <entry>
-    <title>从 3 秒白屏到首屏可见 —— 一次基于 Chrome Performance Call Tree 的深度优化复盘</title>
-    <url>/2026/02/25/front-end/from-3s-white-screen-to-first-paint-react-performance-optimization/</url>
-    <content><![CDATA[🎯 从 3 秒白屏到首屏可见 —— 一次基于 Chrome Performance Call Tree 的深度优化复盘
-一、问题现象
-页面首次进入白屏约 3 秒
-300 个 Card 同步渲染
-每个 Card 内嵌流程图组件
-数据量 &lt; 1000
-
-现象不是掉帧，而是：
-
-页面完全不可见，直到 JS 执行完成。
-
-
-二、使用 Chrome DevTools Performance 分析1️⃣ 录制方式
-打开 Performance 面板
-录制页面加载过程
-停止录制
-切换到 Call Tree 视图
-
-
-三、关键截图分析（Call Tree）
-从 Call Tree 中可以看到几个关键点：
-🔴 1. 主线程长时间被占用顶部可以看到：
-
-Function call
-performWorkUntilDeadline
-Run console task
-beginWork
-
-说明：
-
-这是一次 React 同步渲染过程。
-
-
-🔴 2. React 渲染链路非常清晰调用栈结构大致如下：
-performWorkUntilDeadline└── beginWork└── customNode.tsx├── useRequiredChecker├── useModuleHandle├── useSelector├── useFormikContext└── ...
-
-这说明：
-
-大量时间消耗在 React Fiber 的 beginWork 阶段
-组件内部 hook 执行次数非常多
-每个节点渲染都触发多个 hook
-
-
-🔴 3. 重组件被重复执行从截图中可以看到：
-
-customNode.tsx
-useRequiredChecker.ts
-useModuleHandle.tsx
-useSelector2
-useFormikContext
-ReactFlow
-
-这说明：
-
-每个流程图节点本身就非常重。
-
-而现在：
-
-300 个 Card
-每个 Card 一个 ReactFlow
-每个 ReactFlow 多个 node
-每个 node 多个 hook
-
-这是一个典型的：
-
-同步重渲染风暴
-
-
-四、浏览器角度的本质分析从 Performance 时间轴可以推断：
-
-Main Thread 出现长达 ~1000ms+ 的连续执行
-期间没有明显 idle
-浏览器无法执行 Paint
-
-浏览器渲染流程：
-
-JS 执行
-Style
-Layout
-Paint
-
-问题是：
-
-JS 执行阶段持续时间过长浏览器无法进入 Paint 阶段
-
-所以出现：
-
-页面白屏
-直到所有组件 render + commit 完成
-
-
-五、React 调度机制的角度截图中出现：
-performWorkUntilDeadline
-
-这是 React Scheduler 的调度函数。
-说明：
-
-React 正在同步执行任务
-当前更新优先级较高
-未被打断
-
-在同步模式下：
-
-beginWork 会遍历 Fiber 树
-计算所有子组件
-commit 阶段不可中断
-
-当组件数量 × 单组件复杂度 同时偏大时：
-
-很容易形成长任务
-
-
-六、关键结论这次问题不是：
-
-数据量大
-列表太多
-算法问题
-
-而是：
-
-同步渲染了大量 CPU 密集型 UI 组件
-
-这是一个：
-
-主线程调度问题
-
-而不是：
-
-数据结构问题
-
-
-七、方案对比回顾❌ 虚拟列表
-可以减少数量
-但改造成本高
-未必击中根因
-
-
-⚠️ 分片渲染
-可缓解长任务
-但每片仍包含重组件
-
-
-✅ 延迟重组件渲染（最终方案）核心思想：
-
-让轻内容先完成渲染
-重组件延迟到下一帧
-使用 Skeleton 占位
-打破长任务链路
-
-本质：
-
-把 3000ms 的连续长任务拆成多个小任务
-
-让浏览器获得 Paint 机会。
-
-八、优化后的变化优化前：
-
-Main Thread 长时间连续执行
-无法 Paint
-白屏 3 秒
-
-优化后：
-
-主线程任务被拆散
-首屏快速可见
-重组件分布到后续帧
-用户感知明显改善
-
-注意：
-
-总计算量变化不大但渲染节奏改变了
-
-
-九、架构层升维总结这次优化的本质是：
-
-控制 UI 渲染节奏而不是减少数据量
-
-真正重要的是理解：
-
-浏览器渲染模型
-主线程竞争
-React Fiber 调度
-长任务对 Paint 的阻塞机制
-
-
-🔚 终极总结性能优化的成熟思维是：
-
-不凭直觉选方案
-不迷信虚拟列表
-不盲目上并发特性
-先看 Call Tree
-找到真正的长任务
-从调度层面解决问题
-
-当你开始关注：
-
-主线程时间片而不是组件数量  
-
-你就进入了更高维度的性能优化阶段。
-]]></content>
-      <categories>
-        <category>前端</category>
-      </categories>
-      <tags>
-        <tag>Chrome Performance Call Tree</tag>
-        <tag>React</tag>
-        <tag>Chrome</tag>
-        <tag>Performance</tag>
-        <tag>首屏可见</tag>
-        <tag>首屏</tag>
-        <tag>白屏</tag>
-        <tag>优化</tag>
-        <tag>复盘</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>Next.js + Supabase 实现完美的重置密码工作流（含 React Email 与 Resend SMTP 配置）</title>
-    <url>/2026/01/18/front-end/nextjs-supabase-password-reset-workflow/</url>
-    <content><![CDATA[前言在现代 Web 开发中，身份验证（Auth）是一个核心环节。Supabase 提供了强大的 Auth 服务，但如何将其完美集成到 Next.js (App Router) 中，并使用 React Email 自定义精美的邮件模板？本文将带你走通整个流程。
-1. 核心工作流设计重置密码并非简单的“输入新密码”，为了安全性，它必须遵循 PKCE (Proof Key for Code Exchange) 流程：
-
-Forgot Password: 用户输入邮箱，请求重置。
-Magic Link: Supabase 发送一封带有 code 的邮件。
-Auth Callback: 用户点击链接，回到应用后端交换 code 获取 Session。
-Update Password: 用户进入受保护的修改页面，提交新密码。
-
-2. 环境配置：让 Supabase 认识你的多域名Supabase 的 Site URL 只能设置一个（通常设为生产环境），但你可以通过 Redirect URLs 支持多环境（如 localhost 和 Vercel 预览）。
-后台配置清单：
-Site URL: https://fieldglass-app.vercel.app
-Redirect URLs:
-http://localhost:3000/**
-https://fieldglass-app.vercel.app/**
-
-
-注意：一定要添加 /** 通配符，否则带有查询参数的回调地址会被拦截。
-
-3. 发送请求：Forgot Password 页面使用 shadcn&#x2F;ui 和 react-hook-form 构建一个极简的邮箱提交页面。
-async function onSubmit(values: z.infer&lt;typeof formSchema&gt;) &#123;  setIsLoading(true);  const &#123; error &#125; = await supabase.auth.resetPasswordForEmail(values.email, &#123;    // 动态处理重定向地址    redirectTo: `$&#123;window.location.origin&#125;/auth/callback?next=/update-password`,  &#125;);  if (error) &#123;    toast.error(error.message);  &#125; else &#123;    toast.success(&quot;Reset link sent! Please check your inbox.&quot;);  &#125;  setIsLoading(false);&#125;
-
-
-4. 邮件视觉：React Email + Resend SMTPSupabase 默认邮件配额较低且样式简陋。我们通过 Resend 配置自定义 SMTP。
-SMTP 配置 (Supabase Dashboard):
-Host: smtp.resend.com | Port: 465
-User: resend | Password: 你的Resend_API_KEY
-
-React Email 模板设计:使用 React Email 编写 UI，并保留 Supabase 的变量 &#123;&#123; .ConfirmationURL &#125;&#125;。
-import &#123;  Body,  Button,  Container,  Head,  Heading,  Html,  Preview,  Section,  Text,  Tailwind,  Hr,&#125; from &quot;@react-email/components&quot;;export const ResetPasswordEmail = () =&gt; &#123;  return (    &lt;Html&gt;      &lt;Head /&gt;      &lt;Preview&gt;Reset your Fieldglass App password&lt;/Preview&gt;      &lt;Tailwind&gt;        &lt;Body className=&quot;bg-white my-auto mx-auto font-sans&quot;&gt;          &lt;Container className=&quot;border border-solid border-[#e5e7eb] rounded-lg my-[40px] mx-auto p-[32px] max-w-[465px] shadow-sm&quot;&gt;            &lt;Section&gt;              &#123;/* Text-based Logo / App Name */&#125;              &lt;Text className=&quot;text-black text-[20px] font-bold tracking-tight m-0&quot;&gt;                Fieldglass App              &lt;/Text&gt;            &lt;/Section&gt;                        &lt;Heading className=&quot;text-black text-[24px] font-semibold text-left p-0 my-[30px] mx-0&quot;&gt;              Reset your password            &lt;/Heading&gt;                        &lt;Text className=&quot;text-[#374151] text-[14px] leading-[24px]&quot;&gt;              We received a request to reset the password for your **Fieldglass App** account.               Click the button below to proceed.            &lt;/Text&gt;            &lt;Section className=&quot;mt-[32px] mb-[32px]&quot;&gt;              &lt;Button                className=&quot;bg-[#000000] rounded-md text-white text-[14px] font-medium no-underline text-center px-6 py-3&quot;                href=&quot;&#123;&#123; .ConfirmationURL &#125;&#125;&quot;              &gt;                Reset Password              &lt;/Button&gt;            &lt;/Section&gt;            &lt;Text className=&quot;text-[#6b7280] text-[13px] leading-[22px]&quot;&gt;              If you did not request a password reset, please ignore this email or reply to let us know. This link is only valid for the next 24 hours.            &lt;/Text&gt;            &lt;Hr className=&quot;border border-solid border-[#e5e7eb] my-[26px] mx-0 w-full&quot; /&gt;                        &lt;Text className=&quot;text-[#9ca3af] text-[12px] leading-[18px]&quot;&gt;              &amp;copy; 2026 Fieldglass App. All rights reserved. &lt;br /&gt;              This is an automated security notification.            &lt;/Text&gt;          &lt;/Container&gt;        &lt;/Body&gt;      &lt;/Tailwind&gt;    &lt;/Html&gt;  );&#125;;
-
-
-5. 安全中转站：Auth Callback这是 Next.js 中最关键的路由处理程序。它负责将邮件里的 code 变成浏览器 Cookie。
-文件路径: app/auth/callback/route.ts
-export async function GET(request: Request) &#123;  const &#123; searchParams, origin &#125; = new URL(request.url);  const code = searchParams.get(&#x27;code&#x27;);  const next = searchParams.get(&#x27;next&#x27;) ?? &#x27;/&#x27;;  if (code) &#123;    const supabase = await createClient(); // server client    const &#123; error &#125; = await supabase.auth.exchangeCodeForSession(code);    if (!error) &#123;      return NextResponse.redirect(`$&#123;origin&#125;$&#123;next&#125;`);    &#125;  &#125;  return NextResponse.redirect(`$&#123;origin&#125;/login?error=invalid_token`);&#125;
-
-
-6. 最终步骤：更新密码页面当用户通过 Callback 跳转到 /update-password 时，他们已经处于“已登录”状态，可以直接调用 updateUser。
-const onSubmit = async (values: z.infer&lt;typeof formSchema&gt;) =&gt; &#123;  const &#123; error &#125; = await supabase.auth.updateUser(&#123;    password: values.password,  &#125;);  if (error) &#123;    toast.error(error.message);  &#125; else &#123;    toast.success(&quot;Password updated!&quot;);    router.push(&quot;/login&quot;);  &#125;&#125;;
-
-
-7. 常见坑点排查
-收到的邮件链接还是 localhost？ 检查 Supabase 后台的 Site URL 是否已改为生产域名，并确保 redirectTo 在白名单内。
-点击链接后没登录？ 检查 auth/callback 路由是否正确执行了 exchangeCodeForSession。
-Resend 发送失败？ 确保你的发件域名在 Resend 后台已通过 DNS 验证。
-
-
-结语通过这套组合拳，我们不仅实现了功能，还通过 React Email 提升了用户体验，通过 Resend 保证了邮件的送达率。这才是生产环境该有的样子。
-]]></content>
-      <categories>
-        <category>前端</category>
-      </categories>
-      <tags>
-        <tag>resend</tag>
-        <tag>nexjts</tag>
-        <tag>spabase</tag>
-        <tag>react email</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>记录一下2024年10月18号和前同事的一次模拟面试</title>
     <url>/2024/10/20/front-end/mock-interview/</url>
     <content><![CDATA[敏捷开发敏捷开发是一种以迭代和增量的方式来开发软件的流程，它注重团队协作、快速反馈以及应对变化的能力。在敏捷开发中，Sprint（冲刺） 是一个核心概念。下面我为你总结了敏捷开发流程中的Sprint、迭代节奏、和时间周期：
@@ -3375,6 +3314,81 @@ Module not found: Can&#x27;t resolve &#x27;fs&#x27;./node_modules/@rdkit/rdkit/d
       </tags>
   </entry>
   <entry>
+    <title>Next.js + Supabase 实现完美的重置密码工作流（含 React Email 与 Resend SMTP 配置）</title>
+    <url>/2026/01/18/front-end/nextjs-supabase-password-reset-workflow/</url>
+    <content><![CDATA[前言在现代 Web 开发中，身份验证（Auth）是一个核心环节。Supabase 提供了强大的 Auth 服务，但如何将其完美集成到 Next.js (App Router) 中，并使用 React Email 自定义精美的邮件模板？本文将带你走通整个流程。
+1. 核心工作流设计重置密码并非简单的“输入新密码”，为了安全性，它必须遵循 PKCE (Proof Key for Code Exchange) 流程：
+
+Forgot Password: 用户输入邮箱，请求重置。
+Magic Link: Supabase 发送一封带有 code 的邮件。
+Auth Callback: 用户点击链接，回到应用后端交换 code 获取 Session。
+Update Password: 用户进入受保护的修改页面，提交新密码。
+
+2. 环境配置：让 Supabase 认识你的多域名Supabase 的 Site URL 只能设置一个（通常设为生产环境），但你可以通过 Redirect URLs 支持多环境（如 localhost 和 Vercel 预览）。
+后台配置清单：
+Site URL: https://fieldglass-app.vercel.app
+Redirect URLs:
+http://localhost:3000/**
+https://fieldglass-app.vercel.app/**
+
+
+注意：一定要添加 /** 通配符，否则带有查询参数的回调地址会被拦截。
+
+3. 发送请求：Forgot Password 页面使用 shadcn&#x2F;ui 和 react-hook-form 构建一个极简的邮箱提交页面。
+async function onSubmit(values: z.infer&lt;typeof formSchema&gt;) &#123;  setIsLoading(true);  const &#123; error &#125; = await supabase.auth.resetPasswordForEmail(values.email, &#123;    // 动态处理重定向地址    redirectTo: `$&#123;window.location.origin&#125;/auth/callback?next=/update-password`,  &#125;);  if (error) &#123;    toast.error(error.message);  &#125; else &#123;    toast.success(&quot;Reset link sent! Please check your inbox.&quot;);  &#125;  setIsLoading(false);&#125;
+
+
+4. 邮件视觉：React Email + Resend SMTPSupabase 默认邮件配额较低且样式简陋。我们通过 Resend 配置自定义 SMTP。
+SMTP 配置 (Supabase Dashboard):
+Host: smtp.resend.com | Port: 465
+User: resend | Password: 你的Resend_API_KEY
+
+React Email 模板设计:使用 React Email 编写 UI，并保留 Supabase 的变量 &#123;&#123; .ConfirmationURL &#125;&#125;。
+import &#123;  Body,  Button,  Container,  Head,  Heading,  Html,  Preview,  Section,  Text,  Tailwind,  Hr,&#125; from &quot;@react-email/components&quot;;export const ResetPasswordEmail = () =&gt; &#123;  return (    &lt;Html&gt;      &lt;Head /&gt;      &lt;Preview&gt;Reset your Fieldglass App password&lt;/Preview&gt;      &lt;Tailwind&gt;        &lt;Body className=&quot;bg-white my-auto mx-auto font-sans&quot;&gt;          &lt;Container className=&quot;border border-solid border-[#e5e7eb] rounded-lg my-[40px] mx-auto p-[32px] max-w-[465px] shadow-sm&quot;&gt;            &lt;Section&gt;              &#123;/* Text-based Logo / App Name */&#125;              &lt;Text className=&quot;text-black text-[20px] font-bold tracking-tight m-0&quot;&gt;                Fieldglass App              &lt;/Text&gt;            &lt;/Section&gt;                        &lt;Heading className=&quot;text-black text-[24px] font-semibold text-left p-0 my-[30px] mx-0&quot;&gt;              Reset your password            &lt;/Heading&gt;                        &lt;Text className=&quot;text-[#374151] text-[14px] leading-[24px]&quot;&gt;              We received a request to reset the password for your **Fieldglass App** account.               Click the button below to proceed.            &lt;/Text&gt;            &lt;Section className=&quot;mt-[32px] mb-[32px]&quot;&gt;              &lt;Button                className=&quot;bg-[#000000] rounded-md text-white text-[14px] font-medium no-underline text-center px-6 py-3&quot;                href=&quot;&#123;&#123; .ConfirmationURL &#125;&#125;&quot;              &gt;                Reset Password              &lt;/Button&gt;            &lt;/Section&gt;            &lt;Text className=&quot;text-[#6b7280] text-[13px] leading-[22px]&quot;&gt;              If you did not request a password reset, please ignore this email or reply to let us know. This link is only valid for the next 24 hours.            &lt;/Text&gt;            &lt;Hr className=&quot;border border-solid border-[#e5e7eb] my-[26px] mx-0 w-full&quot; /&gt;                        &lt;Text className=&quot;text-[#9ca3af] text-[12px] leading-[18px]&quot;&gt;              &amp;copy; 2026 Fieldglass App. All rights reserved. &lt;br /&gt;              This is an automated security notification.            &lt;/Text&gt;          &lt;/Container&gt;        &lt;/Body&gt;      &lt;/Tailwind&gt;    &lt;/Html&gt;  );&#125;;
+
+
+5. 安全中转站：Auth Callback这是 Next.js 中最关键的路由处理程序。它负责将邮件里的 code 变成浏览器 Cookie。
+文件路径: app/auth/callback/route.ts
+export async function GET(request: Request) &#123;  const &#123; searchParams, origin &#125; = new URL(request.url);  const code = searchParams.get(&#x27;code&#x27;);  const next = searchParams.get(&#x27;next&#x27;) ?? &#x27;/&#x27;;  if (code) &#123;    const supabase = await createClient(); // server client    const &#123; error &#125; = await supabase.auth.exchangeCodeForSession(code);    if (!error) &#123;      return NextResponse.redirect(`$&#123;origin&#125;$&#123;next&#125;`);    &#125;  &#125;  return NextResponse.redirect(`$&#123;origin&#125;/login?error=invalid_token`);&#125;
+
+
+6. 最终步骤：更新密码页面当用户通过 Callback 跳转到 /update-password 时，他们已经处于“已登录”状态，可以直接调用 updateUser。
+const onSubmit = async (values: z.infer&lt;typeof formSchema&gt;) =&gt; &#123;  const &#123; error &#125; = await supabase.auth.updateUser(&#123;    password: values.password,  &#125;);  if (error) &#123;    toast.error(error.message);  &#125; else &#123;    toast.success(&quot;Password updated!&quot;);    router.push(&quot;/login&quot;);  &#125;&#125;;
+
+
+7. 常见坑点排查
+收到的邮件链接还是 localhost？ 检查 Supabase 后台的 Site URL 是否已改为生产域名，并确保 redirectTo 在白名单内。
+点击链接后没登录？ 检查 auth/callback 路由是否正确执行了 exchangeCodeForSession。
+Resend 发送失败？ 确保你的发件域名在 Resend 后台已通过 DNS 验证。
+
+
+结语通过这套组合拳，我们不仅实现了功能，还通过 React Email 提升了用户体验，通过 Resend 保证了邮件的送达率。这才是生产环境该有的样子。
+]]></content>
+      <categories>
+        <category>前端</category>
+      </categories>
+      <tags>
+        <tag>resend</tag>
+        <tag>nexjts</tag>
+        <tag>spabase</tag>
+        <tag>react email</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Nodejs项目的Dockerfile模版</title>
+    <url>/2021/10/20/front-end/node-docker-template/</url>
+    <content><![CDATA[Nodejs项目的Dockerfile模版基于YarnFROM node:14.17.6-alpine3.14 as build# 取消对https的证书限制# ENV SELF_SIGNED_CERT_IN_CHAIN=true# ENV NODE_TLS_REJECT_UNAUTHORIZED=0# RUN npm config set strict-ssl false# RUN yarn config set strict-ssl falseRUN apk update &amp;&amp; apk add bashCOPY package.json yarn.lock .npmrc /tmp/RUN cd /tmp &amp;&amp; yarn install --frozen-lockfile --non-interactiveRUN mkdir -p /app &amp;&amp; cp -a /tmp/node_modules /app/WORKDIR /appCOPY . /appRUN yarn buildFROM build AS ciWORKDIR /appRUN yarn run test:ci &amp;&amp; yarn install --frozen-lockfile --non-interactive --productionFROM node:14.17.6-alpine3.14 as releaseRUN mkdir -p /app &amp;&amp; \	addgroup -S daminggroup &amp;&amp; \	adduser -S -h /app -G daminggroup daminguser &amp;&amp; \	chown -R daminguser:daminggroup /appWORKDIR /appCOPY --from=ci --chown=daminguser:daminggroup /app/dist ./distCOPY --from=ci --chown=daminguser:daminggroup /app/node_modules ./node_modulesCOPY --from=ci --chown=daminguser:daminggroup /app/package.json .HEALTHCHECK --interval=30s --timeout=30s CMD curl -f http://localhost:3978/ping || exit 1EXPOSE 3978CMD [&quot;sh&quot;, &quot;-c&quot;, &quot;node dist/index.js&quot;]
+
+基于NPMFROM node:14.17.6-alpine3.14 as build# pwc network limit# ENV SELF_SIGNED_CERT_IN_CHAIN=true# ENV NODE_TLS_REJECT_UNAUTHORIZED=0# RUN npm config set strict-ssl false# RUN yarn config set strict-ssl falseRUN apk update &amp;&amp; apk add bashCOPY package.json package-lock.json .npmrc /tmp/RUN cd /tmp &amp;&amp; npm installRUN mkdir -p /app &amp;&amp; cp -a /tmp/node_modules /app/WORKDIR /appCOPY . /appRUN npm run buildFROM build AS ciWORKDIR /appRUN npm run test:ci &amp;&amp; npm install --production --ignore-scripts trueFROM node:14.17.6-alpine3.14 as releaseRUN mkdir -p /app &amp;&amp; \	addgroup -S daminggroup &amp;&amp; \	adduser -S -h /app -G daminggroup daminguser &amp;&amp; \	chown -R daminguser:daminggroup /appWORKDIR /appCOPY --from=ci --chown=daminguser:daminggroup /app/dist ./distCOPY --from=ci --chown=daminguser:daminggroup /app/node_modules ./node_modulesCOPY --from=ci --chown=daminguser:daminggroup /app/package.json .HEALTHCHECK --interval=30s --timeout=30s CMD curl -f http://localhost:3978/ping || exit 1EXPOSE 3978CMD [&quot;sh&quot;, &quot;-c&quot;, &quot;node dist/index.js&quot;]]]></content>
+      <categories>
+        <category>前端</category>
+      </categories>
+      <tags>
+        <tag>docker</tag>
+        <tag>nodejs</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>nodejs的模拟面试</title>
     <url>/2024/10/29/front-end/nodejs-mock-interview/</url>
     <content><![CDATA[CommonJS是什么CommonJS（简称CJS）是一种JavaScript模块化规范，最初为在服务端（如Node.js）实现模块化而设计。在CommonJS中，每个文件都被视为一个独立的模块，并通过module.exports导出和require引入其他模块，形成清晰的模块依赖结构。以下是CommonJS的几个关键点：
@@ -3554,20 +3568,6 @@ exports只是module.exports的引用，主要用于辅助导出属性或方法�
       </categories>
       <tags>
         <tag>面试</tag>
-        <tag>nodejs</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>Nodejs项目的Dockerfile模版</title>
-    <url>/2021/10/20/front-end/node-docker-template/</url>
-    <content><![CDATA[Nodejs项目的Dockerfile模版基于YarnFROM node:14.17.6-alpine3.14 as build# 取消对https的证书限制# ENV SELF_SIGNED_CERT_IN_CHAIN=true# ENV NODE_TLS_REJECT_UNAUTHORIZED=0# RUN npm config set strict-ssl false# RUN yarn config set strict-ssl falseRUN apk update &amp;&amp; apk add bashCOPY package.json yarn.lock .npmrc /tmp/RUN cd /tmp &amp;&amp; yarn install --frozen-lockfile --non-interactiveRUN mkdir -p /app &amp;&amp; cp -a /tmp/node_modules /app/WORKDIR /appCOPY . /appRUN yarn buildFROM build AS ciWORKDIR /appRUN yarn run test:ci &amp;&amp; yarn install --frozen-lockfile --non-interactive --productionFROM node:14.17.6-alpine3.14 as releaseRUN mkdir -p /app &amp;&amp; \	addgroup -S daminggroup &amp;&amp; \	adduser -S -h /app -G daminggroup daminguser &amp;&amp; \	chown -R daminguser:daminggroup /appWORKDIR /appCOPY --from=ci --chown=daminguser:daminggroup /app/dist ./distCOPY --from=ci --chown=daminguser:daminggroup /app/node_modules ./node_modulesCOPY --from=ci --chown=daminguser:daminggroup /app/package.json .HEALTHCHECK --interval=30s --timeout=30s CMD curl -f http://localhost:3978/ping || exit 1EXPOSE 3978CMD [&quot;sh&quot;, &quot;-c&quot;, &quot;node dist/index.js&quot;]
-
-基于NPMFROM node:14.17.6-alpine3.14 as build# pwc network limit# ENV SELF_SIGNED_CERT_IN_CHAIN=true# ENV NODE_TLS_REJECT_UNAUTHORIZED=0# RUN npm config set strict-ssl false# RUN yarn config set strict-ssl falseRUN apk update &amp;&amp; apk add bashCOPY package.json package-lock.json .npmrc /tmp/RUN cd /tmp &amp;&amp; npm installRUN mkdir -p /app &amp;&amp; cp -a /tmp/node_modules /app/WORKDIR /appCOPY . /appRUN npm run buildFROM build AS ciWORKDIR /appRUN npm run test:ci &amp;&amp; npm install --production --ignore-scripts trueFROM node:14.17.6-alpine3.14 as releaseRUN mkdir -p /app &amp;&amp; \	addgroup -S daminggroup &amp;&amp; \	adduser -S -h /app -G daminggroup daminguser &amp;&amp; \	chown -R daminguser:daminggroup /appWORKDIR /appCOPY --from=ci --chown=daminguser:daminggroup /app/dist ./distCOPY --from=ci --chown=daminguser:daminggroup /app/node_modules ./node_modulesCOPY --from=ci --chown=daminguser:daminggroup /app/package.json .HEALTHCHECK --interval=30s --timeout=30s CMD curl -f http://localhost:3978/ping || exit 1EXPOSE 3978CMD [&quot;sh&quot;, &quot;-c&quot;, &quot;node dist/index.js&quot;]]]></content>
-      <categories>
-        <category>前端</category>
-      </categories>
-      <tags>
-        <tag>docker</tag>
         <tag>nodejs</tag>
       </tags>
   </entry>
@@ -3908,6 +3908,40 @@ React Router Framework Mode
       </tags>
   </entry>
   <entry>
+    <title>TypeScript中可选链</title>
+    <url>/2021/07/03/front-end/ts-optional-chaining/</url>
+    <content><![CDATA[TypeScript中可选链什么是可选链TypeScript 3.7中一个最引人关注的特性便是可选链(Optional Chaining)。
+所谓可选链，就是当我们试图使用访问对象的字段或者方法时，如果对象为null或者undefined，TypeScript将会自动停止运行的代码，以防止空指针异常。
+可选链的使用首先定义一个接口 A, 有一个字段b，b可能是字符串，也可能是null:
+interface A &#123;    b: string | null&#125;
+
+定义一个变量a:
+const a = &#123;    b: &#x27;c&#x27;&#125;
+
+使用?.来访问字段:
+console.log(a?.b)
+
+如果a为null或者undefined, 将输出undefined
+TypeScript做了什么可选链并不是ts的专利，在js就已经存在了，除了ie,其他现代浏览器最新版本都是支持了，但是一些老版本就不支持，因此ts没有使用js的语法，而是通过三元表达式? :转译。因此上面的代码将会转译成:
+console.log(a === null || a === void 0 ? void 0 : a.b);
+
+但是ts没有判断a是否是undefined, 而是因为在js中， undefined不仅是值，也可能是一个全局变量。直到es5之前，undefined是可以被修改的。我们可以通过下面的代码来修改:
+(function() &#123;  var undefined = 1  console.log(undefined) // 1&#125;)()
+
+参考
+深入理解 TypeScript(可选链（Optional Chaining）)
+JS: The difference between “undefined”, “null” and “void 0”
+可选链操作符
+
+]]></content>
+      <categories>
+        <category>前端</category>
+      </categories>
+      <tags>
+        <tag>typeScript</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>Angular和React构建体积简单对比</title>
     <url>/2021/02/03/front-end/simple-comparison-of-angular-and-react-build-size/</url>
     <content><![CDATA[Angular和React构建体积简单对比前言Angular是我主要使用的前端框架， 和React是我最近正在学习的前端框架。今天我想对比一下在各自默认的情况下，两者打包体积的对比。
@@ -3973,37 +4007,540 @@ main.8c8b27cf.chunk大小为804B。
       </tags>
   </entry>
   <entry>
-    <title>TypeScript中可选链</title>
-    <url>/2021/07/03/front-end/ts-optional-chaining/</url>
-    <content><![CDATA[TypeScript中可选链什么是可选链TypeScript 3.7中一个最引人关注的特性便是可选链(Optional Chaining)。
-所谓可选链，就是当我们试图使用访问对象的字段或者方法时，如果对象为null或者undefined，TypeScript将会自动停止运行的代码，以防止空指针异常。
-可选链的使用首先定义一个接口 A, 有一个字段b，b可能是字符串，也可能是null:
-interface A &#123;    b: string | null&#125;
+    <title>不使用 SSR 框架，如何给 React + Vite 实现 Prerender</title>
+    <url>/2026/10/05/front-end/use-react-and-vite-to-prerender-public-page-withou-any-ssr-framework/</url>
+    <content><![CDATA[不使用 SSR 框架，如何给 React + Vite 实现 Prerender最近在优化一个 React + Vite 项目的 SEO。
+项目本身使用 React Router Data Mode，是一个标准的 SPA。公开页面主要有：
+//subscriptions/upgrade-plan
 
-定义一个变量a:
-const a = &#123;    b: &#x27;c&#x27;&#125;
+而 /dashboard 等页面属于登录后的应用页面，并不需要搜索引擎抓取。
+最开始考虑过迁移到 React Router Framework Mode，通过 SSR 或 SSG 解决这个问题。但对于一个已经存在的 Vite SPA 来说，为了三个公开页面迁移整个应用架构，成本有些过高。
+最终采用了一个更轻量的方案：
 
-使用?.来访问字段:
-console.log(a?.b)
+保持 React + Vite SPA 架构不变，在构建阶段额外运行一次 React Static Prerender，只为指定公开页面生成静态 HTML。
 
-如果a为null或者undefined, 将输出undefined
-TypeScript做了什么可选链并不是ts的专利，在js就已经存在了，除了ie,其他现代浏览器最新版本都是支持了，但是一些老版本就不支持，因此ts没有使用js的语法，而是通过三元表达式? :转译。因此上面的代码将会转译成:
-console.log(a === null || a === void 0 ? void 0 : a.b);
+最终架构可以概括为：
+React + Vite SPA       +Build-time SSR Renderer       +React prerender()       ↓Selective SSG
 
-但是ts没有判断a是否是undefined, 而是因为在js中， undefined不仅是值，也可能是一个全局变量。直到es5之前，undefined是可以被修改的。我们可以通过下面的代码来修改:
-(function() &#123;  var undefined = 1  console.log(undefined) // 1&#125;)()
+也就是说：
 
-参考
-深入理解 TypeScript(可选链（Optional Chaining）)
-JS: The difference between “undefined”, “null” and “void 0”
-可选链操作符
+公开页面：Prerender + Hydration
+私有页面：传统 CSR
+不需要运行 Node SSR Server
+不需要迁移到 Next.js、React Router Framework Mode 等框架
 
+1. 为什么普通 Vite SPA 对 SEO 不够理想普通 Vite SPA 构建完成后的 index.html 基本是：
+&lt;div id=&quot;root&quot;&gt;&lt;/div&gt;&lt;script type=&quot;module&quot; src=&quot;/assets/index-xxx.js&quot;&gt;&lt;/script&gt;
+
+访问：
+/subscriptions
+
+实际过程是：
+HTML ↓空 #root ↓下载 JavaScript ↓React 启动 ↓React Router 匹配 /subscriptions ↓渲染页面
+
+也就是说初始 HTML 本身没有页面正文。
+我们希望公开页面变成：
+&lt;div id=&quot;root&quot;&gt;  &lt;main&gt;    &lt;h1&gt;...&lt;/h1&gt;    ...  &lt;/main&gt;&lt;/div&gt;
+
+即使关闭 JavaScript，也可以直接看到公开页面的主体内容。
+但同时又不希望 /dashboard 等页面也变成 SSR。
+所以这里真正需要的是 Selective Prerender。
+
+2. 整体构建流程最终的 build command 是：
+&#123;  &quot;scripts&quot;: &#123;    &quot;build&quot;: &quot;tsc -b &amp;&amp; vite build &amp;&amp; vite build --ssr src/entry-server.tsx --outDir dist-ssr &amp;&amp; node scripts/prerender.mjs &amp;&amp; node scripts/verify-prerender.mjs&quot;  &#125;&#125;
+
+乍一看比较长，其实可以拆成四步：
+tsc -b   ↓TypeScript checkvite build   ↓Client Build   ↓dist/vite build --ssr src/entry-server.tsx   ↓Build-time Renderer   ↓dist-ssr/scripts/prerender.mjs   ↓调用 Renderer   ↓生成静态 HTMLscripts/verify-prerender.mjs   ↓验证生成结果
+
+其中最容易产生误解的是：
+vite build --ssr
+
+这里虽然出现了 SSR，但生产环境实际上并没有 SSR Server。
+
+3. dist 和 dist-ssr 到底有什么区别？普通：
+vite build
+
+生成：
+dist/├── index.html└── assets/
+
+这些文件最终会部署给浏览器。
+而：
+vite build --ssr src/entry-server.tsx --outDir dist-ssr
+
+生成的是：
+dist-ssr/└── entry-server.js
+
+它不是给浏览器使用的。
+它的作用是：
+
+把 React 应用编译成 Node.js 在构建阶段可以执行的 Renderer。
+
+因为 Node 不能直接运行：
+entry-server.tsxApp.tsxroutes.tsxJSX / TSXVite alias...
+
+所以先通过 Vite SSR Build：
+src/entry-server.tsx        ↓   Vite SSR Build        ↓dist-ssr/entry-server.js
+
+然后 prerender.mjs 才可以：
+import &#123; render &#125; from &quot;../dist-ssr/entry-server.js&quot;;
+
+所以：
+dist/
+
+是产品。
+而：
+dist-ssr/
+
+更像是生产这个产品的工具。
+整个 build 完成以后，dist-ssr 甚至可以删除。
+
+4. Client 和 Server 必须共享 Routes原来的 Router 定义在 Router.tsx。
+为了让浏览器和构建阶段使用完全相同的 Route Tree，将 route configuration 单独拆成：
+routes.tsx
+
+然后导出：
+export const routes: RouteObject[] = [  // ...];
+
+浏览器使用：
+createBrowserRouter(routes);
+
+Prerender 使用：
+createStaticHandler(routes);
+
+形成：
+                routes.tsx                    │          ┌─────────┴─────────┐          ↓                   ↓createBrowserRouter    createStaticHandler          ↓                   ↓       Browser              Node
+
+这点非常重要。
+否则 Server Render 出来的 React Tree 和 Browser Hydration 的 React Tree 不一致，很容易产生 hydration mismatch。
+
+5. entry-server.tsx：在 Node 中模拟一次路由访问Server Entry 的核心逻辑类似：
+const handler = createStaticHandler(routes);export async function render(path: string) &#123;  const context = await handler.query(    new Request(`https://prerender.invalid$&#123;path&#125;`),  );  const router = createStaticRouter(handler.dataRoutes, context);  // ...&#125;
+
+比如：
+render(&quot;/upgrade-plan&quot;);
+
+React Router 会在 Node 环境中模拟：
+Request /upgrade-plan        ↓React Router route matching        ↓匹配 /upgrade-plan        ↓执行 loader        ↓createStaticRouter()
+
+例如这个 route 有：
+&#123;  path: &#x27;upgrade-plan&#x27;,  loader: planCatalogLoader,  element: ...&#125;
+
+那么 prerender 时 planCatalogLoader 也会执行。
+
+6. StaticRouterProvider 是做什么的？Server Render 使用：
+&lt;StaticRouterProvider router=&#123;router&#125; context=&#123;context&#125; /&gt;
+
+它除了渲染页面之外，还有一个非常重要的作用：
+把 React Router 的 hydration data 输出到 HTML。
+最终 HTML 中会出现类似：
+&lt;script&gt;  window.__staticRouterHydrationData = ...&lt;/script&gt;
+
+其中包含 React Router hydration 所需要的 route state，例如 loader data。
+所以可以粗略理解：
+Serverloader()   ↓StaticRouterProvider   ↓__staticRouterHydrationData   ↓HTML   ↓Browser   ↓createBrowserRouter()   ↓恢复 Router state
+
+这也是为什么 prerender 脚本会检查：
+markup.includes(&quot;__staticRouterHydrationData&quot;);
+
+它是在确认：
+
+React Router 的 hydration 数据确实被生成了。
+
+
+7. 使用 React prerender()构造完整 React Tree：
+const app = (  &lt;StrictMode&gt;    &lt;QueryProvider&gt;      &lt;App&gt;        &lt;StaticRouterProvider router=&#123;router&#125; context=&#123;context&#125; /&gt;      &lt;/App&gt;    &lt;/QueryProvider&gt;  &lt;/StrictMode&gt;);
+
+然后使用 React Static API：
+const &#123; prelude &#125; = await prerender(app, &#123;  onError(error) &#123;    renderError = error;  &#125;,  signal: AbortSignal.timeout(30_000),&#125;);
+
+prerender() 和传统 renderToString() 有一个很重要的区别：
+它是为 Static Generation 设计的，可以等待 Suspense 内容完成。
+这对于项目里大量存在：
+React.lazy(() =&gt; import(...))
+
+以及：
+&lt;Suspense fallback=&#123;...&#125;&gt;
+
+非常重要。
+整体过程变成：
+React Tree   ↓lazy component   ↓Suspense   ↓prerender()   ↓等待内容 ready   ↓Static HTML
+
+关于“两遍 Render”最初的实现为了确保 lazy component 和 Suspense 都已经完成，采用了：
+const &#123; prelude &#125; = await prerender(app);await new Response(prelude).text();return renderToString(app);
+
+也就是：
+prerender()   ↓等待 Suspense   ↓丢弃第一遍 HTML   ↓renderToString()   ↓生成最终 HTML
+
+这个方案可以工作，但进一步分析之后，我认为没有必要。
+prerender() 本身就是 React 提供的 Static Prerender API，因此更自然的写法是直接消费并使用它的输出：
+const &#123; prelude &#125; = await prerender(app, &#123;  onError(error) &#123;    renderError = error;  &#125;,  signal: AbortSignal.timeout(30_000),&#125;);const html = await new Response(prelude).text();if (renderError) throw renderError;return html;
+
+避免重复渲染整棵 React Tree。
+也避免组件中存在时间、随机值或其他非 deterministic 内容时，两次 render 得到不同结果。
+
+8. prerender.mjs：真正生成静态 HTML有了：
+render(&quot;/subscriptions&quot;);
+
+以后，还没有真正生成一个 HTML 文件。
+这一步由：
+scripts/prerender.mjs
+
+负责。
+首先读取 Vite 原始模板：
+const template = await readFile(resolve(&quot;dist&quot;, &quot;index.html&quot;), &quot;utf8&quot;);
+
+里面原本是：
+&lt;div id=&quot;root&quot;&gt;&lt;/div&gt;
+
+然后：
+const markup = await render(path);
+
+拿到 React 输出：
+&lt;main&gt;...&lt;/main&gt;&lt;script&gt;  window.__staticRouterHydrationData = ...&lt;/script&gt;
+
+再替换：
+template.replace(  &#x27;&lt;div id=&quot;root&quot;&gt;&lt;/div&gt;&#x27;,  () =&gt; `&lt;div id=&quot;root&quot; data-prerendered=&quot;$&#123;path&#125;&quot;&gt;$&#123;markup&#125;&lt;/div&gt;`,);
+
+最终 /subscriptions 变成：
+&lt;div id=&quot;root&quot; data-prerendered=&quot;/subscriptions&quot;&gt;  &lt;main&gt;...&lt;/main&gt;  &lt;script&gt;    window.__staticRouterHydrationData = ...  &lt;/script&gt;&lt;/div&gt;
+
+然后写入：
+dist/subscriptions/index.html
+
+
+9. 为什么需要 data-prerendered？这里专门增加了：
+data-prerendered=&quot;/subscriptions&quot;
+
+它不是 React 或 React Router 的 API。
+这是我们自己的一个 marker。
+作用是告诉 Browser：
+
+当前 #root 里面的 HTML 是专门为 /subscriptions prerender 出来的。
+
+浏览器启动时：
+const path = window.location.pathname.replace(/\/+$/, &quot;&quot;) || &quot;/&quot;;if (root.dataset.prerendered === path) &#123;  hydrateRoot(root, app);&#125; else &#123;  createRoot(root).render(app);&#125;
+
+例如：
+URL/subscriptionsHTML markerdata-prerendered=&quot;/subscriptions&quot;
+
+匹配：
+&quot;/subscriptions&quot; === &quot;/subscriptions&quot;;
+
+于是：
+hydrateRoot(root, app);
+
+React 不需要重新创建整个 DOM，而是直接 hydrate 已经存在的静态 HTML。
+
+10. 非 Prerender 页面继续使用 createRoot我们并不希望所有页面都 prerender。
+例如：
+/dashboard
+
+依然应该是传统 SPA。
+所以构建时先保存原始 Vite shell：
+await writeFile(resolve(out, &quot;spa.html&quot;), template);
+
+其中仍然是：
+&lt;div id=&quot;root&quot;&gt;&lt;/div&gt;
+
+访问 /dashboard 时：
+root.dataset.prerendered;
+
+是：
+undefined;
+
+因此：
+createRoot(root).render(app);
+
+最终形成：
+Public page/subscriptions      ↓Static HTML      ↓hydrateRoot()Private / CSR page/dashboard      ↓spa.html      ↓empty #root      ↓createRoot()
+
+这就是整个 Selective Prerender 的核心。
+
+11. 为什么 Router.tsx 还要删除 Hydration Data？Router 初始化还有一个容易忽略的细节：
+const root = document.getElementById(&quot;root&quot;);const path = window.location.pathname.replace(/\/+$/, &quot;&quot;) || &quot;/&quot;;if (root?.dataset.prerendered !== path) &#123;  Reflect.deleteProperty(window, &quot;__staticRouterHydrationData&quot;);&#125;const router = createBrowserRouter(routes);
+
+为什么？
+因为：
+createBrowserRouter(routes);
+
+会读取 React Router 已经存在的 hydration data。
+只有：
+data-prerendered        ===current pathname
+
+才能证明这份 hydration data 属于当前页面。
+如果不匹配，就应该删除：
+window.__staticRouterHydrationData;
+
+让 React Router 正常按照 CSR 模式启动。
+注意顺序也很重要：
+delete hydration data        ↓createBrowserRouter()
+
+不能反过来。
+因为 Router 创建时就可能已经读取 hydration data。
+
+12. React Hydration 和 Router Hydration 是两回事这是整个实现中一个很容易混淆的地方。
+main.tsx：
+hydrateRoot(root, app);
+
+处理的是：
+
+React DOM 是否复用已有 HTML。
+
+而 Router 中：
+window.__staticRouterHydrationData;
+
+处理的是：
+
+React Router 是否复用构建阶段产生的 route &#x2F; loader state。
+
+所以实际上有两个 hydration：
+data-prerendered === current path              │       ┌──────┴──────┐       ↓             ↓ React DOM       React Router       ↓             ↓hydrateRoot()    保留 hydration data
+
+如果不是 prerender 页面：
+data-prerendered !== current path              │       ┌──────┴──────┐       ↓             ↓ React DOM       React Router       ↓             ↓createRoot()     删除 hydration data
+
+两者职责不同，但判断依据相同。
+
+13. 不要用 &lt;h1&gt; 判断 Prerender 是否成功最初的 prerender script 中还有：
+if (  !markup.includes(&quot;&lt;h1&quot;) ||  !markup.includes(&quot;__staticRouterHydrationData&quot;)) &#123;  throw new Error(`Missing content or hydration data: $&#123;path&#125;`);&#125;
+
+这里：
+__staticRouterHydrationData;
+
+是合理的 hydration contract。
+但是：
+markup.includes(&quot;&lt;h1&quot;);
+
+只是一个比较脆弱的 heuristic。
+它实际上是在说：
+
+如果 HTML 里存在 &lt;h1&gt;，就认为页面成功 render 了。
+
+但 &lt;h1&gt; 属于页面语义和 SEO 规则，并不是 prerender 的技术要求。
+更合理的是：
+if (!markup.trim() || !markup.includes(&quot;__staticRouterHydrationData&quot;)) &#123;  throw new Error(`Missing content or hydration data: $&#123;path&#125;`);&#125;
+
+分别验证：
+markup.trim()      ↓React 确实输出了内容__staticRouterHydrationData      ↓React Router hydration data 存在
+
+然后最终 HTML 再通过：
+data-prerendered=&quot;/subscriptions&quot;
+
+确认它属于哪个 path。
+至于：
+&lt;h1&gt;&lt;/h1&gt;
+
+可以继续放在 verify-prerender.mjs 中作为 SEO &#x2F; semantic verification：
+assert.equal(doc.querySelectorAll(&quot;h1&quot;).length, 1);
+
+这两个层次最好分开：
+Prerender correctness        ↓有内容有 hydration data有 data-prerenderedSEO correctness        ↓一个 h1足够正文内容价格存在...
+
+
+14. 为什么还需要 verify-prerender.mjs？只生成文件还不够。
+构建完成后会自动执行：
+node scripts/verify-prerender.mjs
+
+验证包括：
+
+spa.html 的 root 仍然为空
+SPA shell 不包含 hydration data
+prerender 页面存在正确的 data-prerendered
+页面只有一个 &lt;h1&gt;
+&lt;main&gt; 中存在足够的正文内容
+存在 __staticRouterHydrationData
+没有 fallback 到 Switch to client rendering
+CSS &#x2F; JS assets 和原始 Vite shell 一致
+Vercel rewrite 指向正确 HTML
+/subscriptions 与 /subscriptions/ 都能匹配
+API&#x2F;BFF rewrite 没有被破坏
+
+这一步其实很有价值。
+因为 prerender 最危险的情况不是 build 失败，而是：
+
+Build 成功了，但是生成的是 Loading Skeleton 或空页面。
+
+Verification 可以直接在 CI 阶段阻止这种错误部署。
+
+15. Vercel Routing最终静态目录类似：
+dist/├── index.html├── spa.html├── subscriptions/│   └── index.html├── upgrade-plan/│   └── index.html└── assets/
+
+Vercel 中显式配置：
+/                         → /index.html/subscriptions            → /subscriptions/index.html/subscriptions/           → /subscriptions/index.html/upgrade-plan             → /upgrade-plan/index.html/upgrade-plan/            → /upgrade-plan/index.html其他页面                           → /spa.html
+
+同时：
+/api/*/bff/*
+
+继续保持原来的 Serverless Function &#x2F; Worker rewrite。
+这意味着 prerender 完全没有改变应用原来的 API 架构。
+
+16. 最终架构完整构建过程：
+             Source Code                 │     ┌───────────┴───────────┐     │                       │vite build            vite build --ssr     │                       │     ▼                       ▼   dist/                  dist-ssr/Client Assets          entry-server.js     │                       │     │                 render(path)     │                       │     │                React prerender()     │                       │     └───────────┬───────────┘                 ▼          prerender.mjs                 │     ┌───────────┼───────────┐     ▼           ▼           ▼     /    /subscriptions  /upgrade-plan     │           │           │     ▼           ▼           ▼  Static       Static      Static   HTML         HTML        HTML                 │                 ▼       verify-prerender.mjs                 │                 ▼            Deploy dist/
+
+浏览器端则是：
+                   Browser Request                         │             ┌───────────┴───────────┐             │                       │        Public Route              CSR Route             │                       │        Static HTML                spa.html             │                       │data-prerendered matches          empty root             │                       │      hydrateRoot()              createRoot()             │                       │             └───────────┬───────────┘                         ▼                      React App
+
+
+17. 这个方案适合什么场景？这个方案比较适合：
+
+已经存在的 React + Vite SPA
+不想迁移 SSR Framework
+只有少量公开页面需要 SEO
+大量后台页面不需要 SSR
+希望继续使用现有 Vercel Static Deployment
+希望最小化架构改造
+
+例如：
+Marketing pages       → PrerenderPricing pages         → PrerenderPublic product pages  → PrerenderDashboard             → CSRSettings              → CSRAdmin                  → CSRAuthenticated pages   → CSR
+
+如果未来需要 prerender：
+/products/:id/blog/:slug/categories/:id
+
+几百甚至几千个动态页面，那么继续维护自己的 SSG Pipeline 的复杂度会逐渐增加。
+到那个阶段再考虑 React Router Framework Mode、Next.js 等完整框架会更加合理。
+但对于只有几个公开页面需要 SEO 的成熟 Vite SPA，为了 SSR 重构整个应用往往并不划算。
+
+总结整个方案最重要的并不是 vite build --ssr 本身，而是把不同职责拆开：
+Vite Client Build→ 负责浏览器运行Vite SSR Build→ 负责生成构建阶段可执行的 RendererReact prerender()→ 负责把 React Tree 转成静态 HTMLStaticRouterProvider→ 负责 Server Router 和 hydration datadata-prerendered→ 标识 HTML 属于哪个 routehydrateRoot()→ 接管已经生成的静态 HTMLcreateRoot()→ 保持其他页面传统 CSRspa.html→ 保留原来的 SPA fallbackverify-prerender→ 防止错误的静态 HTML 被部署
+
+最终得到的并不是一个 SSR Application，而仍然是一个静态部署的 React SPA。
+只不过构建阶段额外做了一件事：
+
+提前把搜索引擎需要看到的几个页面渲染好了。
+
+这是一种介于纯 SPA 和完整 SSR Framework 之间的方案：
+React + Vite + Build-time Prerender + Selective Hydration。
 ]]></content>
       <categories>
         <category>前端</category>
       </categories>
       <tags>
-        <tag>typeScript</tag>
+        <tag>react</tag>
+        <tag>react-router</tag>
+        <tag>react-dom</tag>
+        <tag>vite</tag>
+        <tag>prerender</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>2022年度总结</title>
+    <url>/2021/12/31/summary/2022/</url>
+    <content><![CDATA[2022年度总结2022年真的是一个让人难以忘怀的年份，尤其在先后经历了上海封城、老丈人去世、领证结婚。
+疫情还记得2020年疫情刚开始的时候，那时侯自己一个人开车回上海，路上的车辆非常少，开车的感觉真的可以说非常爽，完全可以闭着眼开车，反正看不到车，即使进了上海市区。那个时候单纯的想，少则三个月，多则半年，疫情就会自然而然的过去，到时候我们该吃吃该喝喝。虽然这个判断翻车了，但是2021年也是对国内疫情还是比较乐观。但是2022年的上海封城打破了我所有的幻想。我从来没想过上海居然玩砸了“动态清理”，从华亭宾馆开始，上海的疫情持续不断，感染人数死活都下不去。
+3月份我刚搬到南翔就被封控了，但是我刚开始还好，虽然什么吃的都没有，但是只要封控时间到了就能出去买点东西。但遗憾的是，从4月份开始，上海开始静默了，我足足封在家里差不多两个月。我本来是不反对封城的，但是上海市政府真的很让人失望，疫情两年了，市政府似乎没有做好任何相关封城的预案。而且总感觉可能涉及到二十大的高层安排，市政府决策层应该是存在分歧的，并且和医疗系统的人也存在一定的隔阂。由于上层的问题，基层机构出现各种乱七八糟的事儿那也能理解了。
+在经过了白纸运动之后，我们的防疫政策从一个极端走向另外一个极端。我们彻底放开了，让80%以上的人感染了一遍。我不是反对放开，但是我比较反对如此毫无征兆的放开，没有准备好各种的退烧药，没有准备好口罩。
+技术今年继续做一个web2.5的项目，就是web2.0 + 区块链，不能算得上正宗的web3.0。其核心就是将部分原来放在数据库的数据放在区块链里。所以我们一般自称为web2.5。
+目前部门想全力押宝·web3·，希望能和审计部门能够做好技术服务，所以未来对区块链的研究大概率是会集中中DeFi(去中心化金融)。对我来说，金融是一个毫无头绪的东西，之前并没有接触过，没有一个良好的业务场景可以让我研究，导致对我来说DeFi可能只是一个比较空泛的名词。
+过去的一年，对以太坊还是比较浅显的，同时将也做了一些简单的demo。总的来说，也算简单的入门学了点皮毛，但是对智能合约的开发还是基本上一窍不通的。希望接下来的一年可以深入研究智能合约，可以独立开发智能合约并部署到一个测试网络。solana也会是一个比较重要的关注方向，但是考虑到solana的东家出点事儿，可能不太会重心在这个方面，不过rust语言还是会尽量深挖一下，这是一个很有挑战性的方向
+今年应该很少写angular了，更多开始写react。从我个人的角度来说，jsx和react hook对写一些组件来说确实是一把利器，但是对于如何做好一个完整的、强大的前端web应用来说，react的生态是不足的，太碎裂了，导致在接手不同的项目的时候总是能看到不同的react写法和工程组织形式。最近在react-mobile-picker做一个重构。一个方面是想改成通用的monorepo的组织形式，另外一个方面是需要升级核心依赖并使用typescript重写。目前这个工作还在努力中。 angular方面更多的专注于ngx-dom-confetti, 目前仅仅是对dom-confetti的angular封装，将来的计划是参考ripple的代码设计，将来可以好好的重构这个项目。hoteler-web是我一直会维护的angular的项目。
+今天在google domains买了个域名，然后尝试使用k3s的ingress部署了[https://hoteler.damingerdai.com/]。感觉使用k3s部署一些简单的应用基本上问题不大了。[hoteler](https://github.com/damingerdai/hoteler)已经是一个很稳定的demo，大概率是不会进行大规模的重构了。所以目前只有一个很简单的想法那就是使用spring cloud进行重写，这个是不太能自己部署到线上环境了，毕竟服务器资源就那么点，跑不起那么多的资源。
+针对golang的话，我目前私下的在做一个关于健康的demo，目前还在开发中，前端使用react，后端使用golang。目前希望在技术上的突破是使用loki做日志管理，Jaeger用于链路追踪，这是1.0的计划。2.0的话（如果有时间的话），希望可以加入区块链的一些元素，至少能做成个·web2.5·。
+今年其实还是探索了很多的技术。比如minio, harbor, drone, gogs和gitea。
+个人生活今天对我最大的事儿就是结婚了，没有比举办婚礼更重要的事儿了。本来由于收到上半年疫情的影响，原来不指望今年结婚的。本来定的日子是明年的正月办酒席，但是丈母娘觉得今年的夏天那么热，冬天一定很会冷，希望我们今年就是把事儿办了。所以婚期提前到11月份举行，本来日子选的好好的，也没啥好纠结的，毕竟妹子是自己谈的。但是明天和意外你永远都不知道哪个先来，我老丈人在婚礼的前两天去世了。在婚礼前的几个礼拜，我老丈人生病了，是便秘导致的肠梗阻。在医院治疗了一段时间本来已经治好了，但是不知道是医院的水平问题还是我老丈人本身的问题，在治疗过程中可能没有控制好糖尿病导致肺部感染， 在icu躺了几天之后终究将抢救无效去世，年仅50岁。在殡仪馆里，我看到同批火化的人中就属我老丈人最年轻。有的时间真的感觉世事无常，国庆节回去的时候，老丈人还好好的，结果才过去一个月不到，人就没了。
+展望未来对2023年这个经济判断是真的不太好说，谁也不知道明年会怎么想，我也不敢瞎说，我只能我大概率会重点关注·DeFi·。然后希望能够保住就业，保住现金流。
+]]></content>
+  </entry>
+  <entry>
+    <title>2023年度总结</title>
+    <url>/2024/01/06/summary/2023/</url>
+    <content><![CDATA[2023年度总结2023年就这样子莫名其妙的过了，又是稀里糊涂的一年。这一年，和最爱的人去了一趟西藏，圆了她心心念念的梦想；这一年，坐了30多小时的火车，跨越千里去见证一段美好的爱情；这一年，参加了加入PWC以来第二次的线下年会，疫情总算是过去了。
+美好的西藏其实是先从上海到成都出发，在成都带了两天，陪她那只叫做花花的大熊猫。 其实19年时候我去过成都大熊貓繁育研究基地，那个时候还没有花花，也没有那么多的游客，当然也有可能我去的是淡季，不过总算是满足她的心愿了。吃了当地的特色，三大炮，鸡豆花，兔腿，麻婆豆腐，其实那个陈麻婆的那个夫妻肺片还是很有特色的，不辣，有点甜，和紫燕百味鸡的那个压根就不一样的。
+我们是报了一个旅行团，四个人，一个司机。除了我们之外，还有一个山东小哥，一个四川小伙。山东小哥是真的很社牛，和什么人都能聊起来，喜欢旅游，朋友圈三天两头出去玩，晒各地的美景。四川小伙是拿到美国一家博士的offer了，想在出国前能够好好放松一下。四个人一个司机，就这样子从成都沿着318国道出发了。
+去了很多地方，但是我没记住，因为这不是我热爱的，吃了很多美食，我记住了它们的味道，永远不会忘记。
+到了拉萨，我们去看了小昭寺，布达拉宫。吃了当地牦牛肉，喝了当地的牦牛奶做的奶茶。真的是美滋滋的日子啊。
+
+
+
+
+
+
+PWC线下年会我是19年加入PWC的。PWC的年会其实是财年的意思，所以通常是5月份办年会。20年收到疫情的影响，此后的年会都是线上举行的，虽然有元宇宙的等加持，但是对我来而已其实并没有参与感的。收到疫情的影响，很多同事已经没有来公司面对面办公了，曾经的团队早就各奔东西，甚至都不在一个部门的了。
+终于，口罩没了，在加入PWC的第四年中，迎来的第二次线下年会。酒店更高级了，吃的很好，食物也精致，但是呢，我还是感觉19年那次年会吃的更惬意点。
+
+嘉峪关之行嘉峪关之行单纯的是因为大学同学结婚，便选择坐了30多小时的火车，先去西安和好友会和，再去嘉峪关。嘉峪关风景不错，可惜很难再有机会去了。
+
+其他我们还去来了迪士尼
+
+参加她的大学同学的婚礼
+
+最后Time files over us, but leaves its shadow behind.
+]]></content>
+  </entry>
+  <entry>
+    <title>2024年度总结</title>
+    <url>/2025/01/13/summary/2024/</url>
+    <content><![CDATA[2024年度总结对我来说，2024年是一个特别有意义的一年。8月24号，我美丽又可爱的宝宝出生了，体验到了初为人父的喜悦；10月7号，国庆节刚过，公司人事就开邮件通知我我的岗位被取消了。
+初为人父的喜悦孩子的出生时间其实挺意外的。由于老婆在9月初有一场很重要的考试，所以不能耽搁，所以原来计划在20号去医院打催产素的，结果因为报告晚了一天，然后就被通知不用打催产素，已经开始见红了。不过开宫口的速度很慢，过两天还是上催产素了。我记得那个时候我在家里呆着，医院我有丈母娘陪着，反正又不可能那么急着生出来，我就回家先好好休息，打算第二天过去。结果第二天我丈母娘就通知我让我赶紧过去签字给我老婆打催产素。一波三折，到最后这个催产素还是打上去了。在6号待产室，晚上6点06分，7斤2两，我可爱的儿子就这样子平平安安的出生了。说实话，我并没有在第一时间听到孩子的哭声，相反这个小家伙睡的死死的。我伸过去看看了他，第一感觉他好丑啊，头型怪怪的，有点拉长的样子。听医生说，刚出生的小宝宝通常产道的挤压，出来的时候头多多少少会有点拉长的样子，等长大点就好了。
+孩子的出生，对我来说是一个特殊的人生里程碑，从这一刻开始，我不仅仅是一个普通的牛马，更是一个上有老下有小的天选牛马。就这样一下子，感觉身上的责任明显重了很多。算了一下孩子的奶粉钱，尿不湿的钱，将来休学的钱，以后娶老婆的钱和彩礼，还有供养老婆大人吃喝玩乐的钱。处处都是钱，处处都是压力。我也不知道将来孩子会活成什么样子，但是我不奢望他能出人头地，只希望平平安安的长大；不期待他将来学业有成，事业非凡，只希望他能过的自在安心。
+裁员其实裁员是有点风声的，但是一直都是狼来的状态。在国庆节，部门领导就私下的就透露过每个leader都需要上交一份裁员名单，更上级的领导会根据这份名单裁员。对于我这种干活儿的小喽啰，大概率是可以保住饭碗的，毕竟我还是比较能干活儿的，最近做的项目也是比较有钱的其实。
+但是非常尴尬的是，确实是裁员了，但是不是上海发起的裁员，是美国发起的裁员。美国最高层决定全球裁员好几千人，预计涉及美国，墨西哥，印度和上海几个地方的office。
+这次裁员主要是我们P &amp; T部门，其他部门似乎还好好的。P &amp; T由Labs和Digital两个小部门，我们labs这边十分平静的接受了这次裁员，大家虽然都不太能接受，但是普遍选择认命，大家该吃吃该喝喝，好聚好散。但是隔壁部门是有人闹了下，但是很快就没下文了。后来我听说出头闹事的人第一个找到工作之后就不出头了，结果也就没人闹事了。
+找工作找工作挺难的，基本上都是外包。没做面试的记录，就随便回忆一下吧。面试PayPal外包, 二面和三面一起面的，挂了，感觉二面和三面都不是很好。面试VOA2(一家不错的法资小公司)，因为英语和岗位不合适挂。面试迪士尼外包，一面挂了，搞笑的是又一家外包来邀请我去面试，主要是迪士尼的技术栈是Angular+Graphql，比较小众，但是我都用过，我不太想去，但是对方劝了我好几次，最后还是在二面挂了（面试三次，挂了两次，挺好玩的经历）。面试花旗外包，二面挂了，其实本来是挺有机会的，但是二面就27分钟，还算上我问的问题，只能被挂了。面试华钦（华钦是外包公司，但是这个岗位不是外包），我明明面试的是前端，面试官是后端的，道不同。面试摩根士丹利外包，二面过了，感觉比较水，相对好近。
+摩根士丹利进入摩根士丹利之后其实有段时间是不太适应的，习惯了普华永道这种混合办公和不定时工作制，不太能接受摩根士丹利这种965的风格，不过还好，两周就适应了，发了工资就更加适应，没有必要和钱过不去。摩根士丹利里面什么情况我不方便多说，但是根据工作安排来看，坚持到2026年底问题不大，以后就再说吧。
+总结如果没有裁员这回事儿，那么2024年对我还是一个挺不错的年份。涨点工资（普华永道每年7月调薪），有个儿子，本来就可以这样子过去了。可惜没有如果，现在在摩根做外包也能接受，毕竟正式员工对我们算得上非常nice了。希望2025年可以平平安安，保住工作，少点个人消费，多点留给家人。技术也没有什么大的想法，保住工作就行，苟活到经济能够真的复苏吧。
+]]></content>
+  </entry>
+  <entry>
+    <title>2025年度总结</title>
+    <url>/2026/02/24/summary/2025/</url>
+    <content><![CDATA[2025年度总结对我来说，2025年其实又是一个特别有意义的一年。3月初陪老婆去了一次她心心念念的日本，11月的最后一天，在中介第二次带看的情况，匆匆忙忙的买下上海一套二手房，圆了老婆又一个心愿。
+日本之行日本原计划是24年底就去的，但是因为失业，只关心找工作就放弃了。我本身去日本的兴趣不大，但是老婆非常想去就很仓促的时间定下去日本。我们去的是大阪，大概还有一个月的时候就是大阪世博会了，3月份初去还是还好，要是晚了估计人就太多了。
+大阪
+
+
+
+
+在大阪玩的很开心，感觉大阪是一个很国际化的大都市，不少西方和东南亚的面孔。就算看上去东亚面孔，也有很大的可能是中国人。我真的在大阪的地铁里听两个中国人可能是仗着日本人听不懂中国话说着非常非常虎狼的词儿。
+
+
+在大阪住的酒店有个温泉，可以免费去泡澡，没有国内那种搓澡等服务，就是纯粹的泡澡。 水很温和，不是十分烫人，让人感觉到十分舒服，感觉真的可以吸取洗去一声的疲惫。看了酒店的说明，估计这个温泉真的是从山里拉来的真的地下水，比国内所谓温泉但是就是自己烧开水强多了。
+
+
+在大阪，环球影城应该算得上必打卡点了，加上有一个马里奥馆，还是很值得去的。个人比较推荐的是水世界的表演，真的是非常的精彩，特技效果很好，有时间还是很推荐去看看的。
+宇治
+
+
+
+
+老婆是抹茶的超级粉丝，想去宇治。虽然我对此不是很感兴趣，更想去奈良。可惜行程有限，奈良和宇治只能二选一，所以最后是花了一天的时间去宇治。宇治是一个很不错的小城，但是去宇治的电车就不如大阪友好了。大阪的轨道交通都是日，中，英，韩四种语言，而去宇治的电车就日英两种选择了。
+城市不大，但是风景很不错，可能是淡季，游客不算多，但是还好。抹茶嘛，毫无兴趣，不做评价。
+买房老婆买房的想法其实很久了，24年就开始在网上看房了。不知道为什么，25年下半年就特别积极，我本来想着要不26、27年买房吧，要是房价涨了就算自己倒霉。我老婆的意思就先看看，可以考虑一下。可能是被当时租住的小区9月初卖了一套275万刺激，她觉得差不多了，想线下先看看，然后当月底约了一次中介去看过一次房。本来想着下次看房就要26年了，但是不知道老婆是怎么想的，想再看看，然后11月30号，我也没啥事儿，就一起去看看房子。我们这次看了四套房子，其中第四套有点大，价格超过预算，只是中介带我们去看看90平的房子大概是什么布局，估计他没想法当天他就成了一单。
+其实第一套和第二套我不是很满意，第一套价格低点，但是维护很差，重新装修需要花费很大的精力；第二套价格贵点，地段稍微好点，层楼好点，但装修也很一般，大概率还是重新装修。第三套的装修很好，17年的装修到现在都不过时，整体的设计很好的考虑到家里有小宝宝的情况，边边角角都做了圆角设计，材料可以看得出很明显是非常不错的，没有使用比较次的材料，保养也很好，听中介说房东是拿来自住的，没出租过。可能唯一的缺点就是在5楼，爬楼梯有点困难。
+11月30号，上午看房，下午带我妈妈和小宝宝也看了下，宝宝好像挺喜欢的，东看看西看看，应该也看上了吧。然后就宝山链家的中心就和房东谈判了，经过中介的谈判，我们最后还是拿下了这套房。挺快的，也很幸运，就这个装修，其实有不少人在抢，听中介说，上次就有人看上了，可惜约时间的时候不是房东没时间就是购房人没时间，我们去看房的时候，其实还有一个小姐姐也去看了，好像也有兴趣，可惜被我们抢先了。
+很开心能够在上海这个繁华的都市能够拥有一套自己的房子，感谢我老婆，没有她，我大概率不会留在上海，感谢我的孩子，没有他，我压根就没有留下的动力。
+技术摩根士丹利的工作没有可以值得说道的，没有太大的价值，但是我也学到很多东西，我第一次接触到了gitops，现在也在私下的学习这套概念。
+利用春节假期，尝试部署了一套自己的部署体系（kite,prometheus&#x2F;grafana, zot registry），尝试使用helm部署项目，感觉还不错。
+
+
+
+2026 · 向上生长2025 是沉淀与思考的一年。有探索，也有试错；有不确定，也有新的方向。
+2026，希望自己——
+在技术上，更专注本质。少一些浮躁，多一些深度；少一些追逐热点，多一些长期主义。
+在工作上，更从容坚定。把复杂问题拆解清楚，把系统设计得更优雅；让每一行代码，都对得起时间。
+在生活里，更有温度。给家人更多陪伴，给自己更多耐心，在快节奏里守住节奏。
+愿 2026，不是简单的“更忙”，而是“更好”。
+持续学习，持续创造，持续成为更清醒的自己。
+]]></content>
+  </entry>
+  <entry>
+    <title>记录一些测试币的水龙头</title>
+    <url>/2023/01/07/web3/some-token-faucet/</url>
+    <content><![CDATA[记录一些测试币的水龙头记录一些常用的区块链水龙头，以防忘记
+GoerliGoerli Testnet Faucet: 不太记得当初是怎么知道了，但是似乎永远失败…
+GOERLI FAUCET, 每天可以获取0.1 ETH(以前是可以每天领取0.25ETH), 需要使用Alchemy账号.
+Mining Faucet, 使用cpu的算力去挖矿，问题不大，可以使用。
+polygonpolygon faucet, 支持多个测试网络，但是Goerli的ETH没拿到
+参考资料
+免費取得Goerli測試幣
+
+]]></content>
+      <categories>
+        <category>web3</category>
+      </categories>
+      <tags>
+        <tag>web3</tag>
+        <tag>Goerli</tag>
+        <tag>polygon</tag>
       </tags>
   </entry>
   <entry>
@@ -4162,52 +4699,6 @@ docker compose up
       </tags>
   </entry>
   <entry>
-    <title>在k3s中配置私有镜像仓库</title>
-    <url>/2025/03/06/software/connect-to-private-docker-registry-in-k3s/</url>
-    <content><![CDATA[前言本文的目的是实现在k3s中可以访问使用docker部署registry。
-部署registry启动一个一次性容器用于创建账号密码.密码文件路径以&#x2F;root&#x2F;registry&#x2F;htpasswd为例,账号密码以admin和12345678为例.
-docker run --rm --entrypoint \    htpasswd httpd:2 -Bbn \    admin 12345678 &gt; ./registry/htpasswd
-
-编写docker compose的yaml文件用于启动registry。
-services:  registry:    image: registry:2    container_name: registry    volumes:      # - ./config.yml:/etc/docker/registry/config.yml      - ./htpasswd:/auth/htpasswd      - ./registry:/var/lib/registry      - /etc/localtime:/etc/localtime    ports:      - 5000:5000    environment:      - REGISTRY_AUTH=htpasswd      - REGISTRY_AUTH_HTPASSWD_PATH=/auth/htpasswd      - REGISTRY_AUTH_HTPASSWD_REALM=Registry Realm      - REGISTRY_STORAGE_DELETE_ENABLED=true    networks:      - registry-network    restart: always    extra_hosts:      - host.docker.internal:host-gatewaynetworks:  registry-network:    external: false
-
-resistry默认提供web ui使用，我们可以使用docker-registry-ui部署一个web ui。
-registry-ui:image: joxit/docker-registry-ui:maincontainer_name: registry-uirestart: alwaysports:  - 5001:80environment:  - SINGLE_REGISTRY=true  - REGISTRY_TITLE=Docker Registry UI  - DELETE_IMAGES=true  - SHOW_CONTENT_DIGEST=true  - NGINX_PROXY_PASS_URL=http://registry:5000  - SHOW_CATALOG_NB_TAGS=true  - CATALOG_MIN_BRANCHES=1  - CATALOG_MAX_BRANCHES=1  - TAGLIST_PAGE_SIZE=100  - REGISTRY_SECURED=false  - CATALOG_ELEMENTS_LIMIT=1000networks:  - registry-networkextra_hosts:  - host.docker.internal:host-gateway
-
-然后通过·docker compose up -d·就可以启动了。
-docker连接私有仓库docker默认不支持http协议，需要额外配置, 通过在&#x2F;etc&#x2F;docker&#x2F;daemon.json 中将私有仓库地址添加进入就好了。
-&#123;  &quot;insecure-registries&quot;: [&quot;192.168.31.220:5000&quot;]&#125;
-
-然后可以通过docker login去登陆私有仓库。
-docker login 192.168.31.220:5000
-
-k3s连接私有仓库如果k3s使用docker运行时就不需要额外的操作了，就可以操作了应该（没试过）
-如果k3s使用containerd运行时，需要自行配置&#x2F;var&#x2F;lib&#x2F;rancher&#x2F;k3s&#x2F;agent&#x2F;etc&#x2F;containerd&#x2F;config.toml。
-一般而言不鼓励直接修改&#x2F;var&#x2F;lib&#x2F;rancher&#x2F;k3s&#x2F;agent&#x2F;etc&#x2F;containerd&#x2F;config.toml文件，而是通过 &#x2F;etc&#x2F;rancher&#x2F;k3s&#x2F;registries.yaml让k3s自行生成containerd的配置文件。
-mirrors:  &quot;192.168.31.220:5000&quot;:    endpoint:      - &quot;http://192.168.31.220:5000&quot;configs:  &quot;192.168.31.220:5000&quot;:    auth:      username: admin      password: password    tls:      insecure_skip_verify: true
-
-mirrors定义镜像仓库的镜像规则（mirror），用于指定如何访问特定的私有仓库。当容器运行时尝试拉取镜像时，会根据 mirrors 的配置决定从哪个地址拉取。configs定义私有仓库的认证和 TLS 配置。当访问私有仓库时，容器运行时会使用这里配置的用户名、密码和 TLS 设置。
-有的时候k3s不一定能够实时自动监听registries.yaml的改动，所以最好的方式还是重启k3s:
-sudo systemctl restart k3s-agent   # worker 节点# 或者sudo systemctl restart k3s         # server 节点
-
-现在可以通过创建一个pod去测试k3s是否正常访问私有仓库。
-这里推荐使用crictl去直接拉取私有仓库的镜像。
-sudo crictl pull 192.168.31.220:5000/hoteler-api:07e1b87e82ccfc49e5bee7d3d88cf2c304376056
-
-参考资料
-Docker login 登录私服，报错； http: server gave HTTP response to HTTPS client
-Private Registry Configuration
-
-]]></content>
-      <categories>
-        <category>软件</category>
-      </categories>
-      <tags>
-        <tag>k3s</tag>
-        <tag>docker registry</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>🚀 玩转 Homelab：使用 Helm 在 K3s 中部署 Gitea，并接入外部 PostgreSQL</title>
     <url>/2026/06/14/software/deploy-gitea-in-k3s-on-homelab/</url>
     <content><![CDATA[🚀 玩转 Homelab：使用 Helm 在 K3s 中部署 Gitea，并接入外部 PostgreSQL在自己的内网（Homelab）环境里，拥有一个轻量、好用、全加密（HTTPS）的代码托管系统是每个开发者的梦想。今天这篇博客就带大家复盘，如何利用 K3s、Traefik 网关以及外部自建的 PostgreSQL 数据库，一步步搭建属于自己的 Gitea。
@@ -4325,6 +4816,52 @@ NXDOMAIN 错误：因为是内网域名，公共 DNS 无法解析。解决办法
         <tag>gitea</tag>
         <tag>helm</tag>
         <tag>Kubernetes</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>在k3s中配置私有镜像仓库</title>
+    <url>/2025/03/06/software/connect-to-private-docker-registry-in-k3s/</url>
+    <content><![CDATA[前言本文的目的是实现在k3s中可以访问使用docker部署registry。
+部署registry启动一个一次性容器用于创建账号密码.密码文件路径以&#x2F;root&#x2F;registry&#x2F;htpasswd为例,账号密码以admin和12345678为例.
+docker run --rm --entrypoint \    htpasswd httpd:2 -Bbn \    admin 12345678 &gt; ./registry/htpasswd
+
+编写docker compose的yaml文件用于启动registry。
+services:  registry:    image: registry:2    container_name: registry    volumes:      # - ./config.yml:/etc/docker/registry/config.yml      - ./htpasswd:/auth/htpasswd      - ./registry:/var/lib/registry      - /etc/localtime:/etc/localtime    ports:      - 5000:5000    environment:      - REGISTRY_AUTH=htpasswd      - REGISTRY_AUTH_HTPASSWD_PATH=/auth/htpasswd      - REGISTRY_AUTH_HTPASSWD_REALM=Registry Realm      - REGISTRY_STORAGE_DELETE_ENABLED=true    networks:      - registry-network    restart: always    extra_hosts:      - host.docker.internal:host-gatewaynetworks:  registry-network:    external: false
+
+resistry默认提供web ui使用，我们可以使用docker-registry-ui部署一个web ui。
+registry-ui:image: joxit/docker-registry-ui:maincontainer_name: registry-uirestart: alwaysports:  - 5001:80environment:  - SINGLE_REGISTRY=true  - REGISTRY_TITLE=Docker Registry UI  - DELETE_IMAGES=true  - SHOW_CONTENT_DIGEST=true  - NGINX_PROXY_PASS_URL=http://registry:5000  - SHOW_CATALOG_NB_TAGS=true  - CATALOG_MIN_BRANCHES=1  - CATALOG_MAX_BRANCHES=1  - TAGLIST_PAGE_SIZE=100  - REGISTRY_SECURED=false  - CATALOG_ELEMENTS_LIMIT=1000networks:  - registry-networkextra_hosts:  - host.docker.internal:host-gateway
+
+然后通过·docker compose up -d·就可以启动了。
+docker连接私有仓库docker默认不支持http协议，需要额外配置, 通过在&#x2F;etc&#x2F;docker&#x2F;daemon.json 中将私有仓库地址添加进入就好了。
+&#123;  &quot;insecure-registries&quot;: [&quot;192.168.31.220:5000&quot;]&#125;
+
+然后可以通过docker login去登陆私有仓库。
+docker login 192.168.31.220:5000
+
+k3s连接私有仓库如果k3s使用docker运行时就不需要额外的操作了，就可以操作了应该（没试过）
+如果k3s使用containerd运行时，需要自行配置&#x2F;var&#x2F;lib&#x2F;rancher&#x2F;k3s&#x2F;agent&#x2F;etc&#x2F;containerd&#x2F;config.toml。
+一般而言不鼓励直接修改&#x2F;var&#x2F;lib&#x2F;rancher&#x2F;k3s&#x2F;agent&#x2F;etc&#x2F;containerd&#x2F;config.toml文件，而是通过 &#x2F;etc&#x2F;rancher&#x2F;k3s&#x2F;registries.yaml让k3s自行生成containerd的配置文件。
+mirrors:  &quot;192.168.31.220:5000&quot;:    endpoint:      - &quot;http://192.168.31.220:5000&quot;configs:  &quot;192.168.31.220:5000&quot;:    auth:      username: admin      password: password    tls:      insecure_skip_verify: true
+
+mirrors定义镜像仓库的镜像规则（mirror），用于指定如何访问特定的私有仓库。当容器运行时尝试拉取镜像时，会根据 mirrors 的配置决定从哪个地址拉取。configs定义私有仓库的认证和 TLS 配置。当访问私有仓库时，容器运行时会使用这里配置的用户名、密码和 TLS 设置。
+有的时候k3s不一定能够实时自动监听registries.yaml的改动，所以最好的方式还是重启k3s:
+sudo systemctl restart k3s-agent   # worker 节点# 或者sudo systemctl restart k3s         # server 节点
+
+现在可以通过创建一个pod去测试k3s是否正常访问私有仓库。
+这里推荐使用crictl去直接拉取私有仓库的镜像。
+sudo crictl pull 192.168.31.220:5000/hoteler-api:07e1b87e82ccfc49e5bee7d3d88cf2c304376056
+
+参考资料
+Docker login 登录私服，报错； http: server gave HTTP response to HTTPS client
+Private Registry Configuration
+
+]]></content>
+      <categories>
+        <category>软件</category>
+      </categories>
+      <tags>
+        <tag>k3s</tag>
+        <tag>docker registry</tag>
       </tags>
   </entry>
   <entry>
@@ -5808,6 +6345,42 @@ main.gopackage mainimport (	&quot;context&quot;	&quot;bytes&quot;	&quot;fmt&quot
       </tags>
   </entry>
   <entry>
+    <title>优雅实现 Git 多账号切换：基于 SSH Config 与 includeIf 的环境隔离方案</title>
+    <url>/2026/04/18/software/git-multi-account-setup-with-includeif/</url>
+    <content><![CDATA[优雅实现 Git 多账号切换：基于 SSH Config 与 includeIf 的环境隔离方案在日常开发中，我们经常需要在一台电脑上同时处理个人开源项目和公司业务项目。最核心的痛点有两个：
+
+SSH Key 冲突：GitHub 默认只识别一对密钥，多账号如何无感切换？
+提交身份混淆：如何在公司项目中自动使用公司邮箱，在个人项目中自动使用个人邮箱？
+
+本文分享一种“一次配置，永久生效”的自动化方案。
+1. 目录结构规划首先，建议按用途将项目存放在不同的父目录下，这是自动化切换的前提。
+Workspaces/├── personal/  # 存放个人项目└── company/   # 存放公司项目
+
+2. 生成独立的 SSH 密钥为每个账号生成专属的密钥对，不要覆盖默认的 id_ed25519。
+# 生成个人账号密钥ssh-keygen -t ed25519 -C &quot;personal@email.com&quot; -f ~/.ssh/id_ed25519_personal# 生成公司账号密钥ssh-keygen -t ed25519 -C &quot;work@company.com&quot; -f ~/.ssh/id_ed25519_work
+生成的 .pub 文件内容需分别上传至对应 GitHub 账号的 SSH Keys 设置中。
+3. 配置 Git 身份自动切换利用 Git 的 includeIf 特性，根据当前所在的文件夹自动加载不同的配置。
+修改全局配置 ~/.gitconfig[user]    name = YourName_Work    email = work@company.com[core]    # 全局默认使用公司密钥    sshCommand = &quot;ssh -i ~/.ssh/id_ed25519_work&quot;# 关键：当路径匹配 personal 文件夹时，加载额外配置[includeIf &quot;gitdir/i:~/Workspaces/personal/&quot;]    path = ~/.gitconfig-personal
+
+创建个人专属配置 ~/.gitconfig-personal[user]    name = YourName_Personal    email = personal@email.com[core]    # 强制在此目录下使用个人密钥    sshCommand = &quot;ssh -i ~/.ssh/id_ed25519_personal&quot;
+
+4. 方案优势
+无需修改 URL：不需要像传统的 SSH Alias 方案那样把 github.com 改成 github-personal，直接复制 GitHub 上的 git@github.com:... 即可克隆。
+零误操作：只要进入了 personal 目录，所有的 git commit 都会自动关联个人邮箱，彻底避免用公司邮箱给开源社区提代码的尴尬。
+兼容性强：该方案在终端、Neovim (LazyVim)、VS Code 等各类开发工具中均可完美生效。
+
+5. 常见问题验证配置完成后，可以通过以下命令验证：
+# 进入项目目录cd ~/Workspaces/personal/some-repo# 验证邮箱切换git config user.email# 验证 SSH 密钥切换ssh -T git@github.com
+]]></content>
+      <categories>
+        <category>软件</category>
+      </categories>
+      <tags>
+        <tag>git</tag>
+        <tag>SSH</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>🚀 记一次本地 Homelab 环境 Gitea 升级迁移与 Actions (CI/CD) 完美集成实战</title>
     <url>/2026/06/02/software/gitea-upgrade-and-actions-integration/</url>
     <content><![CDATA[🚀 记一次本地 Homelab 环境 Gitea 升级迁移与 Actions (CI&#x2F;CD) 完美集成实战📌 前言最近对本地 Homelab 服务器的私有代码托管平台 Gitea 进行了一次大版本升级迁移（升级至 v1.26）。原本以为只是一次简单的 docker compose up，没想到中间经历了数据库连错库、旧运行器残留、以及 Gitea Actions (Act Runner) 容器网络隔离等一连串经典的暗坑。
@@ -5882,39 +6455,29 @@ Hello Gitea Actions! This is a compiled Go binary!
       </tags>
   </entry>
   <entry>
-    <title>优雅实现 Git 多账号切换：基于 SSH Config 与 includeIf 的环境隔离方案</title>
-    <url>/2026/04/18/software/git-multi-account-setup-with-includeif/</url>
-    <content><![CDATA[优雅实现 Git 多账号切换：基于 SSH Config 与 includeIf 的环境隔离方案在日常开发中，我们经常需要在一台电脑上同时处理个人开源项目和公司业务项目。最核心的痛点有两个：
+    <title>使用中国手机号码验证mailgun账号</title>
+    <url>/2025/08/13/software/how-register-mailgun-with-china-mobile-number/</url>
+    <content><![CDATA[前言Mailgun 是一个专为开发者设计的邮件发送平台，支持通过 API 高效、稳定地发送和接收邮件。它广泛用于用户通知、营销邮件、自动化开发信等场景。每个月可免费发送10000封邮件，可以添加1000个域名，每封邮件都有跟踪日志，简单明了的管理界面。
+注册点 mailgun.com 右上角的“start for free“进去是不会给免费版选项的，只有 free trial，而 https://www.mailgun.com/pricing/ 页面则有免费 plan，常规注册即可，无需填写信用卡.
+验证mailgun会发送邮件要求验证号码。在验证页面会要求用户提供手机号验证。但是对中国手机号码来说，可能存在收不到验证码的可能。
 
-SSH Key 冲突：GitHub 默认只识别一对密钥，多账号如何无感切换？
-提交身份混淆：如何在公司项目中自动使用公司邮箱，在个人项目中自动使用个人邮箱？
+解决在mailgun后台，点击右上角的问号❓，点击“Support”按钮。提交一个工单，点击左下方“Open a ticket”的开工单按钮。在开工单页面下拉选择“Account Management”类别，然后输入问题标题和具体内容。
+这是我总结的模版：
+Subject: Unable to Verify Email Due to Excessive VerificationContent:I am unable to complete email verification because I encountered an issue after entering my mobile phone number (+86 xxxxxxxxxxx) and requesting a verification code. The system notified me that I have exceeded the allowed number of attempts, along with other unspecified reminders.
 
-本文分享一种“一次配置，永久生效”的自动化方案。
-1. 目录结构规划首先，建议按用途将项目存放在不同的父目录下，这是自动化切换的前提。
-Workspaces/├── personal/  # 存放个人项目└── company/   # 存放公司项目
+然后大概在24小时内就能解决。(我是40分钟就解决了)。
+其他别相信咸鱼上那帮所谓提供海外手机号码验证服务的那帮垃圾。
+引用
+Mailgun账号注册、域名配置、API开通教程
+Mailgun China
+国外Mailgun邮件服务账号验证不成功怎么办
 
-2. 生成独立的 SSH 密钥为每个账号生成专属的密钥对，不要覆盖默认的 id_ed25519。
-# 生成个人账号密钥ssh-keygen -t ed25519 -C &quot;personal@email.com&quot; -f ~/.ssh/id_ed25519_personal# 生成公司账号密钥ssh-keygen -t ed25519 -C &quot;work@company.com&quot; -f ~/.ssh/id_ed25519_work
-生成的 .pub 文件内容需分别上传至对应 GitHub 账号的 SSH Keys 设置中。
-3. 配置 Git 身份自动切换利用 Git 的 includeIf 特性，根据当前所在的文件夹自动加载不同的配置。
-修改全局配置 ~/.gitconfig[user]    name = YourName_Work    email = work@company.com[core]    # 全局默认使用公司密钥    sshCommand = &quot;ssh -i ~/.ssh/id_ed25519_work&quot;# 关键：当路径匹配 personal 文件夹时，加载额外配置[includeIf &quot;gitdir/i:~/Workspaces/personal/&quot;]    path = ~/.gitconfig-personal
-
-创建个人专属配置 ~/.gitconfig-personal[user]    name = YourName_Personal    email = personal@email.com[core]    # 强制在此目录下使用个人密钥    sshCommand = &quot;ssh -i ~/.ssh/id_ed25519_personal&quot;
-
-4. 方案优势
-无需修改 URL：不需要像传统的 SSH Alias 方案那样把 github.com 改成 github-personal，直接复制 GitHub 上的 git@github.com:... 即可克隆。
-零误操作：只要进入了 personal 目录，所有的 git commit 都会自动关联个人邮箱，彻底避免用公司邮箱给开源社区提代码的尴尬。
-兼容性强：该方案在终端、Neovim (LazyVim)、VS Code 等各类开发工具中均可完美生效。
-
-5. 常见问题验证配置完成后，可以通过以下命令验证：
-# 进入项目目录cd ~/Workspaces/personal/some-repo# 验证邮箱切换git config user.email# 验证 SSH 密钥切换ssh -T git@github.com
 ]]></content>
       <categories>
         <category>软件</category>
       </categories>
       <tags>
-        <tag>git</tag>
-        <tag>SSH</tag>
+        <tag>mailgun</tag>
       </tags>
   </entry>
   <entry>
@@ -5966,32 +6529,6 @@ UI 方式: 登录后进入 User Profile -&gt; Change Password 修改。
         <tag>Grafana</tag>
         <tag>Ingress</tag>
         <tag>Gateway Api</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>使用中国手机号码验证mailgun账号</title>
-    <url>/2025/08/13/software/how-register-mailgun-with-china-mobile-number/</url>
-    <content><![CDATA[前言Mailgun 是一个专为开发者设计的邮件发送平台，支持通过 API 高效、稳定地发送和接收邮件。它广泛用于用户通知、营销邮件、自动化开发信等场景。每个月可免费发送10000封邮件，可以添加1000个域名，每封邮件都有跟踪日志，简单明了的管理界面。
-注册点 mailgun.com 右上角的“start for free“进去是不会给免费版选项的，只有 free trial，而 https://www.mailgun.com/pricing/ 页面则有免费 plan，常规注册即可，无需填写信用卡.
-验证mailgun会发送邮件要求验证号码。在验证页面会要求用户提供手机号验证。但是对中国手机号码来说，可能存在收不到验证码的可能。
-
-解决在mailgun后台，点击右上角的问号❓，点击“Support”按钮。提交一个工单，点击左下方“Open a ticket”的开工单按钮。在开工单页面下拉选择“Account Management”类别，然后输入问题标题和具体内容。
-这是我总结的模版：
-Subject: Unable to Verify Email Due to Excessive VerificationContent:I am unable to complete email verification because I encountered an issue after entering my mobile phone number (+86 xxxxxxxxxxx) and requesting a verification code. The system notified me that I have exceeded the allowed number of attempts, along with other unspecified reminders.
-
-然后大概在24小时内就能解决。(我是40分钟就解决了)。
-其他别相信咸鱼上那帮所谓提供海外手机号码验证服务的那帮垃圾。
-引用
-Mailgun账号注册、域名配置、API开通教程
-Mailgun China
-国外Mailgun邮件服务账号验证不成功怎么办
-
-]]></content>
-      <categories>
-        <category>软件</category>
-      </categories>
-      <tags>
-        <tag>mailgun</tag>
       </tags>
   </entry>
   <entry>
@@ -6579,6 +7116,27 @@ Multipass - 如 Docker 般的虛擬機
       </tags>
   </entry>
   <entry>
+    <title>noice.nvim在cmdline中的光标自动滚动到最前面的bug</title>
+    <url>/2025/05/22/software/noice-nvim-cmdline-cursor-auto-scroll-to-front-bug/</url>
+    <content><![CDATA[前言最新把 neovim 升级到最新版本0.11.1,lazyvim 升级到14.x。然后不出意外就挂了好几个 plugin。其中 noice.nvim 是影响比较小的但比较膈应人的。
+bug描述
+
+
+
+当在cmdline模式输入命令的时候光标总是会莫名其妙的滚动到最前面。我本来以为是noice.nvim的问题，但是经过测试，发现只有在itermn2的非全屏模式下才会出现，全屏模式或者其他终端模拟器则不会出现类似的问题。
+解决好在bug: Cursor jumps in cmdline - 4.5.0中有小哥也遇到过类似的问题，他在iTerm2中禁用”由会话触发的窗口调整大小”功能解决了这个问题（设置路径：Settings &gt; Profiles &gt; [我的配置文件] &gt; Terminal &gt; 勾选”Disable session-initiated window resizing”），然后就好了。
+其他在https://superuser.com/questions/113944/how-to-prevent-screen-from-resizing-my-terminal-in-mac-os-x, 看上去iterm2的这个bug存在挺久的了。
+]]></content>
+      <categories>
+        <category>软件</category>
+      </categories>
+      <tags>
+        <tag>neovim</tag>
+        <tag>iterm2</tag>
+        <tag>nocie.nvim</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>Docker Compose 部署 Nginx 反向代理与 Cloudflare 建坑避坑指南</title>
     <url>/2026/09/12/software/nginx-docker-cloudflare-guide/</url>
     <content><![CDATA[Docker Compose 部署 Nginx 反向代理与 Cloudflare 建坑避坑指南在自建服务或部署 Docker 应用时，我们经常需要通过 Nginx 进行反向代理，将二级域名解析到具体的容器服务上。本文将以部署一个 Docker 镜像代理服务 为例，完整记录通过 Docker Compose + Nginx 实现域名解析、SSL 证书配置以及解决常见 Cloudflare 301 重定向循环 和 404 响应 的实战过程。
@@ -6658,24 +7216,59 @@ Cloudflare CDN + Nginx 重定向：源站配置了 HTTP-&gt;HTTPS 强制跳转�
       </tags>
   </entry>
   <entry>
-    <title>noice.nvim在cmdline中的光标自动滚动到最前面的bug</title>
-    <url>/2025/05/22/software/noice-nvim-cmdline-cursor-auto-scroll-to-front-bug/</url>
-    <content><![CDATA[前言最新把 neovim 升级到最新版本0.11.1,lazyvim 升级到14.x。然后不出意外就挂了好几个 plugin。其中 noice.nvim 是影响比较小的但比较膈应人的。
-bug描述
+    <title>📝 PostgreSQL 18.x Docker 镜像 PGDATA 路径变更说明</title>
+    <url>/2025/10/04/software/postgresql-18-docker-pgdata-path-changes/</url>
+    <content><![CDATA[📝 PostgreSQL 18.x Docker 镜像 PGDATA 路径变更说明本文档旨在记录 PostgreSQL 官方 Docker 镜像自版本 18.0 起，其默认数据目录（PGDATA）路径的变化，并指导如何正确配置卷挂载以实现数据持久化。
+🚀 核心变更：PGDATA 路径版本化从 PostgreSQL 18.x 开始，官方 Docker 镜像将数据库的数据存储位置 (PGDATA 环境变量) 更改为版本特定的路径。
+
+PostgreSQL PGDATA 路径变更
+
+
+PostgreSQL 版本
+旧版本 PGDATA 默认路径
+18.x 版本 PGDATA 默认路径
 
 
 
-当在cmdline模式输入命令的时候光标总是会莫名其妙的滚动到最前面。我本来以为是noice.nvim的问题，但是经过测试，发现只有在itermn2的非全屏模式下才会出现，全屏模式或者其他终端模拟器则不会出现类似的问题。
-解决好在bug: Cursor jumps in cmdline - 4.5.0中有小哥也遇到过类似的问题，他在iTerm2中禁用”由会话触发的窗口调整大小”功能解决了这个问题（设置路径：Settings &gt; Profiles &gt; [我的配置文件] &gt; Terminal &gt; 勾选”Disable session-initiated window resizing”），然后就好了。
-其他在https://superuser.com/questions/113944/how-to-prevent-screen-from-resizing-my-terminal-in-mac-os-x, 看上去iterm2的这个bug存在挺久的了。
+17.x 及以前
+/var/lib/postgresql/data
+N&#x2F;A
+
+
+18.x 及以后
+N&#x2F;A
+/var/lib/postgresql/18/docker
+
+
+🔍 变更原因采用版本化的 PGDATA 路径有以下重要意义：
+
+便于升级 (pg_upgrade): 允许用户将不同主版本的数据库数据目录（例如 &#x2F;var&#x2F;lib&#x2F;postgresql&#x2F;17&#x2F;docker 和 &#x2F;var&#x2F;lib&#x2F;postgresql&#x2F;18&#x2F;docker）并行挂载到父目录 &#x2F;var&#x2F;lib&#x2F;postgresql 下，从而更有效地利用 pg_upgrade 等工具进行版本间升级。
+确保数据持久性: 在重新创建或升级容器时，通过将卷准确挂载到版本特定的路径，确保了数据的正确持久化。
+
+💾 数据持久化配置当使用 PostgreSQL 18.x 官方镜像时，必须将您的持久化卷（无论是命名卷还是绑定挂载）挂载到新的 PGDATA 路径：/var/lib/postgresql/18/docker。
+使用 Docker Compose在您的 docker-compose.yaml 文件中，应将卷配置指向新的路径：
+services:  postgres:    image: postgres:18.0-alpine3.22    container_name: postgres    # ... 其他配置 ...    volumes:      # ⚠️ 必须指向版本特定的 PGDATA 路径      - pg18-data-volume:/var/lib/postgresql/18/dockervolumes:  pg18-data-volume:
+
+使用 Docker Run (绑定挂载示例)使用 docker run 命令进行绑定挂载时，也需要指定新的路径：
+docker run -d \  -v my_postgres_data:/var/lib/postgresql/18/docker \  -e POSTGRES_PASSWORD=your_password \  --name postgres18 \  postgres:18.0-alpline3.22
+
+⚠️ 升级注意事项在从 PostgreSQL 17.x 或更早版本升级到 18.x 时，由于主版本之间的内部存储格式不兼容，不能简单地更改镜像标签并重用旧的 &#x2F;var&#x2F;lib&#x2F;postgresql&#x2F;data 卷。
+正确的主版本升级流程应是：
+
+从旧版本容器中执行 pg_dumpall 创建完整的 SQL 备份。
+停止旧容器，创建并启动一个新的 PostgreSQL 18.x 容器，并使用 新路径 挂载卷。
+将第 1 步中的 SQL 备份文件导入（psql）到新的 PostgreSQL 18.x 容器中。
+
 ]]></content>
       <categories>
         <category>软件</category>
       </categories>
       <tags>
-        <tag>neovim</tag>
-        <tag>iterm2</tag>
-        <tag>nocie.nvim</tag>
+        <tag>docker</tag>
+        <tag>postgres</tag>
+        <tag>容器</tag>
+        <tag>docker compose</tag>
+        <tag>postgres18</tag>
       </tags>
   </entry>
   <entry>
@@ -6731,59 +7324,53 @@ What is Podman?
       </tags>
   </entry>
   <entry>
-    <title>📝 PostgreSQL 18.x Docker 镜像 PGDATA 路径变更说明</title>
-    <url>/2025/10/04/software/postgresql-18-docker-pgdata-path-changes/</url>
-    <content><![CDATA[📝 PostgreSQL 18.x Docker 镜像 PGDATA 路径变更说明本文档旨在记录 PostgreSQL 官方 Docker 镜像自版本 18.0 起，其默认数据目录（PGDATA）路径的变化，并指导如何正确配置卷挂载以实现数据持久化。
-🚀 核心变更：PGDATA 路径版本化从 PostgreSQL 18.x 开始，官方 Docker 镜像将数据库的数据存储位置 (PGDATA 环境变量) 更改为版本特定的路径。
+    <title>玩转 K8s 面板：轻量级 Kite 安装全记录 (K3s 篇)</title>
+    <url>/2026/01/25/software/setup-kite-with-prometheus-on-k3s/</url>
+    <content><![CDATA[前言在 Kubernetes 运维中，官方的 Dashboard 虽然功能齐全但显得有些沉重。如果你正在寻找一款轻量、现代化、且安装简单的监控面板，Kite 绝对是一个惊喜。本文将详细记录如何在 K3s 环境下安装 Kite，并配置 Ingress 域名访问以及集成 Prometheus 历史监控。
+一、 环境准备
+集群环境：K3s (自带 Traefik Ingress Controller)
+节点 IP：192.168.31.222
+目标域名：kite.damingerdaiinternal.com
 
-PostgreSQL PGDATA 路径变更
+二、 部署 Kite 核心组件首先，我们直接使用官方提供的清单将 Kite 安装到 kube-system 命名空间下：
+kubectl apply -f https://raw.githubusercontent.com/zxh326/kite/refs/heads/main/deploy/install.yaml
 
+1. 修改服务为 NodePort (可选)为了方便最初的调试，我们可以将 Service 类型修改为 NodePort 并指定端口 32008：
+kubectl patch svc kite -n kube-system -p &#x27;&#123;&quot;spec&quot;:&#123;&quot;type&quot;:&quot;NodePort&quot;,&quot;ports&quot;:[&#123;&quot;port&quot;:8080,&quot;targetPort&quot;:8080,&quot;nodePort&quot;:32008&#125;]&#125;&#125;&#x27;
 
-PostgreSQL 版本
-旧版本 PGDATA 默认路径
-18.x 版本 PGDATA 默认路径
+2. 重置管理员密码Kite 默认通过环境变量管理账户。如果你需要自定义或重置密码，可以执行：
+kubectl set env deployment/kite KITE_ADMIN_USER=admin KITE_ADMIN_PASSWORD=your_new_password -n kube-system
 
+三、 配置 Ingress 域名访问 (HTTPS)由于 K3s 默认使用 Traefik，我们使用现代化的 ingressClassName 语法进行配置。
+1. 创建自签名证书 Secret为了支持 HTTPS，我们先为域名创建一个证书：
+openssl req -x509 -nodes -days 365 -newkey rsa:2048 \  -keyout tls.key -out tls.crt \  -subj &quot;/CN=kite.damingerdaiinternal.com&quot;kubectl create secret tls kite-tls --cert=tls.crt --key=tls.key -n kube-system
 
+2. 应用 Ingress 规则创建 kite-ingress.yaml：
+apiVersion: networking.k8s.io/v1kind: Ingressmetadata:  name: kite-ingress  namespace: kube-systemspec:  ingressClassName: traefik  tls:    - hosts: [&quot;kite.damingerdaiinternal.com&quot;]      secretName: kite-tls  rules:    - host: kite.damingerdaiinternal.com      http:        paths:          - path: /            pathType: Prefix            backend:              service:                name: kite                port:                  number: 8080
 
-17.x 及以前
-/var/lib/postgresql/data
-N&#x2F;A
+应用配置：kubectl apply -f kite-ingress.yaml。随后在本地 hosts 文件中添加 192.168.31.222 kite.damingerdaiinternal.com 即可访问。
 
+四、 集成 Prometheus 开启历史监控Kite 默认只显示来自 metrics-server 的实时数据，无法看到历史趋势。我们需要接入 Prometheus。
+1. 安装 kube-prometheus-stack使用 Helm 快速部署全套监控栈：
+helm repo add prometheus-community https://prometheus-community.github.io/helm-chartshelm repo updatehelm install prometheus prometheus-community/kube-prometheus-stack --namespace monitoring --create-namespace
 
-18.x 及以后
-N&#x2F;A
-/var/lib/postgresql/18/docker
+2. 配置 Kite 连接 Prometheus找到 Prometheus 在集群内的 DNS 地址，并将其注入 Kite 的环境变量：
+# DNS地址通常为：http://[服务名].[命名空间].svc.cluster.local:9090kubectl set env deployment/kite PROMETHEUS_URL=http://prometheus-kube-prometheus-prometheus.monitoring.svc.cluster.local:9090 -n kube-system
 
-
-🔍 变更原因采用版本化的 PGDATA 路径有以下重要意义：
-
-便于升级 (pg_upgrade): 允许用户将不同主版本的数据库数据目录（例如 &#x2F;var&#x2F;lib&#x2F;postgresql&#x2F;17&#x2F;docker 和 &#x2F;var&#x2F;lib&#x2F;postgresql&#x2F;18&#x2F;docker）并行挂载到父目录 &#x2F;var&#x2F;lib&#x2F;postgresql 下，从而更有效地利用 pg_upgrade 等工具进行版本间升级。
-确保数据持久性: 在重新创建或升级容器时，通过将卷准确挂载到版本特定的路径，确保了数据的正确持久化。
-
-💾 数据持久化配置当使用 PostgreSQL 18.x 官方镜像时，必须将您的持久化卷（无论是命名卷还是绑定挂载）挂载到新的 PGDATA 路径：/var/lib/postgresql/18/docker。
-使用 Docker Compose在您的 docker-compose.yaml 文件中，应将卷配置指向新的路径：
-services:  postgres:    image: postgres:18.0-alpine3.22    container_name: postgres    # ... 其他配置 ...    volumes:      # ⚠️ 必须指向版本特定的 PGDATA 路径      - pg18-data-volume:/var/lib/postgresql/18/dockervolumes:  pg18-data-volume:
-
-使用 Docker Run (绑定挂载示例)使用 docker run 命令进行绑定挂载时，也需要指定新的路径：
-docker run -d \  -v my_postgres_data:/var/lib/postgresql/18/docker \  -e POSTGRES_PASSWORD=your_password \  --name postgres18 \  postgres:18.0-alpline3.22
-
-⚠️ 升级注意事项在从 PostgreSQL 17.x 或更早版本升级到 18.x 时，由于主版本之间的内部存储格式不兼容，不能简单地更改镜像标签并重用旧的 &#x2F;var&#x2F;lib&#x2F;postgresql&#x2F;data 卷。
-正确的主版本升级流程应是：
-
-从旧版本容器中执行 pg_dumpall 创建完整的 SQL 备份。
-停止旧容器，创建并启动一个新的 PostgreSQL 18.x 容器，并使用 新路径 挂载卷。
-将第 1 步中的 SQL 备份文件导入（psql）到新的 PostgreSQL 18.x 容器中。
+五、 总结稍等几分钟，待 Prometheus 完成指标抓取后，刷新 Kite 界面，你就会发现原先的 “Limited historical data” 提示消失了，取而代之的是精美的 CPU 和内存历史曲线图。
+Kite + K3s + Traefik + Prometheus 的组合，既保证了监控的深度，又维持了极低的资源消耗，非常适合中小规模集群或边缘计算场景。
+💡 小贴士
+如果发现 Ingress 无法解析，请检查 kubectl get ingress -n kube-system 的 ADDRESS 列。
+如果图表长时间不出数据，请确认 kube-state-metrics 是否在 monitoring 命名空间下正常运行。
 
 ]]></content>
       <categories>
         <category>软件</category>
       </categories>
       <tags>
-        <tag>docker</tag>
-        <tag>postgres</tag>
-        <tag>容器</tag>
-        <tag>docker compose</tag>
-        <tag>postgres18</tag>
+        <tag>k3s</tag>
+        <tag>kubernetes</tag>
+        <tag>kite</tag>
       </tags>
   </entry>
   <entry>
@@ -6951,56 +7538,6 @@ sudo tailscale up --advertise-routes=192.168.31.0/24 --accept-dns=false
         <tag>内网穿透</tag>
         <tag>NAS</tag>
         <tag>异地组网</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>玩转 K8s 面板：轻量级 Kite 安装全记录 (K3s 篇)</title>
-    <url>/2026/01/25/software/setup-kite-with-prometheus-on-k3s/</url>
-    <content><![CDATA[前言在 Kubernetes 运维中，官方的 Dashboard 虽然功能齐全但显得有些沉重。如果你正在寻找一款轻量、现代化、且安装简单的监控面板，Kite 绝对是一个惊喜。本文将详细记录如何在 K3s 环境下安装 Kite，并配置 Ingress 域名访问以及集成 Prometheus 历史监控。
-一、 环境准备
-集群环境：K3s (自带 Traefik Ingress Controller)
-节点 IP：192.168.31.222
-目标域名：kite.damingerdaiinternal.com
-
-二、 部署 Kite 核心组件首先，我们直接使用官方提供的清单将 Kite 安装到 kube-system 命名空间下：
-kubectl apply -f https://raw.githubusercontent.com/zxh326/kite/refs/heads/main/deploy/install.yaml
-
-1. 修改服务为 NodePort (可选)为了方便最初的调试，我们可以将 Service 类型修改为 NodePort 并指定端口 32008：
-kubectl patch svc kite -n kube-system -p &#x27;&#123;&quot;spec&quot;:&#123;&quot;type&quot;:&quot;NodePort&quot;,&quot;ports&quot;:[&#123;&quot;port&quot;:8080,&quot;targetPort&quot;:8080,&quot;nodePort&quot;:32008&#125;]&#125;&#125;&#x27;
-
-2. 重置管理员密码Kite 默认通过环境变量管理账户。如果你需要自定义或重置密码，可以执行：
-kubectl set env deployment/kite KITE_ADMIN_USER=admin KITE_ADMIN_PASSWORD=your_new_password -n kube-system
-
-三、 配置 Ingress 域名访问 (HTTPS)由于 K3s 默认使用 Traefik，我们使用现代化的 ingressClassName 语法进行配置。
-1. 创建自签名证书 Secret为了支持 HTTPS，我们先为域名创建一个证书：
-openssl req -x509 -nodes -days 365 -newkey rsa:2048 \  -keyout tls.key -out tls.crt \  -subj &quot;/CN=kite.damingerdaiinternal.com&quot;kubectl create secret tls kite-tls --cert=tls.crt --key=tls.key -n kube-system
-
-2. 应用 Ingress 规则创建 kite-ingress.yaml：
-apiVersion: networking.k8s.io/v1kind: Ingressmetadata:  name: kite-ingress  namespace: kube-systemspec:  ingressClassName: traefik  tls:    - hosts: [&quot;kite.damingerdaiinternal.com&quot;]      secretName: kite-tls  rules:    - host: kite.damingerdaiinternal.com      http:        paths:          - path: /            pathType: Prefix            backend:              service:                name: kite                port:                  number: 8080
-
-应用配置：kubectl apply -f kite-ingress.yaml。随后在本地 hosts 文件中添加 192.168.31.222 kite.damingerdaiinternal.com 即可访问。
-
-四、 集成 Prometheus 开启历史监控Kite 默认只显示来自 metrics-server 的实时数据，无法看到历史趋势。我们需要接入 Prometheus。
-1. 安装 kube-prometheus-stack使用 Helm 快速部署全套监控栈：
-helm repo add prometheus-community https://prometheus-community.github.io/helm-chartshelm repo updatehelm install prometheus prometheus-community/kube-prometheus-stack --namespace monitoring --create-namespace
-
-2. 配置 Kite 连接 Prometheus找到 Prometheus 在集群内的 DNS 地址，并将其注入 Kite 的环境变量：
-# DNS地址通常为：http://[服务名].[命名空间].svc.cluster.local:9090kubectl set env deployment/kite PROMETHEUS_URL=http://prometheus-kube-prometheus-prometheus.monitoring.svc.cluster.local:9090 -n kube-system
-
-五、 总结稍等几分钟，待 Prometheus 完成指标抓取后，刷新 Kite 界面，你就会发现原先的 “Limited historical data” 提示消失了，取而代之的是精美的 CPU 和内存历史曲线图。
-Kite + K3s + Traefik + Prometheus 的组合，既保证了监控的深度，又维持了极低的资源消耗，非常适合中小规模集群或边缘计算场景。
-💡 小贴士
-如果发现 Ingress 无法解析，请检查 kubectl get ingress -n kube-system 的 ADDRESS 列。
-如果图表长时间不出数据，请确认 kube-state-metrics 是否在 monitoring 命名空间下正常运行。
-
-]]></content>
-      <categories>
-        <category>软件</category>
-      </categories>
-      <tags>
-        <tag>k3s</tag>
-        <tag>kubernetes</tag>
-        <tag>kite</tag>
       </tags>
   </entry>
   <entry>
@@ -7289,127 +7826,6 @@ API 陷阱：旧版教程常用 traefik.containo.us&#x2F;v1alpha1，新版 K3s �
       </tags>
   </entry>
   <entry>
-    <title>2022年度总结</title>
-    <url>/2021/12/31/summary/2022/</url>
-    <content><![CDATA[2022年度总结2022年真的是一个让人难以忘怀的年份，尤其在先后经历了上海封城、老丈人去世、领证结婚。
-疫情还记得2020年疫情刚开始的时候，那时侯自己一个人开车回上海，路上的车辆非常少，开车的感觉真的可以说非常爽，完全可以闭着眼开车，反正看不到车，即使进了上海市区。那个时候单纯的想，少则三个月，多则半年，疫情就会自然而然的过去，到时候我们该吃吃该喝喝。虽然这个判断翻车了，但是2021年也是对国内疫情还是比较乐观。但是2022年的上海封城打破了我所有的幻想。我从来没想过上海居然玩砸了“动态清理”，从华亭宾馆开始，上海的疫情持续不断，感染人数死活都下不去。
-3月份我刚搬到南翔就被封控了，但是我刚开始还好，虽然什么吃的都没有，但是只要封控时间到了就能出去买点东西。但遗憾的是，从4月份开始，上海开始静默了，我足足封在家里差不多两个月。我本来是不反对封城的，但是上海市政府真的很让人失望，疫情两年了，市政府似乎没有做好任何相关封城的预案。而且总感觉可能涉及到二十大的高层安排，市政府决策层应该是存在分歧的，并且和医疗系统的人也存在一定的隔阂。由于上层的问题，基层机构出现各种乱七八糟的事儿那也能理解了。
-在经过了白纸运动之后，我们的防疫政策从一个极端走向另外一个极端。我们彻底放开了，让80%以上的人感染了一遍。我不是反对放开，但是我比较反对如此毫无征兆的放开，没有准备好各种的退烧药，没有准备好口罩。
-技术今年继续做一个web2.5的项目，就是web2.0 + 区块链，不能算得上正宗的web3.0。其核心就是将部分原来放在数据库的数据放在区块链里。所以我们一般自称为web2.5。
-目前部门想全力押宝·web3·，希望能和审计部门能够做好技术服务，所以未来对区块链的研究大概率是会集中中DeFi(去中心化金融)。对我来说，金融是一个毫无头绪的东西，之前并没有接触过，没有一个良好的业务场景可以让我研究，导致对我来说DeFi可能只是一个比较空泛的名词。
-过去的一年，对以太坊还是比较浅显的，同时将也做了一些简单的demo。总的来说，也算简单的入门学了点皮毛，但是对智能合约的开发还是基本上一窍不通的。希望接下来的一年可以深入研究智能合约，可以独立开发智能合约并部署到一个测试网络。solana也会是一个比较重要的关注方向，但是考虑到solana的东家出点事儿，可能不太会重心在这个方面，不过rust语言还是会尽量深挖一下，这是一个很有挑战性的方向
-今年应该很少写angular了，更多开始写react。从我个人的角度来说，jsx和react hook对写一些组件来说确实是一把利器，但是对于如何做好一个完整的、强大的前端web应用来说，react的生态是不足的，太碎裂了，导致在接手不同的项目的时候总是能看到不同的react写法和工程组织形式。最近在react-mobile-picker做一个重构。一个方面是想改成通用的monorepo的组织形式，另外一个方面是需要升级核心依赖并使用typescript重写。目前这个工作还在努力中。 angular方面更多的专注于ngx-dom-confetti, 目前仅仅是对dom-confetti的angular封装，将来的计划是参考ripple的代码设计，将来可以好好的重构这个项目。hoteler-web是我一直会维护的angular的项目。
-今天在google domains买了个域名，然后尝试使用k3s的ingress部署了[https://hoteler.damingerdai.com/]。感觉使用k3s部署一些简单的应用基本上问题不大了。[hoteler](https://github.com/damingerdai/hoteler)已经是一个很稳定的demo，大概率是不会进行大规模的重构了。所以目前只有一个很简单的想法那就是使用spring cloud进行重写，这个是不太能自己部署到线上环境了，毕竟服务器资源就那么点，跑不起那么多的资源。
-针对golang的话，我目前私下的在做一个关于健康的demo，目前还在开发中，前端使用react，后端使用golang。目前希望在技术上的突破是使用loki做日志管理，Jaeger用于链路追踪，这是1.0的计划。2.0的话（如果有时间的话），希望可以加入区块链的一些元素，至少能做成个·web2.5·。
-今年其实还是探索了很多的技术。比如minio, harbor, drone, gogs和gitea。
-个人生活今天对我最大的事儿就是结婚了，没有比举办婚礼更重要的事儿了。本来由于收到上半年疫情的影响，原来不指望今年结婚的。本来定的日子是明年的正月办酒席，但是丈母娘觉得今年的夏天那么热，冬天一定很会冷，希望我们今年就是把事儿办了。所以婚期提前到11月份举行，本来日子选的好好的，也没啥好纠结的，毕竟妹子是自己谈的。但是明天和意外你永远都不知道哪个先来，我老丈人在婚礼的前两天去世了。在婚礼前的几个礼拜，我老丈人生病了，是便秘导致的肠梗阻。在医院治疗了一段时间本来已经治好了，但是不知道是医院的水平问题还是我老丈人本身的问题，在治疗过程中可能没有控制好糖尿病导致肺部感染， 在icu躺了几天之后终究将抢救无效去世，年仅50岁。在殡仪馆里，我看到同批火化的人中就属我老丈人最年轻。有的时间真的感觉世事无常，国庆节回去的时候，老丈人还好好的，结果才过去一个月不到，人就没了。
-展望未来对2023年这个经济判断是真的不太好说，谁也不知道明年会怎么想，我也不敢瞎说，我只能我大概率会重点关注·DeFi·。然后希望能够保住就业，保住现金流。
-]]></content>
-  </entry>
-  <entry>
-    <title>2023年度总结</title>
-    <url>/2024/01/06/summary/2023/</url>
-    <content><![CDATA[2023年度总结2023年就这样子莫名其妙的过了，又是稀里糊涂的一年。这一年，和最爱的人去了一趟西藏，圆了她心心念念的梦想；这一年，坐了30多小时的火车，跨越千里去见证一段美好的爱情；这一年，参加了加入PWC以来第二次的线下年会，疫情总算是过去了。
-美好的西藏其实是先从上海到成都出发，在成都带了两天，陪她那只叫做花花的大熊猫。 其实19年时候我去过成都大熊貓繁育研究基地，那个时候还没有花花，也没有那么多的游客，当然也有可能我去的是淡季，不过总算是满足她的心愿了。吃了当地的特色，三大炮，鸡豆花，兔腿，麻婆豆腐，其实那个陈麻婆的那个夫妻肺片还是很有特色的，不辣，有点甜，和紫燕百味鸡的那个压根就不一样的。
-我们是报了一个旅行团，四个人，一个司机。除了我们之外，还有一个山东小哥，一个四川小伙。山东小哥是真的很社牛，和什么人都能聊起来，喜欢旅游，朋友圈三天两头出去玩，晒各地的美景。四川小伙是拿到美国一家博士的offer了，想在出国前能够好好放松一下。四个人一个司机，就这样子从成都沿着318国道出发了。
-去了很多地方，但是我没记住，因为这不是我热爱的，吃了很多美食，我记住了它们的味道，永远不会忘记。
-到了拉萨，我们去看了小昭寺，布达拉宫。吃了当地牦牛肉，喝了当地的牦牛奶做的奶茶。真的是美滋滋的日子啊。
-
-
-
-
-
-
-PWC线下年会我是19年加入PWC的。PWC的年会其实是财年的意思，所以通常是5月份办年会。20年收到疫情的影响，此后的年会都是线上举行的，虽然有元宇宙的等加持，但是对我来而已其实并没有参与感的。收到疫情的影响，很多同事已经没有来公司面对面办公了，曾经的团队早就各奔东西，甚至都不在一个部门的了。
-终于，口罩没了，在加入PWC的第四年中，迎来的第二次线下年会。酒店更高级了，吃的很好，食物也精致，但是呢，我还是感觉19年那次年会吃的更惬意点。
-
-嘉峪关之行嘉峪关之行单纯的是因为大学同学结婚，便选择坐了30多小时的火车，先去西安和好友会和，再去嘉峪关。嘉峪关风景不错，可惜很难再有机会去了。
-
-其他我们还去来了迪士尼
-
-参加她的大学同学的婚礼
-
-最后Time files over us, but leaves its shadow behind.
-]]></content>
-  </entry>
-  <entry>
-    <title>2024年度总结</title>
-    <url>/2025/01/13/summary/2024/</url>
-    <content><![CDATA[2024年度总结对我来说，2024年是一个特别有意义的一年。8月24号，我美丽又可爱的宝宝出生了，体验到了初为人父的喜悦；10月7号，国庆节刚过，公司人事就开邮件通知我我的岗位被取消了。
-初为人父的喜悦孩子的出生时间其实挺意外的。由于老婆在9月初有一场很重要的考试，所以不能耽搁，所以原来计划在20号去医院打催产素的，结果因为报告晚了一天，然后就被通知不用打催产素，已经开始见红了。不过开宫口的速度很慢，过两天还是上催产素了。我记得那个时候我在家里呆着，医院我有丈母娘陪着，反正又不可能那么急着生出来，我就回家先好好休息，打算第二天过去。结果第二天我丈母娘就通知我让我赶紧过去签字给我老婆打催产素。一波三折，到最后这个催产素还是打上去了。在6号待产室，晚上6点06分，7斤2两，我可爱的儿子就这样子平平安安的出生了。说实话，我并没有在第一时间听到孩子的哭声，相反这个小家伙睡的死死的。我伸过去看看了他，第一感觉他好丑啊，头型怪怪的，有点拉长的样子。听医生说，刚出生的小宝宝通常产道的挤压，出来的时候头多多少少会有点拉长的样子，等长大点就好了。
-孩子的出生，对我来说是一个特殊的人生里程碑，从这一刻开始，我不仅仅是一个普通的牛马，更是一个上有老下有小的天选牛马。就这样一下子，感觉身上的责任明显重了很多。算了一下孩子的奶粉钱，尿不湿的钱，将来休学的钱，以后娶老婆的钱和彩礼，还有供养老婆大人吃喝玩乐的钱。处处都是钱，处处都是压力。我也不知道将来孩子会活成什么样子，但是我不奢望他能出人头地，只希望平平安安的长大；不期待他将来学业有成，事业非凡，只希望他能过的自在安心。
-裁员其实裁员是有点风声的，但是一直都是狼来的状态。在国庆节，部门领导就私下的就透露过每个leader都需要上交一份裁员名单，更上级的领导会根据这份名单裁员。对于我这种干活儿的小喽啰，大概率是可以保住饭碗的，毕竟我还是比较能干活儿的，最近做的项目也是比较有钱的其实。
-但是非常尴尬的是，确实是裁员了，但是不是上海发起的裁员，是美国发起的裁员。美国最高层决定全球裁员好几千人，预计涉及美国，墨西哥，印度和上海几个地方的office。
-这次裁员主要是我们P &amp; T部门，其他部门似乎还好好的。P &amp; T由Labs和Digital两个小部门，我们labs这边十分平静的接受了这次裁员，大家虽然都不太能接受，但是普遍选择认命，大家该吃吃该喝喝，好聚好散。但是隔壁部门是有人闹了下，但是很快就没下文了。后来我听说出头闹事的人第一个找到工作之后就不出头了，结果也就没人闹事了。
-找工作找工作挺难的，基本上都是外包。没做面试的记录，就随便回忆一下吧。面试PayPal外包, 二面和三面一起面的，挂了，感觉二面和三面都不是很好。面试VOA2(一家不错的法资小公司)，因为英语和岗位不合适挂。面试迪士尼外包，一面挂了，搞笑的是又一家外包来邀请我去面试，主要是迪士尼的技术栈是Angular+Graphql，比较小众，但是我都用过，我不太想去，但是对方劝了我好几次，最后还是在二面挂了（面试三次，挂了两次，挺好玩的经历）。面试花旗外包，二面挂了，其实本来是挺有机会的，但是二面就27分钟，还算上我问的问题，只能被挂了。面试华钦（华钦是外包公司，但是这个岗位不是外包），我明明面试的是前端，面试官是后端的，道不同。面试摩根士丹利外包，二面过了，感觉比较水，相对好近。
-摩根士丹利进入摩根士丹利之后其实有段时间是不太适应的，习惯了普华永道这种混合办公和不定时工作制，不太能接受摩根士丹利这种965的风格，不过还好，两周就适应了，发了工资就更加适应，没有必要和钱过不去。摩根士丹利里面什么情况我不方便多说，但是根据工作安排来看，坚持到2026年底问题不大，以后就再说吧。
-总结如果没有裁员这回事儿，那么2024年对我还是一个挺不错的年份。涨点工资（普华永道每年7月调薪），有个儿子，本来就可以这样子过去了。可惜没有如果，现在在摩根做外包也能接受，毕竟正式员工对我们算得上非常nice了。希望2025年可以平平安安，保住工作，少点个人消费，多点留给家人。技术也没有什么大的想法，保住工作就行，苟活到经济能够真的复苏吧。
-]]></content>
-  </entry>
-  <entry>
-    <title>2025年度总结</title>
-    <url>/2026/02/24/summary/2025/</url>
-    <content><![CDATA[2025年度总结对我来说，2025年其实又是一个特别有意义的一年。3月初陪老婆去了一次她心心念念的日本，11月的最后一天，在中介第二次带看的情况，匆匆忙忙的买下上海一套二手房，圆了老婆又一个心愿。
-日本之行日本原计划是24年底就去的，但是因为失业，只关心找工作就放弃了。我本身去日本的兴趣不大，但是老婆非常想去就很仓促的时间定下去日本。我们去的是大阪，大概还有一个月的时候就是大阪世博会了，3月份初去还是还好，要是晚了估计人就太多了。
-大阪
-
-
-
-
-在大阪玩的很开心，感觉大阪是一个很国际化的大都市，不少西方和东南亚的面孔。就算看上去东亚面孔，也有很大的可能是中国人。我真的在大阪的地铁里听两个中国人可能是仗着日本人听不懂中国话说着非常非常虎狼的词儿。
-
-
-在大阪住的酒店有个温泉，可以免费去泡澡，没有国内那种搓澡等服务，就是纯粹的泡澡。 水很温和，不是十分烫人，让人感觉到十分舒服，感觉真的可以吸取洗去一声的疲惫。看了酒店的说明，估计这个温泉真的是从山里拉来的真的地下水，比国内所谓温泉但是就是自己烧开水强多了。
-
-
-在大阪，环球影城应该算得上必打卡点了，加上有一个马里奥馆，还是很值得去的。个人比较推荐的是水世界的表演，真的是非常的精彩，特技效果很好，有时间还是很推荐去看看的。
-宇治
-
-
-
-
-老婆是抹茶的超级粉丝，想去宇治。虽然我对此不是很感兴趣，更想去奈良。可惜行程有限，奈良和宇治只能二选一，所以最后是花了一天的时间去宇治。宇治是一个很不错的小城，但是去宇治的电车就不如大阪友好了。大阪的轨道交通都是日，中，英，韩四种语言，而去宇治的电车就日英两种选择了。
-城市不大，但是风景很不错，可能是淡季，游客不算多，但是还好。抹茶嘛，毫无兴趣，不做评价。
-买房老婆买房的想法其实很久了，24年就开始在网上看房了。不知道为什么，25年下半年就特别积极，我本来想着要不26、27年买房吧，要是房价涨了就算自己倒霉。我老婆的意思就先看看，可以考虑一下。可能是被当时租住的小区9月初卖了一套275万刺激，她觉得差不多了，想线下先看看，然后当月底约了一次中介去看过一次房。本来想着下次看房就要26年了，但是不知道老婆是怎么想的，想再看看，然后11月30号，我也没啥事儿，就一起去看看房子。我们这次看了四套房子，其中第四套有点大，价格超过预算，只是中介带我们去看看90平的房子大概是什么布局，估计他没想法当天他就成了一单。
-其实第一套和第二套我不是很满意，第一套价格低点，但是维护很差，重新装修需要花费很大的精力；第二套价格贵点，地段稍微好点，层楼好点，但装修也很一般，大概率还是重新装修。第三套的装修很好，17年的装修到现在都不过时，整体的设计很好的考虑到家里有小宝宝的情况，边边角角都做了圆角设计，材料可以看得出很明显是非常不错的，没有使用比较次的材料，保养也很好，听中介说房东是拿来自住的，没出租过。可能唯一的缺点就是在5楼，爬楼梯有点困难。
-11月30号，上午看房，下午带我妈妈和小宝宝也看了下，宝宝好像挺喜欢的，东看看西看看，应该也看上了吧。然后就宝山链家的中心就和房东谈判了，经过中介的谈判，我们最后还是拿下了这套房。挺快的，也很幸运，就这个装修，其实有不少人在抢，听中介说，上次就有人看上了，可惜约时间的时候不是房东没时间就是购房人没时间，我们去看房的时候，其实还有一个小姐姐也去看了，好像也有兴趣，可惜被我们抢先了。
-很开心能够在上海这个繁华的都市能够拥有一套自己的房子，感谢我老婆，没有她，我大概率不会留在上海，感谢我的孩子，没有他，我压根就没有留下的动力。
-技术摩根士丹利的工作没有可以值得说道的，没有太大的价值，但是我也学到很多东西，我第一次接触到了gitops，现在也在私下的学习这套概念。
-利用春节假期，尝试部署了一套自己的部署体系（kite,prometheus&#x2F;grafana, zot registry），尝试使用helm部署项目，感觉还不错。
-
-
-
-2026 · 向上生长2025 是沉淀与思考的一年。有探索，也有试错；有不确定，也有新的方向。
-2026，希望自己——
-在技术上，更专注本质。少一些浮躁，多一些深度；少一些追逐热点，多一些长期主义。
-在工作上，更从容坚定。把复杂问题拆解清楚，把系统设计得更优雅；让每一行代码，都对得起时间。
-在生活里，更有温度。给家人更多陪伴，给自己更多耐心，在快节奏里守住节奏。
-愿 2026，不是简单的“更忙”，而是“更好”。
-持续学习，持续创造，持续成为更清醒的自己。
-]]></content>
-  </entry>
-  <entry>
-    <title>记录一些测试币的水龙头</title>
-    <url>/2023/01/07/web3/some-token-faucet/</url>
-    <content><![CDATA[记录一些测试币的水龙头记录一些常用的区块链水龙头，以防忘记
-GoerliGoerli Testnet Faucet: 不太记得当初是怎么知道了，但是似乎永远失败…
-GOERLI FAUCET, 每天可以获取0.1 ETH(以前是可以每天领取0.25ETH), 需要使用Alchemy账号.
-Mining Faucet, 使用cpu的算力去挖矿，问题不大，可以使用。
-polygonpolygon faucet, 支持多个测试网络，但是Goerli的ETH没拿到
-参考资料
-免費取得Goerli測試幣
-
-]]></content>
-      <categories>
-        <category>web3</category>
-      </categories>
-      <tags>
-        <tag>web3</tag>
-        <tag>Goerli</tag>
-        <tag>polygon</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>Mastra 入门：从零搭建旅行助手 Agent</title>
     <url>/2026/09/28/ai/mastra/getting-started-travel-agent/</url>
     <content><![CDATA[Mastra 入门：从零搭建旅行助手 Agent本文面向熟悉 TypeScript、刚接触 Mastra 的开发者。完成后，你会有一个能追问旅行需求、生成行程，并按需调用模拟天气工具的 Agent。示例使用 Bun 和 DeepSeek Flash；天气数值固定，仅用于学习工具调用。
@@ -7605,6 +8021,26 @@ Drone 教程
       </tags>
   </entry>
   <entry>
+    <title>Android Studio安装笔记</title>
+    <url>/2021/01/01/software/install/how-to-install-android-studio/</url>
+    <content><![CDATA[Android Studio安装笔记简单记录一下Android Studio安装
+下载从官网安装Android Studio,
+然后点击安装。
+Android SDK使用http://ping.chinaz.com获取dl.google.com的大陆响应时间最短的IP地址。
+以我为例：180.163.151.161
+将其写入hosts文件(C:\WINDOWS\System32\drivers\etc\hosts)
+180.163.151.161 dl.google.com
+
+参考资料在Android Studio中下载Android SDK的两种方式（Android Studio3.0、windows
+]]></content>
+      <categories>
+        <category>软件</category>
+      </categories>
+      <tags>
+        <tag>Android Studio</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>在armbian上使用snap安装neovim</title>
     <url>/2025/02/14/software/install/use-snap-to-install-neovim-on-armbian/</url>
     <content><![CDATA[概述最近搞了一台armbian的机子，想在上面安装neovim，但是发现apt上的nvim版本太低了，只有0.4.0好像。经过一番的搜索，发现Snaps可以满足我的要求。
@@ -7632,26 +8068,6 @@ NVIM v0.10.4Build type: RelWithDebInfoLuaJIT 2.1.1713484068Run &quot;nvim -V1 -v
         <tag>neovim</tag>
         <tag>snap</tag>
         <tag>armbian</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>Android Studio安装笔记</title>
-    <url>/2021/01/01/software/install/how-to-install-android-studio/</url>
-    <content><![CDATA[Android Studio安装笔记简单记录一下Android Studio安装
-下载从官网安装Android Studio,
-然后点击安装。
-Android SDK使用http://ping.chinaz.com获取dl.google.com的大陆响应时间最短的IP地址。
-以我为例：180.163.151.161
-将其写入hosts文件(C:\WINDOWS\System32\drivers\etc\hosts)
-180.163.151.161 dl.google.com
-
-参考资料在Android Studio中下载Android SDK的两种方式（Android Studio3.0、windows
-]]></content>
-      <categories>
-        <category>软件</category>
-      </categories>
-      <tags>
-        <tag>Android Studio</tag>
       </tags>
   </entry>
   <entry>
@@ -7686,49 +8102,6 @@ cd &quot;$(brew --repo)/Library/Taps/homebrew/homebrew-core&quot; &amp;&amp; git
       <tags>
         <tag>mac</tag>
         <tag>homebew</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>轻量化 K8s 管理方案：在 k3s 中部署 Skooner 可视化面板</title>
-    <url>/2026/01/08/software/k8s/deploy-skooner-on-k3s/</url>
-    <content><![CDATA[前言管理 Kubernetes 集群不应该以牺牲系统资源为代价。虽然官方 Dashboard 功能强大，但对于小型集群或单节点 k3s 环境来说，它往往显得过于臃肿。如果你正在寻找一个极致轻快、响应迅速的管理界面，Skooner 是一个完美的平衡点。
-Skooner（原名 K8dash）是一款开源、超轻量级的实时仪表盘，它在不增加集群负担的前提下，提供了核心的资源观测能力。
-为什么选择 Skooner？Skooner 的设计哲学与 k3s 的轻量化理念完美契合：
-
-极低的资源占用：它的内存占用通常不到 50MB，在你的系统监控中几乎可以忽略不计。
-实时状态感知：基于 WebSocket 技术，无需手动刷新页面即可实时查看 CPU、内存消耗以及 Pod 状态。
-移动端自适应：UI 采用响应式设计，即使在手机或平板浏览器上也能轻松排查集群问题。
-
-部署步骤在本指南中，我们将通过 NodePort (32007) 的方式部署并暴露 Skooner，以便你直接通过物理机 IP 访问。
-1. 部署核心组件首先，一键安装 Skooner 的命名空间、服务和部署资源：
-kubectl apply -f https://raw.githubusercontent.com/skooner-k8s/skooner/master/kubernetes-skooner.yaml
-
-2. 配置自定义端口 (32007)默认情况下，Kubernetes 会分配一个随机的 NodePort。我们通过以下命令将其固定为 32007：
-kubectl patch svc skooner -n kube-system --type=&#x27;json&#x27; -p=&#x27;[&#123;&quot;op&quot;: &quot;replace&quot;, &quot;path&quot;: &quot;/spec/type&quot;, &quot;value&quot;:&quot;NodePort&quot;&#125;, &#123;&quot;op&quot;: &quot;replace&quot;, &quot;path&quot;: &quot;/spec/ports/0/nodePort&quot;, &quot;value&quot;:32007&#125;]&#x27;
-
-3. 创建管理 TokenSkooner 使用 Kubernetes 原生的 RBAC 权限。为了获得完整的管理权限，我们需要创建一个 ServiceAccount 并生成登录 Token：
-# 创建 ServiceAccount 和 集群角色绑定cat &lt;&lt;EOF | kubectl apply -f -apiVersion: v1kind: ServiceAccountmetadata:  name: skooner-admin  namespace: kube-system---apiVersion: rbac.authorization.k8s.io/v1kind: ClusterRoleBindingmetadata:  name: skooner-admin-bindingroleRef:  apiGroup: rbac.authorization.k8s.io  kind: ClusterRole  name: cluster-adminsubjects:- kind: ServiceAccount  name: skooner-admin  namespace: kube-systemEOF# 生成登录 Token（有效期 24 小时）kubectl create token skooner-admin -n kube-system --duration=24h
-
-
-如何访问
-打开浏览器，访问：http://&lt;你的服务器IP&gt;:32007。
-在登录界面选择 “Token” 模式。
-粘贴上一步生成的长字符串即可进入面板。
-
-这是我本地的效果：
-
-结语Skooner 在保持 k3s 轻量化特性的同时，为你提供了一个直观、现代的操作界面。对于那些既想要可视化观测、又不想被复杂管理平台拖慢系统性能的开发者来说，Skooner 是一个“即插即用”的最佳方案。
-如需了解更多高级配置，可以参考官方文档：skooner.io。
-一键安装脚本# 1. Deploy Skooner resourceskubectl apply -f https://raw.githubusercontent.com/skooner-k8s/skooner/master/kubernetes-skooner.yaml# 2. Patch the Service to NodePort and set it specifically to 32007kubectl patch svc skooner -n kube-system --type=&#x27;json&#x27; -p=&#x27;[&#123;&quot;op&quot;: &quot;replace&quot;, &quot;path&quot;: &quot;/spec/type&quot;, &quot;value&quot;:&quot;NodePort&quot;&#125;, &#123;&quot;op&quot;: &quot;replace&quot;, &quot;path&quot;: &quot;/spec/ports/0/nodePort&quot;, &quot;value&quot;:32007&#125;]&#x27;# 3. Create a Cluster Admin ServiceAccount for login (if not already created)cat &lt;&lt;EOF | kubectl apply -f -apiVersion: v1kind: ServiceAccountmetadata:  name: skooner-admin  namespace: kube-system---apiVersion: rbac.authorization.k8s.io/v1kind: ClusterRoleBindingmetadata:  name: skooner-admin-bindingroleRef:  apiGroup: rbac.authorization.k8s.io  kind: ClusterRole  name: cluster-adminsubjects:- kind: ServiceAccount  name: skooner-admin  namespace: kube-systemEOF# 4. Generate Login Tokenecho &quot;-------------------------------------------------------&quot;echo &quot;Skooner is now accessible at port: 32007&quot;echo &quot;Access URL: http://$(hostname -I | awk &#x27;&#123;print $1&#125;&#x27;):32007&quot;echo &quot;&quot;echo &quot;Login Token:&quot;kubectl create token skooner-admin -n kube-system --duration=24hecho &quot;-------------------------------------------------------&quot;
-]]></content>
-      <categories>
-        <category>软件</category>
-      </categories>
-      <tags>
-        <tag>k8s</tag>
-        <tag>k3s</tag>
-        <tag>kubernetes</tag>
-        <tag>skooner</tag>
       </tags>
   </entry>
   <entry>
@@ -7775,6 +8148,49 @@ feat: 使用k8s的HorizontalPodAutoscaler进行水平的资源缩放
         <tag>docker</tag>
         <tag>kubernetes</tag>
         <tag>Docker Desktop</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>轻量化 K8s 管理方案：在 k3s 中部署 Skooner 可视化面板</title>
+    <url>/2026/01/08/software/k8s/deploy-skooner-on-k3s/</url>
+    <content><![CDATA[前言管理 Kubernetes 集群不应该以牺牲系统资源为代价。虽然官方 Dashboard 功能强大，但对于小型集群或单节点 k3s 环境来说，它往往显得过于臃肿。如果你正在寻找一个极致轻快、响应迅速的管理界面，Skooner 是一个完美的平衡点。
+Skooner（原名 K8dash）是一款开源、超轻量级的实时仪表盘，它在不增加集群负担的前提下，提供了核心的资源观测能力。
+为什么选择 Skooner？Skooner 的设计哲学与 k3s 的轻量化理念完美契合：
+
+极低的资源占用：它的内存占用通常不到 50MB，在你的系统监控中几乎可以忽略不计。
+实时状态感知：基于 WebSocket 技术，无需手动刷新页面即可实时查看 CPU、内存消耗以及 Pod 状态。
+移动端自适应：UI 采用响应式设计，即使在手机或平板浏览器上也能轻松排查集群问题。
+
+部署步骤在本指南中，我们将通过 NodePort (32007) 的方式部署并暴露 Skooner，以便你直接通过物理机 IP 访问。
+1. 部署核心组件首先，一键安装 Skooner 的命名空间、服务和部署资源：
+kubectl apply -f https://raw.githubusercontent.com/skooner-k8s/skooner/master/kubernetes-skooner.yaml
+
+2. 配置自定义端口 (32007)默认情况下，Kubernetes 会分配一个随机的 NodePort。我们通过以下命令将其固定为 32007：
+kubectl patch svc skooner -n kube-system --type=&#x27;json&#x27; -p=&#x27;[&#123;&quot;op&quot;: &quot;replace&quot;, &quot;path&quot;: &quot;/spec/type&quot;, &quot;value&quot;:&quot;NodePort&quot;&#125;, &#123;&quot;op&quot;: &quot;replace&quot;, &quot;path&quot;: &quot;/spec/ports/0/nodePort&quot;, &quot;value&quot;:32007&#125;]&#x27;
+
+3. 创建管理 TokenSkooner 使用 Kubernetes 原生的 RBAC 权限。为了获得完整的管理权限，我们需要创建一个 ServiceAccount 并生成登录 Token：
+# 创建 ServiceAccount 和 集群角色绑定cat &lt;&lt;EOF | kubectl apply -f -apiVersion: v1kind: ServiceAccountmetadata:  name: skooner-admin  namespace: kube-system---apiVersion: rbac.authorization.k8s.io/v1kind: ClusterRoleBindingmetadata:  name: skooner-admin-bindingroleRef:  apiGroup: rbac.authorization.k8s.io  kind: ClusterRole  name: cluster-adminsubjects:- kind: ServiceAccount  name: skooner-admin  namespace: kube-systemEOF# 生成登录 Token（有效期 24 小时）kubectl create token skooner-admin -n kube-system --duration=24h
+
+
+如何访问
+打开浏览器，访问：http://&lt;你的服务器IP&gt;:32007。
+在登录界面选择 “Token” 模式。
+粘贴上一步生成的长字符串即可进入面板。
+
+这是我本地的效果：
+
+结语Skooner 在保持 k3s 轻量化特性的同时，为你提供了一个直观、现代的操作界面。对于那些既想要可视化观测、又不想被复杂管理平台拖慢系统性能的开发者来说，Skooner 是一个“即插即用”的最佳方案。
+如需了解更多高级配置，可以参考官方文档：skooner.io。
+一键安装脚本# 1. Deploy Skooner resourceskubectl apply -f https://raw.githubusercontent.com/skooner-k8s/skooner/master/kubernetes-skooner.yaml# 2. Patch the Service to NodePort and set it specifically to 32007kubectl patch svc skooner -n kube-system --type=&#x27;json&#x27; -p=&#x27;[&#123;&quot;op&quot;: &quot;replace&quot;, &quot;path&quot;: &quot;/spec/type&quot;, &quot;value&quot;:&quot;NodePort&quot;&#125;, &#123;&quot;op&quot;: &quot;replace&quot;, &quot;path&quot;: &quot;/spec/ports/0/nodePort&quot;, &quot;value&quot;:32007&#125;]&#x27;# 3. Create a Cluster Admin ServiceAccount for login (if not already created)cat &lt;&lt;EOF | kubectl apply -f -apiVersion: v1kind: ServiceAccountmetadata:  name: skooner-admin  namespace: kube-system---apiVersion: rbac.authorization.k8s.io/v1kind: ClusterRoleBindingmetadata:  name: skooner-admin-bindingroleRef:  apiGroup: rbac.authorization.k8s.io  kind: ClusterRole  name: cluster-adminsubjects:- kind: ServiceAccount  name: skooner-admin  namespace: kube-systemEOF# 4. Generate Login Tokenecho &quot;-------------------------------------------------------&quot;echo &quot;Skooner is now accessible at port: 32007&quot;echo &quot;Access URL: http://$(hostname -I | awk &#x27;&#123;print $1&#125;&#x27;):32007&quot;echo &quot;&quot;echo &quot;Login Token:&quot;kubectl create token skooner-admin -n kube-system --duration=24hecho &quot;-------------------------------------------------------&quot;
+]]></content>
+      <categories>
+        <category>软件</category>
+      </categories>
+      <tags>
+        <tag>k8s</tag>
+        <tag>k3s</tag>
+        <tag>kubernetes</tag>
+        <tag>skooner</tag>
       </tags>
   </entry>
   <entry>
@@ -7875,26 +8291,6 @@ Minikube - Kubernetes本地实验环境
       </tags>
   </entry>
   <entry>
-    <title>K3S安装的时候默认使用docker</title>
-    <url>/2022/05/15/software/k8s/k3s-install-with-docker/</url>
-    <content><![CDATA[K3S安装的时候默认使用docker问题k8s在1.20之后就弃用docker的运行时了，所以k3s也开始默认使用containerd作为默认的运行时。这导致一个问题。那就是k3s无法访问本地docker镜像。
-解决方案一种解决方案就是使用containerd的镜像，而不是docker。还有一种方式是在安装时就指定k3s使用docker作为运行环境。
-/usr/local/bin/k3s-uninstall.shcurl -sfL https://get.k3s.io | sh -s - server --docker
-
-国内用户，可以使用以下方法加速安装：
-curl -sfL https://rancher-mirror.rancher.cn/k3s/k3s-install.sh | INSTALL_K3S_MIRROR=cn sh -s - server --docker
-]]></content>
-      <categories>
-        <category>软件</category>
-      </categories>
-      <tags>
-        <tag>k8s</tag>
-        <tag>docker</tag>
-        <tag>k3s</tag>
-        <tag>kubernetes</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>在Ubuntu 18.04.5 LTS上安装minkube</title>
     <url>/2021/01/01/software/k8s/how-to-install-minkube/</url>
     <content><![CDATA[在Ubuntu 18.04.5 LTS上安装minkube要求
@@ -7947,6 +8343,26 @@ eyJhbGciOiJSUzI1NiIsImtpZCI6Imk0TWpNeGM3SWVrMHllMVphM0FPVFZIZ2RIaXZIbll2UzZObkJS
         <tag>minikube</tag>
         <tag>kubernetes</tag>
         <tag>Ubuntu</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>K3S安装的时候默认使用docker</title>
+    <url>/2022/05/15/software/k8s/k3s-install-with-docker/</url>
+    <content><![CDATA[K3S安装的时候默认使用docker问题k8s在1.20之后就弃用docker的运行时了，所以k3s也开始默认使用containerd作为默认的运行时。这导致一个问题。那就是k3s无法访问本地docker镜像。
+解决方案一种解决方案就是使用containerd的镜像，而不是docker。还有一种方式是在安装时就指定k3s使用docker作为运行环境。
+/usr/local/bin/k3s-uninstall.shcurl -sfL https://get.k3s.io | sh -s - server --docker
+
+国内用户，可以使用以下方法加速安装：
+curl -sfL https://rancher-mirror.rancher.cn/k3s/k3s-install.sh | INSTALL_K3S_MIRROR=cn sh -s - server --docker
+]]></content>
+      <categories>
+        <category>软件</category>
+      </categories>
+      <tags>
+        <tag>k8s</tag>
+        <tag>docker</tag>
+        <tag>k3s</tag>
+        <tag>kubernetes</tag>
       </tags>
   </entry>
 </search>
