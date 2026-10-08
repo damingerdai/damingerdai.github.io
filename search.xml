@@ -19,6 +19,28 @@ More info: Deployment
 ]]></content>
   </entry>
   <entry>
+    <title>给Ingress上配置ssl证书</title>
+    <url>/2022/06/18/back-end/add-ssl-for-ingress/</url>
+    <content><![CDATA[给Ingress上配置ssl证书创建secretkubectl create secret tls [secretName]  --cert=[pem文件路径] --key=[key文件路径] --namespace [namespace] -o yaml --dry-run=client &gt; ingress-default-cert.yamlkubectl apply -f ingress-default-cert.yaml
+
+Ingress添加证书apiVersion: networking.k8s.io/v1beta1kind: Ingress  metadata:     name: [ingress-name]     namespace: [namespace] # ingress要和secret在同一个名称空间下     annotations:         kubernetes.io/ingress.class: traefik         traefik.frontend.rule.type: PathPrefixStrip         # http 重定向到 https         ingress.kubernetes.io/ssl-redirect: &quot;True&quot; spec:     tls:         - hosts:             - xxxx.xxxx # 这里是下面要配置https的域名             - xxxx.xxxx # 这里是下面要配置https的域名         secretName:             [secret-name]:     rules:    - host: xxx.xxx.com      http:        paths:          - path: /            pathType: Prefix            backend:              service:                name: [service-name]                port:                  number: 8080
+
+
+参考资料
+为k8s集群配置SSL证书
+k3s配置ingress使用ssl证书
+
+]]></content>
+      <categories>
+        <category>后端</category>
+      </categories>
+      <tags>
+        <tag>k8s</tag>
+        <tag>ingress</tag>
+        <tag>ssl</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>如何在10分钟内使用LangChain</title>
     <url>/2024/06/09/ai/how-to-use-langchain-in-10-minutes/</url>
     <content><![CDATA[如何在10分钟内使用LangChainLangChain是一个强大的Python和Javascript&#x2F;Typescript库，它可以让你快速地原型化大型语言模型应用。它允许你将LLM任务链在一起（因此得名），甚至可以让你快速轻松地运行自主代理(autonomous agents)。今天，我们将介绍chain的基础知识，这样你就可以立即开始你最新的LLM项目。
@@ -94,28 +116,6 @@ LangChain的力量在于其简单性和灵活性。无论你是经验丰富的�
       </tags>
   </entry>
   <entry>
-    <title>给Ingress上配置ssl证书</title>
-    <url>/2022/06/18/back-end/add-ssl-for-ingress/</url>
-    <content><![CDATA[给Ingress上配置ssl证书创建secretkubectl create secret tls [secretName]  --cert=[pem文件路径] --key=[key文件路径] --namespace [namespace] -o yaml --dry-run=client &gt; ingress-default-cert.yamlkubectl apply -f ingress-default-cert.yaml
-
-Ingress添加证书apiVersion: networking.k8s.io/v1beta1kind: Ingress  metadata:     name: [ingress-name]     namespace: [namespace] # ingress要和secret在同一个名称空间下     annotations:         kubernetes.io/ingress.class: traefik         traefik.frontend.rule.type: PathPrefixStrip         # http 重定向到 https         ingress.kubernetes.io/ssl-redirect: &quot;True&quot; spec:     tls:         - hosts:             - xxxx.xxxx # 这里是下面要配置https的域名             - xxxx.xxxx # 这里是下面要配置https的域名         secretName:             [secret-name]:     rules:    - host: xxx.xxx.com      http:        paths:          - path: /            pathType: Prefix            backend:              service:                name: [service-name]                port:                  number: 8080
-
-
-参考资料
-为k8s集群配置SSL证书
-k3s配置ingress使用ssl证书
-
-]]></content>
-      <categories>
-        <category>后端</category>
-      </categories>
-      <tags>
-        <tag>k8s</tag>
-        <tag>ingress</tag>
-        <tag>ssl</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>使用docker-compose备份Postgres Docker容器的解决方案</title>
     <url>/2024/07/10/back-end/back-end-how-to-backup-postgres-docker-container/</url>
     <content><![CDATA[使用docker-compose备份Postgres Docker容器的解决方案备份使用pg_dumpall命令备份Postgres数据库。
@@ -146,51 +146,6 @@ docker-compose exec postgres psql -f /backup/dump_xxx.sql postgres -U postgres
         <tag>docker</tag>
         <tag>docker-compose</tag>
         <tag>postgres</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>Bazel 8 Bzlmod 迁移记录：从 WORKSPACE 到 MODULE.bazel</title>
-    <url>/2025/11/03/back-end/bazel8-bzlmod-migration/</url>
-    <content><![CDATA[Bazel 8 Bzlmod 迁移记录：从 WORKSPACE 到 MODULE.bazel本文档记录了项目 hoteler 从 Bazel 旧版 WORKSPACE 机制迁移到 Bazel 8 Bzlmod（Bazel 模块系统）的完整过程，重点记录了在迁移 Java 和 Maven 依赖时遇到的关键问题及其解决方案。
-1. 迁移背景与目标
-原 Bazel 版本: Bazel 7.x
-目标 Bazel 版本: Bazel 8.4.2 
-目标: 完全移除 WORKSPACE 文件，将所有外部依赖（包括规则集和 Maven Artifacts）迁移到 MODULE.bazel 文件中进行管理。
-涉及的关键规则集: rules_java、rules_jvm_external、rules_spring。
-
-2. 原始 WORKSPACE 结构概述项目原先使用传统的 WORKSPACE 文件管理依赖，主要依赖 http_archive 引入规则集，并使用 rules_jvm_external 的 maven_install 函数定义所有 Maven 依赖。
-# WORKSPACE (简化结构)workspace(name = &quot;hoteler&quot;)# 通过 http_archive 引入 rules_jvm_external 和 rules_springload(&quot;@bazel_tools//tools/build_defs/repo:http.bzl&quot;, &quot;http_archive&quot;)http_archive(...) # rules_jvm_externalhttp_archive(...) # rules_spring# 使用 maven_install 定义所有 Maven 依赖，并将其暴露为 @maven 代码库load(&quot;@rules_jvm_external//:defs.bzl&quot;, &quot;maven_install&quot;)maven_install(    artifacts = [...], # 包含 Spring Boot, Mybatis, JWT 等所有依赖    maven_install_json = &quot;@//:maven_install.json&quot;,)load(&quot;@maven//:defs.bzl&quot;, &quot;pinned_maven_install&quot;)pinned_maven_install()
-
-3. Bzlmod 迁移与问题记录迁移过程主要集中在 MODULE.bazel 文件的创建和调整上，遇到了 Bazel 8 Bzlmod 机制的多个严格限制。
-3.1 遇到的第一个问题：load 语句限制问题描述:尝试在 MODULE.bazel 文件中直接使用 load 语句引入 rules_jvm_external 扩展和本地 .bzl 文件时，Bazel 报错 load statements may not be used in MODULE.bazel files。
-原因分析:MODULE.bazel 文件只允许使用声明性语句如 module(), bazel_dep(), 和 use_extension()。任何形式的 load 语句（包括加载模块扩展）都必须被重写为 use_extension 模式。
-初步解决方案 (失败)：最初尝试将 load 用于模块扩展也失败，因为它与 use_extension 的语法要求不符。
-3.2 遇到的第二个问题：核心依赖缺失 (rules_java)问题描述:在成功引入 rules_jvm_external 后，构建失败，报错 No repository visible as &#39;@rules_java&#39; from main repository。
-原因分析:在 Bzlmod 中，即使是 Java 项目的核心规则集 rules_java 也需要被显式声明。rules_jvm_external 和 rules_spring 都依赖于它。
-解决方案:在 MODULE.bazel 中显式添加 rules_java 依赖，并根据最终构建需求将其版本设置为 8.16.1。
-bazel_dep(    name = &quot;rules_java&quot;,    version = &quot;8.16.1&quot;, )
-
-3.3 遇到的第三个问题：@maven 仓库可见性问题问题描述:在 BUILD.bazel 文件中引用 Maven 依赖时，持续收到错误 No repository visible as &#39;@maven&#39; from main repository 或 No repository visible as &#39;@unpinned_maven&#39; from main repository。
-原因分析:在 Bzlmod 中，模块扩展（如 rules_jvm_external 的 maven 扩展）创建的代码库（如 @maven）不会自动对主模块可见。需要一个额外的步骤来将该代码库导入到主模块的命名空间。
-解决方案 (最终):使用 use_repo 函数将模块扩展生成的 maven 仓库导入。这是 rules_jvm_external 在 Bazel 8 中推荐的 Bzlmod 导入方式:
-# MODULE.bazel (最终结构的关键变动)maven = use_extension(&quot;@rules_jvm_external//:extensions.bzl&quot;, &quot;maven&quot;)# 使用 use_repo 将扩展生成的 &#x27;maven&#x27; 仓库导入主模块use_repo(maven, &quot;maven&quot;)maven.install(    lock_file = &quot;//:maven_install.json&quot;, # 修正了参数名    artifacts = [...],    # ...)
-
-4. 最终 Bzlmod 配置与 BUILD 文件以下是完成迁移后项目的最终依赖管理文件。
-4.1 最终的 MODULE.bazel 文件该文件集成了所有规则集依赖、版本修正和 Maven 扩展配置。
-module(    name = &quot;hoteler&quot;,    compatibility_level = 1,)bazel_dep(    name = &quot;rules_java&quot;,    version = &quot;8.16.1&quot;, )bazel_dep(    name = &quot;rules_jvm_external&quot;,    version = &quot;6.7&quot;, # 解决版本冲突)bazel_dep(    name = &quot;rules_spring&quot;,    version = &quot;2.6.3&quot;,)# 使用 use_extension 激活 Maven 扩展maven = use_extension(&quot;@rules_jvm_external//:extensions.bzl&quot;, &quot;maven&quot;)# 导入 Maven 仓库，使其在 BUILD 文件中可见为 @mavenuse_repo(maven, &quot;maven&quot;)# 配置 Maven 依赖maven.install(    lock_file = &quot;//:maven_install.json&quot;,    artifacts = [        &quot;org.springframework.boot:spring-boot-starter-web:3.5.5&quot;,        # ... (所有 Maven 依赖项，包括补充的 cn.hutool:hutool-crypto 等)    ],    fetch_sources = True,    repositories = [        &quot;https://maven.aliyun.com/repository/central&quot;,        # ... (所有仓库)    ],)
-
-4.2 最终的 BUILD.bazel 引用在 BUILD.bazel 文件中，所有对 Maven 依赖的引用都保持使用 @maven//:... 别名，因为 MODULE.bazel 文件已通过 use_repo(maven, &quot;maven&quot;) 语句确保了 maven 代码库的可见性。
-# BUILD.bazel (部分内容)java_library(    name = &quot;java-maven-lib&quot;,    srcs = glob([&quot;src/main/java/org/daming/hoteler/*.java&quot;]),    deps = [        &quot;@maven//:org_springframework_boot_spring_boot_starter_web&quot;,        &quot;@maven//:io_jsonwebtoken_jjwt_api&quot;,        # ... (所有其他 @maven 引用)    ],    # ...)
-
-5. 结论通过将规则集定义从 http_archive 迁移到 bazel_dep，并将 maven_install 逻辑封装到 use_extension 和 use_repo 组合中，项目成功实现了到 Bazel 8 Bzlmod 的完全迁移，并移除了 WORKSPACE 文件。迁移的关键在于理解 Bazel 8 对依赖导入和名称空间可见性的严格要求。
-]]></content>
-      <categories>
-        <category>后端</category>
-      </categories>
-      <tags>
-        <tag>spring boot</tag>
-        <tag>bazel</tag>
-        <tag>bzlmod</tag>
       </tags>
   </entry>
   <entry>
@@ -289,6 +244,51 @@ Hoteler
         <tag>docker</tag>
         <tag>github</tag>
         <tag>github action</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Bazel 8 Bzlmod 迁移记录：从 WORKSPACE 到 MODULE.bazel</title>
+    <url>/2025/11/03/back-end/bazel8-bzlmod-migration/</url>
+    <content><![CDATA[Bazel 8 Bzlmod 迁移记录：从 WORKSPACE 到 MODULE.bazel本文档记录了项目 hoteler 从 Bazel 旧版 WORKSPACE 机制迁移到 Bazel 8 Bzlmod（Bazel 模块系统）的完整过程，重点记录了在迁移 Java 和 Maven 依赖时遇到的关键问题及其解决方案。
+1. 迁移背景与目标
+原 Bazel 版本: Bazel 7.x
+目标 Bazel 版本: Bazel 8.4.2 
+目标: 完全移除 WORKSPACE 文件，将所有外部依赖（包括规则集和 Maven Artifacts）迁移到 MODULE.bazel 文件中进行管理。
+涉及的关键规则集: rules_java、rules_jvm_external、rules_spring。
+
+2. 原始 WORKSPACE 结构概述项目原先使用传统的 WORKSPACE 文件管理依赖，主要依赖 http_archive 引入规则集，并使用 rules_jvm_external 的 maven_install 函数定义所有 Maven 依赖。
+# WORKSPACE (简化结构)workspace(name = &quot;hoteler&quot;)# 通过 http_archive 引入 rules_jvm_external 和 rules_springload(&quot;@bazel_tools//tools/build_defs/repo:http.bzl&quot;, &quot;http_archive&quot;)http_archive(...) # rules_jvm_externalhttp_archive(...) # rules_spring# 使用 maven_install 定义所有 Maven 依赖，并将其暴露为 @maven 代码库load(&quot;@rules_jvm_external//:defs.bzl&quot;, &quot;maven_install&quot;)maven_install(    artifacts = [...], # 包含 Spring Boot, Mybatis, JWT 等所有依赖    maven_install_json = &quot;@//:maven_install.json&quot;,)load(&quot;@maven//:defs.bzl&quot;, &quot;pinned_maven_install&quot;)pinned_maven_install()
+
+3. Bzlmod 迁移与问题记录迁移过程主要集中在 MODULE.bazel 文件的创建和调整上，遇到了 Bazel 8 Bzlmod 机制的多个严格限制。
+3.1 遇到的第一个问题：load 语句限制问题描述:尝试在 MODULE.bazel 文件中直接使用 load 语句引入 rules_jvm_external 扩展和本地 .bzl 文件时，Bazel 报错 load statements may not be used in MODULE.bazel files。
+原因分析:MODULE.bazel 文件只允许使用声明性语句如 module(), bazel_dep(), 和 use_extension()。任何形式的 load 语句（包括加载模块扩展）都必须被重写为 use_extension 模式。
+初步解决方案 (失败)：最初尝试将 load 用于模块扩展也失败，因为它与 use_extension 的语法要求不符。
+3.2 遇到的第二个问题：核心依赖缺失 (rules_java)问题描述:在成功引入 rules_jvm_external 后，构建失败，报错 No repository visible as &#39;@rules_java&#39; from main repository。
+原因分析:在 Bzlmod 中，即使是 Java 项目的核心规则集 rules_java 也需要被显式声明。rules_jvm_external 和 rules_spring 都依赖于它。
+解决方案:在 MODULE.bazel 中显式添加 rules_java 依赖，并根据最终构建需求将其版本设置为 8.16.1。
+bazel_dep(    name = &quot;rules_java&quot;,    version = &quot;8.16.1&quot;, )
+
+3.3 遇到的第三个问题：@maven 仓库可见性问题问题描述:在 BUILD.bazel 文件中引用 Maven 依赖时，持续收到错误 No repository visible as &#39;@maven&#39; from main repository 或 No repository visible as &#39;@unpinned_maven&#39; from main repository。
+原因分析:在 Bzlmod 中，模块扩展（如 rules_jvm_external 的 maven 扩展）创建的代码库（如 @maven）不会自动对主模块可见。需要一个额外的步骤来将该代码库导入到主模块的命名空间。
+解决方案 (最终):使用 use_repo 函数将模块扩展生成的 maven 仓库导入。这是 rules_jvm_external 在 Bazel 8 中推荐的 Bzlmod 导入方式:
+# MODULE.bazel (最终结构的关键变动)maven = use_extension(&quot;@rules_jvm_external//:extensions.bzl&quot;, &quot;maven&quot;)# 使用 use_repo 将扩展生成的 &#x27;maven&#x27; 仓库导入主模块use_repo(maven, &quot;maven&quot;)maven.install(    lock_file = &quot;//:maven_install.json&quot;, # 修正了参数名    artifacts = [...],    # ...)
+
+4. 最终 Bzlmod 配置与 BUILD 文件以下是完成迁移后项目的最终依赖管理文件。
+4.1 最终的 MODULE.bazel 文件该文件集成了所有规则集依赖、版本修正和 Maven 扩展配置。
+module(    name = &quot;hoteler&quot;,    compatibility_level = 1,)bazel_dep(    name = &quot;rules_java&quot;,    version = &quot;8.16.1&quot;, )bazel_dep(    name = &quot;rules_jvm_external&quot;,    version = &quot;6.7&quot;, # 解决版本冲突)bazel_dep(    name = &quot;rules_spring&quot;,    version = &quot;2.6.3&quot;,)# 使用 use_extension 激活 Maven 扩展maven = use_extension(&quot;@rules_jvm_external//:extensions.bzl&quot;, &quot;maven&quot;)# 导入 Maven 仓库，使其在 BUILD 文件中可见为 @mavenuse_repo(maven, &quot;maven&quot;)# 配置 Maven 依赖maven.install(    lock_file = &quot;//:maven_install.json&quot;,    artifacts = [        &quot;org.springframework.boot:spring-boot-starter-web:3.5.5&quot;,        # ... (所有 Maven 依赖项，包括补充的 cn.hutool:hutool-crypto 等)    ],    fetch_sources = True,    repositories = [        &quot;https://maven.aliyun.com/repository/central&quot;,        # ... (所有仓库)    ],)
+
+4.2 最终的 BUILD.bazel 引用在 BUILD.bazel 文件中，所有对 Maven 依赖的引用都保持使用 @maven//:... 别名，因为 MODULE.bazel 文件已通过 use_repo(maven, &quot;maven&quot;) 语句确保了 maven 代码库的可见性。
+# BUILD.bazel (部分内容)java_library(    name = &quot;java-maven-lib&quot;,    srcs = glob([&quot;src/main/java/org/daming/hoteler/*.java&quot;]),    deps = [        &quot;@maven//:org_springframework_boot_spring_boot_starter_web&quot;,        &quot;@maven//:io_jsonwebtoken_jjwt_api&quot;,        # ... (所有其他 @maven 引用)    ],    # ...)
+
+5. 结论通过将规则集定义从 http_archive 迁移到 bazel_dep，并将 maven_install 逻辑封装到 use_extension 和 use_repo 组合中，项目成功实现了到 Bazel 8 Bzlmod 的完全迁移，并移除了 WORKSPACE 文件。迁移的关键在于理解 Bazel 8 对依赖导入和名称空间可见性的严格要求。
+]]></content>
+      <categories>
+        <category>后端</category>
+      </categories>
+      <tags>
+        <tag>spring boot</tag>
+        <tag>bazel</tag>
+        <tag>bzlmod</tag>
       </tags>
   </entry>
   <entry>
@@ -400,25 +400,6 @@ PUT /password-resets/:token: 执行更新。
       <tags>
         <tag>postgres</tag>
         <tag>golang</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>Gradle配置阿里镜像</title>
-    <url>/2021/10/29/back-end/gradle-ali-mirror/</url>
-    <content><![CDATA[Gradle配置阿里镜像为了加快gradle的国内下载的速度，我们可以为gradle配置阿里仓库的镜像
-请在gradle的安装目录下的init.d的文件夹下添加init.gradle:
-gradle.projectsLoaded &#123;    rootProject.allprojects &#123;        buildscript &#123;            repositories &#123;                def JCENTER_URL = &#x27;https://maven.aliyun.com/repository/public&#x27;                def GOOGLE_URL = &#x27;https://maven.aliyun.com/repository/google&#x27;                def NEXUS_URL = &#x27;https://maven.aliyun.com/repository/central&#x27;                all &#123; ArtifactRepository repo -&gt;                    if (repo instanceof MavenArtifactRepository) &#123;                        def url = repo.url.toString()                        if (url.startsWith(&#x27;https://jcenter.bintray.com/&#x27;)) &#123;                            project.logger.lifecycle &quot;Repository $&#123;repo.url&#125; replaced by $JCENTER_URL.&quot;                            println(&quot;buildscript $&#123;repo.url&#125; replaced by $JCENTER_URL.&quot;)                            remove repo                        &#125;                        else if (url.startsWith(&#x27;https://dl.google.com/dl/android/maven2/&#x27;)) &#123;                            project.logger.lifecycle &quot;Repository $&#123;repo.url&#125; replaced by $GOOGLE_URL.&quot;                            println(&quot;buildscript $&#123;repo.url&#125; replaced by $GOOGLE_URL.&quot;)                            remove repo                        &#125;                        else if (url.startsWith(&#x27;https://repo1.maven.org/maven2&#x27;)) &#123;                            project.logger.lifecycle &quot;Repository $&#123;repo.url&#125; replaced by $REPOSITORY_URL.&quot;                            println(&quot;buildscript $&#123;repo.url&#125; replaced by $REPOSITORY_URL.&quot;)                            remove repo                        &#125;                    &#125;                &#125;                jcenter &#123;                    url JCENTER_URL                &#125;                google &#123;                    url GOOGLE_URL                &#125;                maven &#123;                    url NEXUS_URL                &#125;            &#125;        &#125;        repositories &#123;            def JCENTER_URL = &#x27;https://maven.aliyun.com/repository/public&#x27;            def GOOGLE_URL = &#x27;https://maven.aliyun.com/repository/google&#x27;            def NEXUS_URL = &#x27;https://maven.aliyun.com/repository/central&#x27;            all &#123; ArtifactRepository repo -&gt;                if (repo instanceof MavenArtifactRepository) &#123;                    def url = repo.url.toString()                    if (url.startsWith(&#x27;https://jcenter.bintray.com/&#x27;)) &#123;                        project.logger.lifecycle &quot;Repository $&#123;repo.url&#125; replaced by $JCENTER_URL.&quot;                        println(&quot;buildscript $&#123;repo.url&#125; replaced by $JCENTER_URL.&quot;)                        remove repo                    &#125;                    else if (url.startsWith(&#x27;https://dl.google.com/dl/android/maven2/&#x27;)) &#123;                        project.logger.lifecycle &quot;Repository $&#123;repo.url&#125; replaced by $GOOGLE_URL.&quot;                        println(&quot;buildscript $&#123;repo.url&#125; replaced by $GOOGLE_URL.&quot;)                        remove repo                    &#125;                    else if (url.startsWith(&#x27;https://repo1.maven.org/maven2&#x27;)) &#123;                        project.logger.lifecycle &quot;Repository $&#123;repo.url&#125; replaced by $REPOSITORY_URL.&quot;                        println(&quot;buildscript $&#123;repo.url&#125; replaced by $REPOSITORY_URL.&quot;)                        remove repo                    &#125;                &#125;            &#125;            jcenter &#123;                url JCENTER_URL            &#125;            google &#123;                url GOOGLE_URL            &#125;            maven &#123;                url NEXUS_URL            &#125;        &#125;    &#125;&#125;
-
-参考
-如何构建 Spring 源码环境？
-阿里云云效 Maven
-
-]]></content>
-      <categories>
-        <category>后端</category>
-      </categories>
-      <tags>
-        <tag>gradle</tag>
       </tags>
   </entry>
   <entry>
@@ -714,7 +695,79 @@ character varying(255)
 假设每次密码验证需要 64 MiB 内存，那么大量并发登录请求就可能带来明显的内存压力。
 因此，生产环境应该根据服务器配置调整参数，并对认证请求实施合理的并发限制和速率限制。
 密码哈希算法的选择，最终还是要结合完整的系统安全设计。
-八、总结这次 Health Master 的密码哈希迁移，最初只是想解决 MD5 不再适合密码存储的问题。
+八、Argon2id 的性能测试：Memory-hard 到底有多昂贵？前面提到，Argon2id 的一个重要特点是 Memory-hard。
+但如果只是从原理上理解 Memory-hard，我觉得还不够直观。
+因此，我在 Health Master 的 pkg/pwd 包中增加了 Benchmark，分别调整内存成本、迭代次数和并行度，观察它们对密码哈希性能的影响。
+测试环境：
+
+CPU：Apple M2 Pro
+操作系统：macOS
+架构：arm64
+工具：Go Benchmark
+测试次数：每组 3 次
+
+执行命令：
+go test ./pkg/pwd \  -run &#x27;^$&#x27; \  -bench BenchmarkHashPassword \  -benchmem \  -count=3
+
+测试代码使用 b.Loop() 执行 HashPassword，并通过不同的 Argon2Params 调整参数。
+测试结果：
+
+
+
+配置
+平均耗时
+分配内存
+
+
+
+Default (64 MiB, t&#x3D;3, p&#x3D;2)
+70.64 ms
+64 MiB
+
+
+Memory32MiB
+32.12 ms
+32 MiB
+
+
+Memory128MiB
+143.83 ms
+128 MiB
+
+
+Iterations1
+23.75 ms
+64 MiB
+
+
+Parallelism1
+135.29 ms
+64 MiB
+
+
+Parallelism4
+35.36 ms
+64 MiB
+
+
+从结果可以观察到三个现象。
+首先，增加 Memory Cost 会显著提高计算成本。
+当内存从 32 MiB 增加到 128 MiB 时，哈希耗时从约 32 ms 增加到 144 ms，增长约 4.5 倍。
+这直观地体现了 Argon2id 的 Memory-hard 特性。
+其次，Iterations 对计算时间有明显影响。
+将迭代次数从 3 降低到 1 后，平均耗时从约 71 ms 降低到 24 ms。
+这意味着减少迭代次数虽然能够提高性能，但也降低了每次密码猜测的计算成本。
+最后，Parallelism 的影响值得特别关注。
+在 Apple M2 Pro 上，将并行度从 1 提高到 4，单次哈希耗时从约 135 ms 降低到了 35 ms。
+这说明 Argon2id 能够利用多核 CPU 提高单次计算速度。
+但并行度越高，并不意味着 Web 服务整体性能越好。多个用户同时登录时，还需要考虑 CPU 竞争、内存带宽和服务端并发量。
+这次 Benchmark 给我的启发过去选择密码哈希参数时，我更多关注算法推荐的配置。
+但这次测试让我意识到，Argon2id 的参数不仅是安全参数，同时也是服务端的资源预算。
+更高的内存和计算成本可以增加离线破解的代价，但也会提高合法认证请求的成本。
+因此，参数选择不能只看单次 Benchmark，还应该结合实际部署环境、登录并发量和服务器资源限制。
+尤其是对于运行在资源有限的 Kubernetes 节点上的服务，密码哈希的内存开销也需要纳入容量规划。
+后续我计划进一步增加并发 Benchmark，测试不同并发量下的吞吐量、延迟和内存占用，从而为 Health Master 选择更合理的默认参数。
+九、总结这次 Health Master 的密码哈希迁移，最初只是想解决 MD5 不再适合密码存储的问题。
 但在学习 Argon2id 的过程中，我逐渐理解了几个以前没有认真思考过的问题。
 首先，密码哈希与加密是两种不同的概念。密码哈希不需要解密，认证时只需要重新计算并验证结果。
 其次，Salt 和哈希参数不需要保密。Argon2id 的安全性并不依赖隐藏算法，而是依赖密码本身的不可预测性以及哈希计算成本。
@@ -820,6 +873,25 @@ task checkDependencies &#123;    doLast &#123;        configurations.compileClas
       </tags>
   </entry>
   <entry>
+    <title>Gradle配置阿里镜像</title>
+    <url>/2021/10/29/back-end/gradle-ali-mirror/</url>
+    <content><![CDATA[Gradle配置阿里镜像为了加快gradle的国内下载的速度，我们可以为gradle配置阿里仓库的镜像
+请在gradle的安装目录下的init.d的文件夹下添加init.gradle:
+gradle.projectsLoaded &#123;    rootProject.allprojects &#123;        buildscript &#123;            repositories &#123;                def JCENTER_URL = &#x27;https://maven.aliyun.com/repository/public&#x27;                def GOOGLE_URL = &#x27;https://maven.aliyun.com/repository/google&#x27;                def NEXUS_URL = &#x27;https://maven.aliyun.com/repository/central&#x27;                all &#123; ArtifactRepository repo -&gt;                    if (repo instanceof MavenArtifactRepository) &#123;                        def url = repo.url.toString()                        if (url.startsWith(&#x27;https://jcenter.bintray.com/&#x27;)) &#123;                            project.logger.lifecycle &quot;Repository $&#123;repo.url&#125; replaced by $JCENTER_URL.&quot;                            println(&quot;buildscript $&#123;repo.url&#125; replaced by $JCENTER_URL.&quot;)                            remove repo                        &#125;                        else if (url.startsWith(&#x27;https://dl.google.com/dl/android/maven2/&#x27;)) &#123;                            project.logger.lifecycle &quot;Repository $&#123;repo.url&#125; replaced by $GOOGLE_URL.&quot;                            println(&quot;buildscript $&#123;repo.url&#125; replaced by $GOOGLE_URL.&quot;)                            remove repo                        &#125;                        else if (url.startsWith(&#x27;https://repo1.maven.org/maven2&#x27;)) &#123;                            project.logger.lifecycle &quot;Repository $&#123;repo.url&#125; replaced by $REPOSITORY_URL.&quot;                            println(&quot;buildscript $&#123;repo.url&#125; replaced by $REPOSITORY_URL.&quot;)                            remove repo                        &#125;                    &#125;                &#125;                jcenter &#123;                    url JCENTER_URL                &#125;                google &#123;                    url GOOGLE_URL                &#125;                maven &#123;                    url NEXUS_URL                &#125;            &#125;        &#125;        repositories &#123;            def JCENTER_URL = &#x27;https://maven.aliyun.com/repository/public&#x27;            def GOOGLE_URL = &#x27;https://maven.aliyun.com/repository/google&#x27;            def NEXUS_URL = &#x27;https://maven.aliyun.com/repository/central&#x27;            all &#123; ArtifactRepository repo -&gt;                if (repo instanceof MavenArtifactRepository) &#123;                    def url = repo.url.toString()                    if (url.startsWith(&#x27;https://jcenter.bintray.com/&#x27;)) &#123;                        project.logger.lifecycle &quot;Repository $&#123;repo.url&#125; replaced by $JCENTER_URL.&quot;                        println(&quot;buildscript $&#123;repo.url&#125; replaced by $JCENTER_URL.&quot;)                        remove repo                    &#125;                    else if (url.startsWith(&#x27;https://dl.google.com/dl/android/maven2/&#x27;)) &#123;                        project.logger.lifecycle &quot;Repository $&#123;repo.url&#125; replaced by $GOOGLE_URL.&quot;                        println(&quot;buildscript $&#123;repo.url&#125; replaced by $GOOGLE_URL.&quot;)                        remove repo                    &#125;                    else if (url.startsWith(&#x27;https://repo1.maven.org/maven2&#x27;)) &#123;                        project.logger.lifecycle &quot;Repository $&#123;repo.url&#125; replaced by $REPOSITORY_URL.&quot;                        println(&quot;buildscript $&#123;repo.url&#125; replaced by $REPOSITORY_URL.&quot;)                        remove repo                    &#125;                &#125;            &#125;            jcenter &#123;                url JCENTER_URL            &#125;            google &#123;                url GOOGLE_URL            &#125;            maven &#123;                url NEXUS_URL            &#125;        &#125;    &#125;&#125;
+
+参考
+如何构建 Spring 源码环境？
+阿里云云效 Maven
+
+]]></content>
+      <categories>
+        <category>后端</category>
+      </categories>
+      <tags>
+        <tag>gradle</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>在k8s中如何强制删除处于Terminating状态的namesapce</title>
     <url>/2025/02/13/back-end/how-to-forcefully-delete-a-namespace-that-is-stuck-in-the-Terminating-state/</url>
     <content><![CDATA[概述在k3s中删除一个namespace十分简单，就是一个命令的事儿：
@@ -854,6 +926,65 @@ kubernetes批量删除长期处于Terminating状态的namespace
       <tags>
         <tag>k8s</tag>
         <tag>k3s</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>k3s使用Let‘s Encrypt配置https入口部署</title>
+    <url>/2022/09/03/back-end/k3s-uses-letsencrypt-and-traefik-to-deploy-the-https/</url>
+    <content><![CDATA[前言本文记录k3s使用letsencrypt配置ssl证书和续签。
+本文使用的k3s版本为： v1.23.6+k3s1。
+安装 cert-manager# 使用官网提供的配置文件一键安装# 如果拉取 github 资源有困难，可以从网络通畅的位置下载好粘贴过去$ kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.9.1/cert-manager.yaml
+
+如果一切正常，k3s
+$ kubectl get pods -n cert-managerNAME                                       READY   STATUS    RESTARTS   AGEcert-manager-6544c44c6b-tlhw8              1/1     Running   0          51scert-manager-cainjector-5687864d5f-rldsg   1/1     Running   0          51scert-manager-webhook-785bb86798-g4g7g      1/1     Running   0          51s
+
+部署 Issuing Certificates创建letsencrypt.yaml文件
+apiVersion: cert-manager.io/v1kind: ClusterIssuermetadata:  namespace: cert-manager  name: letsencryptspec:  acme:    email: &lt;YOUR EMAIL&gt; # replace this    privateKeySecretRef:      name: prod-issuer-account-key    server: https://acme-v02.api.letsencrypt.org/directory    solvers:      - http01:          ingress:            class: traefik        selector: &#123;&#125;
+
+
+请自行替换为个人的邮件地址
+
+部署
+$ kubectl apply -f letsencrypt.yaml
+
+如果一切正常:
+$ kubectl describe clusterissuer letsencryptName:         letsencryptNamespace:    Labels:       &lt;none&gt;Annotations:  &lt;none&gt;API Version:  cert-manager.io/v1Kind:         ClusterIssuer...Spec:  Acme:    Email:            user@example.com    Preferred Chain:      Private Key Secret Ref:      Name:  prod-issuer-account-key    Server:  https://acme-v02.api.letsencrypt.org/directory    Solvers:      http01:        Ingress:          Class:  traefik      Selector:Status:  Acme:    Last Registered Email:  mingguobin@live.com    Uri:                    https://acme-v02.api.letsencrypt.org/acme/acct/715199687  Conditions:    Last Transition Time:  2022-09-03T12:20:23Z    Message:               The ACME account was registered with the ACME server    Observed Generation:   1    Reason:                ACMEAccountRegistered    Status:                True    Type:                  ReadyEvents:                    &lt;none&gt;
+
+给Ingress配置sslapiVersion: networking.k8s.io/v1kind: Ingressmetadata:  namespace: hoteler-namespace  annotations:    cert-manager.io/cluster-issuer: letsencrypt  name: hoteler-webspec:  tls:  - secretName: hoteler-web-tls    hosts:      - hoteler.damingerdai.com  # ingressClassName: traefik  rules:  - host: hoteler.damingerdai.com    http:      paths:      - path: /        pathType: Prefix        backend:          service:            name: hoteler-web            port:              number: 80
+
+改动如下：
+
+添加annotations的metadata
+
+annotations:  cert-manager.io/cluster-issuer: letsencrypt
+
+
+添加tls
+
+tls:- secretName: hoteler-web-tls  hosts:    - hoteler.damingerdai.com
+
+secretName可以按照自己的习惯来取，cert-manager会自动创建
+$ kubectl apply -f ingress.yaml -n hoteler-namespace$ kubectl get ingress -n hoteler-namespacehoteler-web                 &lt;none&gt;   hoteler.damingerdai.com         204.44.75.77   80, 443   115d
+
+可以看到hoteler-web除了80端口，还新加了443端口
+查看证书状态$ kubectl describe certificate -n hoteler-namespace...Status:  Conditions:    Last Transition Time:  2022-09-03T12:27:15Z    Message:               Certificate is up to date and has not expired    Observed Generation:   1    Reason:                Ready    Status:                True    Type:                  Ready  Not After:               2022-12-02T11:27:13Z  Not Before:              2022-09-03T11:27:14Z  Renewal Time:            2022-11-02T11:27:13Z  Revision:                1Events:  Type    Reason     Age   From                                       Message  ----    ------     ----  ----                                       -------  Normal  Issuing    30m   cert-manager-certificates-trigger          Issuing certificate as Secret does not exist  Normal  Generated  30m   cert-manager-certificates-key-manager      Stored new private key in temporary Secret resource &quot;hoteler-web-tls-pfxrp&quot;  Normal  Requested  30m   cert-manager-certificates-request-manager  Created new CertificateRequest resource &quot;hoteler-web-tls-v24f6&quot;  Normal  Issuing    29m   cert-manager-certificates-issuing          The certificate has been successfully issued
+
+效果
+参考资料
+k3s 使用 Letsencrypt 和 Traefik 完成 https 入口部署
+K3S与Docker常用命令
+Securing NGINX-ingress
+Documenting “context deadline exceeded” errors relating to the webhook
+
+]]></content>
+      <categories>
+        <category>后端</category>
+      </categories>
+      <tags>
+        <tag>k8s</tag>
+        <tag>ssl</tag>
+        <tag>k3s</tag>
+        <tag>letsencrypt</tag>
       </tags>
   </entry>
   <entry>
@@ -929,65 +1060,6 @@ kubectl port-forward service/pgbouncer 5432:5432
       </tags>
   </entry>
   <entry>
-    <title>k3s使用Let‘s Encrypt配置https入口部署</title>
-    <url>/2022/09/03/back-end/k3s-uses-letsencrypt-and-traefik-to-deploy-the-https/</url>
-    <content><![CDATA[前言本文记录k3s使用letsencrypt配置ssl证书和续签。
-本文使用的k3s版本为： v1.23.6+k3s1。
-安装 cert-manager# 使用官网提供的配置文件一键安装# 如果拉取 github 资源有困难，可以从网络通畅的位置下载好粘贴过去$ kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.9.1/cert-manager.yaml
-
-如果一切正常，k3s
-$ kubectl get pods -n cert-managerNAME                                       READY   STATUS    RESTARTS   AGEcert-manager-6544c44c6b-tlhw8              1/1     Running   0          51scert-manager-cainjector-5687864d5f-rldsg   1/1     Running   0          51scert-manager-webhook-785bb86798-g4g7g      1/1     Running   0          51s
-
-部署 Issuing Certificates创建letsencrypt.yaml文件
-apiVersion: cert-manager.io/v1kind: ClusterIssuermetadata:  namespace: cert-manager  name: letsencryptspec:  acme:    email: &lt;YOUR EMAIL&gt; # replace this    privateKeySecretRef:      name: prod-issuer-account-key    server: https://acme-v02.api.letsencrypt.org/directory    solvers:      - http01:          ingress:            class: traefik        selector: &#123;&#125;
-
-
-请自行替换为个人的邮件地址
-
-部署
-$ kubectl apply -f letsencrypt.yaml
-
-如果一切正常:
-$ kubectl describe clusterissuer letsencryptName:         letsencryptNamespace:    Labels:       &lt;none&gt;Annotations:  &lt;none&gt;API Version:  cert-manager.io/v1Kind:         ClusterIssuer...Spec:  Acme:    Email:            user@example.com    Preferred Chain:      Private Key Secret Ref:      Name:  prod-issuer-account-key    Server:  https://acme-v02.api.letsencrypt.org/directory    Solvers:      http01:        Ingress:          Class:  traefik      Selector:Status:  Acme:    Last Registered Email:  mingguobin@live.com    Uri:                    https://acme-v02.api.letsencrypt.org/acme/acct/715199687  Conditions:    Last Transition Time:  2022-09-03T12:20:23Z    Message:               The ACME account was registered with the ACME server    Observed Generation:   1    Reason:                ACMEAccountRegistered    Status:                True    Type:                  ReadyEvents:                    &lt;none&gt;
-
-给Ingress配置sslapiVersion: networking.k8s.io/v1kind: Ingressmetadata:  namespace: hoteler-namespace  annotations:    cert-manager.io/cluster-issuer: letsencrypt  name: hoteler-webspec:  tls:  - secretName: hoteler-web-tls    hosts:      - hoteler.damingerdai.com  # ingressClassName: traefik  rules:  - host: hoteler.damingerdai.com    http:      paths:      - path: /        pathType: Prefix        backend:          service:            name: hoteler-web            port:              number: 80
-
-改动如下：
-
-添加annotations的metadata
-
-annotations:  cert-manager.io/cluster-issuer: letsencrypt
-
-
-添加tls
-
-tls:- secretName: hoteler-web-tls  hosts:    - hoteler.damingerdai.com
-
-secretName可以按照自己的习惯来取，cert-manager会自动创建
-$ kubectl apply -f ingress.yaml -n hoteler-namespace$ kubectl get ingress -n hoteler-namespacehoteler-web                 &lt;none&gt;   hoteler.damingerdai.com         204.44.75.77   80, 443   115d
-
-可以看到hoteler-web除了80端口，还新加了443端口
-查看证书状态$ kubectl describe certificate -n hoteler-namespace...Status:  Conditions:    Last Transition Time:  2022-09-03T12:27:15Z    Message:               Certificate is up to date and has not expired    Observed Generation:   1    Reason:                Ready    Status:                True    Type:                  Ready  Not After:               2022-12-02T11:27:13Z  Not Before:              2022-09-03T11:27:14Z  Renewal Time:            2022-11-02T11:27:13Z  Revision:                1Events:  Type    Reason     Age   From                                       Message  ----    ------     ----  ----                                       -------  Normal  Issuing    30m   cert-manager-certificates-trigger          Issuing certificate as Secret does not exist  Normal  Generated  30m   cert-manager-certificates-key-manager      Stored new private key in temporary Secret resource &quot;hoteler-web-tls-pfxrp&quot;  Normal  Requested  30m   cert-manager-certificates-request-manager  Created new CertificateRequest resource &quot;hoteler-web-tls-v24f6&quot;  Normal  Issuing    29m   cert-manager-certificates-issuing          The certificate has been successfully issued
-
-效果
-参考资料
-k3s 使用 Letsencrypt 和 Traefik 完成 https 入口部署
-K3S与Docker常用命令
-Securing NGINX-ingress
-Documenting “context deadline exceeded” errors relating to the webhook
-
-]]></content>
-      <categories>
-        <category>后端</category>
-      </categories>
-      <tags>
-        <tag>k8s</tag>
-        <tag>ssl</tag>
-        <tag>k3s</tag>
-        <tag>letsencrypt</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>记录使用pg_dump中遇到的ssl问题</title>
     <url>/2023/02/25/back-end/pg_dump_ssl_issues/</url>
     <content><![CDATA[记录使用pg_dump中遇到的ssl问题问题描述在使用pg_dump过程中遇到的两个问题：
@@ -1045,85 +1117,32 @@ podman login --tls-verify=false 192.168.31.220:5000
       </tags>
   </entry>
   <entry>
-    <title>从springfox迁移到springdoc</title>
-    <url>/2021/11/29/back-end/migrate-springdoc-from-springfox/</url>
-    <content><![CDATA[前言之所以考虑从springfox迁移到springdoc是因为我的开源项目hoteler在升级到spring boot 2.6之后，UT的CI&#x2F;CD挂了：
-HotelerApplicationTests &gt; contextLoads() FAILED    java.lang.IllegalStateException at DefaultCacheAwareContextLoaderDelegate.java:132        Caused by: org.springframework.context.ApplicationContextException at DefaultLifecycleProcessor.java:181            Caused by: java.lang.NullPointerException at WebMvcPatternsRequestConditionWrapper.java:56ErrorPropTest &gt; setErrors() FAILED    java.lang.IllegalStateException at DefaultCacheAwareContextLoaderDelegate.java:132        Caused by: org.springframework.context.ApplicationContextException at DefaultLifecycleProcessor.java:181            Caused by: java.lang.NullPointerException at WebMvcPatternsRequestConditionWrapper.java:56... more
+    <title>在windows系统中如何给rust如何配置字节源</title>
+    <url>/2025/04/30/back-end/rust-bytedance-mirror-windows/</url>
+    <content><![CDATA[rust中如何配置字节源前言本文的目的是在windows上安装或更新rust的时候通过配置字节的国内源来提高安装&#x2F;更新速度。非windows系统就可以直接参考rsproxy
+配置说明在powershell中设置 Rustup 镜像
+$ENV:RUSTUP_DIST_SERVER=&#x27;https://rsproxy.cn&#x27;$ENV:RUSTUP_UPDATE_ROOT=&#x27;https://rsproxy.cn/rustup&#x27;
 
-在一番定位和谷歌之后，在Spring 5.3&#x2F;Spring Boot 2.4 support和spring boot升级2.6.0。启动报错 原因详见：springfox&#x2F;springfox#3462中的提示下，猜测是springfox未升级导致的不兼容导致的问题。本来计划等待springfox官方自行升级，结果一看github的提价记录，springfox从2020年10月14号之后就在也没有更新代码了，因此决定，从springfox迁移到springdoc。
-备注如果仍然想在spring 2.6之后使用springfox，建议在配置文件中添加：
-spring.mvc.pathmatch.matching-strategy=ant_path_matcher
+安装或者更新Rust
+如果是安装rust，直接点击rust-init.exe
+如果是更新rust，直接运行rustup update命令
+rustup update
 
-更多信息可以参考https://github.com/lWoHvYe/eladmin。
-删除springfox依赖和相关代码首先删除springfox的依赖：
-# gradleio.springfox:springfox-boot-starter:3.0.0`# maven&lt;dependency&gt;    &lt;groupId&gt;io.springfox&lt;/groupId&gt;    &lt;artifactId&gt;springfox-boot-starter&lt;/artifactId&gt;    &lt;version&gt;3.0.0&lt;/version&gt;&lt;/dependency&gt;
+设置 crates.io 镜像在当前用户的主目录（以我本地为例：D:\Users\daming）下的.cargo文件夹中创建config文件。
+[source.crates-io]replace-with = &#x27;rsproxy-sparse&#x27;[source.rsproxy]registry = &quot;https://rsproxy.cn/crates.io-index&quot;[source.rsproxy-sparse]registry = &quot;sparse+https://rsproxy.cn/index/&quot;[registries.rsproxy]index = &quot;https://rsproxy.cn/crates.io-index&quot;[net]git-fetch-with-cli = true
 
-删除Controller下的swagger的注解，
-删除自定的swagger的配置类，
-删除@EnableOpenApi
-导入springdoc依赖对于gradle用户：
-implementation &#x27;org.springdoc:springdoc-openapi-ui:1.5.12&#x27;
+参考资料
+rsproxy
+Windows 11 上通过国内源安装 Rust
+rustup-init.exe 安装失败及其解决方案
 
-对于maven用户：
-&lt;dependency&gt;    &lt;groupId&gt;org.springdoc&lt;/groupId&gt;    &lt;artifactId&gt;springdoc-openapi-ui&lt;/artifactId&gt;    &lt;version&gt;1.5.12&lt;/version&gt;&lt;/dependency&gt;
-
-OpenApi配置创建OpenApi配置类
-@Configurationpublic class OpenApiConfig &#123;&#125;
-
-定义License：
-private License license() &#123;      return new License()              .name(&quot;MIT&quot;)              .url(&quot;https://opensource.org/licenses/MIT&quot;);&#125;
-
-
-注： 这里我采用MIT的开源协议，更多协议，请访问https://opensource.org/licenses。
-
-定义Open Api的基本信息：
-private Info info() &#123;      return new Info()              .title(&quot;Hoteler Open API&quot;)              .description(&quot;大明二代&quot;)              .version(&quot;v0.0.1&quot;)              .license(license());&#125;
-
-定义外部文档信息：
-private ExternalDocumentation externalDocumentation() &#123;    return new ExternalDocumentation()            .description(&quot;大明二代的Hoteler&quot;)            .url(&quot;https://github.com/damingerdai/hoteler&quot;);&#125;
-
-定义OpenAPI的spring bean：
-@Beanpublic OpenAPI springShopOpenAPI() &#123;    return new OpenAPI()            .info(info())            .externalDocs(externalDocumentation());&#125;
-
-在配置文件中定义openapi的扫描策略:
-
-基于指定接口包扫描
-
-springdoc:  packagesToScan: org.daming.hoteler.api.web (这是我自己的web包)
-
-
-基于接口路由扫描
-
-springdoc:  pathsToMatch: /api/**, /dev/**
-
-在controler添加@Tag注解在controler方法上添加@Operation注解在 @Operation 注解上添加@Parameters 和 @Parameter 说明，用于springdoc解析controler方法的参数在的请求体类添加@Schema注解
-示例：
-package org.daming.hoteler.api.web;import io.swagger.v3.oas.annotations.Operation;import io.swagger.v3.oas.annotations.Parameter;import io.swagger.v3.oas.annotations.enums.ParameterIn;import io.swagger.v3.oas.annotations.security.SecurityRequirement;import io.swagger.v3.oas.annotations.tags.Tag;...more/** * customer constoller * * @author gming001 * @create 2020-12-25 22:13 **/@Tag(name = &quot;客户&quot;, description = &quot;客户 API&quot;)@RestController@RequestMapping(&quot;api/v1&quot;)public class CustomerController &#123;    private ICustomerService customerService;    private IErrorService errorService;    @Operation(            summary = &quot;创建客户信息&quot;&#125;,            parameters = &#123;                    @Parameter(name = &quot;body&quot;, description = &quot;创建用户信息的请求体&quot;)            &#125;    )    @PostMapping(&quot;customer&quot;)    public CommonResponse create(@RequestBody CreateCustomerRequest request) &#123;        var customer = new Customer().setName(request.getName()).setGender(request.getGender()).setCardId(request.getCardId()).setPhone(request.getPhone());        var id =  this.customerService.create(customer);        return new DataResponse&lt;&gt;(id);    &#125;    @Operation(summary = &quot;更新客户信息&quot;)    @PutMapping(&quot;customer&quot;)    public CommonResponse update(@RequestBody UpdateCustomerRequest request) &#123;        var customer = new Customer().setId(request.getId()).setName(request.getName()).setGender(request.getGender()).setCardId(request.getCardId()).setPhone(request.getPhone());        this.customerService.update(customer);        return new CommonResponse();    &#125;    @Operation(summary = &quot;获取所有的客户信息&quot;)    @GetMapping(&quot;customers&quot;)    public CommonResponse list() &#123;        var list = this.customerService.list();        return new ListResponse&lt;&gt;(list);    &#125;    @Operation(summary = &quot;删除客户信息&quot;)    @DeleteMapping(&quot;customer/&#123;id&#125;&quot;)    public CommonResponse delete(@PathVariable(&quot;id&quot;) String customerId) throws HotelerException &#123;        try &#123;            var id = Long.valueOf(customerId);            this.customerService.delete(id);        &#125; catch (NumberFormatException nfe) &#123;            var params = new Object[] &#123; nfe.getMessage() &#125;;            throw errorService.createHotelerException(ErrorCodeConstants.BAD_REQUEST_ERROR_CODEE, params, nfe);        &#125; catch (Exception ex) &#123;            throw errorService.createHotelerException(ErrorCodeConstants.SYSTEM_ERROR_CODEE, ex);        &#125;        return new CommonResponse();    &#125;    public CustomerController(            ICustomerService customerService,            IErrorService errorService) &#123;        super();        this.customerService = customerService;        this.errorService = errorService;    &#125;&#125;/** * create customer request * * @author gming001 * @create 2020-12-25 22:15 **/@Schema(name = &quot;创建客户请求&quot;)public class CreateCustomerRequest implements Serializable &#123;    private static final long serialVersionUID = -7819607546063963266L;    @Schema(name = &quot;名字&quot;)    private String name;    private Gender gender;    private String cardId;    private long phone：    ...more&#125;
-
-添加对JWT对token的支持(本步骤可选)在添加OpenApiConfig类上添加Components信息：
-private Components components() &#123;    return new Components()            .addSecuritySchemes(&quot;bearer-key&quot;, new SecurityScheme().type(SecurityScheme.Type.HTTP).scheme(&quot;bearer&quot;).bearerFormat(&quot;JWT&quot;));&#125;
-
-然后在OpenApi中注册Components:
-  @Bean  public OpenAPI springShopOpenAPI() &#123;      return new OpenAPI()              .info(info())              .components(components())              .externalDocs(externalDocumentation());&#125;
-
-在需要使用Authorization的接口上添加：
-@Operation(security = &#123; @SecurityRequirement(name = &quot;bearer-key&quot;) &#125;)
-
-swagger-ui在浏览器中输入http://127.0.0.1:8443/swagger-ui.html或者http://localhost:8443/swagger-ui/index.html?configUrl=/v3/api-docs/swagger-config
-
-注： 8443是我个人比较喜欢的web开发的端口占用，一般人使用8080比较多。
-
-效果
-Githubfeat: 从springfox迁移到springdoc以及修复AuthenticationFilter过滤失败的问题
 ]]></content>
       <categories>
         <category>后端</category>
       </categories>
       <tags>
-        <tag>spring boot</tag>
-        <tag>springdoc</tag>
-        <tag>swagger-ui</tag>
-        <tag>oepn api</tag>
+        <tag>windows</tag>
+        <tag>rust</tag>
       </tags>
   </entry>
   <entry>
@@ -1299,32 +1318,85 @@ SMTP 的问题，80% 不是代码问题，而是协议和配置问题。
       </tags>
   </entry>
   <entry>
-    <title>在windows系统中如何给rust如何配置字节源</title>
-    <url>/2025/04/30/back-end/rust-bytedance-mirror-windows/</url>
-    <content><![CDATA[rust中如何配置字节源前言本文的目的是在windows上安装或更新rust的时候通过配置字节的国内源来提高安装&#x2F;更新速度。非windows系统就可以直接参考rsproxy
-配置说明在powershell中设置 Rustup 镜像
-$ENV:RUSTUP_DIST_SERVER=&#x27;https://rsproxy.cn&#x27;$ENV:RUSTUP_UPDATE_ROOT=&#x27;https://rsproxy.cn/rustup&#x27;
+    <title>从springfox迁移到springdoc</title>
+    <url>/2021/11/29/back-end/migrate-springdoc-from-springfox/</url>
+    <content><![CDATA[前言之所以考虑从springfox迁移到springdoc是因为我的开源项目hoteler在升级到spring boot 2.6之后，UT的CI&#x2F;CD挂了：
+HotelerApplicationTests &gt; contextLoads() FAILED    java.lang.IllegalStateException at DefaultCacheAwareContextLoaderDelegate.java:132        Caused by: org.springframework.context.ApplicationContextException at DefaultLifecycleProcessor.java:181            Caused by: java.lang.NullPointerException at WebMvcPatternsRequestConditionWrapper.java:56ErrorPropTest &gt; setErrors() FAILED    java.lang.IllegalStateException at DefaultCacheAwareContextLoaderDelegate.java:132        Caused by: org.springframework.context.ApplicationContextException at DefaultLifecycleProcessor.java:181            Caused by: java.lang.NullPointerException at WebMvcPatternsRequestConditionWrapper.java:56... more
 
-安装或者更新Rust
-如果是安装rust，直接点击rust-init.exe
-如果是更新rust，直接运行rustup update命令
-rustup update
+在一番定位和谷歌之后，在Spring 5.3&#x2F;Spring Boot 2.4 support和spring boot升级2.6.0。启动报错 原因详见：springfox&#x2F;springfox#3462中的提示下，猜测是springfox未升级导致的不兼容导致的问题。本来计划等待springfox官方自行升级，结果一看github的提价记录，springfox从2020年10月14号之后就在也没有更新代码了，因此决定，从springfox迁移到springdoc。
+备注如果仍然想在spring 2.6之后使用springfox，建议在配置文件中添加：
+spring.mvc.pathmatch.matching-strategy=ant_path_matcher
 
-设置 crates.io 镜像在当前用户的主目录（以我本地为例：D:\Users\daming）下的.cargo文件夹中创建config文件。
-[source.crates-io]replace-with = &#x27;rsproxy-sparse&#x27;[source.rsproxy]registry = &quot;https://rsproxy.cn/crates.io-index&quot;[source.rsproxy-sparse]registry = &quot;sparse+https://rsproxy.cn/index/&quot;[registries.rsproxy]index = &quot;https://rsproxy.cn/crates.io-index&quot;[net]git-fetch-with-cli = true
+更多信息可以参考https://github.com/lWoHvYe/eladmin。
+删除springfox依赖和相关代码首先删除springfox的依赖：
+# gradleio.springfox:springfox-boot-starter:3.0.0`# maven&lt;dependency&gt;    &lt;groupId&gt;io.springfox&lt;/groupId&gt;    &lt;artifactId&gt;springfox-boot-starter&lt;/artifactId&gt;    &lt;version&gt;3.0.0&lt;/version&gt;&lt;/dependency&gt;
 
-参考资料
-rsproxy
-Windows 11 上通过国内源安装 Rust
-rustup-init.exe 安装失败及其解决方案
+删除Controller下的swagger的注解，
+删除自定的swagger的配置类，
+删除@EnableOpenApi
+导入springdoc依赖对于gradle用户：
+implementation &#x27;org.springdoc:springdoc-openapi-ui:1.5.12&#x27;
 
+对于maven用户：
+&lt;dependency&gt;    &lt;groupId&gt;org.springdoc&lt;/groupId&gt;    &lt;artifactId&gt;springdoc-openapi-ui&lt;/artifactId&gt;    &lt;version&gt;1.5.12&lt;/version&gt;&lt;/dependency&gt;
+
+OpenApi配置创建OpenApi配置类
+@Configurationpublic class OpenApiConfig &#123;&#125;
+
+定义License：
+private License license() &#123;      return new License()              .name(&quot;MIT&quot;)              .url(&quot;https://opensource.org/licenses/MIT&quot;);&#125;
+
+
+注： 这里我采用MIT的开源协议，更多协议，请访问https://opensource.org/licenses。
+
+定义Open Api的基本信息：
+private Info info() &#123;      return new Info()              .title(&quot;Hoteler Open API&quot;)              .description(&quot;大明二代&quot;)              .version(&quot;v0.0.1&quot;)              .license(license());&#125;
+
+定义外部文档信息：
+private ExternalDocumentation externalDocumentation() &#123;    return new ExternalDocumentation()            .description(&quot;大明二代的Hoteler&quot;)            .url(&quot;https://github.com/damingerdai/hoteler&quot;);&#125;
+
+定义OpenAPI的spring bean：
+@Beanpublic OpenAPI springShopOpenAPI() &#123;    return new OpenAPI()            .info(info())            .externalDocs(externalDocumentation());&#125;
+
+在配置文件中定义openapi的扫描策略:
+
+基于指定接口包扫描
+
+springdoc:  packagesToScan: org.daming.hoteler.api.web (这是我自己的web包)
+
+
+基于接口路由扫描
+
+springdoc:  pathsToMatch: /api/**, /dev/**
+
+在controler添加@Tag注解在controler方法上添加@Operation注解在 @Operation 注解上添加@Parameters 和 @Parameter 说明，用于springdoc解析controler方法的参数在的请求体类添加@Schema注解
+示例：
+package org.daming.hoteler.api.web;import io.swagger.v3.oas.annotations.Operation;import io.swagger.v3.oas.annotations.Parameter;import io.swagger.v3.oas.annotations.enums.ParameterIn;import io.swagger.v3.oas.annotations.security.SecurityRequirement;import io.swagger.v3.oas.annotations.tags.Tag;...more/** * customer constoller * * @author gming001 * @create 2020-12-25 22:13 **/@Tag(name = &quot;客户&quot;, description = &quot;客户 API&quot;)@RestController@RequestMapping(&quot;api/v1&quot;)public class CustomerController &#123;    private ICustomerService customerService;    private IErrorService errorService;    @Operation(            summary = &quot;创建客户信息&quot;&#125;,            parameters = &#123;                    @Parameter(name = &quot;body&quot;, description = &quot;创建用户信息的请求体&quot;)            &#125;    )    @PostMapping(&quot;customer&quot;)    public CommonResponse create(@RequestBody CreateCustomerRequest request) &#123;        var customer = new Customer().setName(request.getName()).setGender(request.getGender()).setCardId(request.getCardId()).setPhone(request.getPhone());        var id =  this.customerService.create(customer);        return new DataResponse&lt;&gt;(id);    &#125;    @Operation(summary = &quot;更新客户信息&quot;)    @PutMapping(&quot;customer&quot;)    public CommonResponse update(@RequestBody UpdateCustomerRequest request) &#123;        var customer = new Customer().setId(request.getId()).setName(request.getName()).setGender(request.getGender()).setCardId(request.getCardId()).setPhone(request.getPhone());        this.customerService.update(customer);        return new CommonResponse();    &#125;    @Operation(summary = &quot;获取所有的客户信息&quot;)    @GetMapping(&quot;customers&quot;)    public CommonResponse list() &#123;        var list = this.customerService.list();        return new ListResponse&lt;&gt;(list);    &#125;    @Operation(summary = &quot;删除客户信息&quot;)    @DeleteMapping(&quot;customer/&#123;id&#125;&quot;)    public CommonResponse delete(@PathVariable(&quot;id&quot;) String customerId) throws HotelerException &#123;        try &#123;            var id = Long.valueOf(customerId);            this.customerService.delete(id);        &#125; catch (NumberFormatException nfe) &#123;            var params = new Object[] &#123; nfe.getMessage() &#125;;            throw errorService.createHotelerException(ErrorCodeConstants.BAD_REQUEST_ERROR_CODEE, params, nfe);        &#125; catch (Exception ex) &#123;            throw errorService.createHotelerException(ErrorCodeConstants.SYSTEM_ERROR_CODEE, ex);        &#125;        return new CommonResponse();    &#125;    public CustomerController(            ICustomerService customerService,            IErrorService errorService) &#123;        super();        this.customerService = customerService;        this.errorService = errorService;    &#125;&#125;/** * create customer request * * @author gming001 * @create 2020-12-25 22:15 **/@Schema(name = &quot;创建客户请求&quot;)public class CreateCustomerRequest implements Serializable &#123;    private static final long serialVersionUID = -7819607546063963266L;    @Schema(name = &quot;名字&quot;)    private String name;    private Gender gender;    private String cardId;    private long phone：    ...more&#125;
+
+添加对JWT对token的支持(本步骤可选)在添加OpenApiConfig类上添加Components信息：
+private Components components() &#123;    return new Components()            .addSecuritySchemes(&quot;bearer-key&quot;, new SecurityScheme().type(SecurityScheme.Type.HTTP).scheme(&quot;bearer&quot;).bearerFormat(&quot;JWT&quot;));&#125;
+
+然后在OpenApi中注册Components:
+  @Bean  public OpenAPI springShopOpenAPI() &#123;      return new OpenAPI()              .info(info())              .components(components())              .externalDocs(externalDocumentation());&#125;
+
+在需要使用Authorization的接口上添加：
+@Operation(security = &#123; @SecurityRequirement(name = &quot;bearer-key&quot;) &#125;)
+
+swagger-ui在浏览器中输入http://127.0.0.1:8443/swagger-ui.html或者http://localhost:8443/swagger-ui/index.html?configUrl=/v3/api-docs/swagger-config
+
+注： 8443是我个人比较喜欢的web开发的端口占用，一般人使用8080比较多。
+
+效果
+Githubfeat: 从springfox迁移到springdoc以及修复AuthenticationFilter过滤失败的问题
 ]]></content>
       <categories>
         <category>后端</category>
       </categories>
       <tags>
-        <tag>windows</tag>
-        <tag>rust</tag>
+        <tag>spring boot</tag>
+        <tag>springdoc</tag>
+        <tag>swagger-ui</tag>
+        <tag>oepn api</tag>
       </tags>
   </entry>
   <entry>
@@ -1510,49 +1582,6 @@ Guide to Spring Email
       </tags>
   </entry>
   <entry>
-    <title>技术复盘：基于 OAuth 2.0 规范的 Spring Boot 鉴权标准化改造</title>
-    <url>/2026/04/02/back-end/spring-boot-oauth2-swagger-standardization/</url>
-    <content><![CDATA[现状与需求在 Hoteler 项目的开发测试阶段，由于原有的登录接口 &#x2F;token 采用非标设计（自定义 JSON 结构、Header 传参），导致 Swagger UI (SpringDoc) 无法识别认证状态，必须手动复制 Token 并粘贴至 Authorize 框中，测试效率低。
-目标：实现符合 OAuth 2.0 Password Grant 规范的接口，对接 Swagger UI 自动鉴权流。
-协议参考本次改造主要参考了以下关于 OAuth 2.0 协议实现的标准逻辑：
-
-理解OAuth 2.0
-OAuth 2.0 的一个简单解释
-OAuth 2.0 的四种方式
-GitHub OAuth 第三方登录示例教程
-
-技术实现方案响应报文的标准化（Schema Mapping）OAuth 2.0 规定 Access Token Response 的根路径必须包含 access_token。为兼容原有业务对象 UserToken，采用接口注入方式扩展响应体：
-public interface OAuth2Compatible &#123;    @JsonProperty(&quot;access_token&quot;)    String getAccessToken(); // 映射至业务 Token 字段    @JsonProperty(&quot;token_type&quot;)    default String getTokenType() &#123; return &quot;bearer&quot;; &#125;        @JsonProperty(&quot;expires_in&quot;)    default long getExpiresIn() &#123; return 2592000; &#125;&#125;
-
-通过 UserTokenResponse implements OAuth2Compatible，在不修改原有 userToken 嵌套对象的前提下，输出了符合 RFC 6749 要求的 JSON 字段
-登录接口参数兼容修改 &#x2F;token 接口，支持 application&#x2F;x-www-form-urlencoded 消费类型，以接收 Swagger UI 默认发送的 username 和 password 表单参数。
-@Operation(summary = &quot;创建token&quot;)@PostMapping(value = &quot;token&quot;, consumes = &#123; MediaType.APPLICATION_FORM_URLENCODED_VALUE, MediaType.APPLICATION_JSON_VALUE &#125;)public UserTokenResponse createToken(@RequestParam(value = &quot;username&quot;, required = false) String formUser,                                        @RequestParam(value = &quot;password&quot;, required = false) String formPass,                                        @RequestHeader(value = &quot;username&quot;, required = false) String headUser,                                        @RequestHeader(value = &quot;password&quot;, required = false) String headPass,                                        HttpSession session) &#123;    var username = (headUser != null) ? headUser : formUser;    var password = (headPass != null) ? headPass : formPass;    try &#123;        var unauthenticated = UsernamePasswordAuthenticationToken.unauthenticated(username, password);        var authenticate = authenticationManager.authenticate(unauthenticated);        var userToken = tokenService.createToken(username, password);        SecurityContextHolder.getContext().setAuthentication(authenticate);        session.setAttribute(HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY, SecurityContextHolder.getContext());        var response = new UserTokenResponse();        response.setUserToken(userToken);        return response;    &#125; catch (AuthenticationException ex) &#123;            LoggerManager.getApiLogger().error(&quot;AuthenticationException: &quot; + ex.getMessage());            throw ex;    &#125; catch (HotelerException ex) &#123;        LoggerManager.getApiLogger().error(&quot;HotelerException: &quot; + ex.getMessage());        throw ex;    &#125; catch (Exception ex) &#123;        LoggerManager.getApiLogger().error(&quot;Exception: &quot; + ex.getMessage());        throw ex;    &#125; finally &#123;        // TODO    &#125;&#125;
-
-OpenAPI SecurityScheme 配置在 OpenApiConfig 中定义 SecurityScheme。关键点在于 type 声明为 OAUTH2，并正确指向 tokenUrl。
-private Components components() &#123;    return new Components()            .addSecuritySchemes(&quot;bearer-key&quot;, new SecurityScheme().type(SecurityScheme.Type.HTTP).scheme(&quot;bearer&quot;).bearerFormat(&quot;JWT&quot;))            .addSecuritySchemes(&quot;OAuth2Password&quot;, new SecurityScheme()                    .type(SecurityScheme.Type.OAUTH2)                    .description(&quot;输入用户名和密码登录以获取令牌&quot;)                    .flows(new OAuthFlows()                            .password(new OAuthFlow()                                    // 这里的 URL 必须对应你 Controller 里的 @PostMapping(&quot;token&quot;)                                    .tokenUrl(&quot;/api/v1/token&quot;)                                    .scopes(new Scopes().addString(&quot;read&quot;, &quot;读权限&quot;))                            )                    ));    &#125;
-
-调试记录Header 填充失效问题现象： 弹窗登录成功后，调用业务接口仍未自动携带 Authorization Header。定位： 接口声明的 SecurityRequirement 名称与 SecurityScheme 的 Key 不一致。解决： 统一使用 OAuth2Password 作为唯一标识符或者直接删除原有的SecurityScheme 的 Key。
-@Operation(security = &#123; @SecurityRequirement(name = &quot;OAuth2Password&quot;) &#125;)
-
-结论通过本次改造，后端认证模块具备了以下特性：
-
-协议对齐：完全兼容 OAuth 2.0 密码模式。
-前端自动化：Swagger UI 可实现“登录-存储-填充”闭环。
-零破坏升级：原有基于 Header 传参的旧客户端调用不受影响。
-
-项目仓库： damingerdai&#x2F;hoteler
-]]></content>
-      <categories>
-        <category>后端</category>
-      </categories>
-      <tags>
-        <tag>spring boot</tag>
-        <tag>swagger ui</tag>
-        <tag>oauth2</tag>
-        <tag>spring doc</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>Spring Cloud Gateway 聚合 Swagger UI：实现微服务统一 API 文档入口</title>
     <url>/2026/01/07/back-end/spring-cloud-gateway-swagger-ui-aggregation/</url>
     <content><![CDATA[🚀 前言在微服务架构中，随着服务数量的增加，每个业务服务（如 auth、workflow）都有自己独立的 Swagger UI 页面。对于开发者和测试人员来说，频繁切换不同的 URL 和端口来查看 API 文档非常低效。
@@ -1599,6 +1628,93 @@ urls 列表中的 url 属性必须能够被网关路由规则匹配。
         <tag>spring cloud</tag>
         <tag>spring cloud gateway</tag>
         <tag>open api</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Spring WebFlux 文件上传：从本地存储到 MinIO 集成 🚀</title>
+    <url>/2025/09/27/back-end/spring-webflux-file-upload-to-minio/</url>
+    <content><![CDATA[前言在现代 Web 应用中，高效可靠的文件存储是必不可少的一环。在 Spring WebFlux 响应式编程模型下，处理文件上传需要特别注意流（Flux）和非阻塞操作。
+本文将基于一个 Spring WebFlux 的文件上传接口，演示如何从最初的本地文件系统存储方案，平滑地迁移并集成到 MinIO 对象存储服务，实现更具可扩展性和稳定性的文件存储。
+🎯 方案切换：为何选择 MinIO？最初的文件上传方案通常是将文件直接存储在服务器的本地文件系统。对于生产环境或需要横向扩展的应用，MinIO（或其他兼容 S3 协议的对象存储）是更优的选择，它提供了高可用、高扩展性和可靠性强的优势，同时解耦了应用和存储。
+🛠️ 第一步：部署 MinIO 服务在本地开发或测试环境中，最便捷的部署 MinIO 的方式是使用 Docker Compose。
+将以下配置保存为 docker-compose.yaml 文件：
+services:  minio:    image: minio/minio:RELEASE.2025-04-22T22-12-26Z    container_name: minio_server    restart: unless-stopped    ports:      # 映射 MinIO API 端口      - &quot;19000:9000&quot;      # 映射 MinIO Console/UI 端口      - &quot;19001:9001&quot;    environment:      # 保持与 application.yaml 中配置一致      MINIO_ROOT_USER: admin      MINIO_ROOT_PASSWORD: 12345678    volumes:      # 将 MinIO 数据持久化到本地目录      - ./minio_data:/data    command: server /data --console-address &quot;:9001&quot;    healthcheck:      test: [&quot;CMD&quot;, &quot;curl&quot;, &quot;-f&quot;, &quot;http://localhost:9000/minio/health/live&quot;]      interval: 30s      timeout: 5s      retries: 3
+
+运行以下命令启动 MinIO 服务：
+docker compose up -d
+
+服务启动后，您可以通过浏览器访问 http://localhost:19001 进入 MinIO 控制台。
+⚙️ 第二步：引入依赖与配置连接引入 MinIO 依赖在 build.gradle 中引入 MinIO Java 客户端：
+dependencies &#123;    // ... 其他依赖    implementation &#x27;io.minio:minio:8.5.17&#x27;     // ...&#125;
+配置 Spring 应用在 application.yaml 中配置 MinIO 的连接信息，确保这里的配置与 Docker Compose 中的 environment 变量保持一致。
+minio:  # 注意：这里配置的是 MinIO API 映射出来的端口 19000  endpoint: http://192.168.31.220:19000  access: admin  secret: 12345678  bucket: batcher-dev
+
+定义MinioProps获取 application.yaml 中配置 MinIO 的连接信息。
+@Component@ConfigurationProperties(prefix = &quot;minio&quot;)public class MinioProps &#123;    private String endpoint;    private String access;    private String secret;    private String bucket;    get/set method...&#125;
+
+自定义MinioConfig配置类将MinioClient注入spring bean中。
+@Configurationpublic class MinioConfig &#123;    private Logger logger = LoggerFactory.getLogger(MinioConfig.class);    private MinioProps minioProperties;    @Bean(name = &quot;minioClient&quot;)    public MinioClient minioClient() throws Exception &#123;        this.logger.debug(&quot;---------- load minio client ----------&quot;);        MinioClient minioClient = MinioClient.builder()                .endpoint(this.minioProperties.getEndpoint())                .credentials(this.minioProperties.getAccess(), this.minioProperties.getSecret())                .build();        boolean isExist = minioClient.bucketExists(BucketExistsArgs.builder().bucket(minioProperties.getBucket()).build());        if (isExist) &#123;            logger.warn(&quot;---------- minio client bucket is existed ----------&quot;);        &#125; else &#123;            minioClient.makeBucket(MakeBucketArgs.builder().bucket(this.minioProperties.getBucket()).build());            logger.debug(&quot;---------- minio client bucket is created ----------&quot;);        &#125;        logger.debug(&quot;---------- minio client is loaded ----------&quot;);        return minioClient;    &#125;    @Autowired    public void setMinioProperties(MinioProps minioProperties) &#123;        this.minioProperties = minioProperties;    &#125;&#125;
+
+💻 第三步：重构文件上传控制器核心变动在于 FileController，我们将注入 MinioClient 和 MinioProps，并重写 uploadFile 方法，将文件流导向 MinIO。
+注入 MinIO 客户端通过构造器注入 MinioClient，以便在上传方法中使用
+@RestController@Tag(name = &quot;File Upload&quot;, description = &quot;APIs for uploading files&quot;)public class FileController &#123;    private final MinioClient minioClient;    private final MinioProps minioProps;    public FileController(MinioClient minioClient, MinioProps minioProps) &#123;        this.minioClient = minioClient;        this.minioProps = minioProps;    &#125;    // ...&#125;
+
+实现 MinIO 响应式上传逻辑利用 Reactor 将 WebFlux 的 Flux 文件流转换为 MinIO 需要的 InputStream，并包装 MinIO 的阻塞调用以保持非阻塞性。
+@PostMapping(&quot;/file&quot;)// ... 省略 Swagger 注解public Mono&lt;String&gt; uploadFile(@RequestPart(&quot;file&quot;) Mono&lt;FilePart&gt; filePartMono) &#123;    var bucketName = minioProps.getBucket();    return filePartMono.flatMap(filePart -&gt; &#123;        var fileName = filePart.filename();        var contentType = Objects.requireNonNull(filePart.headers().getContentType()).toString();        // 1. 检查并创建 MinIO 存储桶（包装阻塞操作）        return Mono.fromCallable(() -&gt; &#123;            boolean found = minioClient.bucketExists(BucketExistsArgs.builder().bucket(bucketName).build());            if (!found) &#123;                minioClient.makeBucket(MakeBucketArgs.builder().bucket(bucketName).build());            &#125;            return true;        &#125;).flatMap(result -&gt;             // 2. 将 Flux&lt;DataBuffer&gt; 转换为 List&lt;InputStream&gt;            filePart.content()                    .map(DataBuffer::asInputStream)                    .collectList()                    // 3. 将 List&lt;InputStream&gt; 合并为单个 SequenceInputStream 并执行上传                    .flatMap(inputStreams -&gt; &#123;                        try (var combinedInputStream = new SequenceInputStream(Collections.enumeration(inputStreams))) &#123;                            // 使用 -1 告诉 MinIO 客户端进行分块上传                            var res = minioClient.putObject(PutObjectArgs.builder()                                    .bucket(bucketName)                                    .object(fileName)                                    .stream(combinedInputStream, -1, 10485760)                                     .contentType(contentType)                                    .build());                            return Mono.just(res.etag());                        &#125; catch (Exception e) &#123;                            return Mono.error(new RuntimeException(&quot;MinIO upload failed: &quot; + e.getMessage(), e));                        &#125;                    &#125;)        );    &#125;);&#125;
+
+总结通过在 Spring WebFlux 中集成 MinIO，我们成功地将文件上传从易受限制的本地文件系统迁移到了健壮、可扩展的对象存储平台。这种方法利用了 Reactor 的响应式流处理能力，同时优雅地处理了 MinIO 客户端的阻塞 I&#x2F;O 操作，实现了高效且非阻塞的文件上传链路。
+]]></content>
+      <categories>
+        <category>后端</category>
+      </categories>
+      <tags>
+        <tag>spring boot</tag>
+        <tag>gradle</tag>
+        <tag>spring webflux</tag>
+        <tag>文件上传</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>技术复盘：基于 OAuth 2.0 规范的 Spring Boot 鉴权标准化改造</title>
+    <url>/2026/04/02/back-end/spring-boot-oauth2-swagger-standardization/</url>
+    <content><![CDATA[现状与需求在 Hoteler 项目的开发测试阶段，由于原有的登录接口 &#x2F;token 采用非标设计（自定义 JSON 结构、Header 传参），导致 Swagger UI (SpringDoc) 无法识别认证状态，必须手动复制 Token 并粘贴至 Authorize 框中，测试效率低。
+目标：实现符合 OAuth 2.0 Password Grant 规范的接口，对接 Swagger UI 自动鉴权流。
+协议参考本次改造主要参考了以下关于 OAuth 2.0 协议实现的标准逻辑：
+
+理解OAuth 2.0
+OAuth 2.0 的一个简单解释
+OAuth 2.0 的四种方式
+GitHub OAuth 第三方登录示例教程
+
+技术实现方案响应报文的标准化（Schema Mapping）OAuth 2.0 规定 Access Token Response 的根路径必须包含 access_token。为兼容原有业务对象 UserToken，采用接口注入方式扩展响应体：
+public interface OAuth2Compatible &#123;    @JsonProperty(&quot;access_token&quot;)    String getAccessToken(); // 映射至业务 Token 字段    @JsonProperty(&quot;token_type&quot;)    default String getTokenType() &#123; return &quot;bearer&quot;; &#125;        @JsonProperty(&quot;expires_in&quot;)    default long getExpiresIn() &#123; return 2592000; &#125;&#125;
+
+通过 UserTokenResponse implements OAuth2Compatible，在不修改原有 userToken 嵌套对象的前提下，输出了符合 RFC 6749 要求的 JSON 字段
+登录接口参数兼容修改 &#x2F;token 接口，支持 application&#x2F;x-www-form-urlencoded 消费类型，以接收 Swagger UI 默认发送的 username 和 password 表单参数。
+@Operation(summary = &quot;创建token&quot;)@PostMapping(value = &quot;token&quot;, consumes = &#123; MediaType.APPLICATION_FORM_URLENCODED_VALUE, MediaType.APPLICATION_JSON_VALUE &#125;)public UserTokenResponse createToken(@RequestParam(value = &quot;username&quot;, required = false) String formUser,                                        @RequestParam(value = &quot;password&quot;, required = false) String formPass,                                        @RequestHeader(value = &quot;username&quot;, required = false) String headUser,                                        @RequestHeader(value = &quot;password&quot;, required = false) String headPass,                                        HttpSession session) &#123;    var username = (headUser != null) ? headUser : formUser;    var password = (headPass != null) ? headPass : formPass;    try &#123;        var unauthenticated = UsernamePasswordAuthenticationToken.unauthenticated(username, password);        var authenticate = authenticationManager.authenticate(unauthenticated);        var userToken = tokenService.createToken(username, password);        SecurityContextHolder.getContext().setAuthentication(authenticate);        session.setAttribute(HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY, SecurityContextHolder.getContext());        var response = new UserTokenResponse();        response.setUserToken(userToken);        return response;    &#125; catch (AuthenticationException ex) &#123;            LoggerManager.getApiLogger().error(&quot;AuthenticationException: &quot; + ex.getMessage());            throw ex;    &#125; catch (HotelerException ex) &#123;        LoggerManager.getApiLogger().error(&quot;HotelerException: &quot; + ex.getMessage());        throw ex;    &#125; catch (Exception ex) &#123;        LoggerManager.getApiLogger().error(&quot;Exception: &quot; + ex.getMessage());        throw ex;    &#125; finally &#123;        // TODO    &#125;&#125;
+
+OpenAPI SecurityScheme 配置在 OpenApiConfig 中定义 SecurityScheme。关键点在于 type 声明为 OAUTH2，并正确指向 tokenUrl。
+private Components components() &#123;    return new Components()            .addSecuritySchemes(&quot;bearer-key&quot;, new SecurityScheme().type(SecurityScheme.Type.HTTP).scheme(&quot;bearer&quot;).bearerFormat(&quot;JWT&quot;))            .addSecuritySchemes(&quot;OAuth2Password&quot;, new SecurityScheme()                    .type(SecurityScheme.Type.OAUTH2)                    .description(&quot;输入用户名和密码登录以获取令牌&quot;)                    .flows(new OAuthFlows()                            .password(new OAuthFlow()                                    // 这里的 URL 必须对应你 Controller 里的 @PostMapping(&quot;token&quot;)                                    .tokenUrl(&quot;/api/v1/token&quot;)                                    .scopes(new Scopes().addString(&quot;read&quot;, &quot;读权限&quot;))                            )                    ));    &#125;
+
+调试记录Header 填充失效问题现象： 弹窗登录成功后，调用业务接口仍未自动携带 Authorization Header。定位： 接口声明的 SecurityRequirement 名称与 SecurityScheme 的 Key 不一致。解决： 统一使用 OAuth2Password 作为唯一标识符或者直接删除原有的SecurityScheme 的 Key。
+@Operation(security = &#123; @SecurityRequirement(name = &quot;OAuth2Password&quot;) &#125;)
+
+结论通过本次改造，后端认证模块具备了以下特性：
+
+协议对齐：完全兼容 OAuth 2.0 密码模式。
+前端自动化：Swagger UI 可实现“登录-存储-填充”闭环。
+零破坏升级：原有基于 Header 传参的旧客户端调用不受影响。
+
+项目仓库： damingerdai&#x2F;hoteler
+]]></content>
+      <categories>
+        <category>后端</category>
+      </categories>
+      <tags>
+        <tag>spring boot</tag>
+        <tag>swagger ui</tag>
+        <tag>oauth2</tag>
+        <tag>spring doc</tag>
       </tags>
   </entry>
   <entry>
@@ -1655,123 +1771,6 @@ org.quartz.SchedulerConfigException: No local DataSource found for configuration
         <tag>gradle</tag>
         <tag>spring webflux</tag>
         <tag>r2dbc</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>Spring WebFlux 文件上传：从本地存储到 MinIO 集成 🚀</title>
-    <url>/2025/09/27/back-end/spring-webflux-file-upload-to-minio/</url>
-    <content><![CDATA[前言在现代 Web 应用中，高效可靠的文件存储是必不可少的一环。在 Spring WebFlux 响应式编程模型下，处理文件上传需要特别注意流（Flux）和非阻塞操作。
-本文将基于一个 Spring WebFlux 的文件上传接口，演示如何从最初的本地文件系统存储方案，平滑地迁移并集成到 MinIO 对象存储服务，实现更具可扩展性和稳定性的文件存储。
-🎯 方案切换：为何选择 MinIO？最初的文件上传方案通常是将文件直接存储在服务器的本地文件系统。对于生产环境或需要横向扩展的应用，MinIO（或其他兼容 S3 协议的对象存储）是更优的选择，它提供了高可用、高扩展性和可靠性强的优势，同时解耦了应用和存储。
-🛠️ 第一步：部署 MinIO 服务在本地开发或测试环境中，最便捷的部署 MinIO 的方式是使用 Docker Compose。
-将以下配置保存为 docker-compose.yaml 文件：
-services:  minio:    image: minio/minio:RELEASE.2025-04-22T22-12-26Z    container_name: minio_server    restart: unless-stopped    ports:      # 映射 MinIO API 端口      - &quot;19000:9000&quot;      # 映射 MinIO Console/UI 端口      - &quot;19001:9001&quot;    environment:      # 保持与 application.yaml 中配置一致      MINIO_ROOT_USER: admin      MINIO_ROOT_PASSWORD: 12345678    volumes:      # 将 MinIO 数据持久化到本地目录      - ./minio_data:/data    command: server /data --console-address &quot;:9001&quot;    healthcheck:      test: [&quot;CMD&quot;, &quot;curl&quot;, &quot;-f&quot;, &quot;http://localhost:9000/minio/health/live&quot;]      interval: 30s      timeout: 5s      retries: 3
-
-运行以下命令启动 MinIO 服务：
-docker compose up -d
-
-服务启动后，您可以通过浏览器访问 http://localhost:19001 进入 MinIO 控制台。
-⚙️ 第二步：引入依赖与配置连接引入 MinIO 依赖在 build.gradle 中引入 MinIO Java 客户端：
-dependencies &#123;    // ... 其他依赖    implementation &#x27;io.minio:minio:8.5.17&#x27;     // ...&#125;
-配置 Spring 应用在 application.yaml 中配置 MinIO 的连接信息，确保这里的配置与 Docker Compose 中的 environment 变量保持一致。
-minio:  # 注意：这里配置的是 MinIO API 映射出来的端口 19000  endpoint: http://192.168.31.220:19000  access: admin  secret: 12345678  bucket: batcher-dev
-
-定义MinioProps获取 application.yaml 中配置 MinIO 的连接信息。
-@Component@ConfigurationProperties(prefix = &quot;minio&quot;)public class MinioProps &#123;    private String endpoint;    private String access;    private String secret;    private String bucket;    get/set method...&#125;
-
-自定义MinioConfig配置类将MinioClient注入spring bean中。
-@Configurationpublic class MinioConfig &#123;    private Logger logger = LoggerFactory.getLogger(MinioConfig.class);    private MinioProps minioProperties;    @Bean(name = &quot;minioClient&quot;)    public MinioClient minioClient() throws Exception &#123;        this.logger.debug(&quot;---------- load minio client ----------&quot;);        MinioClient minioClient = MinioClient.builder()                .endpoint(this.minioProperties.getEndpoint())                .credentials(this.minioProperties.getAccess(), this.minioProperties.getSecret())                .build();        boolean isExist = minioClient.bucketExists(BucketExistsArgs.builder().bucket(minioProperties.getBucket()).build());        if (isExist) &#123;            logger.warn(&quot;---------- minio client bucket is existed ----------&quot;);        &#125; else &#123;            minioClient.makeBucket(MakeBucketArgs.builder().bucket(this.minioProperties.getBucket()).build());            logger.debug(&quot;---------- minio client bucket is created ----------&quot;);        &#125;        logger.debug(&quot;---------- minio client is loaded ----------&quot;);        return minioClient;    &#125;    @Autowired    public void setMinioProperties(MinioProps minioProperties) &#123;        this.minioProperties = minioProperties;    &#125;&#125;
-
-💻 第三步：重构文件上传控制器核心变动在于 FileController，我们将注入 MinioClient 和 MinioProps，并重写 uploadFile 方法，将文件流导向 MinIO。
-注入 MinIO 客户端通过构造器注入 MinioClient，以便在上传方法中使用
-@RestController@Tag(name = &quot;File Upload&quot;, description = &quot;APIs for uploading files&quot;)public class FileController &#123;    private final MinioClient minioClient;    private final MinioProps minioProps;    public FileController(MinioClient minioClient, MinioProps minioProps) &#123;        this.minioClient = minioClient;        this.minioProps = minioProps;    &#125;    // ...&#125;
-
-实现 MinIO 响应式上传逻辑利用 Reactor 将 WebFlux 的 Flux 文件流转换为 MinIO 需要的 InputStream，并包装 MinIO 的阻塞调用以保持非阻塞性。
-@PostMapping(&quot;/file&quot;)// ... 省略 Swagger 注解public Mono&lt;String&gt; uploadFile(@RequestPart(&quot;file&quot;) Mono&lt;FilePart&gt; filePartMono) &#123;    var bucketName = minioProps.getBucket();    return filePartMono.flatMap(filePart -&gt; &#123;        var fileName = filePart.filename();        var contentType = Objects.requireNonNull(filePart.headers().getContentType()).toString();        // 1. 检查并创建 MinIO 存储桶（包装阻塞操作）        return Mono.fromCallable(() -&gt; &#123;            boolean found = minioClient.bucketExists(BucketExistsArgs.builder().bucket(bucketName).build());            if (!found) &#123;                minioClient.makeBucket(MakeBucketArgs.builder().bucket(bucketName).build());            &#125;            return true;        &#125;).flatMap(result -&gt;             // 2. 将 Flux&lt;DataBuffer&gt; 转换为 List&lt;InputStream&gt;            filePart.content()                    .map(DataBuffer::asInputStream)                    .collectList()                    // 3. 将 List&lt;InputStream&gt; 合并为单个 SequenceInputStream 并执行上传                    .flatMap(inputStreams -&gt; &#123;                        try (var combinedInputStream = new SequenceInputStream(Collections.enumeration(inputStreams))) &#123;                            // 使用 -1 告诉 MinIO 客户端进行分块上传                            var res = minioClient.putObject(PutObjectArgs.builder()                                    .bucket(bucketName)                                    .object(fileName)                                    .stream(combinedInputStream, -1, 10485760)                                     .contentType(contentType)                                    .build());                            return Mono.just(res.etag());                        &#125; catch (Exception e) &#123;                            return Mono.error(new RuntimeException(&quot;MinIO upload failed: &quot; + e.getMessage(), e));                        &#125;                    &#125;)        );    &#125;);&#125;
-
-总结通过在 Spring WebFlux 中集成 MinIO，我们成功地将文件上传从易受限制的本地文件系统迁移到了健壮、可扩展的对象存储平台。这种方法利用了 Reactor 的响应式流处理能力，同时优雅地处理了 MinIO 客户端的阻塞 I&#x2F;O 操作，实现了高效且非阻塞的文件上传链路。
-]]></content>
-      <categories>
-        <category>后端</category>
-      </categories>
-      <tags>
-        <tag>spring boot</tag>
-        <tag>gradle</tag>
-        <tag>spring webflux</tag>
-        <tag>文件上传</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>两种在Minikube中运行本地Docker镜像的简单方式</title>
-    <url>/2022/03/23/back-end/two-easy-ways-to-use-local-docker-images-in-minikube/</url>
-    <content><![CDATA[两种在Minikube中运行本地Docker镜像的简单方式前言本文将分享两种在Minikube中运行本地Docker镜像的简单方式
-
-要求
-安装并运行Docker
-安装并运行Minikube
-安装kubectl
-
-你将学到的知识本文将教会大家如何在Minikube中使用本地的Docker镜像。因为Kubernetes默认从注册表中提取镜像，所以Kubernetes一般是不会使用本地镜像，并且在生产环境中也不应该使用本地镜像。但是，如果我们可以很轻松的使用本地镜像，而不是每次都需要将这些镜像推送到远程的注册表、登录远程注册表并在本地电脑中重新拉取，那么使用本地镜像将十分便利。
-和往常一样，我在github中准备了一个仓库, 方便大家查看完成的代码库，并且可以按照本文描述的步骤进行操作。
-Demo介绍/|- app/  |- Dockerfile  |- index.js  |- package.json|- deployment.yaml
-
-在上面的文件夹结构中，我将重点介绍将在本文中使用的重点文件：
-
-app&#x2F;Dockerfile 用于构建包含一个Node.js Web 服务器的本地Docker镜像的Dockerfile，我们将其部署到Minikube
-
-app&#x2F;index.js Node.js Web 服务器的应用程序代码
-
-app&#x2F;package.json 我们Node.js Web 服务器的依赖。在本文中，只使用了express*，一个用于搭建Web服务器的Nodejs库
-
-deployment.yaml 在Kubernetes中运行Node.js Web 服务器的Deployment配置
-
-
-app文件夹中的实际内容和本文无关。 我仅仅是提供一个demo方便接下来的教程讲解，当然使用你自己的demo也是可以的。如果你想要使用app这个应用，请注意服务器将在容器内部中监听8080端口。
-Deployment配置deployment.yaml的内容如下：
-apiVersion: apps/v1kind: Deploymentmetadata:  name: myapp  labels:    name: myappspec:  selector:    matchLabels:      name: myapp  template:    metadata:      labels:        name: myapp    spec:      containers:        - name: myapp          image: pz/demo          imagePullPolicy: Never          ports:            - containerPort: 8080
-
-我们需要重点关注的是imagePullPolicy和containerPort这两个配置
-通过containerPort，我们将暴露app正在监听的8080端口，因此我们稍后可以通过浏览器访问http://127.0.0.1:8080去验证是否满足我们预期那样工作。
-更关键的是imagePullPolicy。如果你想使用本地Docker镜像，imagePullPolicy需要设置成Never, 否则， Kubernetes将在注册表中根据你提供的名字来搜素同名镜像。
-构建Dcoker镜像为了验证Docker镜像能够按照我们的预期在Kubernetes中运行，让我们来构建并运行。
-首先，我们导航进入app目录，然后我们通过docker build -t pz&#x2F;demo .构建Docker镜像，通过-t参数将镜像名字设置为pz&#x2F;demo。
-
-当构建完成之后，我们可以通过docker run -it –rm -p 8080:8080 pz&#x2F;demo命令来运行容器，并将Docker的8080端口映射的本地的8080端口。接下来，我们可以在浏览器中访问localhost:8080。 如果我们可以在浏览器中看到*”Hello World!”*，那么说明我们的容器运行正常。
-
-在Minikube中运行本地Docker镜像如果你想通过kubectl apply -f deployment.yaml命令部署上面的deployment.yaml到你的Minikube中，那启动的Pod将找不到你刚刚构建的Docker镜像。
-你可以通过kubectl logs deployment.apps&#x2F;myapp命令来检查日志去来验证这个错误的结果。
-
-上面的日志显示由于Kubernetes拉取不到镜像Pod一直等待重启。这其实是因为Minikube没有方法获取你本地Docker镜像。
-但是幸运的是，有两个简单的命令可以帮助解决这个问题。
-第一种方式是使用image load命令， 你可以使用下面的名利将本地Docker镜像从本地电脑中导入Minikube中：
-# Generalminikube image load &lt;IMAGE_NAME&gt;# Exampleminikube image load pz/demo
-
-在导入完成之后，你可以重启pod。然后你可以发现pod可以正常工作了。
-其实我们还可以变得更简单。以前的方法是你需呀先在本地构建Docker镜像，然后将其移动到Minikube容器中，虽然耗时不多，但是终究还是浪费了不少时间。
-通过使用Minikube的image build， 我们可以在Minikube中直接构建镜像：
-# Generalminikube image build -t &lt;IMAGE_NAME&gt; .# Exampleminikube image build -t pz/demo .
-
-使用minikube image build构建出来的镜像可以在Minikkube中直接访问，同时也不再需要在minikube image load中的第二步导入步骤。
-使用以上两种之一的方法，我们可以重新检查一下Deployment的日志：
-
-为了进一步验证一切是否按照我们预期的工作，我们可以使用下面的命令将本地8080端口转发发Deployment的8080端口中：
-kubectl port-forward deployment/myapp 8080:8080
-
-重新检查浏览器，我们可以发现本地构建的应用在Minikube中运行正常，🎉🎉🎉
-
-总结通过本文，你应该能够使用minikube image load和minikube image buildcommand命令在Minikube中使用本地镜像了.
-更多信息请关注LinkedIn
-后言原文：Two easy ways to use local Docker images in Minikube
-译文： 两种在Minikube中运行本地Docker镜像的简单方式
-译者：大明二代
-]]></content>
-      <categories>
-        <category>后端</category>
-      </categories>
-      <tags>
-        <tag>k8s</tag>
-        <tag>docker</tag>
-        <tag>minikube</tag>
       </tags>
   </entry>
   <entry>
@@ -1905,6 +1904,79 @@ commons-csv mvaen repository.
       <tags>
         <tag>java</tag>
         <tag>commons-csv</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>两种在Minikube中运行本地Docker镜像的简单方式</title>
+    <url>/2022/03/23/back-end/two-easy-ways-to-use-local-docker-images-in-minikube/</url>
+    <content><![CDATA[两种在Minikube中运行本地Docker镜像的简单方式前言本文将分享两种在Minikube中运行本地Docker镜像的简单方式
+
+要求
+安装并运行Docker
+安装并运行Minikube
+安装kubectl
+
+你将学到的知识本文将教会大家如何在Minikube中使用本地的Docker镜像。因为Kubernetes默认从注册表中提取镜像，所以Kubernetes一般是不会使用本地镜像，并且在生产环境中也不应该使用本地镜像。但是，如果我们可以很轻松的使用本地镜像，而不是每次都需要将这些镜像推送到远程的注册表、登录远程注册表并在本地电脑中重新拉取，那么使用本地镜像将十分便利。
+和往常一样，我在github中准备了一个仓库, 方便大家查看完成的代码库，并且可以按照本文描述的步骤进行操作。
+Demo介绍/|- app/  |- Dockerfile  |- index.js  |- package.json|- deployment.yaml
+
+在上面的文件夹结构中，我将重点介绍将在本文中使用的重点文件：
+
+app&#x2F;Dockerfile 用于构建包含一个Node.js Web 服务器的本地Docker镜像的Dockerfile，我们将其部署到Minikube
+
+app&#x2F;index.js Node.js Web 服务器的应用程序代码
+
+app&#x2F;package.json 我们Node.js Web 服务器的依赖。在本文中，只使用了express*，一个用于搭建Web服务器的Nodejs库
+
+deployment.yaml 在Kubernetes中运行Node.js Web 服务器的Deployment配置
+
+
+app文件夹中的实际内容和本文无关。 我仅仅是提供一个demo方便接下来的教程讲解，当然使用你自己的demo也是可以的。如果你想要使用app这个应用，请注意服务器将在容器内部中监听8080端口。
+Deployment配置deployment.yaml的内容如下：
+apiVersion: apps/v1kind: Deploymentmetadata:  name: myapp  labels:    name: myappspec:  selector:    matchLabels:      name: myapp  template:    metadata:      labels:        name: myapp    spec:      containers:        - name: myapp          image: pz/demo          imagePullPolicy: Never          ports:            - containerPort: 8080
+
+我们需要重点关注的是imagePullPolicy和containerPort这两个配置
+通过containerPort，我们将暴露app正在监听的8080端口，因此我们稍后可以通过浏览器访问http://127.0.0.1:8080去验证是否满足我们预期那样工作。
+更关键的是imagePullPolicy。如果你想使用本地Docker镜像，imagePullPolicy需要设置成Never, 否则， Kubernetes将在注册表中根据你提供的名字来搜素同名镜像。
+构建Dcoker镜像为了验证Docker镜像能够按照我们的预期在Kubernetes中运行，让我们来构建并运行。
+首先，我们导航进入app目录，然后我们通过docker build -t pz&#x2F;demo .构建Docker镜像，通过-t参数将镜像名字设置为pz&#x2F;demo。
+
+当构建完成之后，我们可以通过docker run -it –rm -p 8080:8080 pz&#x2F;demo命令来运行容器，并将Docker的8080端口映射的本地的8080端口。接下来，我们可以在浏览器中访问localhost:8080。 如果我们可以在浏览器中看到*”Hello World!”*，那么说明我们的容器运行正常。
+
+在Minikube中运行本地Docker镜像如果你想通过kubectl apply -f deployment.yaml命令部署上面的deployment.yaml到你的Minikube中，那启动的Pod将找不到你刚刚构建的Docker镜像。
+你可以通过kubectl logs deployment.apps&#x2F;myapp命令来检查日志去来验证这个错误的结果。
+
+上面的日志显示由于Kubernetes拉取不到镜像Pod一直等待重启。这其实是因为Minikube没有方法获取你本地Docker镜像。
+但是幸运的是，有两个简单的命令可以帮助解决这个问题。
+第一种方式是使用image load命令， 你可以使用下面的名利将本地Docker镜像从本地电脑中导入Minikube中：
+# Generalminikube image load &lt;IMAGE_NAME&gt;# Exampleminikube image load pz/demo
+
+在导入完成之后，你可以重启pod。然后你可以发现pod可以正常工作了。
+其实我们还可以变得更简单。以前的方法是你需呀先在本地构建Docker镜像，然后将其移动到Minikube容器中，虽然耗时不多，但是终究还是浪费了不少时间。
+通过使用Minikube的image build， 我们可以在Minikube中直接构建镜像：
+# Generalminikube image build -t &lt;IMAGE_NAME&gt; .# Exampleminikube image build -t pz/demo .
+
+使用minikube image build构建出来的镜像可以在Minikkube中直接访问，同时也不再需要在minikube image load中的第二步导入步骤。
+使用以上两种之一的方法，我们可以重新检查一下Deployment的日志：
+
+为了进一步验证一切是否按照我们预期的工作，我们可以使用下面的命令将本地8080端口转发发Deployment的8080端口中：
+kubectl port-forward deployment/myapp 8080:8080
+
+重新检查浏览器，我们可以发现本地构建的应用在Minikube中运行正常，🎉🎉🎉
+
+总结通过本文，你应该能够使用minikube image load和minikube image buildcommand命令在Minikube中使用本地镜像了.
+更多信息请关注LinkedIn
+后言原文：Two easy ways to use local Docker images in Minikube
+译文： 两种在Minikube中运行本地Docker镜像的简单方式
+译者：大明二代
+]]></content>
+      <categories>
+        <category>后端</category>
+      </categories>
+      <tags>
+        <tag>k8s</tag>
+        <tag>docker</tag>
+        <tag>minikube</tag>
       </tags>
   </entry>
   <entry>
@@ -2050,64 +2122,6 @@ dism.exe /Online /Enable-Feature:Microsoft-Hyper-V /All
       </tags>
   </entry>
   <entry>
-    <title>2026年5月8号面试总结</title>
-    <url>/2026/05/08/front-end/2026-0508-interview/</url>
-    <content><![CDATA[前言2026年5月8号有一场面试，是对方架构师来面试的我。总的来说，面试的效果不是很好。面试的岗位是前端岗位，但是问的很多是后端架构的设计，我认为我的准备不是很好，我需要继续努力补全自己。
-问题Java的虚拟线程问题：Java的虚拟线程是什么，怎么创建？
-回答如下：
-在Java 21中，引入了虚拟线程（Virtual Threads）来简化和增强并发性，这使得在Java中编程并发程序更容易、更高效。
-虚拟线程，也称为“用户模式线程（user-mode threads）”或“纤程（fibers）”。该功能旨在简化并发编程并提供更好的可扩展性。虚拟线程是轻量级的，这意味着它们可以比传统线程创建更多数量，并且开销要少得多。这使得在自己的线程中运行单独任务或请求变得更加实用，即使在高吞吐量的程序中也是如此。
-在Java 21中创建和使用虚拟线程有多种方法：
-1. 使用静态构建器方法Thread.startVirtualThread方法将可运行对象作为参数来创建，并立即启动虚拟线程，具体如下代码：
-Runnable runnable = () -&gt; &#123;    System.out.println(&quot;Hello, www.didispace.com&quot;);&#125;;// 使用静态构建器方法Thread virtualThread = Thread.startVirtualThread(runnable);
-
-也可以使用Thread.ofVirtual()来创建，这里还可以设置一些属性，比如：线程名称。具体如下代码：
-Thread.ofVirtual()        .name(&quot;didispace-virtual-thread&quot;)        .start(runnable);
-
-2. 与ExecutorService结合使用从Java 5开始，就推荐开发人员使用ExecutorServices而不是直接使用Thread类了。现在，Java 21中引入了使用虚拟线程，所以也有了新的ExecutorService来适配，看看下面的例子：
-Runnable runnable = () -&gt; &#123;    System.out.println(&quot;Hello, www.didispace.com&quot;);&#125;;try (ExecutorService executorService = Executors.newVirtualThreadPerTaskExecutor()) &#123;    for (int i = 0; i &lt; 100; i++) &#123;        executorService.submit(runnable);    &#125;&#125;
-
-3. 使用虚拟线程工厂开发者还可以创建一个生成虚拟线程的工厂来管理，具体看下面的例子例子：
-Runnable runnable = () -&gt; &#123;    System.out.println(&quot;Hello, www.didispace.com&quot;);&#125;;ThreadFactory virtualThreadFactory = Thread.ofVirtual()        .name(&quot;didispace&quot;, 0)        .factory();Thread factoryThread = virtualThreadFactory.newThread(runnable);factoryThread.start;
-
-对于虚拟线程的概念，你只需要有一个基本的认识。
-
-虚拟线程是由JVM管理的轻量级线程。
-虚拟线程不需要任何显式分配或调度。
-虚拟线程非常适合I&#x2F;O密集型任务或需要大量并行性的任务。
-虚拟线程也可以用来实现异步操作。
-
-Golang的cmp模型GMP 是 Go 运行时（Runtime）层面的调度模型，它实现了用户态线程（Goroutine）与内核态线程（M）之间的多对多复用，是 Go 能够支持高并发的核心原因
-
-G (Goroutine): 协程。它是待执行的任务，存储了协程的栈、状态及指向任务函数的指针。G 的体积很小（初始仅 2KB），由 Go 运行时管理。
-M (Machine): 操作系统的物理线程。协程最终必须绑定到 M 上才能在 CPU 上运行。M 并不保存状态，它只是一个执行体。
-P (Processor): 逻辑处理器。它是 G 和 M 之间的“中介”或“本地资源池”。P 维护着一个本地就绪队列（Local Runqueue）。M 必须获取到 P 才能执行 G。
-在早期（Go 1.1 之前）只有 GM 模型，由于所有 M 都要抢夺全局队列的锁来获取 G，导致严重的锁竞争。引入 P 后，每个 P 都有本地队列，减少了锁竞争，并实现了 Work Stealing 和 Hand Off 机制，大大提升了效率
-
-
-gemini帮我回答的
-
-MySQL 事务隔离级别SQL:1992 标准定义了四种事务隔离级别，分别是读未提交（Read Uncommitted）、读已提交（Read Committed）、可重复读（Repeatable Read）和串行化（Serializable）。不同的隔离级别下会产生脏读、幻读、不可重复读等相关问题，因此在选择隔离级别的时候要根据应用场景来决定，使用合适的隔离级别。MySQL 中的 InnoDB 存储引擎提供了 SQL 标准所描述的四种事务隔离级别，默认事务隔离级别是可重复读（Repeatable Read）。
-
-读未提交（Read Uncommitted）允许脏读，就是在该隔离级别下，可能读到其他会话未提交事务修改的数据，存在脏读、不可重读读、幻读的问题。
-读已提交（Read Committed）只能查询到已提交的数据。这是 Oracle 数据库默认的事务隔离级别。存在不可重读读、幻读的问题。
-可重复读（Repeatable Read）就是在一个事务里相同条件下，无论何时查到的数据都和第一次查到的数据一致。这是 MySQL 数据库 InnoDB 引擎默认的事务隔离级别。在范围查询时存在幻读的问题。
-串行化（Serializable）是最高的事务隔离级别，它严格服从 ACID 特性的隔离级别。所有的事务依次逐个执行，事务之间互不干扰，该级别可以防止脏读、不可重复读以及幻读。但每个事务读数据时都需要获取表级的共享锁，导致读和写都会阻塞，性能极低。
-
-参考资料
-Java 21 新特性：虚拟线程（Virtual Threads）
-MySQL | 事务隔离级别详解
-
-]]></content>
-      <categories>
-        <category>前端</category>
-      </categories>
-      <tags>
-        <tag>高级前端工程师</tag>
-        <tag>面试</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>2026年5月7号面试总结</title>
     <url>/2026/05/08/front-end/2026-0507-interview/</url>
     <content><![CDATA[前言2026年5月7号有两场面试，本文记录了自己预先准备面试题和面试中遇到的问题。
@@ -2236,6 +2250,64 @@ GSS Data Store使用Podman部署问题：你提到在虚拟机上通过 Podman s
 利用 podman generate systemd 命令将容器的生命周期挂载到系统的 systemd 服务中。
 在 systemd 的配置中设置 Restart&#x3D;always 和 StartLimitInterval。这样即使容器因为宿主机每周末定期重启，宿主机的操作系统内核会自动检测并重新拉起服务。
 相比于简单的脚本，systemctl 提供了成熟的状态检查（Status Check）和日志回溯（Journald），能确保在没有 K8s 控制平面监控的情况下，服务依然具备基本的健壮性
+
+]]></content>
+      <categories>
+        <category>前端</category>
+      </categories>
+      <tags>
+        <tag>高级前端工程师</tag>
+        <tag>面试</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>2026年5月8号面试总结</title>
+    <url>/2026/05/08/front-end/2026-0508-interview/</url>
+    <content><![CDATA[前言2026年5月8号有一场面试，是对方架构师来面试的我。总的来说，面试的效果不是很好。面试的岗位是前端岗位，但是问的很多是后端架构的设计，我认为我的准备不是很好，我需要继续努力补全自己。
+问题Java的虚拟线程问题：Java的虚拟线程是什么，怎么创建？
+回答如下：
+在Java 21中，引入了虚拟线程（Virtual Threads）来简化和增强并发性，这使得在Java中编程并发程序更容易、更高效。
+虚拟线程，也称为“用户模式线程（user-mode threads）”或“纤程（fibers）”。该功能旨在简化并发编程并提供更好的可扩展性。虚拟线程是轻量级的，这意味着它们可以比传统线程创建更多数量，并且开销要少得多。这使得在自己的线程中运行单独任务或请求变得更加实用，即使在高吞吐量的程序中也是如此。
+在Java 21中创建和使用虚拟线程有多种方法：
+1. 使用静态构建器方法Thread.startVirtualThread方法将可运行对象作为参数来创建，并立即启动虚拟线程，具体如下代码：
+Runnable runnable = () -&gt; &#123;    System.out.println(&quot;Hello, www.didispace.com&quot;);&#125;;// 使用静态构建器方法Thread virtualThread = Thread.startVirtualThread(runnable);
+
+也可以使用Thread.ofVirtual()来创建，这里还可以设置一些属性，比如：线程名称。具体如下代码：
+Thread.ofVirtual()        .name(&quot;didispace-virtual-thread&quot;)        .start(runnable);
+
+2. 与ExecutorService结合使用从Java 5开始，就推荐开发人员使用ExecutorServices而不是直接使用Thread类了。现在，Java 21中引入了使用虚拟线程，所以也有了新的ExecutorService来适配，看看下面的例子：
+Runnable runnable = () -&gt; &#123;    System.out.println(&quot;Hello, www.didispace.com&quot;);&#125;;try (ExecutorService executorService = Executors.newVirtualThreadPerTaskExecutor()) &#123;    for (int i = 0; i &lt; 100; i++) &#123;        executorService.submit(runnable);    &#125;&#125;
+
+3. 使用虚拟线程工厂开发者还可以创建一个生成虚拟线程的工厂来管理，具体看下面的例子例子：
+Runnable runnable = () -&gt; &#123;    System.out.println(&quot;Hello, www.didispace.com&quot;);&#125;;ThreadFactory virtualThreadFactory = Thread.ofVirtual()        .name(&quot;didispace&quot;, 0)        .factory();Thread factoryThread = virtualThreadFactory.newThread(runnable);factoryThread.start;
+
+对于虚拟线程的概念，你只需要有一个基本的认识。
+
+虚拟线程是由JVM管理的轻量级线程。
+虚拟线程不需要任何显式分配或调度。
+虚拟线程非常适合I&#x2F;O密集型任务或需要大量并行性的任务。
+虚拟线程也可以用来实现异步操作。
+
+Golang的cmp模型GMP 是 Go 运行时（Runtime）层面的调度模型，它实现了用户态线程（Goroutine）与内核态线程（M）之间的多对多复用，是 Go 能够支持高并发的核心原因
+
+G (Goroutine): 协程。它是待执行的任务，存储了协程的栈、状态及指向任务函数的指针。G 的体积很小（初始仅 2KB），由 Go 运行时管理。
+M (Machine): 操作系统的物理线程。协程最终必须绑定到 M 上才能在 CPU 上运行。M 并不保存状态，它只是一个执行体。
+P (Processor): 逻辑处理器。它是 G 和 M 之间的“中介”或“本地资源池”。P 维护着一个本地就绪队列（Local Runqueue）。M 必须获取到 P 才能执行 G。
+在早期（Go 1.1 之前）只有 GM 模型，由于所有 M 都要抢夺全局队列的锁来获取 G，导致严重的锁竞争。引入 P 后，每个 P 都有本地队列，减少了锁竞争，并实现了 Work Stealing 和 Hand Off 机制，大大提升了效率
+
+
+gemini帮我回答的
+
+MySQL 事务隔离级别SQL:1992 标准定义了四种事务隔离级别，分别是读未提交（Read Uncommitted）、读已提交（Read Committed）、可重复读（Repeatable Read）和串行化（Serializable）。不同的隔离级别下会产生脏读、幻读、不可重复读等相关问题，因此在选择隔离级别的时候要根据应用场景来决定，使用合适的隔离级别。MySQL 中的 InnoDB 存储引擎提供了 SQL 标准所描述的四种事务隔离级别，默认事务隔离级别是可重复读（Repeatable Read）。
+
+读未提交（Read Uncommitted）允许脏读，就是在该隔离级别下，可能读到其他会话未提交事务修改的数据，存在脏读、不可重读读、幻读的问题。
+读已提交（Read Committed）只能查询到已提交的数据。这是 Oracle 数据库默认的事务隔离级别。存在不可重读读、幻读的问题。
+可重复读（Repeatable Read）就是在一个事务里相同条件下，无论何时查到的数据都和第一次查到的数据一致。这是 MySQL 数据库 InnoDB 引擎默认的事务隔离级别。在范围查询时存在幻读的问题。
+串行化（Serializable）是最高的事务隔离级别，它严格服从 ACID 特性的隔离级别。所有的事务依次逐个执行，事务之间互不干扰，该级别可以防止脏读、不可重复读以及幻读。但每个事务读数据时都需要获取表级的共享锁，导致读和写都会阻塞，性能极低。
+
+参考资料
+Java 21 新特性：虚拟线程（Virtual Threads）
+MySQL | 事务隔离级别详解
 
 ]]></content>
       <categories>
@@ -2566,6 +2638,46 @@ Angular Material
       </tags>
   </entry>
   <entry>
+    <title>在windows上构建angular项目(上)</title>
+    <url>/2021/05/13/front-end/build-angular-on-windows-01/</url>
+    <content><![CDATA[在windows上构建angular项目 (上)前端三大框架( angular, reac, vue )中，angular一直都是一个很独特的存在。首先，angular的概念很多，服务、依赖注入、模块，指令等，都是在前端圈不是很常用的，此外，angular使用了bazel作为构建工具，而react和vue都是使用了rollup，因此在本地编译构建angular将会远远超过react和vue，如果你是用的windows平台，那么一个个坑需要自己慢慢来填。。。
+Bazel是什么？根据官网的定义，Bazel是类似于Make，Maven和Gradle的开源构建和测试工具。它使用人类可读的高级构建语言Starlark(一种基于python的方言)。 Bazel支持多种语言的项目，并为多种平台构建输出。 
+从我个人角度来看，bazel是一个强大且复杂的构建系统，通过build rule的概念，支持多种语言、不同平台，支持构建C&#x2F;C++,Java,Android,IOS,Golang,Nodejs,Docker项目
+安装Bazel官方支持Windows，macOS, Ubuntu Linux三大平台，这也是开发人员比较常用的本地开发平台。
+在社区的支持下，bazel还支持其他平台，具体信息可以看一下官网。这里我仅仅介绍如何在windows上安装。
+安装要求在安装前，请确保你windows系统符合要求：
+
+推荐使用64位的windows10，版本号不能低于1703
+64位的Windows 7以上
+64位的Windows Server 2008 R2以上
+
+此外，请事先安装Visual C++ Redistributable for Visual Studio 2015
+下载安装Bazel我们需要在github选择下载bazel-&lt;version&gt;-windows-x86_64.exe，然后将该文件路径放在path环境变量中。
+在终端中执行
+$ bazel version
+
+显示类似效果就是可以了
+Build label: 4.0.0Build target: bazel-out/x64_windows-opt/bin/src/main/java/com/google/devtools/build/lib/bazel/BazelServer_deploy.jarBuild time: Thu Jan 21 07:39:16 2021 (1611214756)Build timestamp: 1611214756Build timestamp as int: 1611214756
+
+安装编译和语言运行时根据不同语言的编译需要，我们可能需要以下的工具：
+
+MSYS2 x86_64
+Build Tools for Visual Studio 2019
+Java SE Development Kit 11 (JDK) for Windows x64
+Python 3.6 for Windows x86-64
+
+如果你想在window平台编译构建angular，后三者必须的，JDK16和Python 3.9.5也能满足自己的需求。
+总结当完成以上步骤的时候，我们基本上就可以开始尝试在windows本地进行编译angular。
+]]></content>
+      <categories>
+        <category>前端</category>
+      </categories>
+      <tags>
+        <tag>bazel</tag>
+        <tag>angular</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>Angular的模拟面试</title>
     <url>/2024/10/26/front-end/angular-mock-interview/</url>
     <content><![CDATA[
@@ -2755,46 +2867,6 @@ Sprint 周期：通常为 1 到 4 周，2 周为常见做法。
         <tag>面试</tag>
         <tag>angular</tag>
         <tag>css</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>在windows上构建angular项目(上)</title>
-    <url>/2021/05/13/front-end/build-angular-on-windows-01/</url>
-    <content><![CDATA[在windows上构建angular项目 (上)前端三大框架( angular, reac, vue )中，angular一直都是一个很独特的存在。首先，angular的概念很多，服务、依赖注入、模块，指令等，都是在前端圈不是很常用的，此外，angular使用了bazel作为构建工具，而react和vue都是使用了rollup，因此在本地编译构建angular将会远远超过react和vue，如果你是用的windows平台，那么一个个坑需要自己慢慢来填。。。
-Bazel是什么？根据官网的定义，Bazel是类似于Make，Maven和Gradle的开源构建和测试工具。它使用人类可读的高级构建语言Starlark(一种基于python的方言)。 Bazel支持多种语言的项目，并为多种平台构建输出。 
-从我个人角度来看，bazel是一个强大且复杂的构建系统，通过build rule的概念，支持多种语言、不同平台，支持构建C&#x2F;C++,Java,Android,IOS,Golang,Nodejs,Docker项目
-安装Bazel官方支持Windows，macOS, Ubuntu Linux三大平台，这也是开发人员比较常用的本地开发平台。
-在社区的支持下，bazel还支持其他平台，具体信息可以看一下官网。这里我仅仅介绍如何在windows上安装。
-安装要求在安装前，请确保你windows系统符合要求：
-
-推荐使用64位的windows10，版本号不能低于1703
-64位的Windows 7以上
-64位的Windows Server 2008 R2以上
-
-此外，请事先安装Visual C++ Redistributable for Visual Studio 2015
-下载安装Bazel我们需要在github选择下载bazel-&lt;version&gt;-windows-x86_64.exe，然后将该文件路径放在path环境变量中。
-在终端中执行
-$ bazel version
-
-显示类似效果就是可以了
-Build label: 4.0.0Build target: bazel-out/x64_windows-opt/bin/src/main/java/com/google/devtools/build/lib/bazel/BazelServer_deploy.jarBuild time: Thu Jan 21 07:39:16 2021 (1611214756)Build timestamp: 1611214756Build timestamp as int: 1611214756
-
-安装编译和语言运行时根据不同语言的编译需要，我们可能需要以下的工具：
-
-MSYS2 x86_64
-Build Tools for Visual Studio 2019
-Java SE Development Kit 11 (JDK) for Windows x64
-Python 3.6 for Windows x86-64
-
-如果你想在window平台编译构建angular，后三者必须的，JDK16和Python 3.9.5也能满足自己的需求。
-总结当完成以上步骤的时候，我们基本上就可以开始尝试在windows本地进行编译angular。
-]]></content>
-      <categories>
-        <category>前端</category>
-      </categories>
-      <tags>
-        <tag>bazel</tag>
-        <tag>angular</tag>
       </tags>
   </entry>
   <entry>
@@ -3249,6 +3321,60 @@ feat: add bazel support
       </tags>
   </entry>
   <entry>
+    <title>JavaScript中的闭包</title>
+    <url>/2024/10/20/front-end/javascript-closure/</url>
+    <content><![CDATA[定义闭包（closure）是一个函数以及其捆绑的周边环境状态（lexical environment，词法环境）的引用的组合。换而言之，闭包让开发者可以从内部函数访问外部函数的作用域。在 JavaScript 中，闭包就是能够读取其他函数内部变量的, 闭包会随着函数的创建而被同时创建。
+作用
+本部分例子来自chatgpt
+
+
+创建私有变量
+
+function createCounter() &#123;    let count = 0;    return function() &#123;        count++;        return count;    &#125;;&#125;const counter = createCounter();console.log(counter()); // 输出 1console.log(counter());
+
+
+保持函数执行上下文
+
+function outer() &#123;    let name = &quot;John&quot;;    return function() &#123;        console.log(name);    &#125;;&#125;const inner = outer();inner(); // 输出 &quot;John&quot;
+
+
+函数柯里化
+
+function add(a) &#123;    return function(b) &#123;        return a + b;    &#125;;&#125;const addFive = add(5);console.log(addFive(10)); // 输出 15
+
+
+延迟执行和异步编程
+
+闭包常用于延迟执行和处理异步操作，因为它能够保存外部函数中的状态。
+function delayedMessage(message, delay) &#123;    setTimeout(function() &#123;        console.log(message);    &#125;, delay);&#125;
+
+
+模拟模块
+
+const module = (function() &#123;    let privateVar = &quot;I&#x27;m private&quot;;    function privateMethod() &#123;        console.log(privateVar);    &#125;    return &#123;        publicMethod: function() &#123;            privateMethod();        &#125;    &#125;;&#125;)();module.publicMethod(); // 输出 &quot;I&#x27;m private&quot;
+
+总结来说，闭包在 JavaScript 中用于数据的封装、状态的保持、异步编程以及提高代码的灵活性与模块化。
+思考题如果你能理解下面两段代码的运行结果，应该就算理解闭包的运行机制了。
+代码片段一：
+var name = &quot;The Window&quot;;var object = &#123;　　name : &quot;My Object&quot;,　　getNameFunc : function()&#123;　　　　return function()&#123;　　　　　　return this.name;　　　　&#125;;　　&#125;&#125;;alert(object.getNameFunc()())
+
+代码二：
+var name = &quot;The Window&quot;;var object = &#123;　　name : &quot;My Object&quot;,　　getNameFunc : function()&#123;        that = this;　　　  return function()&#123;　　　　　  return that.name;　　　  &#125;;　　&#125;&#125;;alert(object.getNameFunc()());
+
+
+参考资料
+闭包
+学习Javascript闭包（Closure）
+
+]]></content>
+      <categories>
+        <category>前端</category>
+      </categories>
+      <tags>
+        <tag>javascript</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>script标签中的defer和async</title>
     <url>/2024/11/04/front-end/html-scripts-defer-async/</url>
     <content><![CDATA[浏览器中script标签中的defer和async有什么区别，优缺点是什么，应用场景是什么？在 HTML 中，&lt;script&gt; 标签的 defer 和 async 属性用于控制脚本的加载和执行方式，尤其是在处理 JavaScript 文件时。它们之间的主要区别和应用场景如下：
@@ -3321,62 +3447,8 @@ chatgpt
         <category>前端</category>
       </categories>
       <tags>
+        <tag>javascript</tag>
         <tag>前端</tag>
-        <tag>javascript</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>JavaScript中的闭包</title>
-    <url>/2024/10/20/front-end/javascript-closure/</url>
-    <content><![CDATA[定义闭包（closure）是一个函数以及其捆绑的周边环境状态（lexical environment，词法环境）的引用的组合。换而言之，闭包让开发者可以从内部函数访问外部函数的作用域。在 JavaScript 中，闭包就是能够读取其他函数内部变量的, 闭包会随着函数的创建而被同时创建。
-作用
-本部分例子来自chatgpt
-
-
-创建私有变量
-
-function createCounter() &#123;    let count = 0;    return function() &#123;        count++;        return count;    &#125;;&#125;const counter = createCounter();console.log(counter()); // 输出 1console.log(counter());
-
-
-保持函数执行上下文
-
-function outer() &#123;    let name = &quot;John&quot;;    return function() &#123;        console.log(name);    &#125;;&#125;const inner = outer();inner(); // 输出 &quot;John&quot;
-
-
-函数柯里化
-
-function add(a) &#123;    return function(b) &#123;        return a + b;    &#125;;&#125;const addFive = add(5);console.log(addFive(10)); // 输出 15
-
-
-延迟执行和异步编程
-
-闭包常用于延迟执行和处理异步操作，因为它能够保存外部函数中的状态。
-function delayedMessage(message, delay) &#123;    setTimeout(function() &#123;        console.log(message);    &#125;, delay);&#125;
-
-
-模拟模块
-
-const module = (function() &#123;    let privateVar = &quot;I&#x27;m private&quot;;    function privateMethod() &#123;        console.log(privateVar);    &#125;    return &#123;        publicMethod: function() &#123;            privateMethod();        &#125;    &#125;;&#125;)();module.publicMethod(); // 输出 &quot;I&#x27;m private&quot;
-
-总结来说，闭包在 JavaScript 中用于数据的封装、状态的保持、异步编程以及提高代码的灵活性与模块化。
-思考题如果你能理解下面两段代码的运行结果，应该就算理解闭包的运行机制了。
-代码片段一：
-var name = &quot;The Window&quot;;var object = &#123;　　name : &quot;My Object&quot;,　　getNameFunc : function()&#123;　　　　return function()&#123;　　　　　　return this.name;　　　　&#125;;　　&#125;&#125;;alert(object.getNameFunc()())
-
-代码二：
-var name = &quot;The Window&quot;;var object = &#123;　　name : &quot;My Object&quot;,　　getNameFunc : function()&#123;        that = this;　　　  return function()&#123;　　　　　  return that.name;　　　  &#125;;　　&#125;&#125;;alert(object.getNameFunc()());
-
-
-参考资料
-闭包
-学习Javascript闭包（Closure）
-
-]]></content>
-      <categories>
-        <category>前端</category>
-      </categories>
-      <tags>
-        <tag>javascript</tag>
       </tags>
   </entry>
   <entry>
@@ -3418,67 +3490,6 @@ const app = express();const server = new ApolloServer(&#123;...&#125;);await ser
         <tag>nodejs</tag>
         <tag>apollo</tag>
         <tag>graphql</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>Next.js + Supabase 实现完美的重置密码工作流（含 React Email 与 Resend SMTP 配置）</title>
-    <url>/2026/01/18/front-end/nextjs-supabase-password-reset-workflow/</url>
-    <content><![CDATA[前言在现代 Web 开发中，身份验证（Auth）是一个核心环节。Supabase 提供了强大的 Auth 服务，但如何将其完美集成到 Next.js (App Router) 中，并使用 React Email 自定义精美的邮件模板？本文将带你走通整个流程。
-1. 核心工作流设计重置密码并非简单的“输入新密码”，为了安全性，它必须遵循 PKCE (Proof Key for Code Exchange) 流程：
-
-Forgot Password: 用户输入邮箱，请求重置。
-Magic Link: Supabase 发送一封带有 code 的邮件。
-Auth Callback: 用户点击链接，回到应用后端交换 code 获取 Session。
-Update Password: 用户进入受保护的修改页面，提交新密码。
-
-2. 环境配置：让 Supabase 认识你的多域名Supabase 的 Site URL 只能设置一个（通常设为生产环境），但你可以通过 Redirect URLs 支持多环境（如 localhost 和 Vercel 预览）。
-后台配置清单：
-Site URL: https://fieldglass-app.vercel.app
-Redirect URLs:
-http://localhost:3000/**
-https://fieldglass-app.vercel.app/**
-
-
-注意：一定要添加 /** 通配符，否则带有查询参数的回调地址会被拦截。
-
-3. 发送请求：Forgot Password 页面使用 shadcn&#x2F;ui 和 react-hook-form 构建一个极简的邮箱提交页面。
-async function onSubmit(values: z.infer&lt;typeof formSchema&gt;) &#123;  setIsLoading(true);  const &#123; error &#125; = await supabase.auth.resetPasswordForEmail(values.email, &#123;    // 动态处理重定向地址    redirectTo: `$&#123;window.location.origin&#125;/auth/callback?next=/update-password`,  &#125;);  if (error) &#123;    toast.error(error.message);  &#125; else &#123;    toast.success(&quot;Reset link sent! Please check your inbox.&quot;);  &#125;  setIsLoading(false);&#125;
-
-
-4. 邮件视觉：React Email + Resend SMTPSupabase 默认邮件配额较低且样式简陋。我们通过 Resend 配置自定义 SMTP。
-SMTP 配置 (Supabase Dashboard):
-Host: smtp.resend.com | Port: 465
-User: resend | Password: 你的Resend_API_KEY
-
-React Email 模板设计:使用 React Email 编写 UI，并保留 Supabase 的变量 &#123;&#123; .ConfirmationURL &#125;&#125;。
-import &#123;  Body,  Button,  Container,  Head,  Heading,  Html,  Preview,  Section,  Text,  Tailwind,  Hr,&#125; from &quot;@react-email/components&quot;;export const ResetPasswordEmail = () =&gt; &#123;  return (    &lt;Html&gt;      &lt;Head /&gt;      &lt;Preview&gt;Reset your Fieldglass App password&lt;/Preview&gt;      &lt;Tailwind&gt;        &lt;Body className=&quot;bg-white my-auto mx-auto font-sans&quot;&gt;          &lt;Container className=&quot;border border-solid border-[#e5e7eb] rounded-lg my-[40px] mx-auto p-[32px] max-w-[465px] shadow-sm&quot;&gt;            &lt;Section&gt;              &#123;/* Text-based Logo / App Name */&#125;              &lt;Text className=&quot;text-black text-[20px] font-bold tracking-tight m-0&quot;&gt;                Fieldglass App              &lt;/Text&gt;            &lt;/Section&gt;                        &lt;Heading className=&quot;text-black text-[24px] font-semibold text-left p-0 my-[30px] mx-0&quot;&gt;              Reset your password            &lt;/Heading&gt;                        &lt;Text className=&quot;text-[#374151] text-[14px] leading-[24px]&quot;&gt;              We received a request to reset the password for your **Fieldglass App** account.               Click the button below to proceed.            &lt;/Text&gt;            &lt;Section className=&quot;mt-[32px] mb-[32px]&quot;&gt;              &lt;Button                className=&quot;bg-[#000000] rounded-md text-white text-[14px] font-medium no-underline text-center px-6 py-3&quot;                href=&quot;&#123;&#123; .ConfirmationURL &#125;&#125;&quot;              &gt;                Reset Password              &lt;/Button&gt;            &lt;/Section&gt;            &lt;Text className=&quot;text-[#6b7280] text-[13px] leading-[22px]&quot;&gt;              If you did not request a password reset, please ignore this email or reply to let us know. This link is only valid for the next 24 hours.            &lt;/Text&gt;            &lt;Hr className=&quot;border border-solid border-[#e5e7eb] my-[26px] mx-0 w-full&quot; /&gt;                        &lt;Text className=&quot;text-[#9ca3af] text-[12px] leading-[18px]&quot;&gt;              &amp;copy; 2026 Fieldglass App. All rights reserved. &lt;br /&gt;              This is an automated security notification.            &lt;/Text&gt;          &lt;/Container&gt;        &lt;/Body&gt;      &lt;/Tailwind&gt;    &lt;/Html&gt;  );&#125;;
-
-
-5. 安全中转站：Auth Callback这是 Next.js 中最关键的路由处理程序。它负责将邮件里的 code 变成浏览器 Cookie。
-文件路径: app/auth/callback/route.ts
-export async function GET(request: Request) &#123;  const &#123; searchParams, origin &#125; = new URL(request.url);  const code = searchParams.get(&#x27;code&#x27;);  const next = searchParams.get(&#x27;next&#x27;) ?? &#x27;/&#x27;;  if (code) &#123;    const supabase = await createClient(); // server client    const &#123; error &#125; = await supabase.auth.exchangeCodeForSession(code);    if (!error) &#123;      return NextResponse.redirect(`$&#123;origin&#125;$&#123;next&#125;`);    &#125;  &#125;  return NextResponse.redirect(`$&#123;origin&#125;/login?error=invalid_token`);&#125;
-
-
-6. 最终步骤：更新密码页面当用户通过 Callback 跳转到 /update-password 时，他们已经处于“已登录”状态，可以直接调用 updateUser。
-const onSubmit = async (values: z.infer&lt;typeof formSchema&gt;) =&gt; &#123;  const &#123; error &#125; = await supabase.auth.updateUser(&#123;    password: values.password,  &#125;);  if (error) &#123;    toast.error(error.message);  &#125; else &#123;    toast.success(&quot;Password updated!&quot;);    router.push(&quot;/login&quot;);  &#125;&#125;;
-
-
-7. 常见坑点排查
-收到的邮件链接还是 localhost？ 检查 Supabase 后台的 Site URL 是否已改为生产域名，并确保 redirectTo 在白名单内。
-点击链接后没登录？ 检查 auth/callback 路由是否正确执行了 exchangeCodeForSession。
-Resend 发送失败？ 确保你的发件域名在 Resend 后台已通过 DNS 验证。
-
-
-结语通过这套组合拳，我们不仅实现了功能，还通过 React Email 提升了用户体验，通过 Resend 保证了邮件的送达率。这才是生产环境该有的样子。
-]]></content>
-      <categories>
-        <category>前端</category>
-      </categories>
-      <tags>
-        <tag>resend</tag>
-        <tag>nexjts</tag>
-        <tag>spabase</tag>
-        <tag>react email</tag>
       </tags>
   </entry>
   <entry>
@@ -3643,8 +3654,69 @@ css中垂直居中的4种方式
         <category>面试</category>
       </categories>
       <tags>
-        <tag>前端</tag>
         <tag>javascript</tag>
+        <tag>前端</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Next.js + Supabase 实现完美的重置密码工作流（含 React Email 与 Resend SMTP 配置）</title>
+    <url>/2026/01/18/front-end/nextjs-supabase-password-reset-workflow/</url>
+    <content><![CDATA[前言在现代 Web 开发中，身份验证（Auth）是一个核心环节。Supabase 提供了强大的 Auth 服务，但如何将其完美集成到 Next.js (App Router) 中，并使用 React Email 自定义精美的邮件模板？本文将带你走通整个流程。
+1. 核心工作流设计重置密码并非简单的“输入新密码”，为了安全性，它必须遵循 PKCE (Proof Key for Code Exchange) 流程：
+
+Forgot Password: 用户输入邮箱，请求重置。
+Magic Link: Supabase 发送一封带有 code 的邮件。
+Auth Callback: 用户点击链接，回到应用后端交换 code 获取 Session。
+Update Password: 用户进入受保护的修改页面，提交新密码。
+
+2. 环境配置：让 Supabase 认识你的多域名Supabase 的 Site URL 只能设置一个（通常设为生产环境），但你可以通过 Redirect URLs 支持多环境（如 localhost 和 Vercel 预览）。
+后台配置清单：
+Site URL: https://fieldglass-app.vercel.app
+Redirect URLs:
+http://localhost:3000/**
+https://fieldglass-app.vercel.app/**
+
+
+注意：一定要添加 /** 通配符，否则带有查询参数的回调地址会被拦截。
+
+3. 发送请求：Forgot Password 页面使用 shadcn&#x2F;ui 和 react-hook-form 构建一个极简的邮箱提交页面。
+async function onSubmit(values: z.infer&lt;typeof formSchema&gt;) &#123;  setIsLoading(true);  const &#123; error &#125; = await supabase.auth.resetPasswordForEmail(values.email, &#123;    // 动态处理重定向地址    redirectTo: `$&#123;window.location.origin&#125;/auth/callback?next=/update-password`,  &#125;);  if (error) &#123;    toast.error(error.message);  &#125; else &#123;    toast.success(&quot;Reset link sent! Please check your inbox.&quot;);  &#125;  setIsLoading(false);&#125;
+
+
+4. 邮件视觉：React Email + Resend SMTPSupabase 默认邮件配额较低且样式简陋。我们通过 Resend 配置自定义 SMTP。
+SMTP 配置 (Supabase Dashboard):
+Host: smtp.resend.com | Port: 465
+User: resend | Password: 你的Resend_API_KEY
+
+React Email 模板设计:使用 React Email 编写 UI，并保留 Supabase 的变量 &#123;&#123; .ConfirmationURL &#125;&#125;。
+import &#123;  Body,  Button,  Container,  Head,  Heading,  Html,  Preview,  Section,  Text,  Tailwind,  Hr,&#125; from &quot;@react-email/components&quot;;export const ResetPasswordEmail = () =&gt; &#123;  return (    &lt;Html&gt;      &lt;Head /&gt;      &lt;Preview&gt;Reset your Fieldglass App password&lt;/Preview&gt;      &lt;Tailwind&gt;        &lt;Body className=&quot;bg-white my-auto mx-auto font-sans&quot;&gt;          &lt;Container className=&quot;border border-solid border-[#e5e7eb] rounded-lg my-[40px] mx-auto p-[32px] max-w-[465px] shadow-sm&quot;&gt;            &lt;Section&gt;              &#123;/* Text-based Logo / App Name */&#125;              &lt;Text className=&quot;text-black text-[20px] font-bold tracking-tight m-0&quot;&gt;                Fieldglass App              &lt;/Text&gt;            &lt;/Section&gt;                        &lt;Heading className=&quot;text-black text-[24px] font-semibold text-left p-0 my-[30px] mx-0&quot;&gt;              Reset your password            &lt;/Heading&gt;                        &lt;Text className=&quot;text-[#374151] text-[14px] leading-[24px]&quot;&gt;              We received a request to reset the password for your **Fieldglass App** account.               Click the button below to proceed.            &lt;/Text&gt;            &lt;Section className=&quot;mt-[32px] mb-[32px]&quot;&gt;              &lt;Button                className=&quot;bg-[#000000] rounded-md text-white text-[14px] font-medium no-underline text-center px-6 py-3&quot;                href=&quot;&#123;&#123; .ConfirmationURL &#125;&#125;&quot;              &gt;                Reset Password              &lt;/Button&gt;            &lt;/Section&gt;            &lt;Text className=&quot;text-[#6b7280] text-[13px] leading-[22px]&quot;&gt;              If you did not request a password reset, please ignore this email or reply to let us know. This link is only valid for the next 24 hours.            &lt;/Text&gt;            &lt;Hr className=&quot;border border-solid border-[#e5e7eb] my-[26px] mx-0 w-full&quot; /&gt;                        &lt;Text className=&quot;text-[#9ca3af] text-[12px] leading-[18px]&quot;&gt;              &amp;copy; 2026 Fieldglass App. All rights reserved. &lt;br /&gt;              This is an automated security notification.            &lt;/Text&gt;          &lt;/Container&gt;        &lt;/Body&gt;      &lt;/Tailwind&gt;    &lt;/Html&gt;  );&#125;;
+
+
+5. 安全中转站：Auth Callback这是 Next.js 中最关键的路由处理程序。它负责将邮件里的 code 变成浏览器 Cookie。
+文件路径: app/auth/callback/route.ts
+export async function GET(request: Request) &#123;  const &#123; searchParams, origin &#125; = new URL(request.url);  const code = searchParams.get(&#x27;code&#x27;);  const next = searchParams.get(&#x27;next&#x27;) ?? &#x27;/&#x27;;  if (code) &#123;    const supabase = await createClient(); // server client    const &#123; error &#125; = await supabase.auth.exchangeCodeForSession(code);    if (!error) &#123;      return NextResponse.redirect(`$&#123;origin&#125;$&#123;next&#125;`);    &#125;  &#125;  return NextResponse.redirect(`$&#123;origin&#125;/login?error=invalid_token`);&#125;
+
+
+6. 最终步骤：更新密码页面当用户通过 Callback 跳转到 /update-password 时，他们已经处于“已登录”状态，可以直接调用 updateUser。
+const onSubmit = async (values: z.infer&lt;typeof formSchema&gt;) =&gt; &#123;  const &#123; error &#125; = await supabase.auth.updateUser(&#123;    password: values.password,  &#125;);  if (error) &#123;    toast.error(error.message);  &#125; else &#123;    toast.success(&quot;Password updated!&quot;);    router.push(&quot;/login&quot;);  &#125;&#125;;
+
+
+7. 常见坑点排查
+收到的邮件链接还是 localhost？ 检查 Supabase 后台的 Site URL 是否已改为生产域名，并确保 redirectTo 在白名单内。
+点击链接后没登录？ 检查 auth/callback 路由是否正确执行了 exchangeCodeForSession。
+Resend 发送失败？ 确保你的发件域名在 Resend 后台已通过 DNS 验证。
+
+
+结语通过这套组合拳，我们不仅实现了功能，还通过 React Email 提升了用户体验，通过 Resend 保证了邮件的送达率。这才是生产环境该有的样子。
+]]></content>
+      <categories>
+        <category>前端</category>
+      </categories>
+      <tags>
+        <tag>resend</tag>
+        <tag>nexjts</tag>
+        <tag>spabase</tag>
+        <tag>react email</tag>
       </tags>
   </entry>
   <entry>
@@ -3710,6 +3782,32 @@ Module not found: Can&#x27;t resolve &#x27;fs&#x27;./node_modules/@rdkit/rdkit/d
         <tag>nexjts</tag>
         <tag>rdkitjs</tag>
         <tag>smiles</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Performance Fix for Stripe.js Script Loading</title>
+    <url>/2025/11/16/front-end/performance-fix-for-stripejs-scripts-loading/</url>
+    <content><![CDATA[Technical SummaryThis summary details a refactoring effort aimed at preventing the premature loading of the Stripe payment script, a common cause of degraded initial page load performance in applications that integrate third-party libraries.
+The ObjectiveThe primary goal was to ensure that the core Stripe JavaScript file (e.g., https://m.stripe.com/6 or https://js.stripe.com/v3/) is only requested and downloaded when a user actually enters a payment-required context, facilitating true lazy loading.
+The Problem: Immediate Execution on Module ImportIn the original code structure, the Stripe initialization was handled in a shared service file as follows:
+// src/shared/service/stripe.ts (Old Code)import &#123; loadStripe &#125; from &#x27;@stripe/stripe-js&#x27;;// The issue lies here: loadStripe is executed immediately in the top-level scope.export const stripePromise = loadStripe(    import.meta.env.VITE_STRIPE_PRIVATE_API_KEY).then(stripe =&gt; &#123;    // ...    return stripe;&#125;);
+
+Because the expression loadStripe(...) was immediately executed and its resulting Promise was exported (export const stripePromise = ...), any component that imported this file—even if it was a component on a non-payment page—would trigger the synchronous execution of this module. This instantly called loadStripe(), initiating the network request for the Stripe script, regardless of the component’s render state.
+The Solution: Wrapping Initialization in an Exported FunctionThe fix involved decoupling the loadStripe call from the module’s initial execution flow by wrapping it inside an exported function, getStripePromise().
+1. Refactoring the Stripe Service FileThe stripe.ts file was changed to export a function instead of an eagerly evaluated Promise:
+// src/shared/service/stripe.ts (New Code)import &#123; loadStripe &#125; from &#x27;@stripe/stripe-js&#x27;;export const getStripePromise = () =&gt; &#123;    console.warn(&#x27;Stripe load function called.&#x27;);    return loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY).then(stripe =&gt; &#123;        console.warn(&#x27;Stripe script downloaded and loaded.&#x27;);        return stripe;    &#125;);&#125;;// The immediate export of the promise was removed:// //export const stripePromise = getStripePromise(); 
+
+2. Local Initialization in Consumer ComponentsThe components that utilize the Stripe context (e.g., paymentMethod/index.tsx, setupChecker/index.tsx) were updated to call this function locally within their own module scope:
+// src/components/stripe/paymentMethod/index.tsx (New Code)import &#123; getStripePromise &#125; from &#x27;@/shared/service/stripe&#x27;;// The promise is now initialized here, within the specific payment module.const stripePromise = getStripePromise(); // This module is expected to be loaded via React.lazy() in a parent component.
+
+ConclusionThis refactoring successfully shifts the responsibility for initiating the Stripe script download from the application’s core bundle to the specific, smaller JavaScript chunk of the payment module. By ensuring the loadStripe() function is only executed when the payment component is mounted and its module is finally loaded (typically via a React.lazy trigger), we eliminate unnecessary network requests on initial page loads, contributing to a better user experience and improved performance metrics.
+]]></content>
+      <categories>
+        <category>前端</category>
+      </categories>
+      <tags>
+        <tag>react</tag>
+        <tag>stripe</tag>
       </tags>
   </entry>
   <entry>
@@ -3893,32 +3991,6 @@ exports只是module.exports的引用，主要用于辅助导出属性或方法�
       <tags>
         <tag>面试</tag>
         <tag>nodejs</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>Performance Fix for Stripe.js Script Loading</title>
-    <url>/2025/11/16/front-end/performance-fix-for-stripejs-scripts-loading/</url>
-    <content><![CDATA[Technical SummaryThis summary details a refactoring effort aimed at preventing the premature loading of the Stripe payment script, a common cause of degraded initial page load performance in applications that integrate third-party libraries.
-The ObjectiveThe primary goal was to ensure that the core Stripe JavaScript file (e.g., https://m.stripe.com/6 or https://js.stripe.com/v3/) is only requested and downloaded when a user actually enters a payment-required context, facilitating true lazy loading.
-The Problem: Immediate Execution on Module ImportIn the original code structure, the Stripe initialization was handled in a shared service file as follows:
-// src/shared/service/stripe.ts (Old Code)import &#123; loadStripe &#125; from &#x27;@stripe/stripe-js&#x27;;// The issue lies here: loadStripe is executed immediately in the top-level scope.export const stripePromise = loadStripe(    import.meta.env.VITE_STRIPE_PRIVATE_API_KEY).then(stripe =&gt; &#123;    // ...    return stripe;&#125;);
-
-Because the expression loadStripe(...) was immediately executed and its resulting Promise was exported (export const stripePromise = ...), any component that imported this file—even if it was a component on a non-payment page—would trigger the synchronous execution of this module. This instantly called loadStripe(), initiating the network request for the Stripe script, regardless of the component’s render state.
-The Solution: Wrapping Initialization in an Exported FunctionThe fix involved decoupling the loadStripe call from the module’s initial execution flow by wrapping it inside an exported function, getStripePromise().
-1. Refactoring the Stripe Service FileThe stripe.ts file was changed to export a function instead of an eagerly evaluated Promise:
-// src/shared/service/stripe.ts (New Code)import &#123; loadStripe &#125; from &#x27;@stripe/stripe-js&#x27;;export const getStripePromise = () =&gt; &#123;    console.warn(&#x27;Stripe load function called.&#x27;);    return loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY).then(stripe =&gt; &#123;        console.warn(&#x27;Stripe script downloaded and loaded.&#x27;);        return stripe;    &#125;);&#125;;// The immediate export of the promise was removed:// //export const stripePromise = getStripePromise(); 
-
-2. Local Initialization in Consumer ComponentsThe components that utilize the Stripe context (e.g., paymentMethod/index.tsx, setupChecker/index.tsx) were updated to call this function locally within their own module scope:
-// src/components/stripe/paymentMethod/index.tsx (New Code)import &#123; getStripePromise &#125; from &#x27;@/shared/service/stripe&#x27;;// The promise is now initialized here, within the specific payment module.const stripePromise = getStripePromise(); // This module is expected to be loaded via React.lazy() in a parent component.
-
-ConclusionThis refactoring successfully shifts the responsibility for initiating the Stripe script download from the application’s core bundle to the specific, smaller JavaScript chunk of the payment module. By ensuring the loadStripe() function is only executed when the payment component is mounted and its module is finally loaded (typically via a React.lazy trigger), we eliminate unnecessary network requests on initial page loads, contributing to a better user experience and improved performance metrics.
-]]></content>
-      <categories>
-        <category>前端</category>
-      </categories>
-      <tags>
-        <tag>react</tag>
-        <tag>stripe</tag>
       </tags>
   </entry>
   <entry>
@@ -4232,6 +4304,40 @@ React Router Framework Mode
       </tags>
   </entry>
   <entry>
+    <title>TypeScript中可选链</title>
+    <url>/2021/07/03/front-end/ts-optional-chaining/</url>
+    <content><![CDATA[TypeScript中可选链什么是可选链TypeScript 3.7中一个最引人关注的特性便是可选链(Optional Chaining)。
+所谓可选链，就是当我们试图使用访问对象的字段或者方法时，如果对象为null或者undefined，TypeScript将会自动停止运行的代码，以防止空指针异常。
+可选链的使用首先定义一个接口 A, 有一个字段b，b可能是字符串，也可能是null:
+interface A &#123;    b: string | null&#125;
+
+定义一个变量a:
+const a = &#123;    b: &#x27;c&#x27;&#125;
+
+使用?.来访问字段:
+console.log(a?.b)
+
+如果a为null或者undefined, 将输出undefined
+TypeScript做了什么可选链并不是ts的专利，在js就已经存在了，除了ie,其他现代浏览器最新版本都是支持了，但是一些老版本就不支持，因此ts没有使用js的语法，而是通过三元表达式? :转译。因此上面的代码将会转译成:
+console.log(a === null || a === void 0 ? void 0 : a.b);
+
+但是ts没有判断a是否是undefined, 而是因为在js中， undefined不仅是值，也可能是一个全局变量。直到es5之前，undefined是可以被修改的。我们可以通过下面的代码来修改:
+(function() &#123;  var undefined = 1  console.log(undefined) // 1&#125;)()
+
+参考
+深入理解 TypeScript(可选链（Optional Chaining）)
+JS: The difference between “undefined”, “null” and “void 0”
+可选链操作符
+
+]]></content>
+      <categories>
+        <category>前端</category>
+      </categories>
+      <tags>
+        <tag>typeScript</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>Angular和React构建体积简单对比</title>
     <url>/2021/02/03/front-end/simple-comparison-of-angular-and-react-build-size/</url>
     <content><![CDATA[Angular和React构建体积简单对比前言Angular是我主要使用的前端框架， 和React是我最近正在学习的前端框架。今天我想对比一下在各自默认的情况下，两者打包体积的对比。
@@ -4294,6 +4400,207 @@ main.8c8b27cf.chunk大小为804B。
       <tags>
         <tag>angular</tag>
         <tag>react</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>无 Docker Desktop + Colima + Docker Compose v2 标准化方案</title>
+    <url>/2026/04/27/software/colima-docker-compose-setup/</url>
+    <content><![CDATA[无 Docker Desktop + 纯 CLI + Colima + Docker Compose v2 标准化方案一、背景在 macOS 环境中，Docker Desktop 虽然开箱即用，但存在以下问题：
+
+资源占用高（CPU &#x2F; 内存）
+启动慢
+商业使用存在许可限制
+与开发环境（如 k8s &#x2F; 自定义 runtime）耦合较重
+
+因此，采用以下组合替代：
+
+Colima + Docker CLI + Compose v2 Plugin
+
+目标是实现：
+
+轻量级 Docker 运行环境
+完整 CLI 操作体验
+原生支持 docker compose（v2）
+
+
+二、整体架构docker CLI   ↓docker context (colima)   ↓unix socket (~/.colima/default/docker.sock)   ↓Colima VM (container runtime)````---## 三、环境安装### 1. 安装基础工具```bashbrew install docker colima docker-compose
+
+说明：
+
+docker：CLI 工具
+colima：本地 container runtime（基于 Lima + containerd）
+docker-compose：Compose v2 实现（后续转换为 plugin）
+
+
+2. 启动 Colimacolima start
+
+可选配置：
+colima start --cpu 4 --memory 8
+
+
+3. 设置 Docker Contextdocker context use colima
+
+验证：
+docker context ls
+
+
+四、启用 Docker Compose v2（核心步骤）Homebrew 不直接提供 docker-compose-plugin，需要手动转换：
+1. 创建 plugin 目录mkdir -p ~/.docker/cli-plugins
+
+
+2. 软链接 composeln -s $(which docker-compose) ~/.docker/cli-plugins/docker-compose
+
+
+3. 验证docker compose version
+
+期望输出：
+Docker Compose version 5.x.x
+
+4. 补充Colima 默认只安装了底层的 Docker 守护进程，但在你的 Mac 宿主机上，缺少了 Docker 的 buildx 插件（也就是用来控制 BuildKit 的客户端组件）。
+# 1. 安装 buildx 插件brew install docker-buildx# 2. 创建 Docker 插件目录（如果不存在的话）mkdir -p ~/.docker/cli-plugins# 3. 将刚刚安装的 buildx 软链接到 Docker 插件目录下ln -sfn $(brew --prefix)/opt/docker-buildx/bin/docker-buildx ~/.docker/cli-plugins/docker-buildx
+
+
+五、最终使用方式统一使用：
+docker compose updocker compose downdocker compose ps
+
+不再使用：
+docker-compose  # deprecated
+
+
+六、环境验证1. Dockerdocker ps
+
+
+2. Composedocker compose version
+
+
+3. Socketecho $DOCKER_HOST
+
+应为空或由 context 管理（推荐）
+
+七、常见问题1. docker compose 不可用原因：
+
+plugin 未配置
+
+解决：
+ls ~/.docker/cli-plugins
+
+确认存在：
+docker-compose
+
+
+2. 连接错误Cannot connect to the Docker daemon
+
+排查：
+docker context ls
+
+
+3. 权限或路径问题which dockerwhich docker-compose
+
+确保均来自 Homebrew：
+/opt/homebrew/bin/
+
+
+八、最佳实践1. 固定 context在 shell 配置中加入：
+export DOCKER_CONTEXT=colima
+
+
+2. 避免 DOCKER_HOST 干扰不要手动设置：
+export DOCKER_HOST=...
+
+交由 context 管理
+
+3. 统一团队规范建议团队统一：
+
+使用 Colima
+使用 docker compose
+禁止 docker-compose
+
+
+九、优缺点分析优点
+轻量（相比 Docker Desktop）
+无商业授权限制
+启动速度快
+与 k8s &#x2F; containerd 更贴近
+
+
+缺点
+需要手动配置 Compose plugin
+初次上手成本略高
+部分 GUI 工具不可用
+
+
+十、总结该方案的核心是：
+
+用 Colima 替代 Docker Desktop，用 CLI + plugin 还原官方 Docker 体验
+
+最终效果：
+docker compose up
+
+与 Docker Desktop 环境保持一致，但更加轻量、可控。
+
+十一、参考命令速查# 启动环境colima start# 查看 contextdocker context ls# 切换 contextdocker context use colima# Composedocker compose updocker compose down# 查看 pluginls ~/.docker/cli-plugins
+
+
+十二、适用人群
+后端工程师（Node.js &#x2F; Go &#x2F; Java）
+前端工程化开发（需要容器化）
+使用 k8s &#x2F; 本地集群（k3s &#x2F; kind）
+追求轻量开发环境的工程师&#96;
+
+]]></content>
+      <categories>
+        <category>软件</category>
+      </categories>
+      <tags>
+        <tag>docker</tag>
+        <tag>colima</tag>
+        <tag>docker compose</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>在k3s中配置私有镜像仓库</title>
+    <url>/2025/03/06/software/connect-to-private-docker-registry-in-k3s/</url>
+    <content><![CDATA[前言本文的目的是实现在k3s中可以访问使用docker部署registry。
+部署registry启动一个一次性容器用于创建账号密码.密码文件路径以&#x2F;root&#x2F;registry&#x2F;htpasswd为例,账号密码以admin和12345678为例.
+docker run --rm --entrypoint \    htpasswd httpd:2 -Bbn \    admin 12345678 &gt; ./registry/htpasswd
+
+编写docker compose的yaml文件用于启动registry。
+services:  registry:    image: registry:2    container_name: registry    volumes:      # - ./config.yml:/etc/docker/registry/config.yml      - ./htpasswd:/auth/htpasswd      - ./registry:/var/lib/registry      - /etc/localtime:/etc/localtime    ports:      - 5000:5000    environment:      - REGISTRY_AUTH=htpasswd      - REGISTRY_AUTH_HTPASSWD_PATH=/auth/htpasswd      - REGISTRY_AUTH_HTPASSWD_REALM=Registry Realm      - REGISTRY_STORAGE_DELETE_ENABLED=true    networks:      - registry-network    restart: always    extra_hosts:      - host.docker.internal:host-gatewaynetworks:  registry-network:    external: false
+
+resistry默认提供web ui使用，我们可以使用docker-registry-ui部署一个web ui。
+registry-ui:image: joxit/docker-registry-ui:maincontainer_name: registry-uirestart: alwaysports:  - 5001:80environment:  - SINGLE_REGISTRY=true  - REGISTRY_TITLE=Docker Registry UI  - DELETE_IMAGES=true  - SHOW_CONTENT_DIGEST=true  - NGINX_PROXY_PASS_URL=http://registry:5000  - SHOW_CATALOG_NB_TAGS=true  - CATALOG_MIN_BRANCHES=1  - CATALOG_MAX_BRANCHES=1  - TAGLIST_PAGE_SIZE=100  - REGISTRY_SECURED=false  - CATALOG_ELEMENTS_LIMIT=1000networks:  - registry-networkextra_hosts:  - host.docker.internal:host-gateway
+
+然后通过·docker compose up -d·就可以启动了。
+docker连接私有仓库docker默认不支持http协议，需要额外配置, 通过在&#x2F;etc&#x2F;docker&#x2F;daemon.json 中将私有仓库地址添加进入就好了。
+&#123;  &quot;insecure-registries&quot;: [&quot;192.168.31.220:5000&quot;]&#125;
+
+然后可以通过docker login去登陆私有仓库。
+docker login 192.168.31.220:5000
+
+k3s连接私有仓库如果k3s使用docker运行时就不需要额外的操作了，就可以操作了应该（没试过）
+如果k3s使用containerd运行时，需要自行配置&#x2F;var&#x2F;lib&#x2F;rancher&#x2F;k3s&#x2F;agent&#x2F;etc&#x2F;containerd&#x2F;config.toml。
+一般而言不鼓励直接修改&#x2F;var&#x2F;lib&#x2F;rancher&#x2F;k3s&#x2F;agent&#x2F;etc&#x2F;containerd&#x2F;config.toml文件，而是通过 &#x2F;etc&#x2F;rancher&#x2F;k3s&#x2F;registries.yaml让k3s自行生成containerd的配置文件。
+mirrors:  &quot;192.168.31.220:5000&quot;:    endpoint:      - &quot;http://192.168.31.220:5000&quot;configs:  &quot;192.168.31.220:5000&quot;:    auth:      username: admin      password: password    tls:      insecure_skip_verify: true
+
+mirrors定义镜像仓库的镜像规则（mirror），用于指定如何访问特定的私有仓库。当容器运行时尝试拉取镜像时，会根据 mirrors 的配置决定从哪个地址拉取。configs定义私有仓库的认证和 TLS 配置。当访问私有仓库时，容器运行时会使用这里配置的用户名、密码和 TLS 设置。
+有的时候k3s不一定能够实时自动监听registries.yaml的改动，所以最好的方式还是重启k3s:
+sudo systemctl restart k3s-agent   # worker 节点# 或者sudo systemctl restart k3s         # server 节点
+
+现在可以通过创建一个pod去测试k3s是否正常访问私有仓库。
+这里推荐使用crictl去直接拉取私有仓库的镜像。
+sudo crictl pull 192.168.31.220:5000/hoteler-api:07e1b87e82ccfc49e5bee7d3d88cf2c304376056
+
+参考资料
+Docker login 登录私服，报错； http: server gave HTTP response to HTTPS client
+Private Registry Configuration
+
+]]></content>
+      <categories>
+        <category>软件</category>
+      </categories>
+      <tags>
+        <tag>k3s</tag>
+        <tag>docker registry</tag>
       </tags>
   </entry>
   <entry>
@@ -4767,241 +5074,6 @@ React + Vite + Build-time Prerender + Selective Hydration。
         <tag>react-dom</tag>
         <tag>vite</tag>
         <tag>prerender</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>TypeScript中可选链</title>
-    <url>/2021/07/03/front-end/ts-optional-chaining/</url>
-    <content><![CDATA[TypeScript中可选链什么是可选链TypeScript 3.7中一个最引人关注的特性便是可选链(Optional Chaining)。
-所谓可选链，就是当我们试图使用访问对象的字段或者方法时，如果对象为null或者undefined，TypeScript将会自动停止运行的代码，以防止空指针异常。
-可选链的使用首先定义一个接口 A, 有一个字段b，b可能是字符串，也可能是null:
-interface A &#123;    b: string | null&#125;
-
-定义一个变量a:
-const a = &#123;    b: &#x27;c&#x27;&#125;
-
-使用?.来访问字段:
-console.log(a?.b)
-
-如果a为null或者undefined, 将输出undefined
-TypeScript做了什么可选链并不是ts的专利，在js就已经存在了，除了ie,其他现代浏览器最新版本都是支持了，但是一些老版本就不支持，因此ts没有使用js的语法，而是通过三元表达式? :转译。因此上面的代码将会转译成:
-console.log(a === null || a === void 0 ? void 0 : a.b);
-
-但是ts没有判断a是否是undefined, 而是因为在js中， undefined不仅是值，也可能是一个全局变量。直到es5之前，undefined是可以被修改的。我们可以通过下面的代码来修改:
-(function() &#123;  var undefined = 1  console.log(undefined) // 1&#125;)()
-
-参考
-深入理解 TypeScript(可选链（Optional Chaining）)
-JS: The difference between “undefined”, “null” and “void 0”
-可选链操作符
-
-]]></content>
-      <categories>
-        <category>前端</category>
-      </categories>
-      <tags>
-        <tag>typeScript</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>无 Docker Desktop + Colima + Docker Compose v2 标准化方案</title>
-    <url>/2026/04/27/software/colima-docker-compose-setup/</url>
-    <content><![CDATA[无 Docker Desktop + 纯 CLI + Colima + Docker Compose v2 标准化方案一、背景在 macOS 环境中，Docker Desktop 虽然开箱即用，但存在以下问题：
-
-资源占用高（CPU &#x2F; 内存）
-启动慢
-商业使用存在许可限制
-与开发环境（如 k8s &#x2F; 自定义 runtime）耦合较重
-
-因此，采用以下组合替代：
-
-Colima + Docker CLI + Compose v2 Plugin
-
-目标是实现：
-
-轻量级 Docker 运行环境
-完整 CLI 操作体验
-原生支持 docker compose（v2）
-
-
-二、整体架构docker CLI   ↓docker context (colima)   ↓unix socket (~/.colima/default/docker.sock)   ↓Colima VM (container runtime)````---## 三、环境安装### 1. 安装基础工具```bashbrew install docker colima docker-compose
-
-说明：
-
-docker：CLI 工具
-colima：本地 container runtime（基于 Lima + containerd）
-docker-compose：Compose v2 实现（后续转换为 plugin）
-
-
-2. 启动 Colimacolima start
-
-可选配置：
-colima start --cpu 4 --memory 8
-
-
-3. 设置 Docker Contextdocker context use colima
-
-验证：
-docker context ls
-
-
-四、启用 Docker Compose v2（核心步骤）Homebrew 不直接提供 docker-compose-plugin，需要手动转换：
-1. 创建 plugin 目录mkdir -p ~/.docker/cli-plugins
-
-
-2. 软链接 composeln -s $(which docker-compose) ~/.docker/cli-plugins/docker-compose
-
-
-3. 验证docker compose version
-
-期望输出：
-Docker Compose version 5.x.x
-
-4. 补充Colima 默认只安装了底层的 Docker 守护进程，但在你的 Mac 宿主机上，缺少了 Docker 的 buildx 插件（也就是用来控制 BuildKit 的客户端组件）。
-# 1. 安装 buildx 插件brew install docker-buildx# 2. 创建 Docker 插件目录（如果不存在的话）mkdir -p ~/.docker/cli-plugins# 3. 将刚刚安装的 buildx 软链接到 Docker 插件目录下ln -sfn $(brew --prefix)/opt/docker-buildx/bin/docker-buildx ~/.docker/cli-plugins/docker-buildx
-
-
-五、最终使用方式统一使用：
-docker compose updocker compose downdocker compose ps
-
-不再使用：
-docker-compose  # deprecated
-
-
-六、环境验证1. Dockerdocker ps
-
-
-2. Composedocker compose version
-
-
-3. Socketecho $DOCKER_HOST
-
-应为空或由 context 管理（推荐）
-
-七、常见问题1. docker compose 不可用原因：
-
-plugin 未配置
-
-解决：
-ls ~/.docker/cli-plugins
-
-确认存在：
-docker-compose
-
-
-2. 连接错误Cannot connect to the Docker daemon
-
-排查：
-docker context ls
-
-
-3. 权限或路径问题which dockerwhich docker-compose
-
-确保均来自 Homebrew：
-/opt/homebrew/bin/
-
-
-八、最佳实践1. 固定 context在 shell 配置中加入：
-export DOCKER_CONTEXT=colima
-
-
-2. 避免 DOCKER_HOST 干扰不要手动设置：
-export DOCKER_HOST=...
-
-交由 context 管理
-
-3. 统一团队规范建议团队统一：
-
-使用 Colima
-使用 docker compose
-禁止 docker-compose
-
-
-九、优缺点分析优点
-轻量（相比 Docker Desktop）
-无商业授权限制
-启动速度快
-与 k8s &#x2F; containerd 更贴近
-
-
-缺点
-需要手动配置 Compose plugin
-初次上手成本略高
-部分 GUI 工具不可用
-
-
-十、总结该方案的核心是：
-
-用 Colima 替代 Docker Desktop，用 CLI + plugin 还原官方 Docker 体验
-
-最终效果：
-docker compose up
-
-与 Docker Desktop 环境保持一致，但更加轻量、可控。
-
-十一、参考命令速查# 启动环境colima start# 查看 contextdocker context ls# 切换 contextdocker context use colima# Composedocker compose updocker compose down# 查看 pluginls ~/.docker/cli-plugins
-
-
-十二、适用人群
-后端工程师（Node.js &#x2F; Go &#x2F; Java）
-前端工程化开发（需要容器化）
-使用 k8s &#x2F; 本地集群（k3s &#x2F; kind）
-追求轻量开发环境的工程师&#96;
-
-]]></content>
-      <categories>
-        <category>软件</category>
-      </categories>
-      <tags>
-        <tag>docker</tag>
-        <tag>colima</tag>
-        <tag>docker compose</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>在k3s中配置私有镜像仓库</title>
-    <url>/2025/03/06/software/connect-to-private-docker-registry-in-k3s/</url>
-    <content><![CDATA[前言本文的目的是实现在k3s中可以访问使用docker部署registry。
-部署registry启动一个一次性容器用于创建账号密码.密码文件路径以&#x2F;root&#x2F;registry&#x2F;htpasswd为例,账号密码以admin和12345678为例.
-docker run --rm --entrypoint \    htpasswd httpd:2 -Bbn \    admin 12345678 &gt; ./registry/htpasswd
-
-编写docker compose的yaml文件用于启动registry。
-services:  registry:    image: registry:2    container_name: registry    volumes:      # - ./config.yml:/etc/docker/registry/config.yml      - ./htpasswd:/auth/htpasswd      - ./registry:/var/lib/registry      - /etc/localtime:/etc/localtime    ports:      - 5000:5000    environment:      - REGISTRY_AUTH=htpasswd      - REGISTRY_AUTH_HTPASSWD_PATH=/auth/htpasswd      - REGISTRY_AUTH_HTPASSWD_REALM=Registry Realm      - REGISTRY_STORAGE_DELETE_ENABLED=true    networks:      - registry-network    restart: always    extra_hosts:      - host.docker.internal:host-gatewaynetworks:  registry-network:    external: false
-
-resistry默认提供web ui使用，我们可以使用docker-registry-ui部署一个web ui。
-registry-ui:image: joxit/docker-registry-ui:maincontainer_name: registry-uirestart: alwaysports:  - 5001:80environment:  - SINGLE_REGISTRY=true  - REGISTRY_TITLE=Docker Registry UI  - DELETE_IMAGES=true  - SHOW_CONTENT_DIGEST=true  - NGINX_PROXY_PASS_URL=http://registry:5000  - SHOW_CATALOG_NB_TAGS=true  - CATALOG_MIN_BRANCHES=1  - CATALOG_MAX_BRANCHES=1  - TAGLIST_PAGE_SIZE=100  - REGISTRY_SECURED=false  - CATALOG_ELEMENTS_LIMIT=1000networks:  - registry-networkextra_hosts:  - host.docker.internal:host-gateway
-
-然后通过·docker compose up -d·就可以启动了。
-docker连接私有仓库docker默认不支持http协议，需要额外配置, 通过在&#x2F;etc&#x2F;docker&#x2F;daemon.json 中将私有仓库地址添加进入就好了。
-&#123;  &quot;insecure-registries&quot;: [&quot;192.168.31.220:5000&quot;]&#125;
-
-然后可以通过docker login去登陆私有仓库。
-docker login 192.168.31.220:5000
-
-k3s连接私有仓库如果k3s使用docker运行时就不需要额外的操作了，就可以操作了应该（没试过）
-如果k3s使用containerd运行时，需要自行配置&#x2F;var&#x2F;lib&#x2F;rancher&#x2F;k3s&#x2F;agent&#x2F;etc&#x2F;containerd&#x2F;config.toml。
-一般而言不鼓励直接修改&#x2F;var&#x2F;lib&#x2F;rancher&#x2F;k3s&#x2F;agent&#x2F;etc&#x2F;containerd&#x2F;config.toml文件，而是通过 &#x2F;etc&#x2F;rancher&#x2F;k3s&#x2F;registries.yaml让k3s自行生成containerd的配置文件。
-mirrors:  &quot;192.168.31.220:5000&quot;:    endpoint:      - &quot;http://192.168.31.220:5000&quot;configs:  &quot;192.168.31.220:5000&quot;:    auth:      username: admin      password: password    tls:      insecure_skip_verify: true
-
-mirrors定义镜像仓库的镜像规则（mirror），用于指定如何访问特定的私有仓库。当容器运行时尝试拉取镜像时，会根据 mirrors 的配置决定从哪个地址拉取。configs定义私有仓库的认证和 TLS 配置。当访问私有仓库时，容器运行时会使用这里配置的用户名、密码和 TLS 设置。
-有的时候k3s不一定能够实时自动监听registries.yaml的改动，所以最好的方式还是重启k3s:
-sudo systemctl restart k3s-agent   # worker 节点# 或者sudo systemctl restart k3s         # server 节点
-
-现在可以通过创建一个pod去测试k3s是否正常访问私有仓库。
-这里推荐使用crictl去直接拉取私有仓库的镜像。
-sudo crictl pull 192.168.31.220:5000/hoteler-api:07e1b87e82ccfc49e5bee7d3d88cf2c304376056
-
-参考资料
-Docker login 登录私服，报错； http: server gave HTTP response to HTTPS client
-Private Registry Configuration
-
-]]></content>
-      <categories>
-        <category>软件</category>
-      </categories>
-      <tags>
-        <tag>k3s</tag>
-        <tag>docker registry</tag>
       </tags>
   </entry>
   <entry>
@@ -5723,6 +5795,284 @@ zsh-syntax-highlighting
       </tags>
   </entry>
   <entry>
+    <title>内网 GitOps 实践：FluxCD 与 Gitea (HTTP) 集成与 初始化 指南</title>
+    <url>/2026/07/21/software/fluxcd-gitea-http-bootstrap-solution/</url>
+    <content><![CDATA[FluxCD 在内网纯 HTTP 环境下与 Gitea 集成并完成初始化（Bootstrap）过程的技术总结
+
+1. 环境背景与技术痛点
+基础设施：部署于内网的 Gitea 实例（通过 HTTP 协议暴露服务，地址格式为 http://&lt;IP&gt;:&lt;PORT&gt;）。
+网络限制：内网环境未配置 TLS&#x2F;SSL 证书，不支持 HTTPS 通信。
+核心拦截点：
+
+
+协议强校验：新版 Flux CLI 的 flux bootstrap gitea 在调用 Gitea API 时默认强制使用 HTTPS，抛出 http: server gave HTTP response to HTTPS client 错误。
+Go-Git 明文传输保护：Flux 底层依赖的 Go-Git 库出于安全限制，禁止在未加密的明文 HTTP 链接中直接发送 Basic Auth 凭证（Token&#x2F;密码），抛出 basic auth cannot be sent over HTTP 错误。
+
+
+2. 核心解决方案（参考 Discussion #4972）根据 FluxCD 社区讨论 FluxCD Discussion #4972，最稳定且通用的解法是跳过特定 Git 供应商（Gitea）的 API 专有引导逻辑，改用通用 flux bootstrap git 命令，并显式透传 --allow-insecure-http=true 参数。
+关键机制说明：
+flux bootstrap git：避开了针对 Gitea API 的 HTTPS 强制探活逻辑（如 GetOrgByName 等组织&#x2F;个人账号鉴权 API）。
+--allow-insecure-http=true：向底层 Go-Git 显式下发参数，解除对纯 HTTP 链接发送鉴权凭证的限制。
+
+
+3. 标准操作流程步骤一：预先准备 Gitea 仓库与 Token
+服务部署：Gitea 的容器化部署结构可参考 home-labs-docker&#x2F;gitea。
+凭证生成：在 Gitea 用户设置中生成个人访问令牌（PAT），需包含仓库读写权限（write:repository）。
+创建仓库：登录 Gitea 页面，手动创建一个空的私有 Git 仓库，例如 fleet-infra。
+
+步骤二：执行 Bootstrap 引导命令在终端中执行通用 Git 初始化命令（使用 PAT 作为 --password）：
+flux bootstrap git \  --url=&quot;http://&lt;Gitea-IP&gt;:&lt;Port&gt;/&lt;Username&gt;/fleet-infra.git&quot; \  --username=&quot;&lt;Username&gt;&quot; \  --password=&quot;&lt;Gitea_PAT_Token&gt;&quot; \  --allow-insecure-http=true \  --token-auth=true \  --path=&quot;./clusters/&lt;Cluster-Name-or-IP&gt;&quot;
+
+步骤三：验证安装结果命令执行完成后，检查系统与组件状态：
+
+检查控制器状态：
+
+flux check
+
+
+确认 source-controller、kustomize-controller、helm-controller 和 notification-controller 全部就绪。2. 检查 Git 源同步状态：
+flux get sources git
+
+
+确认 flux-system 源的 READY 状态为 True，且已存储最新的 Commit Hash。
+➜  ~ flux get sources gitNAME       	REVISION          	SUSPENDED	READY	MESSAGEflux-system	main@sha1:d1968847	False    	True 	stored artifact for revision &#x27;main@sha1:d1968847&#x27;
+
+
+4. GitOps 工作流闭环验证初始化完成后，无需直接在本地运行 kubectl apply：
+
+配置提交：将应用的 Kubernetes Manifests（如 pod.yaml）提交并 git push 至 Gitea 的 fleet-infra 仓库对应集群路径（./clusters/&lt;Cluster-Name-or-IP&gt;/）下。
+
+cat &lt;&lt;EOF &gt; ./clusters/192.168.31.215/pod.yamlapiVersion: v1kind: Podmetadata:  name: gitops-pod-test  namespace: defaultspec:  containers:  - name: nginx    image: nginx:alpine    ports:    - containerPort: 80EOF
+
+自动调和：集群内部的 Flux source-controller 与 kustomize-controller 会定期轮询 Gitea 仓库，自动检测版本差异并将其应用至集群，实现声明式部署与状态漂移修复。
+
+]]></content>
+      <categories>
+        <category>软件</category>
+      </categories>
+      <tags>
+        <tag>Kubernetes</tag>
+        <tag>GitOps</tag>
+        <tag>FluxCD</tag>
+        <tag>Gitea</tag>
+        <tag>DevOps</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>使用 FluxCD 构建 Homelab GitOps：从私有 Git 仓库到 Hoteler 自动部署</title>
+    <url>/2026/08/20/software/fluxcd-homelab-hoteler-gitops/</url>
+    <content><![CDATA[使用 FluxCD 构建 Homelab GitOps：从私有 Git 仓库到 Hoteler 自动部署最近我重新整理了自己的 Homelab 部署方式。
+过去 Kubernetes 应用虽然已经使用 Kustomize管理，但本质上仍然需要人为执行部署操作。既然集群已经运行FluxCD，更合理的方式应该是：
+
+Git 描述期望状态，FluxCD 负责让 Kubernetes 的实际状态持续向 Git中的状态收敛。
+
+这次以 Hoteler 为例，将现有 Kustomize 部署配置接入FluxCD，并将应用源码、应用部署配置和集群配置拆分。
+1. 仓库职责划分整个 GitOps 体系拆成三个部分：
+Application Repositoryhoteler 是应用源码仓库，负责：
+Source CodeDockerfileTestsCIContainer Image
+
+CI 最终产生类似：
+ghcr.io/damingerdai/hoteler:v0.0.5
+
+这样的应用镜像。
+应用仓库本身不直接操作 Kubernetes。
+Application GitOps Repository独立的 hoteler-deployment 仓库负责描述：
+
+Hoteler 应该以什么状态运行。
+
+目录类似：
+hoteler-deployment/└── hoteler-api/    ├── base/    │   ├── application.yml    │   ├── cronjob.yaml    │   ├── deployment.yaml    │   ├── hpa.yaml    │   ├── kustomization.yaml    │   └── service.yaml    └── overlays/        ├── homepage/        ├── lan/        └── prod/
+
+这里使用 Kustomize 的 Base + Overlay 模式管理不同环境。
+Fleet Repositoryfleet-infra 负责回答：
+
+某个 Kubernetes Cluster 应该运行哪些应用？
+
+例如：
+fleet-infra/└── clusters/    └── 192.168.31.222/        ├── kustomization.yaml        ├── flux-system/        │   ├── gotk-components.yaml        │   ├── gotk-sync.yaml        │   └── kustomization.yaml        └── apps/            ├── hoteler-source.yaml            ├── hoteler-api.yaml            └── kustomization.yaml
+
+三个仓库的职责：
+hoteler    ↓软件是什么hoteler-deployment    ↓软件应该怎么运行fleet-infra    ↓哪些集群应该运行这个软件
+
+2. GitRepository 与 KustomizationFluxCD 中的核心关系可以理解为：
+GitRepository      ↓Kustomization      ↓Kubernetes Resources
+
+GitRepository 解决：
+
+Flux 去哪里获取配置？
+
+Kustomization 解决：
+
+获取 Repository 后，应该部署其中哪个目录？
+
+这里需要区分两个同名但不同的 Kustomization。
+Flux CRD：
+apiVersion: kustomize.toolkit.fluxcd.io/v1kind: Kustomization
+
+负责告诉 Flux 持续 reconcile Git 中的某个目录。
+Kustomize 自己的配置：
+apiVersion: kustomize.config.k8s.io/v1beta1kind: Kustomization
+
+负责组合 Deployment、Service、ConfigMap 等 Kubernetes Manifest。
+因此实际关系是：
+Flux GitRepository        ↓Flux Kustomization        ↓Git Directory        ↓Kustomize kustomization.yaml        ↓Deployment / Service / ConfigMap / HPA / ...
+
+3. 接入私有 GitOps Repositoryhoteler-deployment 位于 Homelab 内部的私有 Git 服务：
+ssh://git@192.168.31.220:1022/hoteler/hoteler-deployment.git
+
+首先为 Flux 创建 SSH Credential：
+flux create secret git hoteler-deployment-auth \  --url=ssh://git@192.168.31.220:1022/hoteler/hoteler-deployment.git \  --namespace=flux-system
+
+Flux 会生成 SSH Deploy Key，并创建：
+Secret/hoteler-deployment-auth
+
+将生成的 Public Key 添加到私有 Git Repository 的 Deploy Keys 中即可。
+目前 Flux 只需要读取部署配置，因此只需要 Read 权限。
+4. 创建 GitRepository在 fleet-infra 中创建：
+clusters/192.168.31.222/apps/hoteler-source.yaml
+
+apiVersion: source.toolkit.fluxcd.io/v1kind: GitRepositorymetadata:  name: hoteler-deployment  namespace: flux-systemspec:  interval: 1m  url: ssh://git@192.168.31.220:1022/hoteler/hoteler-deployment.git  ref:    branch: master  secretRef:    name: hoteler-deployment-auth
+
+形成：
+GitRepository/hoteler-deployment            │            │ secretRef            ▼Secret/hoteler-deployment-auth            │            │ SSH            ▼hoteler-deployment.git
+
+5. 让 Fleet Repository 加载应用clusters/192.168.31.222/apps/kustomization.yaml：
+apiVersion: kustomize.config.k8s.io/v1beta1kind: Kustomizationresources:  - hoteler-source.yaml  - hoteler-api.yaml
+
+Cluster 根目录：
+clusters/192.168.31.222/kustomization.yaml
+
+apiVersion: kustomize.config.k8s.io/v1beta1kind: Kustomizationresources:  - flux-system  - apps
+
+这样 Flux Bootstrap 管理 clusters/192.168.31.222 时，就能继续发现apps 中声明的资源。
+6. 验证私有 Git Repository通过：
+flux get sources git -A
+
+检查：
+NAMESPACE     NAME                 REVISION                READYflux-system   flux-system          main@sha1:a28e0e8c      Trueflux-system   hoteler-deployment   master@sha1:333bb97b    True
+
+hoteler-deployment READY=True 意味着：
+Flux ↓SSH Credential ↓Private Git Server ↓hoteler-deployment
+
+整条 Source 链路已经成功建立。
+7. 使用 Flux Kustomization 部署 Hoteler增加：
+clusters/192.168.31.222/apps/hoteler-api.yaml
+
+apiVersion: kustomize.toolkit.fluxcd.io/v1kind: Kustomizationmetadata:  name: hoteler-api  namespace: flux-systemspec:  interval: 5m  sourceRef:    kind: GitRepository    name: hoteler-deployment  path: ./hoteler-api/overlays/lan  prune: true  wait: true  timeout: 5m
+
+组合起来表达的是：
+
+使用 hoteler-deployment Repository 中的 hoteler-api/overlays/lan作为当前集群中 Hoteler API 的期望状态。
+
+fleet-infra     ↓Kustomization/hoteler-api     ↓GitRepository/hoteler-deployment     ↓hoteler-deployment.git     ↓hoteler-api/overlays/lan     ↓Kustomize     ↓Kubernetes
+
+8. Base 与 Overlay 的 Namespace 设计部署过程中遇到的一个问题是 Namespace。
+最初 Base 中存在：
+namespace: hoteler-namespace
+
+但 LAN 环境希望部署到：
+hoteler-dev-namespace
+
+对于这个项目，更合理的职责是：
+base    ↓描述 Hoteler 本身overlay    ↓描述 Hoteler 在具体环境中的差异
+
+既然 Namespace 属于环境差异，就由 Overlay 决定。
+Base：
+apiVersion: kustomize.config.k8s.io/v1beta1kind: Kustomizationresources:  - deployment.yaml  - service.yaml  - hpa.yaml  - cronjob.yamlconfigMapGenerator:  - name: hoteler-api-config    files:      - application.yml
+
+LAN 环境增加：
+overlays/lan/namespace.yaml
+
+apiVersion: v1kind: Namespacemetadata:  name: hoteler-dev-namespace
+
+然后：
+overlays/lan/kustomization.yaml
+
+apiVersion: kustomize.config.k8s.io/v1beta1kind: Kustomizationnamespace: hoteler-dev-namespaceresources:  - ../../base  - namespace.yaml
+
+最终生成：
+Namespace/hoteler-dev-namespacehoteler-dev-namespace├── Deployment/hoteler-api├── Service/hoteler-api├── ConfigMap/hoteler-api-config-xxxxx├── HPA└── CronJob
+
+9. 实际踩坑：Base 中固定 Namespace最开始 Base 中存在：
+namespace: hoteler-namespace
+
+导致 configMapGenerator 生成的 ConfigMap 仍然属于：
+hoteler-namespace
+
+而 LAN Overlay 创建的是：
+hoteler-dev-namespace
+
+Flux 因此报告：
+ConfigMap/hoteler-namespace/hoteler-api-config-td7c9kg7m5 not found:namespaces &quot;hoteler-namespace&quot; not found
+
+删除 Base 中固定的 Namespace，让 Overlay 统一决定环境 Namespace 后解决。
+这里得到的经验是：
+
+Base 尽可能描述环境无关的应用结构；真正因环境不同而变化的内容交给Overlay。
+
+10. Flux 不需要手动 Reconcile调试时可以执行：
+flux reconcile kustomization flux-system --with-source
+
+立即触发 reconciliation。
+但它不是正常部署流程必须执行的命令。
+正常流程应该是：
+git push    ↓Flux Source Controller    ↓发现新的 Git Revision    ↓Kustomization Reconcile    ↓Kubernetes
+
+所以日常修改 hoteler-deployment 后只需要：
+git add .git commitgit push
+
+Flux 会自动完成后续操作。
+可以使用：
+flux get kustomizations -A --watch
+
+观察 reconciliation。
+GitOps 最终希望达到的效果就是：
+git push ↓结束
+
+而不是：
+git push ↓SSH Server ↓kubectl apply
+
+11. 最终链路修复 Namespace 后，Flux 成功创建 hoteler-dev-namespace，并创建 HotelerDeployment。
+Pod 被 Kubernetes Scheduler 分配到节点后，kubelet 开始拉取：
+ghcr.io/damingerdai/hoteler:v0.0.5
+
+完整链路：
+fleet-infra      │      ▼FluxCD      │      ▼GitRepository/hoteler-deployment      │      │ SSH      ▼Private Git Server      │      ▼hoteler-deployment      │      ▼hoteler-api/overlays/lan      │      ▼Kustomize      │      ▼Namespace / Deployment / ServiceConfigMap / CronJob / HPA      │      ▼Kubernetes Pod      │      ▼ghcr.io/damingerdai/hoteler:v0.0.5
+
+12. 当前架构总结最终三个 Repository 分别回答三个问题：
+hoteler
+我要构建什么软件？
+
+负责源码、测试、CI 和 Container Image。
+hoteler-deployment
+这个软件应该怎么运行？
+
+负责 Kustomize Base、Overlay、镜像版本和环境配置。
+fleet-infra
+哪个 Cluster 应该运行这个软件？
+
+负责 FluxCD、Cluster 和 Application GitRepository&#x2F;Kustomization。
+把三个职责拆开以后，整个部署模型更加清晰。
+13. 下一步下一步可以继续引入 Flux Image Automation：
+ImageRepository      ↓ImagePolicy      ↓ImageUpdateAutomation      ↓更新 hoteler-deployment      ↓Flux Reconcile      ↓Rolling Update
+
+最终实现：
+Application Commit      ↓CI      ↓Build &amp; Push Image      ↓Flux Image Automation      ↓Update GitOps Repository      ↓FluxCD      ↓Kubernetes Rolling Update
+
+从而形成完整的 GitOps 发布闭环。
+]]></content>
+      <categories>
+        <category>软件</category>
+      </categories>
+      <tags>
+        <tag>Kubernetes</tag>
+        <tag>GitOps</tag>
+        <tag>FluxCD</tag>
+        <tag>Gitea</tag>
+        <tag>DevOps</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>使用 FluxCD + GitHub + SOPS + age 构建完整 GitOps 部署流程</title>
     <url>/2026/08/23/software/fluxcd-github-sops-age-gitops/</url>
     <content><![CDATA[使用 FluxCD + GitHub + SOPS + age 构建完整 GitOps 部署流程最近我将自己的 Kubernetes 部署方式从手工 Helm 部署逐步迁移到了 FluxCD 管理的 GitOps 模式。
@@ -6258,286 +6608,8 @@ Kubernetes 集群不再依赖“我上次在服务器上执行过什么命令”
         <tag>Kubernetes</tag>
         <tag>GitOps</tag>
         <tag>FluxCD</tag>
+        <tag>DevOps</tag>
         <tag>Github</tag>
-        <tag>DevOps</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>内网 GitOps 实践：FluxCD 与 Gitea (HTTP) 集成与 初始化 指南</title>
-    <url>/2026/07/21/software/fluxcd-gitea-http-bootstrap-solution/</url>
-    <content><![CDATA[FluxCD 在内网纯 HTTP 环境下与 Gitea 集成并完成初始化（Bootstrap）过程的技术总结
-
-1. 环境背景与技术痛点
-基础设施：部署于内网的 Gitea 实例（通过 HTTP 协议暴露服务，地址格式为 http://&lt;IP&gt;:&lt;PORT&gt;）。
-网络限制：内网环境未配置 TLS&#x2F;SSL 证书，不支持 HTTPS 通信。
-核心拦截点：
-
-
-协议强校验：新版 Flux CLI 的 flux bootstrap gitea 在调用 Gitea API 时默认强制使用 HTTPS，抛出 http: server gave HTTP response to HTTPS client 错误。
-Go-Git 明文传输保护：Flux 底层依赖的 Go-Git 库出于安全限制，禁止在未加密的明文 HTTP 链接中直接发送 Basic Auth 凭证（Token&#x2F;密码），抛出 basic auth cannot be sent over HTTP 错误。
-
-
-2. 核心解决方案（参考 Discussion #4972）根据 FluxCD 社区讨论 FluxCD Discussion #4972，最稳定且通用的解法是跳过特定 Git 供应商（Gitea）的 API 专有引导逻辑，改用通用 flux bootstrap git 命令，并显式透传 --allow-insecure-http=true 参数。
-关键机制说明：
-flux bootstrap git：避开了针对 Gitea API 的 HTTPS 强制探活逻辑（如 GetOrgByName 等组织&#x2F;个人账号鉴权 API）。
---allow-insecure-http=true：向底层 Go-Git 显式下发参数，解除对纯 HTTP 链接发送鉴权凭证的限制。
-
-
-3. 标准操作流程步骤一：预先准备 Gitea 仓库与 Token
-服务部署：Gitea 的容器化部署结构可参考 home-labs-docker&#x2F;gitea。
-凭证生成：在 Gitea 用户设置中生成个人访问令牌（PAT），需包含仓库读写权限（write:repository）。
-创建仓库：登录 Gitea 页面，手动创建一个空的私有 Git 仓库，例如 fleet-infra。
-
-步骤二：执行 Bootstrap 引导命令在终端中执行通用 Git 初始化命令（使用 PAT 作为 --password）：
-flux bootstrap git \  --url=&quot;http://&lt;Gitea-IP&gt;:&lt;Port&gt;/&lt;Username&gt;/fleet-infra.git&quot; \  --username=&quot;&lt;Username&gt;&quot; \  --password=&quot;&lt;Gitea_PAT_Token&gt;&quot; \  --allow-insecure-http=true \  --token-auth=true \  --path=&quot;./clusters/&lt;Cluster-Name-or-IP&gt;&quot;
-
-步骤三：验证安装结果命令执行完成后，检查系统与组件状态：
-
-检查控制器状态：
-
-flux check
-
-
-确认 source-controller、kustomize-controller、helm-controller 和 notification-controller 全部就绪。2. 检查 Git 源同步状态：
-flux get sources git
-
-
-确认 flux-system 源的 READY 状态为 True，且已存储最新的 Commit Hash。
-➜  ~ flux get sources gitNAME       	REVISION          	SUSPENDED	READY	MESSAGEflux-system	main@sha1:d1968847	False    	True 	stored artifact for revision &#x27;main@sha1:d1968847&#x27;
-
-
-4. GitOps 工作流闭环验证初始化完成后，无需直接在本地运行 kubectl apply：
-
-配置提交：将应用的 Kubernetes Manifests（如 pod.yaml）提交并 git push 至 Gitea 的 fleet-infra 仓库对应集群路径（./clusters/&lt;Cluster-Name-or-IP&gt;/）下。
-
-cat &lt;&lt;EOF &gt; ./clusters/192.168.31.215/pod.yamlapiVersion: v1kind: Podmetadata:  name: gitops-pod-test  namespace: defaultspec:  containers:  - name: nginx    image: nginx:alpine    ports:    - containerPort: 80EOF
-
-自动调和：集群内部的 Flux source-controller 与 kustomize-controller 会定期轮询 Gitea 仓库，自动检测版本差异并将其应用至集群，实现声明式部署与状态漂移修复。
-
-]]></content>
-      <categories>
-        <category>软件</category>
-      </categories>
-      <tags>
-        <tag>Kubernetes</tag>
-        <tag>GitOps</tag>
-        <tag>FluxCD</tag>
-        <tag>DevOps</tag>
-        <tag>Gitea</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>使用 FluxCD 构建 Homelab GitOps：从私有 Git 仓库到 Hoteler 自动部署</title>
-    <url>/2026/08/20/software/fluxcd-homelab-hoteler-gitops/</url>
-    <content><![CDATA[使用 FluxCD 构建 Homelab GitOps：从私有 Git 仓库到 Hoteler 自动部署最近我重新整理了自己的 Homelab 部署方式。
-过去 Kubernetes 应用虽然已经使用 Kustomize管理，但本质上仍然需要人为执行部署操作。既然集群已经运行FluxCD，更合理的方式应该是：
-
-Git 描述期望状态，FluxCD 负责让 Kubernetes 的实际状态持续向 Git中的状态收敛。
-
-这次以 Hoteler 为例，将现有 Kustomize 部署配置接入FluxCD，并将应用源码、应用部署配置和集群配置拆分。
-1. 仓库职责划分整个 GitOps 体系拆成三个部分：
-Application Repositoryhoteler 是应用源码仓库，负责：
-Source CodeDockerfileTestsCIContainer Image
-
-CI 最终产生类似：
-ghcr.io/damingerdai/hoteler:v0.0.5
-
-这样的应用镜像。
-应用仓库本身不直接操作 Kubernetes。
-Application GitOps Repository独立的 hoteler-deployment 仓库负责描述：
-
-Hoteler 应该以什么状态运行。
-
-目录类似：
-hoteler-deployment/└── hoteler-api/    ├── base/    │   ├── application.yml    │   ├── cronjob.yaml    │   ├── deployment.yaml    │   ├── hpa.yaml    │   ├── kustomization.yaml    │   └── service.yaml    └── overlays/        ├── homepage/        ├── lan/        └── prod/
-
-这里使用 Kustomize 的 Base + Overlay 模式管理不同环境。
-Fleet Repositoryfleet-infra 负责回答：
-
-某个 Kubernetes Cluster 应该运行哪些应用？
-
-例如：
-fleet-infra/└── clusters/    └── 192.168.31.222/        ├── kustomization.yaml        ├── flux-system/        │   ├── gotk-components.yaml        │   ├── gotk-sync.yaml        │   └── kustomization.yaml        └── apps/            ├── hoteler-source.yaml            ├── hoteler-api.yaml            └── kustomization.yaml
-
-三个仓库的职责：
-hoteler    ↓软件是什么hoteler-deployment    ↓软件应该怎么运行fleet-infra    ↓哪些集群应该运行这个软件
-
-2. GitRepository 与 KustomizationFluxCD 中的核心关系可以理解为：
-GitRepository      ↓Kustomization      ↓Kubernetes Resources
-
-GitRepository 解决：
-
-Flux 去哪里获取配置？
-
-Kustomization 解决：
-
-获取 Repository 后，应该部署其中哪个目录？
-
-这里需要区分两个同名但不同的 Kustomization。
-Flux CRD：
-apiVersion: kustomize.toolkit.fluxcd.io/v1kind: Kustomization
-
-负责告诉 Flux 持续 reconcile Git 中的某个目录。
-Kustomize 自己的配置：
-apiVersion: kustomize.config.k8s.io/v1beta1kind: Kustomization
-
-负责组合 Deployment、Service、ConfigMap 等 Kubernetes Manifest。
-因此实际关系是：
-Flux GitRepository        ↓Flux Kustomization        ↓Git Directory        ↓Kustomize kustomization.yaml        ↓Deployment / Service / ConfigMap / HPA / ...
-
-3. 接入私有 GitOps Repositoryhoteler-deployment 位于 Homelab 内部的私有 Git 服务：
-ssh://git@192.168.31.220:1022/hoteler/hoteler-deployment.git
-
-首先为 Flux 创建 SSH Credential：
-flux create secret git hoteler-deployment-auth \  --url=ssh://git@192.168.31.220:1022/hoteler/hoteler-deployment.git \  --namespace=flux-system
-
-Flux 会生成 SSH Deploy Key，并创建：
-Secret/hoteler-deployment-auth
-
-将生成的 Public Key 添加到私有 Git Repository 的 Deploy Keys 中即可。
-目前 Flux 只需要读取部署配置，因此只需要 Read 权限。
-4. 创建 GitRepository在 fleet-infra 中创建：
-clusters/192.168.31.222/apps/hoteler-source.yaml
-
-apiVersion: source.toolkit.fluxcd.io/v1kind: GitRepositorymetadata:  name: hoteler-deployment  namespace: flux-systemspec:  interval: 1m  url: ssh://git@192.168.31.220:1022/hoteler/hoteler-deployment.git  ref:    branch: master  secretRef:    name: hoteler-deployment-auth
-
-形成：
-GitRepository/hoteler-deployment            │            │ secretRef            ▼Secret/hoteler-deployment-auth            │            │ SSH            ▼hoteler-deployment.git
-
-5. 让 Fleet Repository 加载应用clusters/192.168.31.222/apps/kustomization.yaml：
-apiVersion: kustomize.config.k8s.io/v1beta1kind: Kustomizationresources:  - hoteler-source.yaml  - hoteler-api.yaml
-
-Cluster 根目录：
-clusters/192.168.31.222/kustomization.yaml
-
-apiVersion: kustomize.config.k8s.io/v1beta1kind: Kustomizationresources:  - flux-system  - apps
-
-这样 Flux Bootstrap 管理 clusters/192.168.31.222 时，就能继续发现apps 中声明的资源。
-6. 验证私有 Git Repository通过：
-flux get sources git -A
-
-检查：
-NAMESPACE     NAME                 REVISION                READYflux-system   flux-system          main@sha1:a28e0e8c      Trueflux-system   hoteler-deployment   master@sha1:333bb97b    True
-
-hoteler-deployment READY=True 意味着：
-Flux ↓SSH Credential ↓Private Git Server ↓hoteler-deployment
-
-整条 Source 链路已经成功建立。
-7. 使用 Flux Kustomization 部署 Hoteler增加：
-clusters/192.168.31.222/apps/hoteler-api.yaml
-
-apiVersion: kustomize.toolkit.fluxcd.io/v1kind: Kustomizationmetadata:  name: hoteler-api  namespace: flux-systemspec:  interval: 5m  sourceRef:    kind: GitRepository    name: hoteler-deployment  path: ./hoteler-api/overlays/lan  prune: true  wait: true  timeout: 5m
-
-组合起来表达的是：
-
-使用 hoteler-deployment Repository 中的 hoteler-api/overlays/lan作为当前集群中 Hoteler API 的期望状态。
-
-fleet-infra     ↓Kustomization/hoteler-api     ↓GitRepository/hoteler-deployment     ↓hoteler-deployment.git     ↓hoteler-api/overlays/lan     ↓Kustomize     ↓Kubernetes
-
-8. Base 与 Overlay 的 Namespace 设计部署过程中遇到的一个问题是 Namespace。
-最初 Base 中存在：
-namespace: hoteler-namespace
-
-但 LAN 环境希望部署到：
-hoteler-dev-namespace
-
-对于这个项目，更合理的职责是：
-base    ↓描述 Hoteler 本身overlay    ↓描述 Hoteler 在具体环境中的差异
-
-既然 Namespace 属于环境差异，就由 Overlay 决定。
-Base：
-apiVersion: kustomize.config.k8s.io/v1beta1kind: Kustomizationresources:  - deployment.yaml  - service.yaml  - hpa.yaml  - cronjob.yamlconfigMapGenerator:  - name: hoteler-api-config    files:      - application.yml
-
-LAN 环境增加：
-overlays/lan/namespace.yaml
-
-apiVersion: v1kind: Namespacemetadata:  name: hoteler-dev-namespace
-
-然后：
-overlays/lan/kustomization.yaml
-
-apiVersion: kustomize.config.k8s.io/v1beta1kind: Kustomizationnamespace: hoteler-dev-namespaceresources:  - ../../base  - namespace.yaml
-
-最终生成：
-Namespace/hoteler-dev-namespacehoteler-dev-namespace├── Deployment/hoteler-api├── Service/hoteler-api├── ConfigMap/hoteler-api-config-xxxxx├── HPA└── CronJob
-
-9. 实际踩坑：Base 中固定 Namespace最开始 Base 中存在：
-namespace: hoteler-namespace
-
-导致 configMapGenerator 生成的 ConfigMap 仍然属于：
-hoteler-namespace
-
-而 LAN Overlay 创建的是：
-hoteler-dev-namespace
-
-Flux 因此报告：
-ConfigMap/hoteler-namespace/hoteler-api-config-td7c9kg7m5 not found:namespaces &quot;hoteler-namespace&quot; not found
-
-删除 Base 中固定的 Namespace，让 Overlay 统一决定环境 Namespace 后解决。
-这里得到的经验是：
-
-Base 尽可能描述环境无关的应用结构；真正因环境不同而变化的内容交给Overlay。
-
-10. Flux 不需要手动 Reconcile调试时可以执行：
-flux reconcile kustomization flux-system --with-source
-
-立即触发 reconciliation。
-但它不是正常部署流程必须执行的命令。
-正常流程应该是：
-git push    ↓Flux Source Controller    ↓发现新的 Git Revision    ↓Kustomization Reconcile    ↓Kubernetes
-
-所以日常修改 hoteler-deployment 后只需要：
-git add .git commitgit push
-
-Flux 会自动完成后续操作。
-可以使用：
-flux get kustomizations -A --watch
-
-观察 reconciliation。
-GitOps 最终希望达到的效果就是：
-git push ↓结束
-
-而不是：
-git push ↓SSH Server ↓kubectl apply
-
-11. 最终链路修复 Namespace 后，Flux 成功创建 hoteler-dev-namespace，并创建 HotelerDeployment。
-Pod 被 Kubernetes Scheduler 分配到节点后，kubelet 开始拉取：
-ghcr.io/damingerdai/hoteler:v0.0.5
-
-完整链路：
-fleet-infra      │      ▼FluxCD      │      ▼GitRepository/hoteler-deployment      │      │ SSH      ▼Private Git Server      │      ▼hoteler-deployment      │      ▼hoteler-api/overlays/lan      │      ▼Kustomize      │      ▼Namespace / Deployment / ServiceConfigMap / CronJob / HPA      │      ▼Kubernetes Pod      │      ▼ghcr.io/damingerdai/hoteler:v0.0.5
-
-12. 当前架构总结最终三个 Repository 分别回答三个问题：
-hoteler
-我要构建什么软件？
-
-负责源码、测试、CI 和 Container Image。
-hoteler-deployment
-这个软件应该怎么运行？
-
-负责 Kustomize Base、Overlay、镜像版本和环境配置。
-fleet-infra
-哪个 Cluster 应该运行这个软件？
-
-负责 FluxCD、Cluster 和 Application GitRepository&#x2F;Kustomization。
-把三个职责拆开以后，整个部署模型更加清晰。
-13. 下一步下一步可以继续引入 Flux Image Automation：
-ImageRepository      ↓ImagePolicy      ↓ImageUpdateAutomation      ↓更新 hoteler-deployment      ↓Flux Reconcile      ↓Rolling Update
-
-最终实现：
-Application Commit      ↓CI      ↓Build &amp; Push Image      ↓Flux Image Automation      ↓Update GitOps Repository      ↓FluxCD      ↓Kubernetes Rolling Update
-
-从而形成完整的 GitOps 发布闭环。
-]]></content>
-      <categories>
-        <category>软件</category>
-      </categories>
-      <tags>
-        <tag>Kubernetes</tag>
-        <tag>GitOps</tag>
-        <tag>FluxCD</tag>
-        <tag>DevOps</tag>
-        <tag>Gitea</tag>
       </tags>
   </entry>
   <entry>
@@ -7162,64 +7234,6 @@ Public Image Mirror
       </tags>
   </entry>
   <entry>
-    <title>从 Demo 到生产级：Kite 在 K3s 上的 PostgreSQL 与 Ingress 部署实战</title>
-    <url>/2026/04/05/software/kite-production-setup-with-external-postgres-and-ingress/</url>
-    <content><![CDATA[从 Demo 到生产级：Kite 在 K3s 上的高可用数据库与 HTTPS 部署实践引言在之前的文章 《玩转 K8s 面板：轻量级 Kite 安装全记录 (K3s 篇)》 中，我们快速搭建了测试环境。但随着使用深入，原方案的局限性开始显现。今天我们将进行一次彻头彻尾的“生产级”改造。
-
-1. 原方案的痛点：为什么不能用于生产？原方案最大的问题在于数据持久化。
-
-默认 SQLite 的风险：原方案依赖 Pod 内部或本地路径的 SQLite 数据库。在 Kubernetes 环境下，Pod 是随毁随建的（Stateless）。
-数据丢失：一旦节点重启、Pod 漂移或进行版本升级，所有用户配置、AI 工作流数据将全部丢失。
-不可扩展性：SQLite 不支持多实例并发写入，限制了未来的水平扩展。
-
-
-2. 外部数据库集成：计算与存储分离为了实现数据持久化，我们将数据库移出 K3s 集群，部署在独立的服务器（192.168.31.220）上。
-2.1 数据库初始化在 PG 服务器上执行：
-CREATE DATABASE kite_db;CREATE USER kite_user WITH PASSWORD &#x27;20260405&#x27;;-- CREATE DATABASE kite_db OWNER kite_user; 同步创建数据库ALTER DATABASE kite_db OWNER TO kite_user;
-
-2.2 神奇的“桥梁”：Service &amp; EndpointSlice为了让集群内的 Pod 能通过 external-pg 这个域名访问外部 IP，我们利用 K8s 的服务发现机制：
-# external-db.yamlapiVersion: v1kind: Servicemetadata:  name: external-pg  namespace: kite-systemspec:  ports:    - protocol: TCP      port: 5432      targetPort: 5432---apiVersion: discovery.k8s.io/v1kind: EndpointSlicemetadata:  name: external-pg-slice  namespace: kite-system  labels:    kubernetes.io/service-name: external-pgaddressType: IPv4ports:  - protocol: TCP    port: 5432endpoints:  - addresses: [&quot;192.168.31.220&quot;]
-
-Kubernetes 正在逐步废弃旧的 Endpoints 资源，转而推荐使用更高效的 EndpointSlice。虽然旧的 Endpoints 目前依然能工作，但为了符合生产环境的长期维护标准（以及消除那个烦人的 Warning），我们直接按照新标准来。
-
-
-3. 安全访问：Ingress 与 TLS 证书生产环境离不开 HTTPS。我们通过 Traefik Ingress 配置自签名证书。
-3.1 创建 TLS Secretopenssl req -x509 -nodes -days 365 -newkey rsa:2048 \  -keyout tls.key -out tls.crt -subj &quot;/CN=kite.damingerdailocal.com&quot;kubectl create secret tls kite-tls-secret --cert=tls.crt --key=tls.key -n kite-system
-
-3.2 刷新本地 DNS (macOS)在 /etc/hosts 添加 192.168.31.98 kite.damingerdailocal.com 后，别忘了执行刷新：
-sudo dscacheutil -flushcache; sudo killall -HUP mDNSResponder
-
-
-4. 终极部署：Helm 一键点火通过自定义 values.yaml 覆盖默认配置，禁用 SQLite 并启用 PG 和 Ingress。
-db:  type: postgres  dsn: &quot;postgres://kite_user:20260405@external-pg:5432/kite_db?sslmode=disable&quot;sqlite:  persistence:    enabled: falseingress:  enabled: true  className: &quot;traefik&quot;  tls:    - secretName: kite-tls-secret      hosts: [&quot;kite.damingerdailocal.com&quot;]
-
-执行部署：
-helm upgrade --install kite kite/kite --namespace kite-system --create-namespace -f values.yaml
-
-
-
-在 Helm 的设计中，upgrade –install 是生产环境最常用的命令, 如果 Kite 还没安装：它会执行 安装 (Install) 动作，创建一个新的 Release;如果 Kite 已经安装：它会对比 my-values.yaml 和当前的配置，执行 更新 (Upgrade) 动作。
-
-
-5. 避坑总结与经验谈在这次迁移中，我遇到了几个典型问题，希望能帮到大家：
-
-Namespace 依赖陷阱：直接 apply 带有 namespace 属性的资源时，若命名空间不存在会报错。经验： 在 YAML 头部包含 Namespace 定义，或先执行 kubectl create ns。
-残留资源冲突：清理 default 命名空间的旧 Service 时，Endpoints 资源通常会随之自动删除。如果遇到 NotFound 报错，说明 K8s 已经帮你处理好了。
-Readiness Probe 假死：Pod 启动后显示 0/1 READY，通常是正在执行数据库 Migration。经验： 通过 kubectl logs 观察是否有 CREATE TABLE 动作，不要急着重启。
-外部访问阻碍：如果 ping 通了但 curl 不通，大概率是目标机器（192.168.31.220）的防火墙没放行 5432 端口。
-
-结语通过这次改造，Kite 已经具备了应对生产环境的基础能力。数据有了保障，访问有了加密。
-]]></content>
-      <categories>
-        <category>软件</category>
-      </categories>
-      <tags>
-        <tag>k3s</tag>
-        <tag>kubernetes</tag>
-        <tag>kite</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>使用K3s 从零部署 CloudNativePG：打造 Homelab 统一 PostgreSQL 平台</title>
     <url>/2026/06/12/software/k3s-cloudnativepg-homelab-postgres/</url>
     <content><![CDATA[K3s 从零部署 CloudNativePG：打造 Homelab 统一 PostgreSQL 平台前言在很多 CloudNativePG 教程中，通常只会介绍如何安装 Operator 并创建一个 PostgreSQL 集群。
@@ -7344,6 +7358,64 @@ docker logs -f zot-registry&#123;&quot;time&quot;:&quot;2026-02-21T14:52:57.5097
       </tags>
   </entry>
   <entry>
+    <title>从 Demo 到生产级：Kite 在 K3s 上的 PostgreSQL 与 Ingress 部署实战</title>
+    <url>/2026/04/05/software/kite-production-setup-with-external-postgres-and-ingress/</url>
+    <content><![CDATA[从 Demo 到生产级：Kite 在 K3s 上的高可用数据库与 HTTPS 部署实践引言在之前的文章 《玩转 K8s 面板：轻量级 Kite 安装全记录 (K3s 篇)》 中，我们快速搭建了测试环境。但随着使用深入，原方案的局限性开始显现。今天我们将进行一次彻头彻尾的“生产级”改造。
+
+1. 原方案的痛点：为什么不能用于生产？原方案最大的问题在于数据持久化。
+
+默认 SQLite 的风险：原方案依赖 Pod 内部或本地路径的 SQLite 数据库。在 Kubernetes 环境下，Pod 是随毁随建的（Stateless）。
+数据丢失：一旦节点重启、Pod 漂移或进行版本升级，所有用户配置、AI 工作流数据将全部丢失。
+不可扩展性：SQLite 不支持多实例并发写入，限制了未来的水平扩展。
+
+
+2. 外部数据库集成：计算与存储分离为了实现数据持久化，我们将数据库移出 K3s 集群，部署在独立的服务器（192.168.31.220）上。
+2.1 数据库初始化在 PG 服务器上执行：
+CREATE DATABASE kite_db;CREATE USER kite_user WITH PASSWORD &#x27;20260405&#x27;;-- CREATE DATABASE kite_db OWNER kite_user; 同步创建数据库ALTER DATABASE kite_db OWNER TO kite_user;
+
+2.2 神奇的“桥梁”：Service &amp; EndpointSlice为了让集群内的 Pod 能通过 external-pg 这个域名访问外部 IP，我们利用 K8s 的服务发现机制：
+# external-db.yamlapiVersion: v1kind: Servicemetadata:  name: external-pg  namespace: kite-systemspec:  ports:    - protocol: TCP      port: 5432      targetPort: 5432---apiVersion: discovery.k8s.io/v1kind: EndpointSlicemetadata:  name: external-pg-slice  namespace: kite-system  labels:    kubernetes.io/service-name: external-pgaddressType: IPv4ports:  - protocol: TCP    port: 5432endpoints:  - addresses: [&quot;192.168.31.220&quot;]
+
+Kubernetes 正在逐步废弃旧的 Endpoints 资源，转而推荐使用更高效的 EndpointSlice。虽然旧的 Endpoints 目前依然能工作，但为了符合生产环境的长期维护标准（以及消除那个烦人的 Warning），我们直接按照新标准来。
+
+
+3. 安全访问：Ingress 与 TLS 证书生产环境离不开 HTTPS。我们通过 Traefik Ingress 配置自签名证书。
+3.1 创建 TLS Secretopenssl req -x509 -nodes -days 365 -newkey rsa:2048 \  -keyout tls.key -out tls.crt -subj &quot;/CN=kite.damingerdailocal.com&quot;kubectl create secret tls kite-tls-secret --cert=tls.crt --key=tls.key -n kite-system
+
+3.2 刷新本地 DNS (macOS)在 /etc/hosts 添加 192.168.31.98 kite.damingerdailocal.com 后，别忘了执行刷新：
+sudo dscacheutil -flushcache; sudo killall -HUP mDNSResponder
+
+
+4. 终极部署：Helm 一键点火通过自定义 values.yaml 覆盖默认配置，禁用 SQLite 并启用 PG 和 Ingress。
+db:  type: postgres  dsn: &quot;postgres://kite_user:20260405@external-pg:5432/kite_db?sslmode=disable&quot;sqlite:  persistence:    enabled: falseingress:  enabled: true  className: &quot;traefik&quot;  tls:    - secretName: kite-tls-secret      hosts: [&quot;kite.damingerdailocal.com&quot;]
+
+执行部署：
+helm upgrade --install kite kite/kite --namespace kite-system --create-namespace -f values.yaml
+
+
+
+在 Helm 的设计中，upgrade –install 是生产环境最常用的命令, 如果 Kite 还没安装：它会执行 安装 (Install) 动作，创建一个新的 Release;如果 Kite 已经安装：它会对比 my-values.yaml 和当前的配置，执行 更新 (Upgrade) 动作。
+
+
+5. 避坑总结与经验谈在这次迁移中，我遇到了几个典型问题，希望能帮到大家：
+
+Namespace 依赖陷阱：直接 apply 带有 namespace 属性的资源时，若命名空间不存在会报错。经验： 在 YAML 头部包含 Namespace 定义，或先执行 kubectl create ns。
+残留资源冲突：清理 default 命名空间的旧 Service 时，Endpoints 资源通常会随之自动删除。如果遇到 NotFound 报错，说明 K8s 已经帮你处理好了。
+Readiness Probe 假死：Pod 启动后显示 0/1 READY，通常是正在执行数据库 Migration。经验： 通过 kubectl logs 观察是否有 CREATE TABLE 动作，不要急着重启。
+外部访问阻碍：如果 ping 通了但 curl 不通，大概率是目标机器（192.168.31.220）的防火墙没放行 5432 端口。
+
+结语通过这次改造，Kite 已经具备了应对生产环境的基础能力。数据有了保障，访问有了加密。
+]]></content>
+      <categories>
+        <category>软件</category>
+      </categories>
+      <tags>
+        <tag>k3s</tag>
+        <tag>kubernetes</tag>
+        <tag>kite</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>学习multipass笔记</title>
     <url>/2023/12/14/software/multipass-learning/</url>
     <content><![CDATA[前言Multipass 是一个轻量虚拟机管理器，是由 Ubuntu 运营公司 Canonical 所推出的开源项目。运行环境支持 Linux、Windows、macOS。在不同的操作系统上，使用的是不同的虚拟化技术。在 Linux 上使用的是 KVM、Window 上使用 Hyper-V、macOS 中使用 HyperKit 以最小开销运行 VM，支持在笔记本模拟小型云。
@@ -7455,6 +7527,58 @@ Cloudflare CDN + Nginx 重定向：源站配置了 HTTP-&gt;HTTPS 强制跳转�
       </tags>
   </entry>
   <entry>
+    <title>Podman的hello world入门</title>
+    <url>/2024/01/21/software/podman-hello-world/</url>
+    <content><![CDATA[前言Podnam是一个符合OCI，用于在 Linux® 系统上开发、提供了与 Docker 等类似的功能来管理容器。管理和运行容器开源工具。 Podman 最初由 Red Hat® 工程师与开源社区一起开发。Podman使用 libpod 库管理整个容器生态系统。
+安装如果你使用Macos, 可以使用homebrew安装：
+brew install podman
+
+安装之后就可以创建和启动Podnam虚拟机：
+podman machine initpodman machine start
+
+如果你使用Debian 或者 ubuntu， 可以使用apt-get命令安装：
+sudo apt-get install runc -ysudo apt-get -y install podman
+
+ 其他系统可能参考podman安装页面
+
+注意：对于 Windows 和 Mac，podman 需要一个虚拟机来部署容器。
+
+配置默认情况下，Podman 配置有两个容器注册表。
+
+quay.io
+docker.io
+
+我们可以在·&#x2F;etc&#x2F;containers&#x2F;registries.conf·看到
+但是为了方便我们构建基于Dockerfile的景象，我们需要在没有明确容器注册表的时候默认拉取docer.io的注册表，我们可以在·&#x2F;etc&#x2F;containers&#x2F;registries.conf·或者·$HOME&#x2F;.config&#x2F;containers&#x2F;registries.conf·设置unqualified-search-registries
+unqualified-search-registries = [&quot;docker.io&quot;]
+
+存储每个系统用户都有自己的容器存储地址。这意味着，如果您尝试从不同的用户登录中提取镜像，它将从远程注册表而不是本地映像中提取镜像。
+容器管理拉取容器：
+podman pull docker.io/nginx
+
+运行容器：
+podman  run --name docker-nginx -p 8080:80 docker.io/nginx
+
+如果你绑定1024一下的端口，你需要使用root权限：
+sudo podman run --name docker-nginx -p 80:80 docker.io/nginx
+
+对于root用户，容器将会存储在·&#x2F;var&#x2F;lib&#x2F;containers&#x2F;storag·的文件夹中。对于非root用户，容器将会存储在·$HOME&#x2F;.local&#x2F;share&#x2F;containers&#x2F;storage·的文件夹中。
+参考资料
+What is Podman?
+Podman 初学者指南（上）
+Podman “Error: no registries found in registries.conf, a registry must be provided” while logging&#x2F;pulling from docker.io
+What is Podman?
+
+]]></content>
+      <categories>
+        <category>软件</category>
+      </categories>
+      <tags>
+        <tag>podman</tag>
+        <tag>容器</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>noice.nvim在cmdline中的光标自动滚动到最前面的bug</title>
     <url>/2025/05/22/software/noice-nvim-cmdline-cursor-auto-scroll-to-front-bug/</url>
     <content><![CDATA[前言最新把 neovim 升级到最新版本0.11.1,lazyvim 升级到14.x。然后不出意外就挂了好几个 plugin。其中 noice.nvim 是影响比较小的但比较膈应人的。
@@ -7529,58 +7653,6 @@ docker run -d \  -v my_postgres_data:/var/lib/postgresql/18/docker \  -e POSTGRE
         <tag>容器</tag>
         <tag>docker compose</tag>
         <tag>postgres18</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>Podman的hello world入门</title>
-    <url>/2024/01/21/software/podman-hello-world/</url>
-    <content><![CDATA[前言Podnam是一个符合OCI，用于在 Linux® 系统上开发、提供了与 Docker 等类似的功能来管理容器。管理和运行容器开源工具。 Podman 最初由 Red Hat® 工程师与开源社区一起开发。Podman使用 libpod 库管理整个容器生态系统。
-安装如果你使用Macos, 可以使用homebrew安装：
-brew install podman
-
-安装之后就可以创建和启动Podnam虚拟机：
-podman machine initpodman machine start
-
-如果你使用Debian 或者 ubuntu， 可以使用apt-get命令安装：
-sudo apt-get install runc -ysudo apt-get -y install podman
-
- 其他系统可能参考podman安装页面
-
-注意：对于 Windows 和 Mac，podman 需要一个虚拟机来部署容器。
-
-配置默认情况下，Podman 配置有两个容器注册表。
-
-quay.io
-docker.io
-
-我们可以在·&#x2F;etc&#x2F;containers&#x2F;registries.conf·看到
-但是为了方便我们构建基于Dockerfile的景象，我们需要在没有明确容器注册表的时候默认拉取docer.io的注册表，我们可以在·&#x2F;etc&#x2F;containers&#x2F;registries.conf·或者·$HOME&#x2F;.config&#x2F;containers&#x2F;registries.conf·设置unqualified-search-registries
-unqualified-search-registries = [&quot;docker.io&quot;]
-
-存储每个系统用户都有自己的容器存储地址。这意味着，如果您尝试从不同的用户登录中提取镜像，它将从远程注册表而不是本地映像中提取镜像。
-容器管理拉取容器：
-podman pull docker.io/nginx
-
-运行容器：
-podman  run --name docker-nginx -p 8080:80 docker.io/nginx
-
-如果你绑定1024一下的端口，你需要使用root权限：
-sudo podman run --name docker-nginx -p 80:80 docker.io/nginx
-
-对于root用户，容器将会存储在·&#x2F;var&#x2F;lib&#x2F;containers&#x2F;storag·的文件夹中。对于非root用户，容器将会存储在·$HOME&#x2F;.local&#x2F;share&#x2F;containers&#x2F;storage·的文件夹中。
-参考资料
-What is Podman?
-Podman 初学者指南（上）
-Podman “Error: no registries found in registries.conf, a registry must be provided” while logging&#x2F;pulling from docker.io
-What is Podman?
-
-]]></content>
-      <categories>
-        <category>软件</category>
-      </categories>
-      <tags>
-        <tag>podman</tag>
-        <tag>容器</tag>
       </tags>
   </entry>
   <entry>
@@ -8144,6 +8216,48 @@ PWC线下年会我是19年加入PWC的。PWC的年会其实是财年的意思，
 ]]></content>
   </entry>
   <entry>
+    <title>2025年度总结</title>
+    <url>/2026/02/24/summary/2025/</url>
+    <content><![CDATA[2025年度总结对我来说，2025年其实又是一个特别有意义的一年。3月初陪老婆去了一次她心心念念的日本，11月的最后一天，在中介第二次带看的情况，匆匆忙忙的买下上海一套二手房，圆了老婆又一个心愿。
+日本之行日本原计划是24年底就去的，但是因为失业，只关心找工作就放弃了。我本身去日本的兴趣不大，但是老婆非常想去就很仓促的时间定下去日本。我们去的是大阪，大概还有一个月的时候就是大阪世博会了，3月份初去还是还好，要是晚了估计人就太多了。
+大阪
+
+
+
+
+在大阪玩的很开心，感觉大阪是一个很国际化的大都市，不少西方和东南亚的面孔。就算看上去东亚面孔，也有很大的可能是中国人。我真的在大阪的地铁里听两个中国人可能是仗着日本人听不懂中国话说着非常非常虎狼的词儿。
+
+
+在大阪住的酒店有个温泉，可以免费去泡澡，没有国内那种搓澡等服务，就是纯粹的泡澡。 水很温和，不是十分烫人，让人感觉到十分舒服，感觉真的可以吸取洗去一声的疲惫。看了酒店的说明，估计这个温泉真的是从山里拉来的真的地下水，比国内所谓温泉但是就是自己烧开水强多了。
+
+
+在大阪，环球影城应该算得上必打卡点了，加上有一个马里奥馆，还是很值得去的。个人比较推荐的是水世界的表演，真的是非常的精彩，特技效果很好，有时间还是很推荐去看看的。
+宇治
+
+
+
+
+老婆是抹茶的超级粉丝，想去宇治。虽然我对此不是很感兴趣，更想去奈良。可惜行程有限，奈良和宇治只能二选一，所以最后是花了一天的时间去宇治。宇治是一个很不错的小城，但是去宇治的电车就不如大阪友好了。大阪的轨道交通都是日，中，英，韩四种语言，而去宇治的电车就日英两种选择了。
+城市不大，但是风景很不错，可能是淡季，游客不算多，但是还好。抹茶嘛，毫无兴趣，不做评价。
+买房老婆买房的想法其实很久了，24年就开始在网上看房了。不知道为什么，25年下半年就特别积极，我本来想着要不26、27年买房吧，要是房价涨了就算自己倒霉。我老婆的意思就先看看，可以考虑一下。可能是被当时租住的小区9月初卖了一套275万刺激，她觉得差不多了，想线下先看看，然后当月底约了一次中介去看过一次房。本来想着下次看房就要26年了，但是不知道老婆是怎么想的，想再看看，然后11月30号，我也没啥事儿，就一起去看看房子。我们这次看了四套房子，其中第四套有点大，价格超过预算，只是中介带我们去看看90平的房子大概是什么布局，估计他没想法当天他就成了一单。
+其实第一套和第二套我不是很满意，第一套价格低点，但是维护很差，重新装修需要花费很大的精力；第二套价格贵点，地段稍微好点，层楼好点，但装修也很一般，大概率还是重新装修。第三套的装修很好，17年的装修到现在都不过时，整体的设计很好的考虑到家里有小宝宝的情况，边边角角都做了圆角设计，材料可以看得出很明显是非常不错的，没有使用比较次的材料，保养也很好，听中介说房东是拿来自住的，没出租过。可能唯一的缺点就是在5楼，爬楼梯有点困难。
+11月30号，上午看房，下午带我妈妈和小宝宝也看了下，宝宝好像挺喜欢的，东看看西看看，应该也看上了吧。然后就宝山链家的中心就和房东谈判了，经过中介的谈判，我们最后还是拿下了这套房。挺快的，也很幸运，就这个装修，其实有不少人在抢，听中介说，上次就有人看上了，可惜约时间的时候不是房东没时间就是购房人没时间，我们去看房的时候，其实还有一个小姐姐也去看了，好像也有兴趣，可惜被我们抢先了。
+很开心能够在上海这个繁华的都市能够拥有一套自己的房子，感谢我老婆，没有她，我大概率不会留在上海，感谢我的孩子，没有他，我压根就没有留下的动力。
+技术摩根士丹利的工作没有可以值得说道的，没有太大的价值，但是我也学到很多东西，我第一次接触到了gitops，现在也在私下的学习这套概念。
+利用春节假期，尝试部署了一套自己的部署体系（kite,prometheus&#x2F;grafana, zot registry），尝试使用helm部署项目，感觉还不错。
+
+
+
+2026 · 向上生长2025 是沉淀与思考的一年。有探索，也有试错；有不确定，也有新的方向。
+2026，希望自己——
+在技术上，更专注本质。少一些浮躁，多一些深度；少一些追逐热点，多一些长期主义。
+在工作上，更从容坚定。把复杂问题拆解清楚，把系统设计得更优雅；让每一行代码，都对得起时间。
+在生活里，更有温度。给家人更多陪伴，给自己更多耐心，在快节奏里守住节奏。
+愿 2026，不是简单的“更忙”，而是“更好”。
+持续学习，持续创造，持续成为更清醒的自己。
+]]></content>
+  </entry>
+  <entry>
     <title>记录一些测试币的水龙头</title>
     <url>/2023/01/07/web3/some-token-faucet/</url>
     <content><![CDATA[记录一些测试币的水龙头记录一些常用的区块链水龙头，以防忘记
@@ -8266,48 +8380,6 @@ Mastra 中文教程：动手构建；教程源码与旅行助手示例
         <tag>AI</tag>
         <tag>Mastra</tag>
       </tags>
-  </entry>
-  <entry>
-    <title>2025年度总结</title>
-    <url>/2026/02/24/summary/2025/</url>
-    <content><![CDATA[2025年度总结对我来说，2025年其实又是一个特别有意义的一年。3月初陪老婆去了一次她心心念念的日本，11月的最后一天，在中介第二次带看的情况，匆匆忙忙的买下上海一套二手房，圆了老婆又一个心愿。
-日本之行日本原计划是24年底就去的，但是因为失业，只关心找工作就放弃了。我本身去日本的兴趣不大，但是老婆非常想去就很仓促的时间定下去日本。我们去的是大阪，大概还有一个月的时候就是大阪世博会了，3月份初去还是还好，要是晚了估计人就太多了。
-大阪
-
-
-
-
-在大阪玩的很开心，感觉大阪是一个很国际化的大都市，不少西方和东南亚的面孔。就算看上去东亚面孔，也有很大的可能是中国人。我真的在大阪的地铁里听两个中国人可能是仗着日本人听不懂中国话说着非常非常虎狼的词儿。
-
-
-在大阪住的酒店有个温泉，可以免费去泡澡，没有国内那种搓澡等服务，就是纯粹的泡澡。 水很温和，不是十分烫人，让人感觉到十分舒服，感觉真的可以吸取洗去一声的疲惫。看了酒店的说明，估计这个温泉真的是从山里拉来的真的地下水，比国内所谓温泉但是就是自己烧开水强多了。
-
-
-在大阪，环球影城应该算得上必打卡点了，加上有一个马里奥馆，还是很值得去的。个人比较推荐的是水世界的表演，真的是非常的精彩，特技效果很好，有时间还是很推荐去看看的。
-宇治
-
-
-
-
-老婆是抹茶的超级粉丝，想去宇治。虽然我对此不是很感兴趣，更想去奈良。可惜行程有限，奈良和宇治只能二选一，所以最后是花了一天的时间去宇治。宇治是一个很不错的小城，但是去宇治的电车就不如大阪友好了。大阪的轨道交通都是日，中，英，韩四种语言，而去宇治的电车就日英两种选择了。
-城市不大，但是风景很不错，可能是淡季，游客不算多，但是还好。抹茶嘛，毫无兴趣，不做评价。
-买房老婆买房的想法其实很久了，24年就开始在网上看房了。不知道为什么，25年下半年就特别积极，我本来想着要不26、27年买房吧，要是房价涨了就算自己倒霉。我老婆的意思就先看看，可以考虑一下。可能是被当时租住的小区9月初卖了一套275万刺激，她觉得差不多了，想线下先看看，然后当月底约了一次中介去看过一次房。本来想着下次看房就要26年了，但是不知道老婆是怎么想的，想再看看，然后11月30号，我也没啥事儿，就一起去看看房子。我们这次看了四套房子，其中第四套有点大，价格超过预算，只是中介带我们去看看90平的房子大概是什么布局，估计他没想法当天他就成了一单。
-其实第一套和第二套我不是很满意，第一套价格低点，但是维护很差，重新装修需要花费很大的精力；第二套价格贵点，地段稍微好点，层楼好点，但装修也很一般，大概率还是重新装修。第三套的装修很好，17年的装修到现在都不过时，整体的设计很好的考虑到家里有小宝宝的情况，边边角角都做了圆角设计，材料可以看得出很明显是非常不错的，没有使用比较次的材料，保养也很好，听中介说房东是拿来自住的，没出租过。可能唯一的缺点就是在5楼，爬楼梯有点困难。
-11月30号，上午看房，下午带我妈妈和小宝宝也看了下，宝宝好像挺喜欢的，东看看西看看，应该也看上了吧。然后就宝山链家的中心就和房东谈判了，经过中介的谈判，我们最后还是拿下了这套房。挺快的，也很幸运，就这个装修，其实有不少人在抢，听中介说，上次就有人看上了，可惜约时间的时候不是房东没时间就是购房人没时间，我们去看房的时候，其实还有一个小姐姐也去看了，好像也有兴趣，可惜被我们抢先了。
-很开心能够在上海这个繁华的都市能够拥有一套自己的房子，感谢我老婆，没有她，我大概率不会留在上海，感谢我的孩子，没有他，我压根就没有留下的动力。
-技术摩根士丹利的工作没有可以值得说道的，没有太大的价值，但是我也学到很多东西，我第一次接触到了gitops，现在也在私下的学习这套概念。
-利用春节假期，尝试部署了一套自己的部署体系（kite,prometheus&#x2F;grafana, zot registry），尝试使用helm部署项目，感觉还不错。
-
-
-
-2026 · 向上生长2025 是沉淀与思考的一年。有探索，也有试错；有不确定，也有新的方向。
-2026，希望自己——
-在技术上，更专注本质。少一些浮躁，多一些深度；少一些追逐热点，多一些长期主义。
-在工作上，更从容坚定。把复杂问题拆解清楚，把系统设计得更优雅；让每一行代码，都对得起时间。
-在生活里，更有温度。给家人更多陪伴，给自己更多耐心，在快节奏里守住节奏。
-愿 2026，不是简单的“更忙”，而是“更好”。
-持续学习，持续创造，持续成为更清醒的自己。
-]]></content>
   </entry>
   <entry>
     <title>drone + gogs + docker实现持续自动化部署</title>
@@ -8486,49 +8558,6 @@ NVIM v0.10.4Build type: RelWithDebInfoLuaJIT 2.1.1713484068Run &quot;nvim -V1 -v
       </tags>
   </entry>
   <entry>
-    <title>轻量化 K8s 管理方案：在 k3s 中部署 Skooner 可视化面板</title>
-    <url>/2026/01/08/software/k8s/deploy-skooner-on-k3s/</url>
-    <content><![CDATA[前言管理 Kubernetes 集群不应该以牺牲系统资源为代价。虽然官方 Dashboard 功能强大，但对于小型集群或单节点 k3s 环境来说，它往往显得过于臃肿。如果你正在寻找一个极致轻快、响应迅速的管理界面，Skooner 是一个完美的平衡点。
-Skooner（原名 K8dash）是一款开源、超轻量级的实时仪表盘，它在不增加集群负担的前提下，提供了核心的资源观测能力。
-为什么选择 Skooner？Skooner 的设计哲学与 k3s 的轻量化理念完美契合：
-
-极低的资源占用：它的内存占用通常不到 50MB，在你的系统监控中几乎可以忽略不计。
-实时状态感知：基于 WebSocket 技术，无需手动刷新页面即可实时查看 CPU、内存消耗以及 Pod 状态。
-移动端自适应：UI 采用响应式设计，即使在手机或平板浏览器上也能轻松排查集群问题。
-
-部署步骤在本指南中，我们将通过 NodePort (32007) 的方式部署并暴露 Skooner，以便你直接通过物理机 IP 访问。
-1. 部署核心组件首先，一键安装 Skooner 的命名空间、服务和部署资源：
-kubectl apply -f https://raw.githubusercontent.com/skooner-k8s/skooner/master/kubernetes-skooner.yaml
-
-2. 配置自定义端口 (32007)默认情况下，Kubernetes 会分配一个随机的 NodePort。我们通过以下命令将其固定为 32007：
-kubectl patch svc skooner -n kube-system --type=&#x27;json&#x27; -p=&#x27;[&#123;&quot;op&quot;: &quot;replace&quot;, &quot;path&quot;: &quot;/spec/type&quot;, &quot;value&quot;:&quot;NodePort&quot;&#125;, &#123;&quot;op&quot;: &quot;replace&quot;, &quot;path&quot;: &quot;/spec/ports/0/nodePort&quot;, &quot;value&quot;:32007&#125;]&#x27;
-
-3. 创建管理 TokenSkooner 使用 Kubernetes 原生的 RBAC 权限。为了获得完整的管理权限，我们需要创建一个 ServiceAccount 并生成登录 Token：
-# 创建 ServiceAccount 和 集群角色绑定cat &lt;&lt;EOF | kubectl apply -f -apiVersion: v1kind: ServiceAccountmetadata:  name: skooner-admin  namespace: kube-system---apiVersion: rbac.authorization.k8s.io/v1kind: ClusterRoleBindingmetadata:  name: skooner-admin-bindingroleRef:  apiGroup: rbac.authorization.k8s.io  kind: ClusterRole  name: cluster-adminsubjects:- kind: ServiceAccount  name: skooner-admin  namespace: kube-systemEOF# 生成登录 Token（有效期 24 小时）kubectl create token skooner-admin -n kube-system --duration=24h
-
-
-如何访问
-打开浏览器，访问：http://&lt;你的服务器IP&gt;:32007。
-在登录界面选择 “Token” 模式。
-粘贴上一步生成的长字符串即可进入面板。
-
-这是我本地的效果：
-
-结语Skooner 在保持 k3s 轻量化特性的同时，为你提供了一个直观、现代的操作界面。对于那些既想要可视化观测、又不想被复杂管理平台拖慢系统性能的开发者来说，Skooner 是一个“即插即用”的最佳方案。
-如需了解更多高级配置，可以参考官方文档：skooner.io。
-一键安装脚本# 1. Deploy Skooner resourceskubectl apply -f https://raw.githubusercontent.com/skooner-k8s/skooner/master/kubernetes-skooner.yaml# 2. Patch the Service to NodePort and set it specifically to 32007kubectl patch svc skooner -n kube-system --type=&#x27;json&#x27; -p=&#x27;[&#123;&quot;op&quot;: &quot;replace&quot;, &quot;path&quot;: &quot;/spec/type&quot;, &quot;value&quot;:&quot;NodePort&quot;&#125;, &#123;&quot;op&quot;: &quot;replace&quot;, &quot;path&quot;: &quot;/spec/ports/0/nodePort&quot;, &quot;value&quot;:32007&#125;]&#x27;# 3. Create a Cluster Admin ServiceAccount for login (if not already created)cat &lt;&lt;EOF | kubectl apply -f -apiVersion: v1kind: ServiceAccountmetadata:  name: skooner-admin  namespace: kube-system---apiVersion: rbac.authorization.k8s.io/v1kind: ClusterRoleBindingmetadata:  name: skooner-admin-bindingroleRef:  apiGroup: rbac.authorization.k8s.io  kind: ClusterRole  name: cluster-adminsubjects:- kind: ServiceAccount  name: skooner-admin  namespace: kube-systemEOF# 4. Generate Login Tokenecho &quot;-------------------------------------------------------&quot;echo &quot;Skooner is now accessible at port: 32007&quot;echo &quot;Access URL: http://$(hostname -I | awk &#x27;&#123;print $1&#125;&#x27;):32007&quot;echo &quot;&quot;echo &quot;Login Token:&quot;kubectl create token skooner-admin -n kube-system --duration=24hecho &quot;-------------------------------------------------------&quot;
-]]></content>
-      <categories>
-        <category>软件</category>
-      </categories>
-      <tags>
-        <tag>k8s</tag>
-        <tag>k3s</tag>
-        <tag>kubernetes</tag>
-        <tag>skooner</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>HorizontalPodAutoscaler入门实践</title>
     <url>/2023/09/27/software/k8s/horizontal-pod-autoscaler-getting-started/</url>
     <content><![CDATA[HorizontalPodAutoscaler在Kubernetes中，HorizontalPodAutoscaler 自动更新工作负载资源（例如Deployment或者StatefulSet），目的是自动扩缩工作负载以满足需求。水平扩缩意味着对增加的负载的响应是部署更多的 Pod。
@@ -8572,6 +8601,49 @@ feat: 使用k8s的HorizontalPodAutoscaler进行水平的资源缩放
         <tag>docker</tag>
         <tag>kubernetes</tag>
         <tag>Docker Desktop</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>轻量化 K8s 管理方案：在 k3s 中部署 Skooner 可视化面板</title>
+    <url>/2026/01/08/software/k8s/deploy-skooner-on-k3s/</url>
+    <content><![CDATA[前言管理 Kubernetes 集群不应该以牺牲系统资源为代价。虽然官方 Dashboard 功能强大，但对于小型集群或单节点 k3s 环境来说，它往往显得过于臃肿。如果你正在寻找一个极致轻快、响应迅速的管理界面，Skooner 是一个完美的平衡点。
+Skooner（原名 K8dash）是一款开源、超轻量级的实时仪表盘，它在不增加集群负担的前提下，提供了核心的资源观测能力。
+为什么选择 Skooner？Skooner 的设计哲学与 k3s 的轻量化理念完美契合：
+
+极低的资源占用：它的内存占用通常不到 50MB，在你的系统监控中几乎可以忽略不计。
+实时状态感知：基于 WebSocket 技术，无需手动刷新页面即可实时查看 CPU、内存消耗以及 Pod 状态。
+移动端自适应：UI 采用响应式设计，即使在手机或平板浏览器上也能轻松排查集群问题。
+
+部署步骤在本指南中，我们将通过 NodePort (32007) 的方式部署并暴露 Skooner，以便你直接通过物理机 IP 访问。
+1. 部署核心组件首先，一键安装 Skooner 的命名空间、服务和部署资源：
+kubectl apply -f https://raw.githubusercontent.com/skooner-k8s/skooner/master/kubernetes-skooner.yaml
+
+2. 配置自定义端口 (32007)默认情况下，Kubernetes 会分配一个随机的 NodePort。我们通过以下命令将其固定为 32007：
+kubectl patch svc skooner -n kube-system --type=&#x27;json&#x27; -p=&#x27;[&#123;&quot;op&quot;: &quot;replace&quot;, &quot;path&quot;: &quot;/spec/type&quot;, &quot;value&quot;:&quot;NodePort&quot;&#125;, &#123;&quot;op&quot;: &quot;replace&quot;, &quot;path&quot;: &quot;/spec/ports/0/nodePort&quot;, &quot;value&quot;:32007&#125;]&#x27;
+
+3. 创建管理 TokenSkooner 使用 Kubernetes 原生的 RBAC 权限。为了获得完整的管理权限，我们需要创建一个 ServiceAccount 并生成登录 Token：
+# 创建 ServiceAccount 和 集群角色绑定cat &lt;&lt;EOF | kubectl apply -f -apiVersion: v1kind: ServiceAccountmetadata:  name: skooner-admin  namespace: kube-system---apiVersion: rbac.authorization.k8s.io/v1kind: ClusterRoleBindingmetadata:  name: skooner-admin-bindingroleRef:  apiGroup: rbac.authorization.k8s.io  kind: ClusterRole  name: cluster-adminsubjects:- kind: ServiceAccount  name: skooner-admin  namespace: kube-systemEOF# 生成登录 Token（有效期 24 小时）kubectl create token skooner-admin -n kube-system --duration=24h
+
+
+如何访问
+打开浏览器，访问：http://&lt;你的服务器IP&gt;:32007。
+在登录界面选择 “Token” 模式。
+粘贴上一步生成的长字符串即可进入面板。
+
+这是我本地的效果：
+
+结语Skooner 在保持 k3s 轻量化特性的同时，为你提供了一个直观、现代的操作界面。对于那些既想要可视化观测、又不想被复杂管理平台拖慢系统性能的开发者来说，Skooner 是一个“即插即用”的最佳方案。
+如需了解更多高级配置，可以参考官方文档：skooner.io。
+一键安装脚本# 1. Deploy Skooner resourceskubectl apply -f https://raw.githubusercontent.com/skooner-k8s/skooner/master/kubernetes-skooner.yaml# 2. Patch the Service to NodePort and set it specifically to 32007kubectl patch svc skooner -n kube-system --type=&#x27;json&#x27; -p=&#x27;[&#123;&quot;op&quot;: &quot;replace&quot;, &quot;path&quot;: &quot;/spec/type&quot;, &quot;value&quot;:&quot;NodePort&quot;&#125;, &#123;&quot;op&quot;: &quot;replace&quot;, &quot;path&quot;: &quot;/spec/ports/0/nodePort&quot;, &quot;value&quot;:32007&#125;]&#x27;# 3. Create a Cluster Admin ServiceAccount for login (if not already created)cat &lt;&lt;EOF | kubectl apply -f -apiVersion: v1kind: ServiceAccountmetadata:  name: skooner-admin  namespace: kube-system---apiVersion: rbac.authorization.k8s.io/v1kind: ClusterRoleBindingmetadata:  name: skooner-admin-bindingroleRef:  apiGroup: rbac.authorization.k8s.io  kind: ClusterRole  name: cluster-adminsubjects:- kind: ServiceAccount  name: skooner-admin  namespace: kube-systemEOF# 4. Generate Login Tokenecho &quot;-------------------------------------------------------&quot;echo &quot;Skooner is now accessible at port: 32007&quot;echo &quot;Access URL: http://$(hostname -I | awk &#x27;&#123;print $1&#125;&#x27;):32007&quot;echo &quot;&quot;echo &quot;Login Token:&quot;kubectl create token skooner-admin -n kube-system --duration=24hecho &quot;-------------------------------------------------------&quot;
+]]></content>
+      <categories>
+        <category>软件</category>
+      </categories>
+      <tags>
+        <tag>k8s</tag>
+        <tag>k3s</tag>
+        <tag>kubernetes</tag>
+        <tag>skooner</tag>
       </tags>
   </entry>
   <entry>
