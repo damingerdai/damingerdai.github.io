@@ -612,7 +612,82 @@ character varying(255)
 
 密码哈希算法的选择，最终还是要结合完整的系统安全设计。
 
-## 八、总结
+## 八、Argon2id 的性能测试：Memory-hard 到底有多昂贵？
+
+前面提到，Argon2id 的一个重要特点是 Memory-hard。
+
+但如果只是从原理上理解 Memory-hard，我觉得还不够直观。
+
+因此，我在 Health Master 的 `pkg/pwd` 包中增加了 Benchmark，分别调整内存成本、迭代次数和并行度，观察它们对密码哈希性能的影响。
+
+测试环境：
+
+- CPU：Apple M2 Pro
+- 操作系统：macOS
+- 架构：arm64
+- 工具：Go Benchmark
+- 测试次数：每组 3 次
+
+执行命令：
+
+```bash
+go test ./pkg/pwd \
+  -run '^$' \
+  -bench BenchmarkHashPassword \
+  -benchmem \
+  -count=3
+```
+
+测试代码使用 `b.Loop()` 执行 `HashPassword`，并通过不同的 `Argon2Params` 调整参数。
+
+测试结果：
+
+| 配置 | 平均耗时 | 分配内存 |
+|---|---:|---:|
+| Default (64 MiB, t=3, p=2) | 70.64 ms | 64 MiB |
+| Memory32MiB | 32.12 ms | 32 MiB |
+| Memory128MiB | 143.83 ms | 128 MiB |
+| Iterations1 | 23.75 ms | 64 MiB |
+| Parallelism1 | 135.29 ms | 64 MiB |
+| Parallelism4 | 35.36 ms | 64 MiB |
+
+从结果可以观察到三个现象。
+
+**首先，增加 Memory Cost 会显著提高计算成本。**
+
+当内存从 32 MiB 增加到 128 MiB 时，哈希耗时从约 32 ms 增加到 144 ms，增长约 4.5 倍。
+
+这直观地体现了 Argon2id 的 Memory-hard 特性。
+
+**其次，Iterations 对计算时间有明显影响。**
+
+将迭代次数从 3 降低到 1 后，平均耗时从约 71 ms 降低到 24 ms。
+
+这意味着减少迭代次数虽然能够提高性能，但也降低了每次密码猜测的计算成本。
+
+**最后，Parallelism 的影响值得特别关注。**
+
+在 Apple M2 Pro 上，将并行度从 1 提高到 4，单次哈希耗时从约 135 ms 降低到了 35 ms。
+
+这说明 Argon2id 能够利用多核 CPU 提高单次计算速度。
+
+但并行度越高，并不意味着 Web 服务整体性能越好。多个用户同时登录时，还需要考虑 CPU 竞争、内存带宽和服务端并发量。
+
+### 这次 Benchmark 给我的启发
+
+过去选择密码哈希参数时，我更多关注算法推荐的配置。
+
+但这次测试让我意识到，Argon2id 的参数不仅是安全参数，同时也是服务端的资源预算。
+
+更高的内存和计算成本可以增加离线破解的代价，但也会提高合法认证请求的成本。
+
+因此，参数选择不能只看单次 Benchmark，还应该结合实际部署环境、登录并发量和服务器资源限制。
+
+尤其是对于运行在资源有限的 Kubernetes 节点上的服务，密码哈希的内存开销也需要纳入容量规划。
+
+后续我计划进一步增加并发 Benchmark，测试不同并发量下的吞吐量、延迟和内存占用，从而为 Health Master 选择更合理的默认参数。
+
+## 九、总结
 
 这次 Health Master 的密码哈希迁移，最初只是想解决 MD5 不再适合密码存储的问题。
 
