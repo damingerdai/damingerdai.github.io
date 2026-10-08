@@ -614,78 +614,115 @@ character varying(255)
 
 ## 八、Argon2id 的性能测试：Memory-hard 到底有多昂贵？
 
-前面提到，Argon2id 的一个重要特点是 Memory-hard。
+前面提到，Argon2id 的重要特性是 Memory-hard。但仅仅理解算法原理还不够，我希望通过真实的 Benchmark，看看内存成本、迭代次数和并行度分别会带来多少开销，以及并发执行时系统的吞吐量如何变化。
 
-但如果只是从原理上理解 Memory-hard，我觉得还不够直观。
+本次测试在 Health Master 的 `pkg/pwd` 包中进行，环境为 macOS、Apple M2 Pro、`darwin/arm64`。每组测试执行三次，下面的汇总数据取三次 `ns/op` 的算术平均值；不同硬件和系统负载下结果可能不同。
 
-因此，我在 Health Master 的 `pkg/pwd` 包中增加了 Benchmark，分别调整内存成本、迭代次数和并行度，观察它们对密码哈希性能的影响。
-
-测试环境：
-
-- CPU：Apple M2 Pro
-- 操作系统：macOS
-- 架构：arm64
-- 工具：Go Benchmark
-- 测试次数：每组 3 次
+### 8.1 单次哈希：Memory、Iterations 与 Parallelism
 
 执行命令：
 
 ```bash
-go test ./pkg/pwd \
-  -run '^$' \
+go test ./pkg/pwd -run '^$' \
   -bench BenchmarkHashPassword \
-  -benchmem \
-  -count=3
+  -benchmem -count=3
 ```
 
-测试代码使用 `b.Loop()` 执行 `HashPassword`，并通过不同的 `Argon2Params` 调整参数。
+测试代码如下：
 
-测试结果：
+```go
+func BenchmarkHashPassword(b *testing.B) {
+    for _, tc := range []struct {
+        name   string
+        modify func(*Argon2Params)
+    }{
+        {name: "Default"},
+        {name: "Memory32MiB", modify: func(p *Argon2Params) { p.Memory = 32 * 1024 }},
+        {name: "Memory128MiB", modify: func(p *Argon2Params) { p.Memory = 128 * 1024 }},
+        {name: "Iterations1", modify: func(p *Argon2Params) { p.Iterations = 1 }},
+        {name: "Parallelism1", modify: func(p *Argon2Params) { p.Parallelism = 1 }},
+        {name: "Parallelism4", modify: func(p *Argon2Params) { p.Parallelism = 4 }},
+    } {
+        b.Run(tc.name, func(b *testing.B) {
+            var params *Argon2Params
+            if tc.modify != nil {
+                copy := *DefaultParams
+                tc.modify(&copy)
+                params = &copy
+            }
+            b.ReportAllocs()
+            for b.Loop() {
+                if _, err := HashPassword("benchmark-password", params); err != nil {
+                    b.Fatal(err)
+                }
+            }
+        })
+    }
+}
+```
 
-| 配置 | 平均耗时 | 分配内存 |
-|---|---:|---:|
-| Default (64 MiB, t=3, p=2) | 70.64 ms | 64 MiB |
-| Memory32MiB | 32.12 ms | 32 MiB |
-| Memory128MiB | 143.83 ms | 128 MiB |
-| Iterations1 | 23.75 ms | 64 MiB |
-| Parallelism1 | 135.29 ms | 64 MiB |
-| Parallelism4 | 35.36 ms | 64 MiB |
+默认配置为 `m=64 MiB, t=3, p=2`。除被测试的参数外，其他参数保持默认值。
 
-从结果可以观察到三个现象。
+| 测试配置 | 平均耗时 | 相对 Default | 每次分配内存（约） |
+|---|---:|---:|---:|
+| Default | 70.64 ms | 1.00× | 64 MiB |
+| Memory32MiB | 32.12 ms | 0.45× | 32 MiB |
+| Memory128MiB | 143.83 ms | 2.04× | 128 MiB |
+| Iterations1 | 23.75 ms | 0.34× | 64 MiB |
+| Parallelism1 | 135.29 ms | 1.92× | 64 MiB |
+| Parallelism4 | 35.36 ms | 0.50× | 64 MiB |
 
-**首先，增加 Memory Cost 会显著提高计算成本。**
+**内存成本。** 将 `m` 从 32 MiB 增加到 128 MiB，平均耗时从约 32 ms 增加到 144 ms，累计分配内存也随之增加。这使 Memory-hard 的资源成本变得直观。不过，Go Benchmark 的 `B/op` 是**每次操作累计分配字节数**，不等于进程峰值 RSS。
 
-当内存从 32 MiB 增加到 128 MiB 时，哈希耗时从约 32 ms 增加到 144 ms，增长约 4.5 倍。
+**迭代次数。** 将 `t` 从 3 降为 1，耗时从约 71 ms 降至 24 ms。降低迭代次数虽然可以减少登录时的计算开销，但也会降低攻击者每次离线猜测所需付出的成本。
 
-这直观地体现了 Argon2id 的 Memory-hard 特性。
+**并行度。** 在 Apple M2 Pro 上，`p=1` 的平均耗时约为 135 ms，`p=4` 约为 35 ms。这说明单次哈希能从更高并行度中获益；但这不意味着 `p` 越大，Web 服务的整体吞吐量就一定越高。多个登录请求同时执行时，CPU 和内存带宽仍然是共享资源。
 
-**其次，Iterations 对计算时间有明显影响。**
+### 8.2 并发 Benchmark：从单次耗时到整体吞吐量
 
-将迭代次数从 3 降低到 1 后，平均耗时从约 71 ms 降低到 24 ms。
+为了进一步观察并发行为，我使用 `RunParallel` 测试默认参数，并调整 `GOMAXPROCS`：
 
-这意味着减少迭代次数虽然能够提高性能，但也降低了每次密码猜测的计算成本。
+```bash
+go test ./pkg/pwd -run '^$' \
+  -bench BenchmarkHashPasswordParallel \
+  -benchmem -cpu 1,2,4,8 -count=3
+```
 
-**最后，Parallelism 的影响值得特别关注。**
+这里 `-cpu` 设置的是 Go 运行时的 `GOMAXPROCS`，即允许同时执行 Go 代码的逻辑处理器数量，并**不是**模拟固定数量的用户登录请求。
 
-在 Apple M2 Pro 上，将并行度从 1 提高到 4，单次哈希耗时从约 135 ms 降低到了 35 ms。
+| GOMAXPROCS | 三次测试的 ns/op（ms） | 平均 ns/op（ms） | 估算吞吐量（ops/s） | 相对 1 |
+|---|---|---:|---:|---:|
+| 1 | 134.30 / 129.37 / 126.14 | 129.94 | 7.70 | 1.00× |
+| 2 | 69.57 / 69.30 / 66.35 | 68.41 | 14.62 | 1.90× |
+| 4 | 37.77 / 35.82 / 34.27 | 35.95 | 27.81 | 3.61× |
+| 8 | 23.45 / 24.43 / 45.72 | 31.20 | 32.05 | 4.16× |
 
-这说明 Argon2id 能够利用多核 CPU 提高单次计算速度。
+> 表中吞吐量以 `1 / 平均每次操作耗时` 估算。`RunParallel` 的 `ns/op` 是测试总时间除以操作数，更接近吞吐成本，**不能直接当作单个请求的端到端响应延迟**。`B/op` 在各组中约为 64 MiB，表示每次哈希的累计分配量。
 
-但并行度越高，并不意味着 Web 服务整体性能越好。多个用户同时登录时，还需要考虑 CPU 竞争、内存带宽和服务端并发量。
+从这组结果可以看到：
 
-### 这次 Benchmark 给我的启发
+1. `GOMAXPROCS` 从 1 增加到 4 时，估算吞吐量由约 7.70 ops/s 提高到 27.81 ops/s，扩展效果较明显。
+2. 从 4 增加到 8 时，收益变小。增加可并行执行的 CPU 资源，并不会保证吞吐量等比例提升。
+3. `GOMAXPROCS=8` 的第三次结果为 **45.72 ms/op**，明显高于前两次的约 23–24 ms/op。这可能与系统调度、后台负载、CPU 功耗或内存带宽竞争有关，但仅凭三次结果无法确定原因。
 
-过去选择密码哈希参数时，我更多关注算法推荐的配置。
+这一轮测试让我意识到：**单次哈希快，不等于并发登录时每个用户的等待时间短；吞吐量提高，也不等于延迟一定降低。**
 
-但这次测试让我意识到，Argon2id 的参数不仅是安全参数，同时也是服务端的资源预算。
+### 8.3 Benchmark 对生产环境的启发
 
-更高的内存和计算成本可以增加离线破解的代价，但也会提高合法认证请求的成本。
+Argon2id 的 `m`、`t` 和 `p` 不只是密码学参数，也是服务端的资源预算。
 
-因此，参数选择不能只看单次 Benchmark，还应该结合实际部署环境、登录并发量和服务器资源限制。
+以 64 MiB 工作内存为例，如果有 20 次哈希真正同时执行，Argon2 工作内存理论上就可能达到约 **1.25 GiB**，还不包含 Go 运行时、数据库连接和其他业务逻辑的开销。
 
-尤其是对于运行在资源有限的 Kubernetes 节点上的服务，密码哈希的内存开销也需要纳入容量规划。
+因此，不能仅凭 Apple M2 Pro 上约 71 ms 的单次哈希结果，就认定这组参数适合 Health Master 的生产环境。尤其是在资源有限的 Kubernetes 节点中，仍然需要在实际部署机器上测量：
 
-后续我计划进一步增加并发 Benchmark，测试不同并发量下的吞吐量、延迟和内存占用，从而为 Health Master 选择更合理的默认参数。
+- 固定并发请求数下的吞吐量与 p50/p95/p99 响应延迟；
+- CPU 使用率、峰值 RSS 和 Pod 的 Memory Limit；
+- 不同 `m`、`t`、`p` 组合下的性能与安全成本；
+- 登录限流与哈希计算并发上限是否合理。
+
+目前我会将 `m=64 MiB, t=3, p=2` 保留为**待验证的基准配置**，而不是因为 `p=4` 的单次 Benchmark 更快，就直接修改生产参数。
+
+这次 Benchmark 让我对 Memory-hard 有了更具体的认识：Argon2id 增加的是攻击者进行密码猜测的成本，但这份成本同样需要由正常的认证服务承担。安全性和资源消耗之间的权衡，必须通过实际测量来完成。
 
 ## 九、总结
 
