@@ -1,0 +1,814 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="dark"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1.0,viewport-fit=cover"><title>从密码哈希迁移到 Argon2id：一次 Go 项目中的密码安全实践 | Damingerdai's Blog</title><meta name="author" content="Arthur Ming"><meta name="copyright" content="Arthur Ming"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#0d0d0d"><meta name="description" content="记录 Health Master 从 MD5 迁移到 Argon2id 的过程，理解 Memory-hard、Salt、密码哈希验证与 Timing Attack，以及 Go 中的工程实践。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="从密码哈希迁移到 Argon2id：一次 Go 项目中的密码安全实践">
+<meta property="og:url" content="http://blog.damingerdai.com/2026/10/08/back-end/golang-argon2id-password-hashing/index.html">
+<meta property="og:site_name" content="Damingerdai&#39;s Blog">
+<meta property="og:description" content="记录 Health Master 从 MD5 迁移到 Argon2id 的过程，理解 Memory-hard、Salt、密码哈希验证与 Timing Attack，以及 Go 中的工程实践。">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg">
+<meta property="article:published_time" content="2026-10-08T11:16:53.000Z">
+<meta property="article:modified_time" content="2026-10-08T11:25:08.691Z">
+<meta property="article:author" content="Arthur Ming">
+<meta property="article:tag" content="Go">
+<meta property="article:tag" content="Golang">
+<meta property="article:tag" content="Argon2id">
+<meta property="article:tag" content="Cryptography">
+<meta property="article:tag" content="Security">
+<meta property="article:tag" content="Password Hashing">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg"><script type="application/ld+json">{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "从密码哈希迁移到 Argon2id：一次 Go 项目中的密码安全实践",
+  "url": "http://blog.damingerdai.com/2026/10/08/back-end/golang-argon2id-password-hashing/",
+  "image": "https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg",
+  "datePublished": "2026-10-08T11:16:53.000Z",
+  "dateModified": "2026-10-08T11:25:08.691Z",
+  "author": [
+    {
+      "@type": "Person",
+      "name": "Arthur Ming",
+      "url": "http://blog.damingerdai.com"
+    }
+  ]
+}</script><link rel="shortcut icon" href="/img/avatar.png"><link rel="canonical" href="http://blog.damingerdai.com/2026/10/08/back-end/golang-argon2id-password-hashing/index.html"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><link rel="stylesheet" href="/css/index.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free/css/all.min.css"><script>
+    (() => {
+      
+    const saveToLocal = {
+      set: (key, value, ttl) => {
+        if (!ttl) return
+        const expiry = Date.now() + ttl * 86400000
+        localStorage.setItem(key, JSON.stringify({ value, expiry }))
+      },
+      get: key => {
+        const itemStr = localStorage.getItem(key)
+        if (!itemStr) return undefined
+        const { value, expiry } = JSON.parse(itemStr)
+        if (Date.now() > expiry) {
+          localStorage.removeItem(key)
+          return undefined
+        }
+        return value
+      }
+    }
+
+    window.btf = {
+      saveToLocal,
+      getScript: (url, attr = {}) => new Promise((resolve, reject) => {
+        const script = document.createElement('script')
+        script.src = url
+        script.async = true
+        Object.entries(attr).forEach(([key, val]) => script.setAttribute(key, val))
+        script.onload = script.onreadystatechange = () => {
+          if (!script.readyState || /loaded|complete/.test(script.readyState)) resolve()
+        }
+        script.onerror = reject
+        document.head.appendChild(script)
+      }),
+      getCSS: (url, id) => new Promise((resolve, reject) => {
+        const link = document.createElement('link')
+        link.rel = 'stylesheet'
+        link.href = url
+        if (id) link.id = id
+        link.onload = link.onreadystatechange = () => {
+          if (!link.readyState || /loaded|complete/.test(link.readyState)) resolve()
+        }
+        link.onerror = reject
+        document.head.appendChild(link)
+      }),
+      addGlobalFn: (key, fn, name = false, parent = window) => {
+        if (!false && key.startsWith('pjax')) return
+        const globalFn = parent.globalFn || {}
+        globalFn[key] = globalFn[key] || {}
+        globalFn[key][name || Object.keys(globalFn[key]).length] = fn
+        parent.globalFn = globalFn
+      }
+    }
+  
+      
+      const activateDarkMode = () => {
+        document.documentElement.setAttribute('data-theme', 'dark')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+        }
+      }
+      const activateLightMode = () => {
+        document.documentElement.setAttribute('data-theme', 'light')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#ffffff')
+        }
+      }
+
+      btf.activateDarkMode = activateDarkMode
+      btf.activateLightMode = activateLightMode
+
+      const theme = saveToLocal.get('theme')
+    
+          const mediaQueryDark = window.matchMedia('(prefers-color-scheme: dark)')
+          const mediaQueryLight = window.matchMedia('(prefers-color-scheme: light)')
+
+          if (theme === undefined) {
+            if (mediaQueryLight.matches) activateLightMode()
+            else if (mediaQueryDark.matches) activateDarkMode()
+            else {
+              const hour = new Date().getHours()
+              const isNight = hour <= 6 || hour >= 18
+              isNight ? activateDarkMode() : activateLightMode()
+            }
+            mediaQueryDark.addEventListener('change', () => {
+              if (saveToLocal.get('theme') === undefined) {
+                e.matches ? activateDarkMode() : activateLightMode()
+              }
+            })
+          } else {
+            theme === 'light' ? activateLightMode() : activateDarkMode()
+          }
+        
+      
+      const asideStatus = saveToLocal.get('aside-status')
+      if (asideStatus !== undefined) {
+        document.documentElement.classList.toggle('hide-aside', asideStatus === 'hide')
+      }
+    
+      
+    const detectApple = () => {
+      if (/iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent)) {
+        document.documentElement.classList.add('apple')
+      }
+    }
+    detectApple()
+  
+    })()
+  </script><script>const GLOBAL_CONFIG = {
+  root: '/',
+  algolia: undefined,
+  localSearch: undefined,
+  translate: undefined,
+  highlight: {"plugin":"highlight.js","highlightCopy":true,"highlightLang":true,"highlightHeightLimit":false,"highlightFullpage":false,"highlightMacStyle":false},
+  copy: {
+    success: '复制成功',
+    error: '复制失败',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '',
+  dateSuffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: undefined,
+  lightbox: 'null',
+  Snackbar: undefined,
+  infinitegrid: {
+    js: 'https://cdn.jsdelivr.net/npm/@egjs/infinitegrid/dist/infinitegrid.min.js',
+    buttonText: '加载更多'
+  },
+  isPhotoFigcaption: false,
+  islazyloadPlugin: false,
+  isAnchor: false,
+  percent: {
+    toc: true,
+    rightside: false,
+  },
+  autoDarkmode: true
+}</script><script id="config-diff">var GLOBAL_CONFIG_SITE = {
+  title: '从密码哈希迁移到 Argon2id：一次 Go 项目中的密码安全实践',
+  isHighlightShrink: false,
+  isToc: true,
+  pageType: 'post'
+}</script><link rel="stylesheet" href="/css/styles.css"><meta name="generator" content="Hexo 7.3.0"></head><body><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="avatar-img text-center"><img src="/img/avatar.png" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="site-data text-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">106</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">169</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">8</div></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归类</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><span class="site-page group"><i class="fa-fw fas fa-list"></i><span> 其他</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><li><a class="site-page child" href="/others/learning"><i class="fa-fw fas fa-graduation-cap"></i><span> 学习课程</span></a></li><li><a class="site-page child" href="/others/link/"><i class="fa-fw fas fa-link"></i><span> 链接</span></a></li><li><a class="site-page child" href="/others/interview/"><i class="fa-fw fas fa-glide"></i><span> 面试</span></a></li></ul></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于</span></a></div></div></div></div><div class="post" id="body-wrap"><header class="post-bg" id="page-header" style="background-image: url(https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg);"><nav id="nav"><span id="blog-info"><a class="nav-site-title" href="/"><span class="site-name">Damingerdai's Blog</span></a><a class="nav-page-title" href="/"><span class="site-name">从密码哈希迁移到 Argon2id：一次 Go 项目中的密码安全实践</span><span class="site-name"><i class="fa-solid fa-circle-arrow-left"></i><span>  返回首页</span></span></a></span><div id="menus"><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归类</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><span class="site-page group"><i class="fa-fw fas fa-list"></i><span> 其他</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><li><a class="site-page child" href="/others/learning"><i class="fa-fw fas fa-graduation-cap"></i><span> 学习课程</span></a></li><li><a class="site-page child" href="/others/link/"><i class="fa-fw fas fa-link"></i><span> 链接</span></a></li><li><a class="site-page child" href="/others/interview/"><i class="fa-fw fas fa-glide"></i><span> 面试</span></a></li></ul></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于</span></a></div></div><div id="toggle-menu"><span class="site-page"><i class="fas fa-bars fa-fw"></i></span></div></div></nav><div id="post-info"><h1 class="post-title">从密码哈希迁移到 Argon2id：一次 Go 项目中的密码安全实践</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2026-10-08T11:16:53.000Z" title="发表于 2026-10-08 19:16:53">2026-10-08</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2026-10-08T11:25:08.691Z" title="更新于 2026-10-08 19:25:08">2026-10-08</time></span><span class="post-meta-categories"><span class="post-meta-separator">|</span><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/%E5%90%8E%E7%AB%AF/">后端</a></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-pv-cv" id="" data-flag-title=""><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">浏览量:</span><span id="busuanzi_value_page_pv"><i class="fa-solid fa-spinner fa-spin"></i></span></span></div></div></div></header><main class="layout" id="content-inner"><div id="post"><article class="container post-content" id="article-container"><h1 id="从密码哈希迁移到-Argon2id：一次-Go-项目中的密码安全实践"><a href="#从密码哈希迁移到-Argon2id：一次-Go-项目中的密码安全实践" class="headerlink" title="从密码哈希迁移到 Argon2id：一次 Go 项目中的密码安全实践"></a>从密码哈希迁移到 Argon2id：一次 Go 项目中的密码安全实践</h1><p>最近在维护我的开源项目 <a target="_blank" rel="noopener" href="https://github.com/damingerdai/health-master">Health Master</a> 时，我完成了一次密码哈希机制的升级，将原有的 MD5 迁移到 Argon2id。</p>
+<p>相关代码可以参考 <a target="_blank" rel="noopener" href="https://github.com/damingerdai/health-master/pull/333">PR #333：Migrate password hashing to Argon2id and improve login errors</a>。</p>
+<p>最初的想法其实很简单：MD5 已经不适合存储用户密码了，应该换成更加安全的算法。</p>
+<p>但在实际修改过程中，我发现这并不只是一次简单的函数替换。</p>
+<p>比如：</p>
+<ul>
+<li>为什么 MD5 和 SHA-256 都不适合直接存储密码？</li>
+<li>Argon2id 所谓的 Memory-hard 究竟是什么意思？</li>
+<li>为什么 Argon2id 要把 Salt、算法版本和计算参数一起保存在数据库中？</li>
+<li>如果攻击者拿到了完整的哈希字符串，为什么不能直接解密密码？</li>
+<li>为什么 Go 中验证 Hash 时，还要使用 <code>subtle.ConstantTimeCompare</code>？</li>
+<li>已经使用 MD5 存储密码的用户，又应该如何迁移？</li>
+</ul>
+<p>为了弄清楚这些问题，我阅读了 <a target="_blank" rel="noopener" href="https://bsheepcoder.github.io/2026/07/01/cs-argon2id-explained/">《Argon2id 密码哈希：memory-hard 的工程实践与前沿》</a>，也重新回顾了陈皓在酷壳发表的 <a target="_blank" rel="noopener" href="https://gaojuqian.github.io/CoolShell/coolshell.cn/articles/21003.html">《计时攻击 Timing Attacks》</a>。</p>
+<p>这篇文章记录一下这次学习和实践的过程。</p>
+<h2 id="一、为什么要从-MD5-迁移？"><a href="#一、为什么要从-MD5-迁移？" class="headerlink" title="一、为什么要从 MD5 迁移？"></a>一、为什么要从 MD5 迁移？</h2><p>在早期的软件开发中，MD5 曾经被广泛用于生成数据摘要。</p>
+<p>例如，在 Go 中计算一个字符串的 MD5：</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> main</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> (</span><br><span class="line">    <span class="string">&quot;crypto/md5&quot;</span></span><br><span class="line">    <span class="string">&quot;encoding/hex&quot;</span></span><br><span class="line">    <span class="string">&quot;fmt&quot;</span></span><br><span class="line">)</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">main</span><span class="params">()</span></span> &#123;</span><br><span class="line">    password := <span class="string">&quot;Hello123!&quot;</span></span><br><span class="line"></span><br><span class="line">    hash := md5.Sum([]<span class="type">byte</span>(password))</span><br><span class="line"></span><br><span class="line">    fmt.Println(hex.EncodeToString(hash[:]))</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>MD5 会生成一个固定长度的 128-bit 摘要。</p>
+<p>从表面上看，使用 MD5 保存密码似乎是安全的：数据库中不再存储明文密码，而且 MD5 也不存在可以直接还原原文的解密函数。</p>
+<p>但是，<strong>密码哈希的安全性不能只看算法是否可逆。</strong></p>
+<h3 id="1-1-MD5-最大的问题是什么？"><a href="#1-1-MD5-最大的问题是什么？" class="headerlink" title="1.1 MD5 最大的问题是什么？"></a>1.1 MD5 最大的问题是什么？</h3><p>对于密码存储来说，MD5 最大的问题之一是计算速度太快。</p>
+<p>假设攻击者获得了数据库中的密码哈希：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">5d41402abc4b2a76b9719d911017c592</span><br></pre></td></tr></table></figure>
+
+<p>攻击者并不需要把哈希逆向还原，而是可以不断猜测密码：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">MD5(&quot;123456&quot;)      → 不匹配</span><br><span class="line">MD5(&quot;password&quot;)    → 不匹配</span><br><span class="line">MD5(&quot;hello&quot;)       → 匹配</span><br></pre></td></tr></table></figure>
+
+<p>这就是离线密码猜测攻击。</p>
+<p>由于 MD5 的计算成本非常低，攻击者可以利用 GPU 等硬件快速尝试大量候选密码。</p>
+<p>需要注意，MD5 的碰撞安全问题与这里讨论的密码猜测并不完全相同。即使一个快速哈希算法没有已知的实用碰撞攻击，也不代表它适合直接存储密码。</p>
+<h3 id="1-2-换成-SHA-256-可以吗？"><a href="#1-2-换成-SHA-256-可以吗？" class="headerlink" title="1.2 换成 SHA-256 可以吗？"></a>1.2 换成 SHA-256 可以吗？</h3><p>最初我也考虑过这个问题。</p>
+<p>SHA-256 比 MD5 具有更好的密码学安全性质，但如果直接使用：</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">sha256.Sum256([]<span class="type">byte</span>(password))</span><br></pre></td></tr></table></figure>
+
+<p>仍然不能解决密码哈希计算速度过快的问题。</p>
+<p>对于文件校验、数字签名等场景，快速计算是优点。</p>
+<p>但对于密码存储，快速计算反而降低了离线猜测的成本。</p>
+<p>因此，我们需要的并不是一个普通的哈希函数，而是专门为密码存储设计的 Password Hashing Function。</p>
+<h2 id="二、Argon2id-是什么？"><a href="#二、Argon2id-是什么？" class="headerlink" title="二、Argon2id 是什么？"></a>二、Argon2id 是什么？</h2><p>Argon2 是 2015 年 Password Hashing Competition（PHC）的获胜算法，后来被标准化为 <a target="_blank" rel="noopener" href="https://www.rfc-editor.org/rfc/rfc9106.html">RFC 9106</a>。</p>
+<p>它的核心设计思想是：</p>
+<p><strong>通过增加计算成本和内存成本，提高攻击者进行大规模密码猜测的代价。</strong></p>
+<p>Argon2 主要有三个变体：</p>
+<table>
+<thead>
+<tr>
+<th>算法</th>
+<th>特点</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Argon2d</td>
+<td>数据相关的内存访问模式，侧重抵抗特定硬件上的破解优化</td>
+</tr>
+<tr>
+<td>Argon2i</td>
+<td>数据无关的内存访问模式，侧重抵抗侧信道攻击</td>
+</tr>
+<tr>
+<td>Argon2id</td>
+<td>结合两种模式，兼顾相关安全需求</td>
+</tr>
+</tbody></table>
+<p>对于一般的用户密码存储场景，Argon2id 是目前推荐优先考虑的选择。</p>
+<h3 id="2-1-什么是-Memory-hard？"><a href="#2-1-什么是-Memory-hard？" class="headerlink" title="2.1 什么是 Memory-hard？"></a>2.1 什么是 Memory-hard？</h3><p>这是我在学习 Argon2id 时遇到的第一个重要概念。</p>
+<p>传统快速哈希算法主要依赖计算能力。</p>
+<p>而 Argon2id 除了需要执行一定数量的计算，还需要使用一定规模的内存。</p>
+<p>例如：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">memory = 64 MiB</span><br><span class="line">iterations = 3</span><br><span class="line">parallelism = 2</span><br></pre></td></tr></table></figure>
+
+<p>意味着一次密码哈希计算需要约 64 MiB 的工作内存，并按照指定参数进行计算。</p>
+<p>对于普通服务器，这个开销通常可以接受。</p>
+<p>但如果攻击者希望同时尝试成千上万个密码，就必须考虑这些计算任务所需要的内存资源和内存带宽。</p>
+<p>这就是 Memory-hard 设计的意义。</p>
+<p>它并不是让 GPU 无法执行 Argon2id，而是提高攻击者使用 GPU、ASIC 等硬件进行大规模并行破解的成本。</p>
+<h3 id="2-2-Argon2id-的参数"><a href="#2-2-Argon2id-的参数" class="headerlink" title="2.2 Argon2id 的参数"></a>2.2 Argon2id 的参数</h3><p>Argon2id 主要通过三个参数调整计算成本：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">m = memory cost</span><br><span class="line">t = time cost</span><br><span class="line">p = parallelism</span><br></pre></td></tr></table></figure>
+
+<p>例如：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">m=65536,t=3,p=2</span><br></pre></td></tr></table></figure>
+
+<p>其中：</p>
+<ul>
+<li><code>m=65536</code>：内存成本为 65536 KiB，即 64 MiB。</li>
+<li><code>t=3</code>：迭代次数为 3。</li>
+<li><code>p=2</code>：并行度为 2，表示两个 lane。</li>
+</ul>
+<p>这里有一个容易误解的地方：<code>p=2</code> 并不意味着内存成本自动变成 128 MiB。</p>
+<p><code>m</code> 指定的是整个 Argon2 计算的内存成本，而不是每个 lane 分别使用 64 MiB。</p>
+<p>这些参数并不是越大越好。</p>
+<p>因为提高攻击者成本的同时，也会增加正常用户登录时服务器的资源消耗。</p>
+<p>实际生产环境应该通过 Benchmark 确定适合自己的参数。</p>
+<h2 id="三、Salt-和-Hash-都公开了，密码为什么仍然安全？"><a href="#三、Salt-和-Hash-都公开了，密码为什么仍然安全？" class="headerlink" title="三、Salt 和 Hash 都公开了，密码为什么仍然安全？"></a>三、Salt 和 Hash 都公开了，密码为什么仍然安全？</h2><p>这是我在学习 Argon2id 时最感兴趣的问题。</p>
+<p>一个典型的 Argon2id 密码哈希字符串如下：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">$argon2id$v=19$m=65536,t=3,p=2$salt$hash</span><br></pre></td></tr></table></figure>
+
+<p>它通常采用 PHC String Format。</p>
+<p>把它拆开：</p>
+<table>
+<thead>
+<tr>
+<th>字段</th>
+<th>含义</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>argon2id</code></td>
+<td>使用的密码哈希算法</td>
+</tr>
+<tr>
+<td><code>v=19</code></td>
+<td>Argon2 算法版本</td>
+</tr>
+<tr>
+<td><code>m=65536</code></td>
+<td>内存成本</td>
+</tr>
+<tr>
+<td><code>t=3</code></td>
+<td>迭代次数</td>
+</tr>
+<tr>
+<td><code>p=2</code></td>
+<td>并行度</td>
+</tr>
+<tr>
+<td><code>salt</code></td>
+<td>随机盐，实际为 Base64 编码</td>
+</tr>
+<tr>
+<td><code>hash</code></td>
+<td>密码哈希，实际为 Base64 编码</td>
+</tr>
+</tbody></table>
+<p>我的第一个疑问是：</p>
+<p><strong>既然算法、参数、Salt 和 Hash 全部都保存在数据库中，攻击者拿到这个字符串后，不就知道密码是怎么计算出来的吗？</strong></p>
+<p>答案是：攻击者确实知道计算方法，但这并不意味着可以反向恢复原始密码。</p>
+<h3 id="3-1-哈希不是加密"><a href="#3-1-哈希不是加密" class="headerlink" title="3.1 哈希不是加密"></a>3.1 哈希不是加密</h3><p>加密和哈希最重要的区别是：</p>
+<p>加密是可逆的。拥有正确密钥的一方，可以通过解密算法恢复原始数据。</p>
+<p>而密码哈希是单向的。</p>
+<p>例如：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">password + salt</span><br><span class="line">      ↓</span><br><span class="line">   Argon2id</span><br><span class="line">      ↓</span><br><span class="line">     hash</span><br></pre></td></tr></table></figure>
+
+<p>我们可以通过密码和 Salt 计算 Hash，但不存在对应的 Argon2id 解密函数，能够直接从 Hash 还原原始密码。</p>
+<h3 id="3-2-那么攻击者能做什么？"><a href="#3-2-那么攻击者能做什么？" class="headerlink" title="3.2 那么攻击者能做什么？"></a>3.2 那么攻击者能做什么？</h3><p>攻击者可以进行猜测。</p>
+<p>例如，数据库中保存：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">$argon2id$v=19$m=65536,t=3,p=2$salt$hash</span><br></pre></td></tr></table></figure>
+
+<p>攻击者可以使用同样的 Salt 和参数，不断尝试候选密码：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">Argon2id(&quot;123456&quot;, salt)     → 不匹配</span><br><span class="line">Argon2id(&quot;password&quot;, salt)   → 不匹配</span><br><span class="line">Argon2id(&quot;Hello123!&quot;, salt)  → 匹配</span><br></pre></td></tr></table></figure>
+
+<p>一旦匹配成功，就说明找到了一个可以通过验证的密码。</p>
+<p>所以 Argon2id 不能保证密码永远不会被猜中。</p>
+<p>它真正提供的是较高的单次猜测成本。</p>
+<p>如果用户使用的是 <code>123456</code> 这样的弱密码，即使使用 Argon2id，也可能被字典攻击猜中。</p>
+<h3 id="3-3-为什么-Salt-不需要保密？"><a href="#3-3-为什么-Salt-不需要保密？" class="headerlink" title="3.3 为什么 Salt 不需要保密？"></a>3.3 为什么 Salt 不需要保密？</h3><p>Salt 的主要作用不是作为秘密密钥，而是让相同密码在不同情况下生成不同的哈希。</p>
+<p>例如两个用户都使用：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">Hello123!</span><br></pre></td></tr></table></figure>
+
+<p>如果使用不同的 Salt：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">Argon2id(&quot;Hello123!&quot;, saltA) → hashA</span><br><span class="line">Argon2id(&quot;Hello123!&quot;, saltB) → hashB</span><br></pre></td></tr></table></figure>
+
+<p>最终结果就会不同。</p>
+<p>这样可以避免攻击者直接根据相同的哈希判断用户是否使用相同密码，也能阻止攻击者高效复用预先计算好的哈希表。</p>
+<p>因此，Salt 可以和 Hash 一起存储。</p>
+<p>这里体现了密码学中的一个重要思想：<strong>系统的安全性不应该依赖算法本身保密。</strong></p>
+<h2 id="四、在-Go-中实现-Argon2id"><a href="#四、在-Go-中实现-Argon2id" class="headerlink" title="四、在 Go 中实现 Argon2id"></a>四、在 Go 中实现 Argon2id</h2><p>理解基本原理之后，就可以开始实际编码了。</p>
+<p>Go 可以使用 <code>golang.org/x/crypto/argon2</code>：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">go get golang.org/x/crypto/argon2</span><br></pre></td></tr></table></figure>
+
+<p>其中 <code>argon2.IDKey</code> 就是用于计算 Argon2id 的核心函数。</p>
+<h3 id="4-1-生成密码哈希"><a href="#4-1-生成密码哈希" class="headerlink" title="4.1 生成密码哈希"></a>4.1 生成密码哈希</h3><p>下面是一个简化的示例：</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> pwd</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> (</span><br><span class="line">    <span class="string">&quot;crypto/rand&quot;</span></span><br><span class="line">    <span class="string">&quot;encoding/base64&quot;</span></span><br><span class="line">    <span class="string">&quot;fmt&quot;</span></span><br><span class="line"></span><br><span class="line">    <span class="string">&quot;golang.org/x/crypto/argon2&quot;</span></span><br><span class="line">)</span><br><span class="line"></span><br><span class="line"><span class="keyword">const</span> (</span><br><span class="line">    memory      = <span class="number">64</span> * <span class="number">1024</span></span><br><span class="line">    iterations  = <span class="number">3</span></span><br><span class="line">    parallelism = <span class="number">2</span></span><br><span class="line">    saltLength  = <span class="number">16</span></span><br><span class="line">    keyLength   = <span class="number">32</span></span><br><span class="line">)</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">HashPassword</span><span class="params">(password <span class="type">string</span>)</span></span> (<span class="type">string</span>, <span class="type">error</span>) &#123;</span><br><span class="line">    salt := <span class="built_in">make</span>([]<span class="type">byte</span>, saltLength)</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> _, err := rand.Read(salt); err != <span class="literal">nil</span> &#123;</span><br><span class="line">        <span class="keyword">return</span> <span class="string">&quot;&quot;</span>, err</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    hash := argon2.IDKey(</span><br><span class="line">        []<span class="type">byte</span>(password),</span><br><span class="line">        salt,</span><br><span class="line">        iterations,</span><br><span class="line">        memory,</span><br><span class="line">        parallelism,</span><br><span class="line">        keyLength,</span><br><span class="line">    )</span><br><span class="line"></span><br><span class="line">    <span class="keyword">return</span> fmt.Sprintf(</span><br><span class="line">        <span class="string">&quot;$argon2id$v=%d$m=%d,t=%d,p=%d$%s$%s&quot;</span>,</span><br><span class="line">        argon2.Version,</span><br><span class="line">        memory,</span><br><span class="line">        iterations,</span><br><span class="line">        parallelism,</span><br><span class="line">        base64.RawStdEncoding.EncodeToString(salt),</span><br><span class="line">        base64.RawStdEncoding.EncodeToString(hash),</span><br><span class="line">    ), <span class="literal">nil</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>这段代码主要完成三件事：</p>
+<p>第一，使用 <code>crypto/rand</code> 生成随机 Salt。</p>
+<p>第二，调用 <code>argon2.IDKey</code> 计算密码哈希。</p>
+<p>第三，将算法版本、计算参数、Salt 和 Hash 编码为 PHC 字符串。</p>
+<p>这里使用 <code>crypto/rand</code> 非常重要，因为 Salt 应该来自密码学安全的随机数生成器。</p>
+<h3 id="4-2-验证密码"><a href="#4-2-验证密码" class="headerlink" title="4.2 验证密码"></a>4.2 验证密码</h3><p>密码验证的过程则是：</p>
+<ol>
+<li>从数据库读取完整的 PHC 字符串。</li>
+<li>解析算法、参数、Salt 和 Hash。</li>
+<li>使用用户输入的密码重新计算。</li>
+<li>比较计算结果与数据库中的 Hash。</li>
+</ol>
+<p>核心逻辑如下：</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">actualHash := argon2.IDKey(</span><br><span class="line">    []<span class="type">byte</span>(password),</span><br><span class="line">    salt,</span><br><span class="line">    iterations,</span><br><span class="line">    memory,</span><br><span class="line">    parallelism,</span><br><span class="line">    <span class="type">uint32</span>(<span class="built_in">len</span>(expectedHash)),</span><br><span class="line">)</span><br><span class="line"></span><br><span class="line">valid := subtle.ConstantTimeCompare(</span><br><span class="line">    actualHash,</span><br><span class="line">    expectedHash,</span><br><span class="line">) == <span class="number">1</span></span><br></pre></td></tr></table></figure>
+
+<p>这里省略了 PHC 字符串解析和参数校验逻辑。</p>
+<p>实际项目中必须校验算法版本、Salt 长度、Hash 长度，以及内存和迭代参数的上下限，不能直接信任解析出来的所有值。</p>
+<p>否则，恶意或异常的哈希字符串可能导致服务器分配过多内存，造成拒绝服务风险。</p>
+<p>不过，上面的代码还有一个值得继续讨论的地方：</p>
+<p><strong>为什么比较两个 Hash，需要使用 <code>subtle.ConstantTimeCompare</code>？</strong></p>
+<h2 id="五、从-ConstantTimeCompare-到-Timing-Attack"><a href="#五、从-ConstantTimeCompare-到-Timing-Attack" class="headerlink" title="五、从 ConstantTimeCompare 到 Timing Attack"></a>五、从 ConstantTimeCompare 到 Timing Attack</h2><p>最初看到 Go 的 <code>crypto/subtle</code> 时，我并没有特别在意。</p>
+<p>毕竟两个 Hash 都是字节数组，直接进行比较似乎就可以了。</p>
+<p>但重新阅读陈皓在酷壳发表的 <a target="_blank" rel="noopener" href="https://gaojuqian.github.io/CoolShell/coolshell.cn/articles/21003.html">《计时攻击 Timing Attacks》</a> 后，我意识到普通比较操作也可能存在安全问题。</p>
+<h3 id="5-1-普通字节比较有什么问题？"><a href="#5-1-普通字节比较有什么问题？" class="headerlink" title="5.1 普通字节比较有什么问题？"></a>5.1 普通字节比较有什么问题？</h3><p>假设我们自己实现一个比较函数：</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">Equal</span><span class="params">(a, b []<span class="type">byte</span>)</span></span> <span class="type">bool</span> &#123;</span><br><span class="line">    <span class="keyword">if</span> <span class="built_in">len</span>(a) != <span class="built_in">len</span>(b) &#123;</span><br><span class="line">        <span class="keyword">return</span> <span class="literal">false</span></span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">for</span> i := <span class="keyword">range</span> a &#123;</span><br><span class="line">        <span class="keyword">if</span> a[i] != b[i] &#123;</span><br><span class="line">            <span class="keyword">return</span> <span class="literal">false</span></span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">return</span> <span class="literal">true</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>这段代码在逻辑上完全正确。</p>
+<p>但是它有一个特点：发现第一个不同的字节后，就立即返回。</p>
+<p>例如：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">abcdef vs xbcdef</span><br><span class="line">↑</span><br><span class="line">第一个字符不同，立即返回</span><br></pre></td></tr></table></figure>
+
+<p>而另一种情况：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">abcdef vs abcdxf</span><br><span class="line">             ↑</span><br><span class="line">第五个字符才不同</span><br></pre></td></tr></table></figure>
+
+<p>第二次比较需要执行更多循环。</p>
+<p>因此，不同输入可能产生微小的执行时间差异。</p>
+<h3 id="5-2-什么是-Timing-Attack？"><a href="#5-2-什么是-Timing-Attack？" class="headerlink" title="5.2 什么是 Timing Attack？"></a>5.2 什么是 Timing Attack？</h3><p>Timing Attack，即计时攻击，是一种侧信道攻击。</p>
+<p>攻击者并不直接破解算法，而是通过观察程序的执行时间，推测内部数据。</p>
+<p>例如，在一个使用不安全比较函数验证 HMAC 签名的接口中，攻击者可能通过反复提交不同的签名，并分析响应时间，逐步推测正确签名的前缀。</p>
+<p>陈皓的文章讨论了这种利用执行时间差异泄露信息的攻击思路。</p>
+<p>这里需要注意，真实网络环境中存在大量噪声，单次请求的时间差异通常并不可靠。</p>
+<p>攻击者可能需要大量重复请求和统计分析，而且攻击能否成功还取决于具体实现。</p>
+<p>但这足以说明一个问题：</p>
+<p><strong>密码学实现中的微小行为差异，也可能成为信息泄露的来源。</strong></p>
+<h3 id="5-3-Go-的-ConstantTimeCompare"><a href="#5-3-Go-的-ConstantTimeCompare" class="headerlink" title="5.3 Go 的 ConstantTimeCompare"></a>5.3 Go 的 ConstantTimeCompare</h3><p>Go 标准库提供了：</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">subtle.ConstantTimeCompare(x, y)</span><br></pre></td></tr></table></figure>
+
+<p>它的目标是避免等长字节数组的比较时间依赖于匹配前缀的长度。</p>
+<p>例如：</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">valid := subtle.ConstantTimeCompare(</span><br><span class="line">    actualHash,</span><br><span class="line">    expectedHash,</span><br><span class="line">) == <span class="number">1</span></span><br></pre></td></tr></table></figure>
+
+<p>与普通的提前返回式比较不同，<code>ConstantTimeCompare</code> 不会因为前几个字节不匹配，就跳过后续的比较。</p>
+<p>不过，这里有两个需要注意的细节。</p>
+<p>首先，<code>ConstantTimeCompare</code> 对长度不同的输入会立即返回，因此它并不能保证所有输入情况下执行时间完全相同。</p>
+<p>其次，它也不能保证整个登录请求的响应时间恒定。</p>
+<p>例如，数据库查询、用户是否存在、Argon2id 计算参数以及其他业务分支，都可能影响认证流程的耗时。</p>
+<h3 id="5-4-这是否意味着可以通过计时攻击猜出密码？"><a href="#5-4-这是否意味着可以通过计时攻击猜出密码？" class="headerlink" title="5.4 这是否意味着可以通过计时攻击猜出密码？"></a>5.4 这是否意味着可以通过计时攻击猜出密码？</h3><p>并不是。</p>
+<p>需要区分普通字符串比较与 Argon2id 哈希验证。</p>
+<p>Argon2id 具有密码学哈希函数所需的扩散性质，原始密码即使只有一个字符不同，也会产生完全不同的哈希结果。</p>
+<p>因此，比较哈希时泄露的前缀信息，并不等同于泄露原始密码的前缀。</p>
+<p>使用 <code>ConstantTimeCompare</code> 是密码学工程中的防御性实践，不能据此推断使用普通比较的 Argon2id 登录接口就一定存在可利用的逐字符密码恢复漏洞。</p>
+<p>这也是这次学习中让我印象深刻的一点：</p>
+<p><strong>密码安全不仅涉及算法本身，还涉及算法周围的实现细节。</strong></p>
+<h2 id="六、Health-Master-的密码哈希迁移"><a href="#六、Health-Master-的密码哈希迁移" class="headerlink" title="六、Health Master 的密码哈希迁移"></a>六、Health Master 的密码哈希迁移</h2><p>理解了 Argon2id 的基本原理之后，我开始将它应用到 Health Master 中。</p>
+<p>对应的改动记录在 <a target="_blank" rel="noopener" href="https://github.com/damingerdai/health-master/pull/333">PR #333</a>。</p>
+<p>这次迁移主要涉及密码处理逻辑、用户认证、历史密码兼容、数据库字段和错误处理。</p>
+<h3 id="6-1-统一密码处理"><a href="#6-1-统一密码处理" class="headerlink" title="6.1 统一密码处理"></a>6.1 统一密码处理</h3><p>这次修改引入了独立的 <code>pkg/pwd</code> 包，用于集中管理密码哈希与验证。</p>
+<p>主要包括：</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">HashPassword(...)</span><br><span class="line">VerifyPassword(...)</span><br><span class="line">Authenticate(...)</span><br></pre></td></tr></table></figure>
+
+<p>这样做的好处是，注册、登录和密码重置等业务逻辑不需要分别处理底层的密码哈希算法。</p>
+<p>后续如果需要调整 Argon2id 参数，也可以集中维护。</p>
+<h3 id="6-2-旧-MD5-密码怎么办？"><a href="#6-2-旧-MD5-密码怎么办？" class="headerlink" title="6.2 旧 MD5 密码怎么办？"></a>6.2 旧 MD5 密码怎么办？</h3><p>这是迁移过程中比较实际的问题。</p>
+<p>数据库中已经存在使用 MD5 存储的密码，新的 Argon2id 验证逻辑无法直接验证这些旧哈希。</p>
+<p>一种常见方案是：</p>
+<p>用户登录时先验证 MD5，成功后再使用 Argon2id 重新计算并更新密码哈希。</p>
+<p>这种方式对用户比较友好，但意味着迁移期间仍然需要保留旧 MD5 验证逻辑。</p>
+<p>在这次 PR 中，我选择了另一种方式：识别旧 MD5 格式，并要求用户重置密码。</p>
+<p>认证逻辑会返回专门的错误：</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">errcode.ErrLegacyPasswordResetRequired</span><br></pre></td></tr></table></figure>
+
+<p>然后由业务层和前端处理这一状态。</p>
+<p>这样可以逐步淘汰旧的 MD5 密码，而不需要在正常登录路径中长期保留旧哈希验证能力。</p>
+<p>当然，这种方案也有代价：旧用户需要额外完成密码重置流程。</p>
+<h3 id="6-3-数据库字段长度需要调整"><a href="#6-3-数据库字段长度需要调整" class="headerlink" title="6.3 数据库字段长度需要调整"></a>6.3 数据库字段长度需要调整</h3><p>MD5 通常使用 32 个十六进制字符表示。</p>
+<p>但 Argon2id 的 PHC 字符串包含算法、参数、Salt 和 Hash，长度明显更长。</p>
+<p>因此，这次 PR 也调整了数据库中的 <code>users.password</code> 字段：</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">character</span> <span class="type">varying</span>(<span class="number">255</span>)</span><br></pre></td></tr></table></figure>
+
+<p>这提醒了我，密码哈希算法迁移不只是修改一个函数，还涉及数据存储格式的兼容性。</p>
+<h3 id="6-4-登录错误处理"><a href="#6-4-登录错误处理" class="headerlink" title="6.4 登录错误处理"></a>6.4 登录错误处理</h3><p>迁移后，登录流程还需要正确区分：</p>
+<ul>
+<li>普通密码验证失败。</li>
+<li>旧密码格式需要重置。</li>
+<li>服务端内部错误。</li>
+</ul>
+<p>这次 PR 同步调整了相关错误码及登录错误处理。</p>
+<p>不过，认证错误信息也需要考虑安全性。</p>
+<p>例如，不能让普通登录接口随意暴露用户是否存在，否则可能被用于账号枚举。</p>
+<p>对于旧密码重置提示，也需要结合具体认证流程进行评估。</p>
+<h2 id="七、Argon2id-并不意味着可以忽略其他安全问题"><a href="#七、Argon2id-并不意味着可以忽略其他安全问题" class="headerlink" title="七、Argon2id 并不意味着可以忽略其他安全问题"></a>七、Argon2id 并不意味着可以忽略其他安全问题</h2><p>经过这次学习，我认为有必要强调：Argon2id 只是密码安全体系中的一部分。</p>
+<p>它主要解决的是数据库密码哈希泄露后，攻击者进行离线密码猜测的成本问题。</p>
+<p>但它并不能直接解决：</p>
+<ul>
+<li>用户使用弱密码。</li>
+<li>登录接口缺少 Rate Limiting。</li>
+<li>密码重置流程存在漏洞。</li>
+<li>数据库权限配置不合理。</li>
+<li>用户遭遇钓鱼攻击。</li>
+<li>认证流程存在其他侧信道。</li>
+</ul>
+<p>尤其是 Argon2id 的 Memory-hard 特性，也会增加服务器自身的资源消耗。</p>
+<p>假设每次密码验证需要 64 MiB 内存，那么大量并发登录请求就可能带来明显的内存压力。</p>
+<p>因此，生产环境应该根据服务器配置调整参数，并对认证请求实施合理的并发限制和速率限制。</p>
+<p>密码哈希算法的选择，最终还是要结合完整的系统安全设计。</p>
+<h2 id="八、总结"><a href="#八、总结" class="headerlink" title="八、总结"></a>八、总结</h2><p>这次 Health Master 的密码哈希迁移，最初只是想解决 MD5 不再适合密码存储的问题。</p>
+<p>但在学习 Argon2id 的过程中，我逐渐理解了几个以前没有认真思考过的问题。</p>
+<p>首先，密码哈希与加密是两种不同的概念。密码哈希不需要解密，认证时只需要重新计算并验证结果。</p>
+<p>其次，Salt 和哈希参数不需要保密。Argon2id 的安全性并不依赖隐藏算法，而是依赖密码本身的不可预测性以及哈希计算成本。</p>
+<p>再次，Memory-hard 让我意识到，密码哈希算法的设计目标和普通哈希算法并不相同。对于密码存储来说，有意增加计算和内存成本是一种安全设计。</p>
+<p>最后，通过 <code>subtle.ConstantTimeCompare</code> 和 Timing Attack，我进一步认识到，安全问题不仅存在于密码学算法本身，也存在于具体的工程实现中。</p>
+<p>回到 Health Master，这次改动也让我重新审视了旧密码迁移、数据库结构、错误处理和认证流程之间的关系。</p>
+<p>对于一个已经存在用户数据的项目来说，安全升级不能只考虑新代码是否正确，还必须考虑历史数据如何处理，以及迁移会对用户产生什么影响。</p>
+<p>这次 PR 是一次密码存储机制的升级，也是一次很有价值的学习过程。</p>
+<h2 id="参考资料"><a href="#参考资料" class="headerlink" title="参考资料"></a>参考资料</h2><ol>
+<li><a target="_blank" rel="noopener" href="https://bsheepcoder.github.io/2026/07/01/cs-argon2id-explained/">Argon2id 密码哈希：memory-hard 的工程实践与前沿</a></li>
+<li><a target="_blank" rel="noopener" href="https://gaojuqian.github.io/CoolShell/coolshell.cn/articles/21003.html">陈皓：计时攻击 Timing Attacks — 酷壳</a></li>
+<li><a target="_blank" rel="noopener" href="https://github.com/damingerdai/health-master/pull/333">Health Master PR #333 — Migrate password hashing to Argon2id and improve login errors</a></li>
+<li><a target="_blank" rel="noopener" href="https://www.rfc-editor.org/rfc/rfc9106.html">RFC 9106 — Argon2 Memory-Hard Function</a></li>
+<li><a target="_blank" rel="noopener" href="https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html">OWASP Password Storage Cheat Sheet</a></li>
+<li><a target="_blank" rel="noopener" href="https://pkg.go.dev/crypto/subtle">Go crypto&#x2F;subtle</a></li>
+<li><a target="_blank" rel="noopener" href="https://pkg.go.dev/golang.org/x/crypto/argon2">Go x&#x2F;crypto&#x2F;argon2</a></li>
+</ol>
+</article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta"><i class="fas fa-circle-user fa-fw"></i>文章作者: </span><span class="post-copyright-info"><a href="http://blog.damingerdai.com">Arthur Ming</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta"><i class="fas fa-square-arrow-up-right fa-fw"></i>文章链接: </span><span class="post-copyright-info"><a href="http://blog.damingerdai.com/2026/10/08/back-end/golang-argon2id-password-hashing/">http://blog.damingerdai.com/2026/10/08/back-end/golang-argon2id-password-hashing/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta"><i class="fas fa-circle-exclamation fa-fw"></i>版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来源 <a href="http://blog.damingerdai.com" target="_blank">Damingerdai's Blog</a>！</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/Go/">Go</a><a class="post-meta__tags" href="/tags/Golang/">Golang</a><a class="post-meta__tags" href="/tags/Argon2id/">Argon2id</a><a class="post-meta__tags" href="/tags/Cryptography/">Cryptography</a><a class="post-meta__tags" href="/tags/Security/">Security</a><a class="post-meta__tags" href="/tags/Password-Hashing/">Password Hashing</a></div><div class="post-share"><div class="social-share" data-image="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" data-sites="facebook,x,wechat,weibo,qq"></div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/butterfly-extsrc/sharejs/dist/css/share.min.css" media="print" onload="this.media='all'"><script src="https://cdn.jsdelivr.net/npm/butterfly-extsrc/sharejs/dist/js/social-share.min.js" defer></script></div></div><nav class="pagination-post" id="pagination"><a class="pagination-related full-width" href="/2026/10/05/front-end/use-react-and-vite-to-prerender-public-page-withou-any-ssr-framework/" title="不使用 SSR 框架，如何给 React + Vite 实现 Prerender"><img class="cover" src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" onerror="onerror=null;src='/img/404.jpg'" alt="cover of next post"><div class="info text-right"><div class="info-1"><div class="info-item-1">下一篇</div><div class="info-item-2">不使用 SSR 框架，如何给 React + Vite 实现 Prerender</div></div><div class="info-2"><div class="info-item-1">不使用 SSR 框架，如何给 React + Vite 实现 Prerender最近在优化一个 React + Vite 项目的 SEO。 项目本身使用 React Router Data Mode，是一个标准的 SPA。公开页面主要有： 123//subscriptions/upgrade-plan  而 /dashboard 等页面属于登录后的应用页面，并不需要搜索引擎抓取。 最开始考虑过迁移到 React Router Framework Mode，通过 SSR 或 SSG 解决这个问题。但对于一个已经存在的 Vite SPA 来说，为了三个公开页面迁移整个应用架构，成本有些过高。 最终采用了一个更轻量的方案：  保持 React + Vite SPA 架构不变，在构建阶段额外运行一次 React Static Prerender，只为指定公开页面生成静态 HTML。  最终架构可以概括为： 1234567React + Vite SPA       +Build-time SSR Renderer       +React prerender()       ↓Selec...</div></div></div></a></nav></div><div class="aside-content" id="aside-content"><div class="card-widget card-info text-center"><div class="avatar-img"><img src="/img/avatar.png" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="author-info-name">Arthur Ming</div><div class="author-info-description">大明二代的博客</div><div class="site-data"><a href="/archives/"><div class="headline">文章</div><div class="length-num">106</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">169</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">8</div></a></div><a id="card-info-btn" target="_blank" rel="noopener" href="https://github.com/damingerdai"><i class="fab fa-github"></i><span>Follow Me</span></a><div class="card-info-social-icons"><a class="social-icon" href="https://github.com/damingerdai" target="_blank" title="Github"><i class="fab fa-github" style="color: #24292e;"></i></a><a class="social-icon" href="mailto:mingguobin@live.com" target="_blank" title="Email"><i class="fas fa-envelope" style="color: #4a7dbe;"></i></a></div></div><div class="card-widget card-announcement"><div class="item-headline"><i class="fas fa-bullhorn fa-shake"></i><span>公告</span></div><div class="announcement_content">大家好，我是大明二代</div></div><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="item-headline"><i class="fas fa-stream"></i><span>目录</span><span class="toc-percentage"></span></div><div class="toc-content"><ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#%E4%BB%8E%E5%AF%86%E7%A0%81%E5%93%88%E5%B8%8C%E8%BF%81%E7%A7%BB%E5%88%B0-Argon2id%EF%BC%9A%E4%B8%80%E6%AC%A1-Go-%E9%A1%B9%E7%9B%AE%E4%B8%AD%E7%9A%84%E5%AF%86%E7%A0%81%E5%AE%89%E5%85%A8%E5%AE%9E%E8%B7%B5"><span class="toc-number">1.</span> <span class="toc-text">从密码哈希迁移到 Argon2id：一次 Go 项目中的密码安全实践</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%B8%80%E3%80%81%E4%B8%BA%E4%BB%80%E4%B9%88%E8%A6%81%E4%BB%8E-MD5-%E8%BF%81%E7%A7%BB%EF%BC%9F"><span class="toc-number">1.1.</span> <span class="toc-text">一、为什么要从 MD5 迁移？</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#1-1-MD5-%E6%9C%80%E5%A4%A7%E7%9A%84%E9%97%AE%E9%A2%98%E6%98%AF%E4%BB%80%E4%B9%88%EF%BC%9F"><span class="toc-number">1.1.1.</span> <span class="toc-text">1.1 MD5 最大的问题是什么？</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#1-2-%E6%8D%A2%E6%88%90-SHA-256-%E5%8F%AF%E4%BB%A5%E5%90%97%EF%BC%9F"><span class="toc-number">1.1.2.</span> <span class="toc-text">1.2 换成 SHA-256 可以吗？</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%BA%8C%E3%80%81Argon2id-%E6%98%AF%E4%BB%80%E4%B9%88%EF%BC%9F"><span class="toc-number">1.2.</span> <span class="toc-text">二、Argon2id 是什么？</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#2-1-%E4%BB%80%E4%B9%88%E6%98%AF-Memory-hard%EF%BC%9F"><span class="toc-number">1.2.1.</span> <span class="toc-text">2.1 什么是 Memory-hard？</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#2-2-Argon2id-%E7%9A%84%E5%8F%82%E6%95%B0"><span class="toc-number">1.2.2.</span> <span class="toc-text">2.2 Argon2id 的参数</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%B8%89%E3%80%81Salt-%E5%92%8C-Hash-%E9%83%BD%E5%85%AC%E5%BC%80%E4%BA%86%EF%BC%8C%E5%AF%86%E7%A0%81%E4%B8%BA%E4%BB%80%E4%B9%88%E4%BB%8D%E7%84%B6%E5%AE%89%E5%85%A8%EF%BC%9F"><span class="toc-number">1.3.</span> <span class="toc-text">三、Salt 和 Hash 都公开了，密码为什么仍然安全？</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#3-1-%E5%93%88%E5%B8%8C%E4%B8%8D%E6%98%AF%E5%8A%A0%E5%AF%86"><span class="toc-number">1.3.1.</span> <span class="toc-text">3.1 哈希不是加密</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-2-%E9%82%A3%E4%B9%88%E6%94%BB%E5%87%BB%E8%80%85%E8%83%BD%E5%81%9A%E4%BB%80%E4%B9%88%EF%BC%9F"><span class="toc-number">1.3.2.</span> <span class="toc-text">3.2 那么攻击者能做什么？</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-3-%E4%B8%BA%E4%BB%80%E4%B9%88-Salt-%E4%B8%8D%E9%9C%80%E8%A6%81%E4%BF%9D%E5%AF%86%EF%BC%9F"><span class="toc-number">1.3.3.</span> <span class="toc-text">3.3 为什么 Salt 不需要保密？</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%9B%9B%E3%80%81%E5%9C%A8-Go-%E4%B8%AD%E5%AE%9E%E7%8E%B0-Argon2id"><span class="toc-number">1.4.</span> <span class="toc-text">四、在 Go 中实现 Argon2id</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#4-1-%E7%94%9F%E6%88%90%E5%AF%86%E7%A0%81%E5%93%88%E5%B8%8C"><span class="toc-number">1.4.1.</span> <span class="toc-text">4.1 生成密码哈希</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#4-2-%E9%AA%8C%E8%AF%81%E5%AF%86%E7%A0%81"><span class="toc-number">1.4.2.</span> <span class="toc-text">4.2 验证密码</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%BA%94%E3%80%81%E4%BB%8E-ConstantTimeCompare-%E5%88%B0-Timing-Attack"><span class="toc-number">1.5.</span> <span class="toc-text">五、从 ConstantTimeCompare 到 Timing Attack</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#5-1-%E6%99%AE%E9%80%9A%E5%AD%97%E8%8A%82%E6%AF%94%E8%BE%83%E6%9C%89%E4%BB%80%E4%B9%88%E9%97%AE%E9%A2%98%EF%BC%9F"><span class="toc-number">1.5.1.</span> <span class="toc-text">5.1 普通字节比较有什么问题？</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#5-2-%E4%BB%80%E4%B9%88%E6%98%AF-Timing-Attack%EF%BC%9F"><span class="toc-number">1.5.2.</span> <span class="toc-text">5.2 什么是 Timing Attack？</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#5-3-Go-%E7%9A%84-ConstantTimeCompare"><span class="toc-number">1.5.3.</span> <span class="toc-text">5.3 Go 的 ConstantTimeCompare</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#5-4-%E8%BF%99%E6%98%AF%E5%90%A6%E6%84%8F%E5%91%B3%E7%9D%80%E5%8F%AF%E4%BB%A5%E9%80%9A%E8%BF%87%E8%AE%A1%E6%97%B6%E6%94%BB%E5%87%BB%E7%8C%9C%E5%87%BA%E5%AF%86%E7%A0%81%EF%BC%9F"><span class="toc-number">1.5.4.</span> <span class="toc-text">5.4 这是否意味着可以通过计时攻击猜出密码？</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%85%AD%E3%80%81Health-Master-%E7%9A%84%E5%AF%86%E7%A0%81%E5%93%88%E5%B8%8C%E8%BF%81%E7%A7%BB"><span class="toc-number">1.6.</span> <span class="toc-text">六、Health Master 的密码哈希迁移</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#6-1-%E7%BB%9F%E4%B8%80%E5%AF%86%E7%A0%81%E5%A4%84%E7%90%86"><span class="toc-number">1.6.1.</span> <span class="toc-text">6.1 统一密码处理</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#6-2-%E6%97%A7-MD5-%E5%AF%86%E7%A0%81%E6%80%8E%E4%B9%88%E5%8A%9E%EF%BC%9F"><span class="toc-number">1.6.2.</span> <span class="toc-text">6.2 旧 MD5 密码怎么办？</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#6-3-%E6%95%B0%E6%8D%AE%E5%BA%93%E5%AD%97%E6%AE%B5%E9%95%BF%E5%BA%A6%E9%9C%80%E8%A6%81%E8%B0%83%E6%95%B4"><span class="toc-number">1.6.3.</span> <span class="toc-text">6.3 数据库字段长度需要调整</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#6-4-%E7%99%BB%E5%BD%95%E9%94%99%E8%AF%AF%E5%A4%84%E7%90%86"><span class="toc-number">1.6.4.</span> <span class="toc-text">6.4 登录错误处理</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%B8%83%E3%80%81Argon2id-%E5%B9%B6%E4%B8%8D%E6%84%8F%E5%91%B3%E7%9D%80%E5%8F%AF%E4%BB%A5%E5%BF%BD%E7%95%A5%E5%85%B6%E4%BB%96%E5%AE%89%E5%85%A8%E9%97%AE%E9%A2%98"><span class="toc-number">1.7.</span> <span class="toc-text">七、Argon2id 并不意味着可以忽略其他安全问题</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%85%AB%E3%80%81%E6%80%BB%E7%BB%93"><span class="toc-number">1.8.</span> <span class="toc-text">八、总结</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%8F%82%E8%80%83%E8%B5%84%E6%96%99"><span class="toc-number">1.9.</span> <span class="toc-text">参考资料</span></a></li></ol></li></ol></div></div><div class="card-widget card-recent-post"><div class="item-headline"><i class="fas fa-history"></i><span>最新文章</span></div><div class="aside-list"><div class="aside-list-item"><a class="thumbnail" href="/2026/10/08/back-end/golang-argon2id-password-hashing/" title="从密码哈希迁移到 Argon2id：一次 Go 项目中的密码安全实践"><img src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="从密码哈希迁移到 Argon2id：一次 Go 项目中的密码安全实践"/></a><div class="content"><a class="title" href="/2026/10/08/back-end/golang-argon2id-password-hashing/" title="从密码哈希迁移到 Argon2id：一次 Go 项目中的密码安全实践">从密码哈希迁移到 Argon2id：一次 Go 项目中的密码安全实践</a><time datetime="2026-10-08T11:16:53.000Z" title="发表于 2026-10-08 19:16:53">2026-10-08</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2026/10/05/front-end/use-react-and-vite-to-prerender-public-page-withou-any-ssr-framework/" title="不使用 SSR 框架，如何给 React + Vite 实现 Prerender"><img src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="不使用 SSR 框架，如何给 React + Vite 实现 Prerender"/></a><div class="content"><a class="title" href="/2026/10/05/front-end/use-react-and-vite-to-prerender-public-page-withou-any-ssr-framework/" title="不使用 SSR 框架，如何给 React + Vite 实现 Prerender">不使用 SSR 框架，如何给 React + Vite 实现 Prerender</a><time datetime="2026-10-05T15:46:18.000Z" title="发表于 2026-10-05 23:46:18">2026-10-05</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2026/09/30/software/fix-oh-my-zsh-plugin-update-conflict/" title="Oh My Zsh 更新失败：第三方插件安装目录冲突及解决方案"><img src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="Oh My Zsh 更新失败：第三方插件安装目录冲突及解决方案"/></a><div class="content"><a class="title" href="/2026/09/30/software/fix-oh-my-zsh-plugin-update-conflict/" title="Oh My Zsh 更新失败：第三方插件安装目录冲突及解决方案">Oh My Zsh 更新失败：第三方插件安装目录冲突及解决方案</a><time datetime="2026-09-30T13:34:56.000Z" title="发表于 2026-09-30 21:34:56">2026-09-30</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2026/09/29/software/use-rbenv-manage-ruby-version-on-debian-13/" title="Debian 13 上安装最新版 Ruby：使用 rbenv 管理 Ruby 版本"><img src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="Debian 13 上安装最新版 Ruby：使用 rbenv 管理 Ruby 版本"/></a><div class="content"><a class="title" href="/2026/09/29/software/use-rbenv-manage-ruby-version-on-debian-13/" title="Debian 13 上安装最新版 Ruby：使用 rbenv 管理 Ruby 版本">Debian 13 上安装最新版 Ruby：使用 rbenv 管理 Ruby 版本</a><time datetime="2026-09-29T14:04:38.000Z" title="发表于 2026-09-29 22:04:38">2026-09-29</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2026/09/28/ai/mastra/getting-started-travel-agent/" title="Mastra 入门：从零搭建旅行助手 Agent"><img src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="Mastra 入门：从零搭建旅行助手 Agent"/></a><div class="content"><a class="title" href="/2026/09/28/ai/mastra/getting-started-travel-agent/" title="Mastra 入门：从零搭建旅行助手 Agent">Mastra 入门：从零搭建旅行助手 Agent</a><time datetime="2026-09-28T09:19:14.000Z" title="发表于 2026-09-28 17:19:14">2026-09-28</time></div></div></div></div></div></div></main><footer id="footer"><div class="footer-other"><div class="footer-copyright"><span class="copyright">&copy;&nbsp;2020 - 2026 By Arthur Ming</span></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="日间和夜间模式切换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside-config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><button id="go-up" type="button" title="回到顶部"><span class="scroll-percent"></span><i class="fas fa-arrow-up"></i></button></div></div><div><script src="/js/utils.js"></script><script src="/js/main.js"></script><div class="js-pjax"><script>(() => {
+  const parseViewBox = viewBox => {
+    if (!viewBox) return null
+    const parts = viewBox.trim().split(/[\s,]+/).map(n => Number(n))
+    if (parts.length !== 4 || parts.some(n => Number.isNaN(n))) return null
+    return parts
+  }
+
+  const getSvgViewBox = svg => {
+    const attr = parseViewBox(svg.getAttribute('viewBox'))
+    if (attr) return attr
+
+    // Fallback: use bbox to build a viewBox
+    try {
+      const bbox = svg.getBBox()
+      if (bbox && bbox.width && bbox.height) return [bbox.x, bbox.y, bbox.width, bbox.height]
+    } catch (e) {
+      // getBBox may fail on some edge cases; ignore
+    }
+
+    const w = Number(svg.getAttribute('width')) || 0
+    const h = Number(svg.getAttribute('height')) || 0
+    if (w > 0 && h > 0) return [0, 0, w, h]
+    return [0, 0, 100, 100]
+  }
+
+  const setSvgViewBox = (svg, vb) => {
+    svg.setAttribute('viewBox', `${vb[0]} ${vb[1]} ${vb[2]} ${vb[3]}`)
+  }
+
+  const clamp = (v, min, max) => Math.max(min, Math.min(max, v))
+
+  const openSvgInNewTab = ({ source, initViewBox }) => {
+    const getClonedSvg = () => {
+      if (typeof source === 'string') {
+        const template = document.createElement('template')
+        template.innerHTML = source.trim()
+        const svg = template.content.querySelector('svg')
+        return svg ? svg.cloneNode(true) : null
+      }
+      if (source && typeof source.cloneNode === 'function') {
+        return source.cloneNode(true)
+      }
+      return null
+    }
+
+    const clone = getClonedSvg()
+    if (!clone) return
+    if (initViewBox && initViewBox.length === 4) {
+      clone.setAttribute('viewBox', initViewBox.join(' '))
+    }
+    if (!clone.getAttribute('xmlns')) clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg')
+    if (!clone.getAttribute('xmlns:xlink') && clone.outerHTML.includes('xlink:')) {
+      clone.setAttribute('xmlns:xlink', 'http://www.w3.org/1999/xlink')
+    }
+    // inject background to match current theme
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark'
+    const bg = getComputedStyle(document.body).backgroundColor || (isDark ? '#1e1e1e' : '#ffffff')
+    if (!clone.style.background) clone.style.background = bg
+
+    const serializer = new XMLSerializer()
+    const svgSource = serializer.serializeToString(clone)
+    const htmlSource = `<!doctype html><html><head><meta charset="utf-8" />
+      <style>
+        html, body { width: 100%; height: 100%; margin: 0; display: flex; align-items: center; justify-content: center; background: ${bg}; }
+        svg { max-width: 100%; max-height: 100%; height: auto; width: auto; }
+      </style>
+      </head><body>${svgSource}</body></html>`
+    const blob = new Blob([htmlSource], { type: 'text/html;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    window.open(url, '_blank', 'noopener')
+    setTimeout(() => URL.revokeObjectURL(url), 30000)
+  }
+
+  const attachMermaidViewerButton = wrap => {
+    let btn = wrap.querySelector('.mermaid-open-btn')
+    if (!btn) {
+      btn = document.createElement('button')
+      btn.type = 'button'
+      btn.className = 'mermaid-open-btn'
+      wrap.appendChild(btn)
+    }
+
+    btn.innerHTML = '<i class="fa fa-search fa-fw" aria-hidden="true"></i>'
+
+    if (!btn.__mermaidViewerBound) {
+      btn.addEventListener('click', e => {
+        e.preventDefault()
+        e.stopPropagation()
+        const svg = wrap.__mermaidOriginalSvg || wrap.querySelector('svg')
+        if (!svg) return
+        const initViewBox = wrap.__mermaidInitViewBox
+        if (typeof svg === 'string') {
+          openSvgInNewTab({ source: svg, initViewBox })
+          return
+        }
+        openSvgInNewTab({ source: svg, initViewBox })
+      })
+      btn.__mermaidViewerBound = true
+    }
+  }
+
+  // Zoom around a point (px, py) in the SVG viewport (in viewBox coordinates)
+  const zoomAtPoint = (vb, factor, px, py) => {
+    const w = vb[2] * factor
+    const h = vb[3] * factor
+    const nx = px - (px - vb[0]) * factor
+    const ny = py - (py - vb[1]) * factor
+    return [nx, ny, w, h]
+  }
+
+  const initMermaidGestures = wrap => {
+    const svg = wrap.querySelector('svg')
+    if (!svg) return
+
+    // Ensure viewBox exists so gestures always work
+    const initVb = getSvgViewBox(svg)
+    wrap.__mermaidInitViewBox = initVb
+    wrap.__mermaidCurViewBox = initVb.slice()
+    setSvgViewBox(svg, initVb)
+
+    // Avoid binding multiple times on themeChange/pjax
+    if (wrap.__mermaidGestureBound) return
+    wrap.__mermaidGestureBound = true
+
+    // Helper: map client (viewport) coordinate -> viewBox coordinate
+    const clientToViewBox = (clientX, clientY) => {
+      const rect = svg.getBoundingClientRect()
+      const vb = wrap.__mermaidCurViewBox || getSvgViewBox(svg)
+      const x = vb[0] + (clientX - rect.left) * (vb[2] / rect.width)
+      const y = vb[1] + (clientY - rect.top) * (vb[3] / rect.height)
+      return { x, y, rect, vb }
+    }
+
+    const state = {
+      pointers: new Map(),
+      startVb: null,
+      startDist: 0,
+      startCenter: null
+    }
+
+    const clampVb = vb => {
+      const init = wrap.__mermaidInitViewBox || vb
+      const minW = init[2] * 0.1
+      const maxW = init[2] * 10
+      const minH = init[3] * 0.1
+      const maxH = init[3] * 10
+      vb[2] = clamp(vb[2], minW, maxW)
+      vb[3] = clamp(vb[3], minH, maxH)
+      return vb
+    }
+
+    const setCurVb = vb => {
+      vb = clampVb(vb)
+      wrap.__mermaidCurViewBox = vb
+      setSvgViewBox(svg, vb)
+    }
+
+    const onPointerDown = e => {
+      // Allow only primary button for mouse
+      if (e.pointerType === 'mouse' && e.button !== 0) return
+      svg.setPointerCapture(e.pointerId)
+      state.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY })
+
+      if (state.pointers.size === 1) {
+        state.startVb = (wrap.__mermaidCurViewBox || getSvgViewBox(svg)).slice()
+      } else if (state.pointers.size === 2) {
+        const pts = [...state.pointers.values()]
+        const dx = pts[0].x - pts[1].x
+        const dy = pts[0].y - pts[1].y
+        state.startDist = Math.hypot(dx, dy)
+        state.startVb = (wrap.__mermaidCurViewBox || getSvgViewBox(svg)).slice()
+        state.startCenter = { x: (pts[0].x + pts[1].x) / 2, y: (pts[0].y + pts[1].y) / 2 }
+      }
+    }
+
+    const onPointerMove = e => {
+      if (!state.pointers.has(e.pointerId)) return
+      state.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY })
+
+      // Pan with 1 pointer
+      if (state.pointers.size === 1 && state.startVb) {
+        const p = [...state.pointers.values()][0]
+        const prev = { x: e.clientX - e.movementX, y: e.clientY - e.movementY }
+        // movementX/Y unreliable on touch, compute from stored last position
+        const last = wrap.__mermaidLastSinglePointer || p
+        const dxClient = p.x - last.x
+        const dyClient = p.y - last.y
+        wrap.__mermaidLastSinglePointer = p
+
+        const { rect } = clientToViewBox(p.x, p.y)
+        const vb = (wrap.__mermaidCurViewBox || getSvgViewBox(svg)).slice()
+        const dx = dxClient * (vb[2] / rect.width)
+        const dy = dyClient * (vb[3] / rect.height)
+        setCurVb([vb[0] - dx, vb[1] - dy, vb[2], vb[3]])
+        return
+      }
+
+      // Pinch zoom with 2 pointers
+      if (state.pointers.size === 2 && state.startVb && state.startDist > 0) {
+        const pts = [...state.pointers.values()]
+        const dx = pts[0].x - pts[1].x
+        const dy = pts[0].y - pts[1].y
+        const dist = Math.hypot(dx, dy)
+        if (!dist) return
+        const factor = state.startDist / dist // dist bigger => zoom in (viewBox smaller)
+
+        const cx = (pts[0].x + pts[1].x) / 2
+        const cy = (pts[0].y + pts[1].y) / 2
+        const centerClient = { x: cx, y: cy }
+
+        const pxy = clientToViewBox(centerClient.x, centerClient.y)
+        const cpx = pxy.x
+        const cpy = pxy.y
+
+        const vb = zoomAtPoint(state.startVb, factor, cpx, cpy)
+        setCurVb(vb)
+      }
+    }
+
+    const onPointerUpOrCancel = e => {
+      state.pointers.delete(e.pointerId)
+      if (state.pointers.size === 0) {
+        state.startVb = null
+        state.startDist = 0
+        state.startCenter = null
+        wrap.__mermaidLastSinglePointer = null
+      } else if (state.pointers.size === 1) {
+        // reset single pointer baseline to avoid jump
+        wrap.__mermaidLastSinglePointer = [...state.pointers.values()][0]
+      }
+    }
+
+    // Wheel zoom (mouse/trackpad)
+    const onWheel = e => {
+      // ctrlKey on mac trackpad pinch; we treat both as zoom
+      e.preventDefault()
+      const delta = e.deltaY
+      const zoomFactor = delta > 0 ? 1.1 : 0.9
+      const { x, y } = clientToViewBox(e.clientX, e.clientY)
+      const vb = (wrap.__mermaidCurViewBox || getSvgViewBox(svg)).slice()
+      setCurVb(zoomAtPoint(vb, zoomFactor, x, y))
+    }
+
+    const onDblClick = () => {
+      const init = wrap.__mermaidInitViewBox
+      if (!init) return
+      wrap.__mermaidCurViewBox = init.slice()
+      setSvgViewBox(svg, init)
+    }
+
+    svg.addEventListener('pointerdown', onPointerDown)
+    svg.addEventListener('pointermove', onPointerMove)
+    svg.addEventListener('pointerup', onPointerUpOrCancel)
+    svg.addEventListener('pointercancel', onPointerUpOrCancel)
+    svg.addEventListener('wheel', onWheel, { passive: false })
+    svg.addEventListener('dblclick', onDblClick)
+  }
+
+  const runMermaid = ele => {
+    window.loadMermaid = true
+    const theme = document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'default'
+
+    ele.forEach((item, index) => {
+      const mermaidSrc = item.firstElementChild
+
+      // Clear old render (themeChange/pjax will rerun)
+      const oldSvg = item.querySelector('svg')
+      if (oldSvg) oldSvg.remove()
+      item.__mermaidGestureBound = false
+
+      const config = mermaidSrc.dataset.config ? JSON.parse(mermaidSrc.dataset.config) : {}
+      if (!config.theme) {
+        config.theme = theme
+      }
+      const mermaidThemeConfig = `%%{init: ${JSON.stringify(config)}}%%\n`
+      const mermaidID = `mermaid-${index}`
+      const mermaidDefinition = mermaidThemeConfig + mermaidSrc.textContent
+
+      const renderFn = mermaid.render(mermaidID, mermaidDefinition)
+      const renderMermaid = svg => {
+        mermaidSrc.insertAdjacentHTML('afterend', svg)
+        if (true) initMermaidGestures(item)
+        item.__mermaidOriginalSvg = svg
+        if (true) attachMermaidViewerButton(item)
+      }
+
+
+      // mermaid v9 and v10 compatibility
+      typeof renderFn === 'string' ? renderMermaid(renderFn) : renderFn.then(({ svg }) => renderMermaid(svg))
+    })
+  }
+
+  const codeToMermaid = () => {
+    const codeMermaidEle = document.querySelectorAll('pre > code.mermaid')
+    if (codeMermaidEle.length === 0) return
+
+    codeMermaidEle.forEach(ele => {
+      const preEle = document.createElement('pre')
+      preEle.className = 'mermaid-src'
+      preEle.hidden = true
+      preEle.textContent = ele.textContent
+      const newEle = document.createElement('div')
+      newEle.className = 'mermaid-wrap'
+      newEle.appendChild(preEle)
+      ele.parentNode.replaceWith(newEle)
+    })
+  }
+
+  const loadMermaid = () => {
+    if (true) codeToMermaid()
+    const $mermaid = document.querySelectorAll('#article-container .mermaid-wrap')
+    if ($mermaid.length === 0) return
+
+    const runMermaidFn = () => runMermaid($mermaid)
+    btf.addGlobalFn('themeChange', runMermaidFn, 'mermaid')
+    window.loadMermaid ? runMermaidFn() : btf.getScript('https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js').then(runMermaidFn)
+  }
+
+  btf.addGlobalFn('encrypt', loadMermaid, 'mermaid')
+  window.pjax ? loadMermaid() : document.addEventListener('DOMContentLoaded', loadMermaid)
+})()</script></div><script defer="defer" id="ribbon" src="https://cdn.jsdelivr.net/npm/butterfly-extsrc/dist/canvas-ribbon.min.js" size="150" alpha="0.6" zIndex="-1" mobile="false" data-click="true"></script><script async data-pjax src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script></div></body></html>
