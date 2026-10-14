@@ -147,6 +147,9 @@ RUN npm config set registry https://registry.npmjs.org/ && \
 
 ---
 
-**后记**：写完这篇博客后，我去 `https://npmmirror.com/package/ketcher-standalone` 点了一下 Sync 按钮，过几分钟再试，果然可以正常下载了。所以如果你也遇到同样的问题，记得先去点一下同步按钮 😄
+**后记**：写完这篇博客后，我去 `https://npmmirror.com/package/ketcher-standalone` 点了一下 Sync 按钮，过几分钟再试，果然可以正常下载了。所以如果你也遇到同样的问题，记得先去点一下同步按钮 😄。(想多了，我在2026年10月14号看了一下才发现同步过来了，反正8月肯定是没有同步)
+
 ```
- 
+
+```
+
