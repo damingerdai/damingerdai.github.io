@@ -19,28 +19,6 @@ More info: Deployment
 ]]></content>
   </entry>
   <entry>
-    <title>给Ingress上配置ssl证书</title>
-    <url>/2022/06/18/back-end/add-ssl-for-ingress/</url>
-    <content><![CDATA[给Ingress上配置ssl证书创建secretkubectl create secret tls [secretName]  --cert=[pem文件路径] --key=[key文件路径] --namespace [namespace] -o yaml --dry-run=client &gt; ingress-default-cert.yamlkubectl apply -f ingress-default-cert.yaml
-
-Ingress添加证书apiVersion: networking.k8s.io/v1beta1kind: Ingress  metadata:     name: [ingress-name]     namespace: [namespace] # ingress要和secret在同一个名称空间下     annotations:         kubernetes.io/ingress.class: traefik         traefik.frontend.rule.type: PathPrefixStrip         # http 重定向到 https         ingress.kubernetes.io/ssl-redirect: &quot;True&quot; spec:     tls:         - hosts:             - xxxx.xxxx # 这里是下面要配置https的域名             - xxxx.xxxx # 这里是下面要配置https的域名         secretName:             [secret-name]:     rules:    - host: xxx.xxx.com      http:        paths:          - path: /            pathType: Prefix            backend:              service:                name: [service-name]                port:                  number: 8080
-
-
-参考资料
-为k8s集群配置SSL证书
-k3s配置ingress使用ssl证书
-
-]]></content>
-      <categories>
-        <category>后端</category>
-      </categories>
-      <tags>
-        <tag>k8s</tag>
-        <tag>ingress</tag>
-        <tag>ssl</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>如何在10分钟内使用LangChain</title>
     <url>/2024/06/09/ai/how-to-use-langchain-in-10-minutes/</url>
     <content><![CDATA[如何在10分钟内使用LangChainLangChain是一个强大的Python和Javascript&#x2F;Typescript库，它可以让你快速地原型化大型语言模型应用。它允许你将LLM任务链在一起（因此得名），甚至可以让你快速轻松地运行自主代理(autonomous agents)。今天，我们将介绍chain的基础知识，这样你就可以立即开始你最新的LLM项目。
@@ -113,6 +91,28 @@ LangChain的力量在于其简单性和灵活性。无论你是经验丰富的�
         <tag>AI</tag>
         <tag>LangChain</tag>
         <tag>翻译</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>给Ingress上配置ssl证书</title>
+    <url>/2022/06/18/back-end/add-ssl-for-ingress/</url>
+    <content><![CDATA[给Ingress上配置ssl证书创建secretkubectl create secret tls [secretName]  --cert=[pem文件路径] --key=[key文件路径] --namespace [namespace] -o yaml --dry-run=client &gt; ingress-default-cert.yamlkubectl apply -f ingress-default-cert.yaml
+
+Ingress添加证书apiVersion: networking.k8s.io/v1beta1kind: Ingress  metadata:     name: [ingress-name]     namespace: [namespace] # ingress要和secret在同一个名称空间下     annotations:         kubernetes.io/ingress.class: traefik         traefik.frontend.rule.type: PathPrefixStrip         # http 重定向到 https         ingress.kubernetes.io/ssl-redirect: &quot;True&quot; spec:     tls:         - hosts:             - xxxx.xxxx # 这里是下面要配置https的域名             - xxxx.xxxx # 这里是下面要配置https的域名         secretName:             [secret-name]:     rules:    - host: xxx.xxx.com      http:        paths:          - path: /            pathType: Prefix            backend:              service:                name: [service-name]                port:                  number: 8080
+
+
+参考资料
+为k8s集群配置SSL证书
+k3s配置ingress使用ssl证书
+
+]]></content>
+      <categories>
+        <category>后端</category>
+      </categories>
+      <tags>
+        <tag>k8s</tag>
+        <tag>ingress</tag>
+        <tag>ssl</tag>
       </tags>
   </entry>
   <entry>
@@ -292,6 +292,53 @@ Hoteler
       </tags>
   </entry>
   <entry>
+    <title>实践分享：在 Go 项目中实现一个安全的密码重置流程</title>
+    <url>/2026/02/08/back-end/go-secure-password-reset-atomic-transaction/</url>
+    <content><![CDATA[实践分享：在 Go 项目中实现一个安全的密码重置流程1. 业务场景在我们的 health-master 项目中，我们需要一个安全且用户体验良好的密码重置功能。用户流程如下：
+
+输入邮箱申请重置  收到邮件链接。
+点击链接  页面显示脱敏后的账号（确认没点错）。
+输入并提交新密码  链接失效  修改成功。
+
+2. 技术难点与设计方案2.1 数据库建模我们不只是存一个 Token 字符串，而是将“重置请求”看作一个有生命周期的资源。
+CREATE TABLE tokens (    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),    user_id UUID NOT NULL,    token_hash VARCHAR(64) NOT NULL, -- 存储 SHA-256 哈希值而非明文    category VARCHAR(20) NOT NULL,   -- 类型，如 password_reset    used_count INT DEFAULT 0,       -- 已使用次数    max_uses INT DEFAULT 1,         -- 最大使用次数（1即阅后即焚）    expires_at TIMESTAMP NOT NULL,  -- 过期时间    is_revoked BOOLEAN DEFAULT FALSE -- 是否手动撤销);CREATE INDEX idx_token_hash ON tokens(token_hash);
+
+2.2 Token 的安全性：Hash 存储直接在数据库存储明文 Token 是危险的。我们效仿密码存储的逻辑，在数据库中存储 Token 的 SHA-256 哈希值。
+
+生成： crypto/rand 生成 32 字节随机数  发送给用户。
+存储： sha256(raw_token)  存入 token_hash 字段。
+校验： 接收用户传来的 Token  哈希后去数据库匹配。
+
+2.3 原子核销：防止并发重置为了保证“阅后即焚”（重置一次即失效），我们使用了 PostgreSQL 的原子更新操作。在 ConsumeToken 时，我们通过一行 SQL 同时完成校验与核销：
+UPDATE tokensSET used_count = used_count + 1, last_used_at = NOW()WHERE token_hash = $1   AND category = &#x27;password_reset&#x27;  AND used_count &lt; max_uses  -- 核心：确保只用一次  AND expires_at &gt; NOW()RETURNING user_id;
+
+2.4 隐私保护：SQL 层面的脱敏用户打开页面时，我们希望展示其 Email 但不暴露完整地址。为了性能，我们直接在 SQL 中处理：
+SELECT     CASE         WHEN POSITION(&#x27;@&#x27; IN u.email) &gt; 3 THEN             OVERLAY(u.email PLACING &#x27;***&#x27; FROM 3 FOR POSITION(&#x27;@&#x27; IN u.email) - 3)        ELSE             OVERLAY(u.email PLACING &#x27;***&#x27; FROM 2 FOR POSITION(&#x27;@&#x27; IN u.email) - 2)    END AS masked_emailFROM tokens t JOIN users u ON t.user_id = u.id ...
+
+3. 代码架构实现 (Service 层)在 ResetPassword 的 Service 实现中，我们利用了 Go 的 命名返回值 (Named Return Parameters) 来优雅地管理事务。这种写法确保了只要有任何一步报错，tx.Rollback() 就会被正确执行。
+func (userService *UserService) ResetPassword(ctx context.Context, email, rawToken, newPassword string) (user *model.User, err error) &#123;    // 1. 耗时操作：Bcrypt 放在事务外    hashedPassword, _ := bcrypt.GenerateFromPassword([]byte(newPassword), bcrypt.DefaultCost)    tx, _ := userService.pool.Begin(ctx)    defer func() &#123;        if err != nil &#123; tx.Rollback(ctx) &#125; else &#123; err = tx.Commit(ctx) &#125;    &#125;()    repos := repository.New(tx)    // 2. 核销 Token    tokenRecord, err := repos.TokenRecordRepository.ConsumeToken(ctx, rawToken, &quot;password_reset&quot;)    // 3. 更新密码...&#125;
+
+4. RESTful API 设计为了符合现代 API 规范，我们将重置流程定义为对 password-resets 资源的操作：
+
+POST /password-resets: 创建重置请求。
+GET /password-resets/:token: 预检查并获取用户信息。
+PUT /password-resets/:token: 执行更新。
+
+5. TODO：后续优化这个 PR 已经打下了坚实的基础，后续我们还可以：
+
+自动清理： 增加 Cron Job 每天定时清理过期超过 24 小时的 Token 记录。
+安全审计： 在重置成功后，发送一封“密码已修改”的提醒邮件。
+
+]]></content>
+      <categories>
+        <category>后端</category>
+      </categories>
+      <tags>
+        <tag>postgres</tag>
+        <tag>golang</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>Go + Next.js 实现 2FA (TOTP) 的踩坑记录与架构复盘</title>
     <url>/2026/07/03/back-end/go-nextjs-2fa-totp-review/</url>
     <content><![CDATA[Go + Next.js 实现 2FA (TOTP) 的踩坑记录与架构复盘最近给手头的项目加上了基于 TOTP（基于时间的一次性密码）的双因子认证（2FA）流程。整体思路是传统的双阶段认证（Two-Stage）：
@@ -353,53 +400,6 @@ Code Review 后的重构 TODO 列表以下是目前首版代码里暴露出来�
         <tag>nextjs</tag>
         <tag>2fa</tag>
         <tag>totp</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>实践分享：在 Go 项目中实现一个安全的密码重置流程</title>
-    <url>/2026/02/08/back-end/go-secure-password-reset-atomic-transaction/</url>
-    <content><![CDATA[实践分享：在 Go 项目中实现一个安全的密码重置流程1. 业务场景在我们的 health-master 项目中，我们需要一个安全且用户体验良好的密码重置功能。用户流程如下：
-
-输入邮箱申请重置  收到邮件链接。
-点击链接  页面显示脱敏后的账号（确认没点错）。
-输入并提交新密码  链接失效  修改成功。
-
-2. 技术难点与设计方案2.1 数据库建模我们不只是存一个 Token 字符串，而是将“重置请求”看作一个有生命周期的资源。
-CREATE TABLE tokens (    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),    user_id UUID NOT NULL,    token_hash VARCHAR(64) NOT NULL, -- 存储 SHA-256 哈希值而非明文    category VARCHAR(20) NOT NULL,   -- 类型，如 password_reset    used_count INT DEFAULT 0,       -- 已使用次数    max_uses INT DEFAULT 1,         -- 最大使用次数（1即阅后即焚）    expires_at TIMESTAMP NOT NULL,  -- 过期时间    is_revoked BOOLEAN DEFAULT FALSE -- 是否手动撤销);CREATE INDEX idx_token_hash ON tokens(token_hash);
-
-2.2 Token 的安全性：Hash 存储直接在数据库存储明文 Token 是危险的。我们效仿密码存储的逻辑，在数据库中存储 Token 的 SHA-256 哈希值。
-
-生成： crypto/rand 生成 32 字节随机数  发送给用户。
-存储： sha256(raw_token)  存入 token_hash 字段。
-校验： 接收用户传来的 Token  哈希后去数据库匹配。
-
-2.3 原子核销：防止并发重置为了保证“阅后即焚”（重置一次即失效），我们使用了 PostgreSQL 的原子更新操作。在 ConsumeToken 时，我们通过一行 SQL 同时完成校验与核销：
-UPDATE tokensSET used_count = used_count + 1, last_used_at = NOW()WHERE token_hash = $1   AND category = &#x27;password_reset&#x27;  AND used_count &lt; max_uses  -- 核心：确保只用一次  AND expires_at &gt; NOW()RETURNING user_id;
-
-2.4 隐私保护：SQL 层面的脱敏用户打开页面时，我们希望展示其 Email 但不暴露完整地址。为了性能，我们直接在 SQL 中处理：
-SELECT     CASE         WHEN POSITION(&#x27;@&#x27; IN u.email) &gt; 3 THEN             OVERLAY(u.email PLACING &#x27;***&#x27; FROM 3 FOR POSITION(&#x27;@&#x27; IN u.email) - 3)        ELSE             OVERLAY(u.email PLACING &#x27;***&#x27; FROM 2 FOR POSITION(&#x27;@&#x27; IN u.email) - 2)    END AS masked_emailFROM tokens t JOIN users u ON t.user_id = u.id ...
-
-3. 代码架构实现 (Service 层)在 ResetPassword 的 Service 实现中，我们利用了 Go 的 命名返回值 (Named Return Parameters) 来优雅地管理事务。这种写法确保了只要有任何一步报错，tx.Rollback() 就会被正确执行。
-func (userService *UserService) ResetPassword(ctx context.Context, email, rawToken, newPassword string) (user *model.User, err error) &#123;    // 1. 耗时操作：Bcrypt 放在事务外    hashedPassword, _ := bcrypt.GenerateFromPassword([]byte(newPassword), bcrypt.DefaultCost)    tx, _ := userService.pool.Begin(ctx)    defer func() &#123;        if err != nil &#123; tx.Rollback(ctx) &#125; else &#123; err = tx.Commit(ctx) &#125;    &#125;()    repos := repository.New(tx)    // 2. 核销 Token    tokenRecord, err := repos.TokenRecordRepository.ConsumeToken(ctx, rawToken, &quot;password_reset&quot;)    // 3. 更新密码...&#125;
-
-4. RESTful API 设计为了符合现代 API 规范，我们将重置流程定义为对 password-resets 资源的操作：
-
-POST /password-resets: 创建重置请求。
-GET /password-resets/:token: 预检查并获取用户信息。
-PUT /password-resets/:token: 执行更新。
-
-5. TODO：后续优化这个 PR 已经打下了坚实的基础，后续我们还可以：
-
-自动清理： 增加 Cron Job 每天定时清理过期超过 24 小时的 Token 记录。
-安全审计： 在重置成功后，发送一封“密码已修改”的提醒邮件。
-
-]]></content>
-      <categories>
-        <category>后端</category>
-      </categories>
-      <tags>
-        <tag>postgres</tag>
-        <tag>golang</tag>
       </tags>
   </entry>
   <entry>
@@ -1051,88 +1051,6 @@ kubectl port-forward service/pgbouncer 5432:5432
       </tags>
   </entry>
   <entry>
-    <title>从springfox迁移到springdoc</title>
-    <url>/2021/11/29/back-end/migrate-springdoc-from-springfox/</url>
-    <content><![CDATA[前言之所以考虑从springfox迁移到springdoc是因为我的开源项目hoteler在升级到spring boot 2.6之后，UT的CI&#x2F;CD挂了：
-HotelerApplicationTests &gt; contextLoads() FAILED    java.lang.IllegalStateException at DefaultCacheAwareContextLoaderDelegate.java:132        Caused by: org.springframework.context.ApplicationContextException at DefaultLifecycleProcessor.java:181            Caused by: java.lang.NullPointerException at WebMvcPatternsRequestConditionWrapper.java:56ErrorPropTest &gt; setErrors() FAILED    java.lang.IllegalStateException at DefaultCacheAwareContextLoaderDelegate.java:132        Caused by: org.springframework.context.ApplicationContextException at DefaultLifecycleProcessor.java:181            Caused by: java.lang.NullPointerException at WebMvcPatternsRequestConditionWrapper.java:56... more
-
-在一番定位和谷歌之后，在Spring 5.3&#x2F;Spring Boot 2.4 support和spring boot升级2.6.0。启动报错 原因详见：springfox&#x2F;springfox#3462中的提示下，猜测是springfox未升级导致的不兼容导致的问题。本来计划等待springfox官方自行升级，结果一看github的提价记录，springfox从2020年10月14号之后就在也没有更新代码了，因此决定，从springfox迁移到springdoc。
-备注如果仍然想在spring 2.6之后使用springfox，建议在配置文件中添加：
-spring.mvc.pathmatch.matching-strategy=ant_path_matcher
-
-更多信息可以参考https://github.com/lWoHvYe/eladmin。
-删除springfox依赖和相关代码首先删除springfox的依赖：
-# gradleio.springfox:springfox-boot-starter:3.0.0`# maven&lt;dependency&gt;    &lt;groupId&gt;io.springfox&lt;/groupId&gt;    &lt;artifactId&gt;springfox-boot-starter&lt;/artifactId&gt;    &lt;version&gt;3.0.0&lt;/version&gt;&lt;/dependency&gt;
-
-删除Controller下的swagger的注解，
-删除自定的swagger的配置类，
-删除@EnableOpenApi
-导入springdoc依赖对于gradle用户：
-implementation &#x27;org.springdoc:springdoc-openapi-ui:1.5.12&#x27;
-
-对于maven用户：
-&lt;dependency&gt;    &lt;groupId&gt;org.springdoc&lt;/groupId&gt;    &lt;artifactId&gt;springdoc-openapi-ui&lt;/artifactId&gt;    &lt;version&gt;1.5.12&lt;/version&gt;&lt;/dependency&gt;
-
-OpenApi配置创建OpenApi配置类
-@Configurationpublic class OpenApiConfig &#123;&#125;
-
-定义License：
-private License license() &#123;      return new License()              .name(&quot;MIT&quot;)              .url(&quot;https://opensource.org/licenses/MIT&quot;);&#125;
-
-
-注： 这里我采用MIT的开源协议，更多协议，请访问https://opensource.org/licenses。
-
-定义Open Api的基本信息：
-private Info info() &#123;      return new Info()              .title(&quot;Hoteler Open API&quot;)              .description(&quot;大明二代&quot;)              .version(&quot;v0.0.1&quot;)              .license(license());&#125;
-
-定义外部文档信息：
-private ExternalDocumentation externalDocumentation() &#123;    return new ExternalDocumentation()            .description(&quot;大明二代的Hoteler&quot;)            .url(&quot;https://github.com/damingerdai/hoteler&quot;);&#125;
-
-定义OpenAPI的spring bean：
-@Beanpublic OpenAPI springShopOpenAPI() &#123;    return new OpenAPI()            .info(info())            .externalDocs(externalDocumentation());&#125;
-
-在配置文件中定义openapi的扫描策略:
-
-基于指定接口包扫描
-
-springdoc:  packagesToScan: org.daming.hoteler.api.web (这是我自己的web包)
-
-
-基于接口路由扫描
-
-springdoc:  pathsToMatch: /api/**, /dev/**
-
-在controler添加@Tag注解在controler方法上添加@Operation注解在 @Operation 注解上添加@Parameters 和 @Parameter 说明，用于springdoc解析controler方法的参数在的请求体类添加@Schema注解
-示例：
-package org.daming.hoteler.api.web;import io.swagger.v3.oas.annotations.Operation;import io.swagger.v3.oas.annotations.Parameter;import io.swagger.v3.oas.annotations.enums.ParameterIn;import io.swagger.v3.oas.annotations.security.SecurityRequirement;import io.swagger.v3.oas.annotations.tags.Tag;...more/** * customer constoller * * @author gming001 * @create 2020-12-25 22:13 **/@Tag(name = &quot;客户&quot;, description = &quot;客户 API&quot;)@RestController@RequestMapping(&quot;api/v1&quot;)public class CustomerController &#123;    private ICustomerService customerService;    private IErrorService errorService;    @Operation(            summary = &quot;创建客户信息&quot;&#125;,            parameters = &#123;                    @Parameter(name = &quot;body&quot;, description = &quot;创建用户信息的请求体&quot;)            &#125;    )    @PostMapping(&quot;customer&quot;)    public CommonResponse create(@RequestBody CreateCustomerRequest request) &#123;        var customer = new Customer().setName(request.getName()).setGender(request.getGender()).setCardId(request.getCardId()).setPhone(request.getPhone());        var id =  this.customerService.create(customer);        return new DataResponse&lt;&gt;(id);    &#125;    @Operation(summary = &quot;更新客户信息&quot;)    @PutMapping(&quot;customer&quot;)    public CommonResponse update(@RequestBody UpdateCustomerRequest request) &#123;        var customer = new Customer().setId(request.getId()).setName(request.getName()).setGender(request.getGender()).setCardId(request.getCardId()).setPhone(request.getPhone());        this.customerService.update(customer);        return new CommonResponse();    &#125;    @Operation(summary = &quot;获取所有的客户信息&quot;)    @GetMapping(&quot;customers&quot;)    public CommonResponse list() &#123;        var list = this.customerService.list();        return new ListResponse&lt;&gt;(list);    &#125;    @Operation(summary = &quot;删除客户信息&quot;)    @DeleteMapping(&quot;customer/&#123;id&#125;&quot;)    public CommonResponse delete(@PathVariable(&quot;id&quot;) String customerId) throws HotelerException &#123;        try &#123;            var id = Long.valueOf(customerId);            this.customerService.delete(id);        &#125; catch (NumberFormatException nfe) &#123;            var params = new Object[] &#123; nfe.getMessage() &#125;;            throw errorService.createHotelerException(ErrorCodeConstants.BAD_REQUEST_ERROR_CODEE, params, nfe);        &#125; catch (Exception ex) &#123;            throw errorService.createHotelerException(ErrorCodeConstants.SYSTEM_ERROR_CODEE, ex);        &#125;        return new CommonResponse();    &#125;    public CustomerController(            ICustomerService customerService,            IErrorService errorService) &#123;        super();        this.customerService = customerService;        this.errorService = errorService;    &#125;&#125;/** * create customer request * * @author gming001 * @create 2020-12-25 22:15 **/@Schema(name = &quot;创建客户请求&quot;)public class CreateCustomerRequest implements Serializable &#123;    private static final long serialVersionUID = -7819607546063963266L;    @Schema(name = &quot;名字&quot;)    private String name;    private Gender gender;    private String cardId;    private long phone：    ...more&#125;
-
-添加对JWT对token的支持(本步骤可选)在添加OpenApiConfig类上添加Components信息：
-private Components components() &#123;    return new Components()            .addSecuritySchemes(&quot;bearer-key&quot;, new SecurityScheme().type(SecurityScheme.Type.HTTP).scheme(&quot;bearer&quot;).bearerFormat(&quot;JWT&quot;));&#125;
-
-然后在OpenApi中注册Components:
-  @Bean  public OpenAPI springShopOpenAPI() &#123;      return new OpenAPI()              .info(info())              .components(components())              .externalDocs(externalDocumentation());&#125;
-
-在需要使用Authorization的接口上添加：
-@Operation(security = &#123; @SecurityRequirement(name = &quot;bearer-key&quot;) &#125;)
-
-swagger-ui在浏览器中输入http://127.0.0.1:8443/swagger-ui.html或者http://localhost:8443/swagger-ui/index.html?configUrl=/v3/api-docs/swagger-config
-
-注： 8443是我个人比较喜欢的web开发的端口占用，一般人使用8080比较多。
-
-效果
-Githubfeat: 从springfox迁移到springdoc以及修复AuthenticationFilter过滤失败的问题
-]]></content>
-      <categories>
-        <category>后端</category>
-      </categories>
-      <tags>
-        <tag>spring boot</tag>
-        <tag>springdoc</tag>
-        <tag>swagger-ui</tag>
-        <tag>oepn api</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>k3s使用Let‘s Encrypt配置https入口部署</title>
     <url>/2022/09/03/back-end/k3s-uses-letsencrypt-and-traefik-to-deploy-the-https/</url>
     <content><![CDATA[前言本文记录k3s使用letsencrypt配置ssl证书和续签。
@@ -1224,6 +1142,88 @@ SSL error unsafe legacy renegotiation disabled
         <tag>ssl</tag>
         <tag>pg_dump</tag>
         <tag>postgresql</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>从springfox迁移到springdoc</title>
+    <url>/2021/11/29/back-end/migrate-springdoc-from-springfox/</url>
+    <content><![CDATA[前言之所以考虑从springfox迁移到springdoc是因为我的开源项目hoteler在升级到spring boot 2.6之后，UT的CI&#x2F;CD挂了：
+HotelerApplicationTests &gt; contextLoads() FAILED    java.lang.IllegalStateException at DefaultCacheAwareContextLoaderDelegate.java:132        Caused by: org.springframework.context.ApplicationContextException at DefaultLifecycleProcessor.java:181            Caused by: java.lang.NullPointerException at WebMvcPatternsRequestConditionWrapper.java:56ErrorPropTest &gt; setErrors() FAILED    java.lang.IllegalStateException at DefaultCacheAwareContextLoaderDelegate.java:132        Caused by: org.springframework.context.ApplicationContextException at DefaultLifecycleProcessor.java:181            Caused by: java.lang.NullPointerException at WebMvcPatternsRequestConditionWrapper.java:56... more
+
+在一番定位和谷歌之后，在Spring 5.3&#x2F;Spring Boot 2.4 support和spring boot升级2.6.0。启动报错 原因详见：springfox&#x2F;springfox#3462中的提示下，猜测是springfox未升级导致的不兼容导致的问题。本来计划等待springfox官方自行升级，结果一看github的提价记录，springfox从2020年10月14号之后就在也没有更新代码了，因此决定，从springfox迁移到springdoc。
+备注如果仍然想在spring 2.6之后使用springfox，建议在配置文件中添加：
+spring.mvc.pathmatch.matching-strategy=ant_path_matcher
+
+更多信息可以参考https://github.com/lWoHvYe/eladmin。
+删除springfox依赖和相关代码首先删除springfox的依赖：
+# gradleio.springfox:springfox-boot-starter:3.0.0`# maven&lt;dependency&gt;    &lt;groupId&gt;io.springfox&lt;/groupId&gt;    &lt;artifactId&gt;springfox-boot-starter&lt;/artifactId&gt;    &lt;version&gt;3.0.0&lt;/version&gt;&lt;/dependency&gt;
+
+删除Controller下的swagger的注解，
+删除自定的swagger的配置类，
+删除@EnableOpenApi
+导入springdoc依赖对于gradle用户：
+implementation &#x27;org.springdoc:springdoc-openapi-ui:1.5.12&#x27;
+
+对于maven用户：
+&lt;dependency&gt;    &lt;groupId&gt;org.springdoc&lt;/groupId&gt;    &lt;artifactId&gt;springdoc-openapi-ui&lt;/artifactId&gt;    &lt;version&gt;1.5.12&lt;/version&gt;&lt;/dependency&gt;
+
+OpenApi配置创建OpenApi配置类
+@Configurationpublic class OpenApiConfig &#123;&#125;
+
+定义License：
+private License license() &#123;      return new License()              .name(&quot;MIT&quot;)              .url(&quot;https://opensource.org/licenses/MIT&quot;);&#125;
+
+
+注： 这里我采用MIT的开源协议，更多协议，请访问https://opensource.org/licenses。
+
+定义Open Api的基本信息：
+private Info info() &#123;      return new Info()              .title(&quot;Hoteler Open API&quot;)              .description(&quot;大明二代&quot;)              .version(&quot;v0.0.1&quot;)              .license(license());&#125;
+
+定义外部文档信息：
+private ExternalDocumentation externalDocumentation() &#123;    return new ExternalDocumentation()            .description(&quot;大明二代的Hoteler&quot;)            .url(&quot;https://github.com/damingerdai/hoteler&quot;);&#125;
+
+定义OpenAPI的spring bean：
+@Beanpublic OpenAPI springShopOpenAPI() &#123;    return new OpenAPI()            .info(info())            .externalDocs(externalDocumentation());&#125;
+
+在配置文件中定义openapi的扫描策略:
+
+基于指定接口包扫描
+
+springdoc:  packagesToScan: org.daming.hoteler.api.web (这是我自己的web包)
+
+
+基于接口路由扫描
+
+springdoc:  pathsToMatch: /api/**, /dev/**
+
+在controler添加@Tag注解在controler方法上添加@Operation注解在 @Operation 注解上添加@Parameters 和 @Parameter 说明，用于springdoc解析controler方法的参数在的请求体类添加@Schema注解
+示例：
+package org.daming.hoteler.api.web;import io.swagger.v3.oas.annotations.Operation;import io.swagger.v3.oas.annotations.Parameter;import io.swagger.v3.oas.annotations.enums.ParameterIn;import io.swagger.v3.oas.annotations.security.SecurityRequirement;import io.swagger.v3.oas.annotations.tags.Tag;...more/** * customer constoller * * @author gming001 * @create 2020-12-25 22:13 **/@Tag(name = &quot;客户&quot;, description = &quot;客户 API&quot;)@RestController@RequestMapping(&quot;api/v1&quot;)public class CustomerController &#123;    private ICustomerService customerService;    private IErrorService errorService;    @Operation(            summary = &quot;创建客户信息&quot;&#125;,            parameters = &#123;                    @Parameter(name = &quot;body&quot;, description = &quot;创建用户信息的请求体&quot;)            &#125;    )    @PostMapping(&quot;customer&quot;)    public CommonResponse create(@RequestBody CreateCustomerRequest request) &#123;        var customer = new Customer().setName(request.getName()).setGender(request.getGender()).setCardId(request.getCardId()).setPhone(request.getPhone());        var id =  this.customerService.create(customer);        return new DataResponse&lt;&gt;(id);    &#125;    @Operation(summary = &quot;更新客户信息&quot;)    @PutMapping(&quot;customer&quot;)    public CommonResponse update(@RequestBody UpdateCustomerRequest request) &#123;        var customer = new Customer().setId(request.getId()).setName(request.getName()).setGender(request.getGender()).setCardId(request.getCardId()).setPhone(request.getPhone());        this.customerService.update(customer);        return new CommonResponse();    &#125;    @Operation(summary = &quot;获取所有的客户信息&quot;)    @GetMapping(&quot;customers&quot;)    public CommonResponse list() &#123;        var list = this.customerService.list();        return new ListResponse&lt;&gt;(list);    &#125;    @Operation(summary = &quot;删除客户信息&quot;)    @DeleteMapping(&quot;customer/&#123;id&#125;&quot;)    public CommonResponse delete(@PathVariable(&quot;id&quot;) String customerId) throws HotelerException &#123;        try &#123;            var id = Long.valueOf(customerId);            this.customerService.delete(id);        &#125; catch (NumberFormatException nfe) &#123;            var params = new Object[] &#123; nfe.getMessage() &#125;;            throw errorService.createHotelerException(ErrorCodeConstants.BAD_REQUEST_ERROR_CODEE, params, nfe);        &#125; catch (Exception ex) &#123;            throw errorService.createHotelerException(ErrorCodeConstants.SYSTEM_ERROR_CODEE, ex);        &#125;        return new CommonResponse();    &#125;    public CustomerController(            ICustomerService customerService,            IErrorService errorService) &#123;        super();        this.customerService = customerService;        this.errorService = errorService;    &#125;&#125;/** * create customer request * * @author gming001 * @create 2020-12-25 22:15 **/@Schema(name = &quot;创建客户请求&quot;)public class CreateCustomerRequest implements Serializable &#123;    private static final long serialVersionUID = -7819607546063963266L;    @Schema(name = &quot;名字&quot;)    private String name;    private Gender gender;    private String cardId;    private long phone：    ...more&#125;
+
+添加对JWT对token的支持(本步骤可选)在添加OpenApiConfig类上添加Components信息：
+private Components components() &#123;    return new Components()            .addSecuritySchemes(&quot;bearer-key&quot;, new SecurityScheme().type(SecurityScheme.Type.HTTP).scheme(&quot;bearer&quot;).bearerFormat(&quot;JWT&quot;));&#125;
+
+然后在OpenApi中注册Components:
+  @Bean  public OpenAPI springShopOpenAPI() &#123;      return new OpenAPI()              .info(info())              .components(components())              .externalDocs(externalDocumentation());&#125;
+
+在需要使用Authorization的接口上添加：
+@Operation(security = &#123; @SecurityRequirement(name = &quot;bearer-key&quot;) &#125;)
+
+swagger-ui在浏览器中输入http://127.0.0.1:8443/swagger-ui.html或者http://localhost:8443/swagger-ui/index.html?configUrl=/v3/api-docs/swagger-config
+
+注： 8443是我个人比较喜欢的web开发的端口占用，一般人使用8080比较多。
+
+效果
+Githubfeat: 从springfox迁移到springdoc以及修复AuthenticationFilter过滤失败的问题
+]]></content>
+      <categories>
+        <category>后端</category>
+      </categories>
+      <tags>
+        <tag>spring boot</tag>
+        <tag>springdoc</tag>
+        <tag>swagger-ui</tag>
+        <tag>oepn api</tag>
       </tags>
   </entry>
   <entry>
@@ -1450,46 +1450,6 @@ SMTP 的问题，80% 不是代码问题，而是协议和配置问题。
       </tags>
   </entry>
   <entry>
-    <title>在spring中使用gmail发送邮件</title>
-    <url>/2025/06/22/back-end/send-mail-with-gmail-and-spring/</url>
-    <content><![CDATA[申请gmail的应用专用密码首先你需要一个gmail账号，然后才能申请gmail的应用专用密码。
-想要申请应用专用密码必须开启两步验证：
-
-google似乎默认并不想让用户直接创建应用专用密码，需要通过右上角搜索框输入“应用专用密码”才能进入相关页面。如果使用英文页面则搜索“App Password”。
-
-然后你就可以创建“应用专用密码”
-
-保存密码，gmail仅仅会显示这一次。
-使用spring发送邮件这里实际使用的是spring boot。
-导入spring-boot-starter-mail:
-对于maven用户：
-&lt;dependency&gt;    &lt;groupId&gt;org.springframework.boot&lt;/groupId&gt;    &lt;artifactId&gt;spring-boot-starter-mail&lt;/artifactId&gt;    &lt;version&gt;$&#123;spring-boot-version&#125;&lt;/version&gt;&lt;/dependency&gt;
-
-对于gradle用户：
-implementation &#x27;org.springframework.boot:spring-boot-starter-mail:$&#123;spring-boot-version&#125;&#x27;
-
-添加配置：
-spring:  mail:    host: smtp.gmail.com    port: 587    username: pollardsmithal899@gmail.com    password: &#x27;your app password&#x27;    properties:      mail:        smtp:          auth: true          starttls:            enable: true
-
-最后可以使用JavaMailSenderImpl发送邮件了；
- dvar message = javaMailSender.createMimeMessage();var helper = new MimeMessageHelper(message, true);helper.setTo(&quot;mingguobin@live.com&quot;);helper.setSubject(&quot;batcher support&quot;);helper.setText(&quot;hello, this is batcher&quot;);javaMailSender.send(message);
-
-参考
-使用应用专用密码登录
-Gmail with an App Password
-Guide to Spring Email
-使用 Google 作为邮件服务器从 Spring Boot 应用程序发送邮件的技巧
-
-]]></content>
-      <categories>
-        <category>后端</category>
-      </categories>
-      <tags>
-        <tag>spring</tag>
-        <tag>email</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>在 Docker 构建 Rust 项目时注入 Git 版本信息</title>
     <url>/2026/07/29/back-end/rust-docker-git-build-metadata/</url>
     <content><![CDATA[在 Docker 构建 Rust 项目时注入 Git 版本信息在开发 Rust 服务时，我们经常希望程序能够输出自身的构建信息，例如：
@@ -1675,6 +1635,95 @@ private Components components() &#123;    return new Components()            .ad
       </tags>
   </entry>
   <entry>
+    <title>Spring Cloud Gateway 聚合 Swagger UI：实现微服务统一 API 文档入口</title>
+    <url>/2026/01/07/back-end/spring-cloud-gateway-swagger-ui-aggregation/</url>
+    <content><![CDATA[🚀 前言在微服务架构中，随着服务数量的增加，每个业务服务（如 auth、workflow）都有自己独立的 Swagger UI 页面。对于开发者和测试人员来说，频繁切换不同的 URL 和端口来查看 API 文档非常低效。
+为了解决这个问题，我在我的开源项目 hoteler-cloud 中，利用 Spring Cloud Gateway 和 Springdoc OpenAPI 实现了 Swagger UI 的聚合。现在，只需要访问网关服务（orchestration）的一个地址，即可通过下拉菜单切换所有后端服务的 API 文档。
+💡 核心思路
+网关层引入 UI 依赖：在网关服务 orchestration 中引入支持 WebFlux 的 Springdoc UI 包。
+配置聚合路由：在 application.yml 中配置 springdoc.swagger-ui.urls，手动指定各微服务 OpenAPI 定义文件的路径。
+网关转发逻辑：利用网关现有的路由机制，确保能够正确转发对各服务 /v3/api-docs 接口的请求。
+
+🛠️ 具体实现步骤1. 添加依赖在 orchestration (Gateway) 服务的 pom.xml 中引入 springdoc-openapi-starter-webflux-ui。
+
+注意：由于 Spring Cloud Gateway 是基于 WebFlux 构建的，必须使用对应的 WebFlux Starter。
+
+&lt;dependency&gt;    &lt;groupId&gt;org.springdoc&lt;/groupId&gt;    &lt;artifactId&gt;springdoc-openapi-starter-webflux-ui&lt;/artifactId&gt;    &lt;version&gt;$&#123;springdoc.version&#125;&lt;/version&gt;&lt;/dependency&gt;
+
+2. 配置 application.yml这是最关键的一步。我们需要在网关的配置文件中告诉 Swagger UI 去哪里拉取其他服务的 API 定义（JSON 格式）。
+springdoc:  swagger-ui:    # 启用聚合功能并定义下拉菜单    urls:      - name: 认证服务 (Auth Service)        url: /auth/v3/api-docs      - name: 工作流服务 (Workflow Service)        url: /workflow/v3/api-docs    # 自定义 Swagger UI 的路径    path: /swagger-ui.htmlspring:  cloud:    gateway:      routes:        - id: auth-service          uri: lb://auth          predicates:            - Path=/auth/**          filters:            - StripPrefix=1        - id: workflow-service          uri: lb://workflow          predicates:            - Path=/workflow/**          filters:            - StripPrefix=1
+
+配置说明：
+
+urls 列表中的 url 属性必须能够被网关路由规则匹配。
+例如，访问 /auth/v3/api-docs 时，网关会根据 auth-service 的路由规则将其转发到真正的 auth 服务。
+
+3. 微服务侧配置确保 auth 和 workflow 服务本身也引入了 Springdoc 依赖，并且没有禁用 api-docs 路径。
+✅ 效果展示现在，当我们启动所有服务并访问网关地址：http://localhost:8080/swagger-ui.html
+
+页面右上角会出现一个 Select a definition 的下拉选框。
+下拉菜单中会显示“认证服务”和“工作流服务”。
+切换选项后，页面会动态加载对应服务的 API 列表，并可以直接进行接口调试。
+
+⚠️ 避坑指南
+跨域问题 (CORS)：如果网关和子服务不在同一个域，可能会遇到跨域问题。建议在网关层通过 Spring Cloud Gateway 的配置统一处理 CORS。
+路径匹配：确保 springdoc.swagger-ui.urls 里的路径与 Gateway 的 routes 配置能够对应上，否则会出现 404 无法加载 JSON 的情况。
+版本兼容：Spring Boot 3.x 务必使用 springdoc-openapi-starter-webflux-ui 而不是旧版的 springdoc-openapi-ui。
+
+📝 总结通过在网关层聚合 Swagger UI，我们不仅提升了开发体验，还统一了系统的入口。这也是构建企业级微服务架构中“开发者友好型”基础设施的重要一环。
+如果你对实现细节感兴趣，欢迎查看我的 PR 详情：🔗 PR #149: Feat: add swagger ui for orchestration
+项目地址： damingerdai&#x2F;hoteler-cloud如果你觉得这个项目对你有帮助，欢迎点个 Star ⭐！
+]]></content>
+      <categories>
+        <category>后端</category>
+      </categories>
+      <tags>
+        <tag>spring cloud</tag>
+        <tag>spring cloud gateway</tag>
+        <tag>open api</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>在spring中使用gmail发送邮件</title>
+    <url>/2025/06/22/back-end/send-mail-with-gmail-and-spring/</url>
+    <content><![CDATA[申请gmail的应用专用密码首先你需要一个gmail账号，然后才能申请gmail的应用专用密码。
+想要申请应用专用密码必须开启两步验证：
+
+google似乎默认并不想让用户直接创建应用专用密码，需要通过右上角搜索框输入“应用专用密码”才能进入相关页面。如果使用英文页面则搜索“App Password”。
+
+然后你就可以创建“应用专用密码”
+
+保存密码，gmail仅仅会显示这一次。
+使用spring发送邮件这里实际使用的是spring boot。
+导入spring-boot-starter-mail:
+对于maven用户：
+&lt;dependency&gt;    &lt;groupId&gt;org.springframework.boot&lt;/groupId&gt;    &lt;artifactId&gt;spring-boot-starter-mail&lt;/artifactId&gt;    &lt;version&gt;$&#123;spring-boot-version&#125;&lt;/version&gt;&lt;/dependency&gt;
+
+对于gradle用户：
+implementation &#x27;org.springframework.boot:spring-boot-starter-mail:$&#123;spring-boot-version&#125;&#x27;
+
+添加配置：
+spring:  mail:    host: smtp.gmail.com    port: 587    username: pollardsmithal899@gmail.com    password: &#x27;your app password&#x27;    properties:      mail:        smtp:          auth: true          starttls:            enable: true
+
+最后可以使用JavaMailSenderImpl发送邮件了；
+ dvar message = javaMailSender.createMimeMessage();var helper = new MimeMessageHelper(message, true);helper.setTo(&quot;mingguobin@live.com&quot;);helper.setSubject(&quot;batcher support&quot;);helper.setText(&quot;hello, this is batcher&quot;);javaMailSender.send(message);
+
+参考
+使用应用专用密码登录
+Gmail with an App Password
+Guide to Spring Email
+使用 Google 作为邮件服务器从 Spring Boot 应用程序发送邮件的技巧
+
+]]></content>
+      <categories>
+        <category>后端</category>
+      </categories>
+      <tags>
+        <tag>spring</tag>
+        <tag>email</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>Spring WebFlux 文件上传：从本地存储到 MinIO 集成 🚀</title>
     <url>/2025/09/27/back-end/spring-webflux-file-upload-to-minio/</url>
     <content><![CDATA[前言在现代 Web 应用中，高效可靠的文件存储是必不可少的一环。在 Spring WebFlux 响应式编程模型下，处理文件上传需要特别注意流（Flux）和非阻塞操作。
@@ -1772,55 +1821,6 @@ org.quartz.SchedulerConfigException: No local DataSource found for configuration
         <tag>gradle</tag>
         <tag>spring webflux</tag>
         <tag>r2dbc</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>Spring Cloud Gateway 聚合 Swagger UI：实现微服务统一 API 文档入口</title>
-    <url>/2026/01/07/back-end/spring-cloud-gateway-swagger-ui-aggregation/</url>
-    <content><![CDATA[🚀 前言在微服务架构中，随着服务数量的增加，每个业务服务（如 auth、workflow）都有自己独立的 Swagger UI 页面。对于开发者和测试人员来说，频繁切换不同的 URL 和端口来查看 API 文档非常低效。
-为了解决这个问题，我在我的开源项目 hoteler-cloud 中，利用 Spring Cloud Gateway 和 Springdoc OpenAPI 实现了 Swagger UI 的聚合。现在，只需要访问网关服务（orchestration）的一个地址，即可通过下拉菜单切换所有后端服务的 API 文档。
-💡 核心思路
-网关层引入 UI 依赖：在网关服务 orchestration 中引入支持 WebFlux 的 Springdoc UI 包。
-配置聚合路由：在 application.yml 中配置 springdoc.swagger-ui.urls，手动指定各微服务 OpenAPI 定义文件的路径。
-网关转发逻辑：利用网关现有的路由机制，确保能够正确转发对各服务 /v3/api-docs 接口的请求。
-
-🛠️ 具体实现步骤1. 添加依赖在 orchestration (Gateway) 服务的 pom.xml 中引入 springdoc-openapi-starter-webflux-ui。
-
-注意：由于 Spring Cloud Gateway 是基于 WebFlux 构建的，必须使用对应的 WebFlux Starter。
-
-&lt;dependency&gt;    &lt;groupId&gt;org.springdoc&lt;/groupId&gt;    &lt;artifactId&gt;springdoc-openapi-starter-webflux-ui&lt;/artifactId&gt;    &lt;version&gt;$&#123;springdoc.version&#125;&lt;/version&gt;&lt;/dependency&gt;
-
-2. 配置 application.yml这是最关键的一步。我们需要在网关的配置文件中告诉 Swagger UI 去哪里拉取其他服务的 API 定义（JSON 格式）。
-springdoc:  swagger-ui:    # 启用聚合功能并定义下拉菜单    urls:      - name: 认证服务 (Auth Service)        url: /auth/v3/api-docs      - name: 工作流服务 (Workflow Service)        url: /workflow/v3/api-docs    # 自定义 Swagger UI 的路径    path: /swagger-ui.htmlspring:  cloud:    gateway:      routes:        - id: auth-service          uri: lb://auth          predicates:            - Path=/auth/**          filters:            - StripPrefix=1        - id: workflow-service          uri: lb://workflow          predicates:            - Path=/workflow/**          filters:            - StripPrefix=1
-
-配置说明：
-
-urls 列表中的 url 属性必须能够被网关路由规则匹配。
-例如，访问 /auth/v3/api-docs 时，网关会根据 auth-service 的路由规则将其转发到真正的 auth 服务。
-
-3. 微服务侧配置确保 auth 和 workflow 服务本身也引入了 Springdoc 依赖，并且没有禁用 api-docs 路径。
-✅ 效果展示现在，当我们启动所有服务并访问网关地址：http://localhost:8080/swagger-ui.html
-
-页面右上角会出现一个 Select a definition 的下拉选框。
-下拉菜单中会显示“认证服务”和“工作流服务”。
-切换选项后，页面会动态加载对应服务的 API 列表，并可以直接进行接口调试。
-
-⚠️ 避坑指南
-跨域问题 (CORS)：如果网关和子服务不在同一个域，可能会遇到跨域问题。建议在网关层通过 Spring Cloud Gateway 的配置统一处理 CORS。
-路径匹配：确保 springdoc.swagger-ui.urls 里的路径与 Gateway 的 routes 配置能够对应上，否则会出现 404 无法加载 JSON 的情况。
-版本兼容：Spring Boot 3.x 务必使用 springdoc-openapi-starter-webflux-ui 而不是旧版的 springdoc-openapi-ui。
-
-📝 总结通过在网关层聚合 Swagger UI，我们不仅提升了开发体验，还统一了系统的入口。这也是构建企业级微服务架构中“开发者友好型”基础设施的重要一环。
-如果你对实现细节感兴趣，欢迎查看我的 PR 详情：🔗 PR #149: Feat: add swagger ui for orchestration
-项目地址： damingerdai&#x2F;hoteler-cloud如果你觉得这个项目对你有帮助，欢迎点个 Star ⭐！
-]]></content>
-      <categories>
-        <category>后端</category>
-      </categories>
-      <tags>
-        <tag>spring cloud</tag>
-        <tag>spring cloud gateway</tag>
-        <tag>open api</tag>
       </tags>
   </entry>
   <entry>
@@ -2030,73 +2030,6 @@ commons-csv mvaen repository.
       </tags>
   </entry>
   <entry>
-    <title>使用systemd部署podman的容器</title>
-    <url>/2025/07/20/back-end/use-systemd-to-deploy-podman-build-by-podman/</url>
-    <content><![CDATA[podman的问题podman是一个容器运行时环境，提供与 Docker 非常相似的功能并不需要在你的系统上运行任何守护进程。没有守护进程就意味着如果你想使用podman部署容器，是没有办法使用类似docker的方式去实现自动重启功能。如果使用k8s部署容器那问题不大，如果就纯容器部署，可以使用podman给出的方案：
-podman generate systemd --help[DEPRECATED] Generate systemd unitsDescription:  Generate systemd units for a pod or container.  The generated units can later be controlled via systemctl(1).DEPRECATED command:It is recommended to use Quadlets for running containers and pods under systemd.Please refer to podman-systemd.unit(5) for details.Usage:  podman generate systemd [options] &#123;CONTAINER|POD&#125;Examples:  podman generate systemd CTR  podman generate systemd --new --time 10 CTR  podman generate systemd --files --name PODOptions:      --after stringArray         Add dependencies order to the generated unit file      --container-prefix string   Systemd unit name prefix for containers (default &quot;container&quot;)  -e, --env stringArray           Set environment variables to the systemd unit files  -f, --files                     Generate .service files instead of printing to stdout      --format string             Print the created units in specified format (json)  -n, --name                      Use container/pod names instead of IDs      --new                       Create a new container or pod instead of starting an existing one      --no-header                 Skip header generation      --pod-prefix string         Systemd unit name prefix for pods (default &quot;pod&quot;)      --requires stringArray      Similar to wants, but declares stronger requirement dependencies      --restart-policy string     Systemd restart-policy (default &quot;on-failure&quot;)      --restart-sec uint          Systemd restart-sec      --separator string          Systemd unit name separator between name/id and prefix (default &quot;-&quot;)      --start-timeout uint        Start timeout override      --stop-timeout uint         Stop timeout override (default 10)      --template                  Make it a template file and use %i and %I specifiers. Working only for containers      --wants stringArray         Add (weak) requirement dependencies to the generated unit file
-
-systemdsystemd是Linux系统的一套基本构建模块。它提供了一个系统和服务管理器，作为PID 1运行并启动系统的其余部分。systemd是在引导期间启动的第一个守护进程，也是在关闭期间终止的最后一个守护进程。利用这个特性，可以使用systemd去监控容器的运行状态
-例子这里使用health-master作为例子。
-# 获取名为 health-master 的容器 IDCONTAINER_ID=$(podman ps -a --filter &quot;name=health-master&quot; --format &quot;&#123;&#123;.ID&#125;&#125;&quot;)if [ -z &quot;$CONTAINER_ID&quot; ]; then  echo &quot;未找到名为 health-master 的容器。&quot; &gt;&amp;2  exit 1fiecho &quot;找到容器 health-master，ID 为 $CONTAINER_ID&quot;# 定义服务文件的存储路径SERVICE_FILE_PATH=&quot;$HOME/.config/systemd/user&quot;SERVICE_NAME=&quot;podman-health-master&quot;# 使用 podman generate systemd 创建服务文件echo &quot;正在生成 systemd 服务文件...&quot;podman generate systemd --name --restart-policy=on-failure -t 10 &quot;$CONTAINER_ID&quot; &gt;&quot;$SERVICE_FILE_PATH/$SERVICE_NAME.service&quot;if [ $? -ne 0 ]; then  echo &quot;错误: 无法生成 $SERVICE_NAME 服务。&quot; &gt;&amp;2  exit 1fi# 修复 SELinux 上下文（如启用 SELinux）restorecon -RvF &quot;$SERVICE_FILE_PATH/$SERVICE_NAME.service&quot;# 启用用户级 systemd 支持（首次需运行）loginctl enable-linger &quot;$USER&quot;# 重新加载 systemd 配置echo &quot;重新加载 systemd 配置...&quot;systemctl --user daemon-reloadif [ $? -ne 0 ]; then  echo &quot;错误: 无法重新加载 systemd 配置。&quot; &gt;&amp;2  exit 1fi# 启用服务echo &quot;启用服务 $SERVICE_NAME...&quot;systemctl --user enable --now &quot;$SERVICE_NAME&quot;if [ $? -ne 0 ]; then  echo &quot;错误: 无法启用服务 $SERVICE_NAME。&quot; &gt;&amp;2  exit 1fi# 启动服务echo &quot;启动服务 $SERVICE_NAME...&quot;systemctl --user start &quot;$SERVICE_NAME&quot;if [ $? -ne 0 ]; then  echo &quot;错误: 无法启动服务 $SERVICE_NAME。&quot; &gt;&amp;2  exit 1fiecho &quot;服务 $SERVICE_NAME 已成功创建并启动。&quot;echo &quot;你现在可以使用以下命令管理服务:&quot;echo &quot;  systemctl --user status $SERVICE_NAME  # 查看服务状态&quot;echo &quot;  systemctl --user stop $SERVICE_NAME    # 停止服务&quot;echo &quot;  systemctl --user restart $SERVICE_NAME # 重启服务&quot;
-
-问题podman generate systemd在podman 4.4的时候就已经弃用了，目前推荐使用Quadlet
-引用
-使用 Podman 以非 root 用户身份运行 Linux 容器
-System and Service Manager
-Linux Systemd基础教程
-How to replace the “podman generate systemd” command since its deprecated
-
-]]></content>
-      <categories>
-        <category>后端</category>
-      </categories>
-      <tags>
-        <tag>podman</tag>
-        <tag>容器</tag>
-        <tag>systemd</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>解决Windows下Docker启动容器时，端口被占用错误</title>
-    <url>/2023/02/26/back-end/windows_docker_port_in_use_issues/</url>
-    <content><![CDATA[解决Windows下Docker启动容器时，端口被占用错误问题描述在使用docker-compose启动mysql的时候遇到一个问题:
-bind: An attempt was made to access a socket in a way forbidden by its access permissions.
-
-然后查了一下是否存在应用占用了3306的端口：
-netstat -ano | findstr 3306
-
-结果很尴尬，并没有。。。
-百度了一下，发现是Hyper-V会保留部分tcp端口导致我们自己无法使用这些端口, 使用如下命令查看保留的端口：
-netsh interface ipv4 show excludedportrange protocol=tcp协议 tcp 端口排除范围开始端口    结束端口----------    --------      1026        1125      1126        1225      1226        1325      1326        1425      1426        1525      1538        1637      2327        2426      2427        2526      2527        2626      2627        2726      2727        2826      2827        2926      6344        6567     50000       50059     *     50070       50070     ** - 管理的端口排除。
-
-解决方案解决方案很多，但是最推荐的该市修改永久排除保留端口：
-首选关闭docker, 用管理员权限打开powershell， 输入以下命令用于关闭Hyper-V:
-dism.exe /Online /Disable-Feature:Microsoft-Hyper-V
-
-
-该操作可能需要重启
-
-然后将3306端口永久排除：
-netsh int ipv4 add excludedportrange protocol=tcp startport=3306 numberofports=1 store=persistent
-
-最后重启Hyper-V:
-dism.exe /Online /Enable-Feature:Microsoft-Hyper-V /All
-
-参考资料
-解决Windows下Docker启动容器时，端口被占用错误
-修改Hyper-V动态端口范围
-
-]]></content>
-      <categories>
-        <category>后端</category>
-      </categories>
-      <tags>
-        <tag>docker</tag>
-        <tag>windows</tag>
-        <tag>docker desktop</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>使用bazel构建spring boot项目</title>
     <url>/2024/02/11/back-end/use-bazel-build-and-run-spring-boot/</url>
     <content><![CDATA[前言根据官网的定义，Bazel是类似于Make，Maven和Gradle的开源构建和测试工具。它使用人类可读的高级构建语言Starlark(一种基于python的方言)。 Bazel支持多种语言的项目，并为多种平台构建输出。 
@@ -2169,6 +2102,73 @@ New Java Project With Bazel
         <tag>spring boot</tag>
         <tag>bazel</tag>
         <tag>java</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>使用systemd部署podman的容器</title>
+    <url>/2025/07/20/back-end/use-systemd-to-deploy-podman-build-by-podman/</url>
+    <content><![CDATA[podman的问题podman是一个容器运行时环境，提供与 Docker 非常相似的功能并不需要在你的系统上运行任何守护进程。没有守护进程就意味着如果你想使用podman部署容器，是没有办法使用类似docker的方式去实现自动重启功能。如果使用k8s部署容器那问题不大，如果就纯容器部署，可以使用podman给出的方案：
+podman generate systemd --help[DEPRECATED] Generate systemd unitsDescription:  Generate systemd units for a pod or container.  The generated units can later be controlled via systemctl(1).DEPRECATED command:It is recommended to use Quadlets for running containers and pods under systemd.Please refer to podman-systemd.unit(5) for details.Usage:  podman generate systemd [options] &#123;CONTAINER|POD&#125;Examples:  podman generate systemd CTR  podman generate systemd --new --time 10 CTR  podman generate systemd --files --name PODOptions:      --after stringArray         Add dependencies order to the generated unit file      --container-prefix string   Systemd unit name prefix for containers (default &quot;container&quot;)  -e, --env stringArray           Set environment variables to the systemd unit files  -f, --files                     Generate .service files instead of printing to stdout      --format string             Print the created units in specified format (json)  -n, --name                      Use container/pod names instead of IDs      --new                       Create a new container or pod instead of starting an existing one      --no-header                 Skip header generation      --pod-prefix string         Systemd unit name prefix for pods (default &quot;pod&quot;)      --requires stringArray      Similar to wants, but declares stronger requirement dependencies      --restart-policy string     Systemd restart-policy (default &quot;on-failure&quot;)      --restart-sec uint          Systemd restart-sec      --separator string          Systemd unit name separator between name/id and prefix (default &quot;-&quot;)      --start-timeout uint        Start timeout override      --stop-timeout uint         Stop timeout override (default 10)      --template                  Make it a template file and use %i and %I specifiers. Working only for containers      --wants stringArray         Add (weak) requirement dependencies to the generated unit file
+
+systemdsystemd是Linux系统的一套基本构建模块。它提供了一个系统和服务管理器，作为PID 1运行并启动系统的其余部分。systemd是在引导期间启动的第一个守护进程，也是在关闭期间终止的最后一个守护进程。利用这个特性，可以使用systemd去监控容器的运行状态
+例子这里使用health-master作为例子。
+# 获取名为 health-master 的容器 IDCONTAINER_ID=$(podman ps -a --filter &quot;name=health-master&quot; --format &quot;&#123;&#123;.ID&#125;&#125;&quot;)if [ -z &quot;$CONTAINER_ID&quot; ]; then  echo &quot;未找到名为 health-master 的容器。&quot; &gt;&amp;2  exit 1fiecho &quot;找到容器 health-master，ID 为 $CONTAINER_ID&quot;# 定义服务文件的存储路径SERVICE_FILE_PATH=&quot;$HOME/.config/systemd/user&quot;SERVICE_NAME=&quot;podman-health-master&quot;# 使用 podman generate systemd 创建服务文件echo &quot;正在生成 systemd 服务文件...&quot;podman generate systemd --name --restart-policy=on-failure -t 10 &quot;$CONTAINER_ID&quot; &gt;&quot;$SERVICE_FILE_PATH/$SERVICE_NAME.service&quot;if [ $? -ne 0 ]; then  echo &quot;错误: 无法生成 $SERVICE_NAME 服务。&quot; &gt;&amp;2  exit 1fi# 修复 SELinux 上下文（如启用 SELinux）restorecon -RvF &quot;$SERVICE_FILE_PATH/$SERVICE_NAME.service&quot;# 启用用户级 systemd 支持（首次需运行）loginctl enable-linger &quot;$USER&quot;# 重新加载 systemd 配置echo &quot;重新加载 systemd 配置...&quot;systemctl --user daemon-reloadif [ $? -ne 0 ]; then  echo &quot;错误: 无法重新加载 systemd 配置。&quot; &gt;&amp;2  exit 1fi# 启用服务echo &quot;启用服务 $SERVICE_NAME...&quot;systemctl --user enable --now &quot;$SERVICE_NAME&quot;if [ $? -ne 0 ]; then  echo &quot;错误: 无法启用服务 $SERVICE_NAME。&quot; &gt;&amp;2  exit 1fi# 启动服务echo &quot;启动服务 $SERVICE_NAME...&quot;systemctl --user start &quot;$SERVICE_NAME&quot;if [ $? -ne 0 ]; then  echo &quot;错误: 无法启动服务 $SERVICE_NAME。&quot; &gt;&amp;2  exit 1fiecho &quot;服务 $SERVICE_NAME 已成功创建并启动。&quot;echo &quot;你现在可以使用以下命令管理服务:&quot;echo &quot;  systemctl --user status $SERVICE_NAME  # 查看服务状态&quot;echo &quot;  systemctl --user stop $SERVICE_NAME    # 停止服务&quot;echo &quot;  systemctl --user restart $SERVICE_NAME # 重启服务&quot;
+
+问题podman generate systemd在podman 4.4的时候就已经弃用了，目前推荐使用Quadlet
+引用
+使用 Podman 以非 root 用户身份运行 Linux 容器
+System and Service Manager
+Linux Systemd基础教程
+How to replace the “podman generate systemd” command since its deprecated
+
+]]></content>
+      <categories>
+        <category>后端</category>
+      </categories>
+      <tags>
+        <tag>podman</tag>
+        <tag>容器</tag>
+        <tag>systemd</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>解决Windows下Docker启动容器时，端口被占用错误</title>
+    <url>/2023/02/26/back-end/windows_docker_port_in_use_issues/</url>
+    <content><![CDATA[解决Windows下Docker启动容器时，端口被占用错误问题描述在使用docker-compose启动mysql的时候遇到一个问题:
+bind: An attempt was made to access a socket in a way forbidden by its access permissions.
+
+然后查了一下是否存在应用占用了3306的端口：
+netstat -ano | findstr 3306
+
+结果很尴尬，并没有。。。
+百度了一下，发现是Hyper-V会保留部分tcp端口导致我们自己无法使用这些端口, 使用如下命令查看保留的端口：
+netsh interface ipv4 show excludedportrange protocol=tcp协议 tcp 端口排除范围开始端口    结束端口----------    --------      1026        1125      1126        1225      1226        1325      1326        1425      1426        1525      1538        1637      2327        2426      2427        2526      2527        2626      2627        2726      2727        2826      2827        2926      6344        6567     50000       50059     *     50070       50070     ** - 管理的端口排除。
+
+解决方案解决方案很多，但是最推荐的该市修改永久排除保留端口：
+首选关闭docker, 用管理员权限打开powershell， 输入以下命令用于关闭Hyper-V:
+dism.exe /Online /Disable-Feature:Microsoft-Hyper-V
+
+
+该操作可能需要重启
+
+然后将3306端口永久排除：
+netsh int ipv4 add excludedportrange protocol=tcp startport=3306 numberofports=1 store=persistent
+
+最后重启Hyper-V:
+dism.exe /Online /Enable-Feature:Microsoft-Hyper-V /All
+
+参考资料
+解决Windows下Docker启动容器时，端口被占用错误
+修改Hyper-V动态端口范围
+
+]]></content>
+      <categories>
+        <category>后端</category>
+      </categories>
+      <tags>
+        <tag>docker</tag>
+        <tag>windows</tag>
+        <tag>docker desktop</tag>
       </tags>
   </entry>
   <entry>
@@ -2366,6 +2366,57 @@ MySQL | 事务隔离级别详解
       <tags>
         <tag>高级前端工程师</tag>
         <tag>面试</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>为 Angular Material 应用添加完美深色模式支持</title>
+    <url>/2025/09/28/front-end/angular-material-perfect-dark-mode/</url>
+    <content><![CDATA[💡 为 Angular Material 应用添加完美深色模式支持深色模式（Dark Mode）是现代应用不可或缺的功能。它不仅能提升用户在低光环境下的舒适度，还能让应用看起来更专业、更时尚。
+如果你正在使用 Angular Material，实现深色模式可以非常优雅和高效。本文将分享我如何通过一个独立的 ThemePickerComponent，结合 Angular Signals 和 系统偏好检测，为我的应用添加深色模式的完整过程。
+🛠️ 核心思路概览我的深色模式解决方案基于以下几个关键机制：
+
+CSS 变量与 color-scheme: 利用 Angular Material 基于 CSS 变量的主题机制，并通过在 &lt;html&gt; 标签上切换 color-scheme 属性来控制主题。
+Angular Signals: 使用 signal() 存储和管理当前的主题模式 (&#39;light&#39; 或 &#39;dark&#39;)。
+持久化与偏好: 通过 localStorage 记住用户的选择，同时使用 window.matchMedia 监听用户操作系统的偏好设置。
+
+💻 关键代码解析与实现步骤1. 配置主题和 color-scheme (styles.scss)在全局样式文件中，我们确保应用能响应 color-scheme 变化，并设置 Material 主题。
+/* ui/src/styles.scss */@use &#x27;@angular/material&#x27; as mat;html, body &#123;  font-family: Roboto, &quot;Helvetica Neue&quot;, sans-serif;&#125;html &#123;  background-color: var(--mat-sys-surface);  color: var(--mat-sys-on-surface);  // ✨ 关键：允许浏览器知道页面支持两种颜色方案  color-scheme: light dark;  @include mat.theme((        color: (          // Material 会根据 color-scheme 自动应用 light/dark 调色板          primary: mat.$rose-palette,           tertiary: mat.$red-palette,      ),      typography: Roboto,      density: 0,  ));&#125;
+
+我们通过 background-color: var(--mat-sys-surface) 来使用 Material 系统级 CSS 变量，确保背景颜色随着主题切换而正确变化。
+2. ThemePickerComponent：主题切换器这是整个功能的核心。它负责初始化、监听和切换主题。
+A. HTML 模板：根据模式切换图标我们使用 mat-icon-button 和 @if 语法根据 mode() 的值显示太阳或月亮图标。
+&lt;button class=&quot;theme-button&quot; mat-icon-button    [matTooltip]=&quot;&#x27;Change Theme&#x27;&quot;    (click)=&quot;changeMode()&quot;  &gt;     @if (mode() === &#x27;dark&#x27;) &#123;       &lt;mat-icon&gt;dark_mode&lt;/mat-icon&gt;     &#125; @else &#123;       &lt;mat-icon&gt;light_mode&lt;/mat-icon&gt;     &#125;&lt;/button&gt;
+
+B. TypeScript 逻辑：Signals, Effects, 和持久化// ui/src/app/components/theme-picker/theme-picker.component.tsimport &#123; afterNextRender, Component, effect, inject, OnInit, Renderer2, signal &#125; from &#x27;@angular/core&#x27;;// ... 导入 MatButtonModule, MatIconModule, MatTooltipModule@Component(&#123;...&#125;)export class ThemePickerComponent implements OnInit &#123;  static storageKey = &#x27;batcher-ui-theme&#x27;;  mode = signal(&#x27;light&#x27;);  private renderer = inject(Renderer2);  constructor() &#123;    // 1. 响应式更新：当 mode() 变化时，更新 &lt;html&gt; 元素的 color-scheme    effect(() =&gt; &#123;      const mode = this.mode();      this.renderer.setStyle(document.documentElement, &#x27;color-scheme&#x27;, mode);    &#125;);    // 2. 初始化：客户端渲染后，加载存储或系统偏好    afterNextRender(() =&gt; &#123;      // 优先加载 localStorage 存储的模式，否则检测系统偏好      const systemPreference = window.matchMedia(&#x27;(prefers-color-scheme: dark)&#x27;).matches ? &#x27;dark&#x27; : &#x27;light&#x27;;      const storedMode = this.getStoredMode() || systemPreference;            if (storedMode) &#123;        this.mode.set(storedMode);      &#125;    &#125;);  &#125;  ngOnInit(): void &#123;    // 3. 实时监听：如果用户未设置过偏好，跟随系统主题的实时变化    window.matchMedia(&#x27;(prefers-color-scheme: dark)&#x27;).addEventListener(&#x27;change&#x27;, e =&gt; &#123;      const storedMode = this.getStoredMode();      if (!storedMode) &#123;        this.mode.set(e.matches ? &#x27;dark&#x27; : &#x27;light&#x27;);      &#125;    &#125;);  &#125;  changeMode(): void &#123;    const newMode = this.mode() === &#x27;light&#x27; ? &#x27;dark&#x27; : &#x27;light&#x27;;    this.mode.set(newMode);    this.storeMode(newMode);  &#125;  // 4. 持久化方法 (storeMode, getStoredMode)  storeMode(mode: string): void &#123;    try &#123;      localStorage.setItem(ThemePickerComponent.storageKey, mode);    &#125; catch &#123; /* ignore */ &#125;  &#125;  getStoredMode(): string | null &#123;    try &#123;      return localStorage.getItem(ThemePickerComponent.storageKey);    &#125; catch &#123; return null; &#125;  &#125;&#125;
+
+C. SCSS处理(可选)修改icon的颜色去适配material 3的配色
+.theme-button &#123;    color: var(--mat-primary);&#125;
+
+3. 集成到导航栏 (navigation.component.html)我们将 app-theme-picker 组件放置在应用导航栏（mat-toolbar）的右侧。
+&lt;mat-toolbar&gt;    &lt;div class=&quot;flex-grow-1&quot;&gt;&lt;/div&gt;    &lt;app-theme-picker class=&quot;theme-picker&quot;&gt;&lt;/app-theme-picker&gt;&lt;/mat-toolbar&gt;
+
+导航栏样式调整
+我们还调整了导航栏的背景色，使其使用更适合作为容器背景的 Material 系统变量。
+/* ui/src/app/components/navigation/navigation.component.scss */:host &#123;  color: var(--mat-sys-primary);  // 更改为使用 surface-container-low，这通常更适合作为页面/容器的背景  background: var(--mat-sys-surface-container-low);&#125;// ... 省略其他样式.flex-grow-1 &#123;  flex-grow: 1;&#125;
+
+
+✨ 总结通过上述实现，我们的 Angular Material 应用获得了：
+
+用户自定义: 用户可以随时通过点击按钮切换光亮&#x2F;深色模式。
+偏好记忆: 应用会记住用户的选择，即使重新打开浏览器也不会丢失。
+尊重系统设置: 如果用户从未手动切换过主题，应用会默认跟随操作系统的偏好设置。
+
+使用 Angular Signals 和 Effects 极大地简化了状态管理和响应式更新，让深色模式的实现既强大又简洁！
+🔗 完整的代码变更你可以查看这个 GitHub Commit 来了解所有相关的代码修改：
+fix(ui): add dark mode
+]]></content>
+      <categories>
+        <category>前端</category>
+      </categories>
+      <tags>
+        <tag>angular</tag>
+        <tag>angular material</tag>
+        <tag>dark mode</tag>
       </tags>
   </entry>
   <entry>
@@ -2760,59 +2811,8 @@ Sprint 周期：通常为 1 到 4 周，2 周为常见做法。
       </categories>
       <tags>
         <tag>面试</tag>
+        <tag>angular</tag>
         <tag>css</tag>
-        <tag>angular</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>为 Angular Material 应用添加完美深色模式支持</title>
-    <url>/2025/09/28/front-end/angular-material-perfect-dark-mode/</url>
-    <content><![CDATA[💡 为 Angular Material 应用添加完美深色模式支持深色模式（Dark Mode）是现代应用不可或缺的功能。它不仅能提升用户在低光环境下的舒适度，还能让应用看起来更专业、更时尚。
-如果你正在使用 Angular Material，实现深色模式可以非常优雅和高效。本文将分享我如何通过一个独立的 ThemePickerComponent，结合 Angular Signals 和 系统偏好检测，为我的应用添加深色模式的完整过程。
-🛠️ 核心思路概览我的深色模式解决方案基于以下几个关键机制：
-
-CSS 变量与 color-scheme: 利用 Angular Material 基于 CSS 变量的主题机制，并通过在 &lt;html&gt; 标签上切换 color-scheme 属性来控制主题。
-Angular Signals: 使用 signal() 存储和管理当前的主题模式 (&#39;light&#39; 或 &#39;dark&#39;)。
-持久化与偏好: 通过 localStorage 记住用户的选择，同时使用 window.matchMedia 监听用户操作系统的偏好设置。
-
-💻 关键代码解析与实现步骤1. 配置主题和 color-scheme (styles.scss)在全局样式文件中，我们确保应用能响应 color-scheme 变化，并设置 Material 主题。
-/* ui/src/styles.scss */@use &#x27;@angular/material&#x27; as mat;html, body &#123;  font-family: Roboto, &quot;Helvetica Neue&quot;, sans-serif;&#125;html &#123;  background-color: var(--mat-sys-surface);  color: var(--mat-sys-on-surface);  // ✨ 关键：允许浏览器知道页面支持两种颜色方案  color-scheme: light dark;  @include mat.theme((        color: (          // Material 会根据 color-scheme 自动应用 light/dark 调色板          primary: mat.$rose-palette,           tertiary: mat.$red-palette,      ),      typography: Roboto,      density: 0,  ));&#125;
-
-我们通过 background-color: var(--mat-sys-surface) 来使用 Material 系统级 CSS 变量，确保背景颜色随着主题切换而正确变化。
-2. ThemePickerComponent：主题切换器这是整个功能的核心。它负责初始化、监听和切换主题。
-A. HTML 模板：根据模式切换图标我们使用 mat-icon-button 和 @if 语法根据 mode() 的值显示太阳或月亮图标。
-&lt;button class=&quot;theme-button&quot; mat-icon-button    [matTooltip]=&quot;&#x27;Change Theme&#x27;&quot;    (click)=&quot;changeMode()&quot;  &gt;     @if (mode() === &#x27;dark&#x27;) &#123;       &lt;mat-icon&gt;dark_mode&lt;/mat-icon&gt;     &#125; @else &#123;       &lt;mat-icon&gt;light_mode&lt;/mat-icon&gt;     &#125;&lt;/button&gt;
-
-B. TypeScript 逻辑：Signals, Effects, 和持久化// ui/src/app/components/theme-picker/theme-picker.component.tsimport &#123; afterNextRender, Component, effect, inject, OnInit, Renderer2, signal &#125; from &#x27;@angular/core&#x27;;// ... 导入 MatButtonModule, MatIconModule, MatTooltipModule@Component(&#123;...&#125;)export class ThemePickerComponent implements OnInit &#123;  static storageKey = &#x27;batcher-ui-theme&#x27;;  mode = signal(&#x27;light&#x27;);  private renderer = inject(Renderer2);  constructor() &#123;    // 1. 响应式更新：当 mode() 变化时，更新 &lt;html&gt; 元素的 color-scheme    effect(() =&gt; &#123;      const mode = this.mode();      this.renderer.setStyle(document.documentElement, &#x27;color-scheme&#x27;, mode);    &#125;);    // 2. 初始化：客户端渲染后，加载存储或系统偏好    afterNextRender(() =&gt; &#123;      // 优先加载 localStorage 存储的模式，否则检测系统偏好      const systemPreference = window.matchMedia(&#x27;(prefers-color-scheme: dark)&#x27;).matches ? &#x27;dark&#x27; : &#x27;light&#x27;;      const storedMode = this.getStoredMode() || systemPreference;            if (storedMode) &#123;        this.mode.set(storedMode);      &#125;    &#125;);  &#125;  ngOnInit(): void &#123;    // 3. 实时监听：如果用户未设置过偏好，跟随系统主题的实时变化    window.matchMedia(&#x27;(prefers-color-scheme: dark)&#x27;).addEventListener(&#x27;change&#x27;, e =&gt; &#123;      const storedMode = this.getStoredMode();      if (!storedMode) &#123;        this.mode.set(e.matches ? &#x27;dark&#x27; : &#x27;light&#x27;);      &#125;    &#125;);  &#125;  changeMode(): void &#123;    const newMode = this.mode() === &#x27;light&#x27; ? &#x27;dark&#x27; : &#x27;light&#x27;;    this.mode.set(newMode);    this.storeMode(newMode);  &#125;  // 4. 持久化方法 (storeMode, getStoredMode)  storeMode(mode: string): void &#123;    try &#123;      localStorage.setItem(ThemePickerComponent.storageKey, mode);    &#125; catch &#123; /* ignore */ &#125;  &#125;  getStoredMode(): string | null &#123;    try &#123;      return localStorage.getItem(ThemePickerComponent.storageKey);    &#125; catch &#123; return null; &#125;  &#125;&#125;
-
-C. SCSS处理(可选)修改icon的颜色去适配material 3的配色
-.theme-button &#123;    color: var(--mat-primary);&#125;
-
-3. 集成到导航栏 (navigation.component.html)我们将 app-theme-picker 组件放置在应用导航栏（mat-toolbar）的右侧。
-&lt;mat-toolbar&gt;    &lt;div class=&quot;flex-grow-1&quot;&gt;&lt;/div&gt;    &lt;app-theme-picker class=&quot;theme-picker&quot;&gt;&lt;/app-theme-picker&gt;&lt;/mat-toolbar&gt;
-
-导航栏样式调整
-我们还调整了导航栏的背景色，使其使用更适合作为容器背景的 Material 系统变量。
-/* ui/src/app/components/navigation/navigation.component.scss */:host &#123;  color: var(--mat-sys-primary);  // 更改为使用 surface-container-low，这通常更适合作为页面/容器的背景  background: var(--mat-sys-surface-container-low);&#125;// ... 省略其他样式.flex-grow-1 &#123;  flex-grow: 1;&#125;
-
-
-✨ 总结通过上述实现，我们的 Angular Material 应用获得了：
-
-用户自定义: 用户可以随时通过点击按钮切换光亮&#x2F;深色模式。
-偏好记忆: 应用会记住用户的选择，即使重新打开浏览器也不会丢失。
-尊重系统设置: 如果用户从未手动切换过主题，应用会默认跟随操作系统的偏好设置。
-
-使用 Angular Signals 和 Effects 极大地简化了状态管理和响应式更新，让深色模式的实现既强大又简洁！
-🔗 完整的代码变更你可以查看这个 GitHub Commit 来了解所有相关的代码修改：
-fix(ui): add dark mode
-]]></content>
-      <categories>
-        <category>前端</category>
-      </categories>
-      <tags>
-        <tag>angular</tag>
-        <tag>angular material</tag>
-        <tag>dark mode</tag>
       </tags>
   </entry>
   <entry>
@@ -4453,6 +4453,161 @@ JS: The difference between “undefined”, “null” and “void 0”
       </tags>
   </entry>
   <entry>
+    <title>无 Docker Desktop + Colima + Docker Compose v2 标准化方案</title>
+    <url>/2026/04/27/software/colima-docker-compose-setup/</url>
+    <content><![CDATA[无 Docker Desktop + 纯 CLI + Colima + Docker Compose v2 标准化方案一、背景在 macOS 环境中，Docker Desktop 虽然开箱即用，但存在以下问题：
+
+资源占用高（CPU &#x2F; 内存）
+启动慢
+商业使用存在许可限制
+与开发环境（如 k8s &#x2F; 自定义 runtime）耦合较重
+
+因此，采用以下组合替代：
+
+Colima + Docker CLI + Compose v2 Plugin
+
+目标是实现：
+
+轻量级 Docker 运行环境
+完整 CLI 操作体验
+原生支持 docker compose（v2）
+
+
+二、整体架构docker CLI   ↓docker context (colima)   ↓unix socket (~/.colima/default/docker.sock)   ↓Colima VM (container runtime)````---## 三、环境安装### 1. 安装基础工具```bashbrew install docker colima docker-compose
+
+说明：
+
+docker：CLI 工具
+colima：本地 container runtime（基于 Lima + containerd）
+docker-compose：Compose v2 实现（后续转换为 plugin）
+
+
+2. 启动 Colimacolima start
+
+可选配置：
+colima start --cpu 4 --memory 8
+
+
+3. 设置 Docker Contextdocker context use colima
+
+验证：
+docker context ls
+
+
+四、启用 Docker Compose v2（核心步骤）Homebrew 不直接提供 docker-compose-plugin，需要手动转换：
+1. 创建 plugin 目录mkdir -p ~/.docker/cli-plugins
+
+
+2. 软链接 composeln -s $(which docker-compose) ~/.docker/cli-plugins/docker-compose
+
+
+3. 验证docker compose version
+
+期望输出：
+Docker Compose version 5.x.x
+
+4. 补充Colima 默认只安装了底层的 Docker 守护进程，但在你的 Mac 宿主机上，缺少了 Docker 的 buildx 插件（也就是用来控制 BuildKit 的客户端组件）。
+# 1. 安装 buildx 插件brew install docker-buildx# 2. 创建 Docker 插件目录（如果不存在的话）mkdir -p ~/.docker/cli-plugins# 3. 将刚刚安装的 buildx 软链接到 Docker 插件目录下ln -sfn $(brew --prefix)/opt/docker-buildx/bin/docker-buildx ~/.docker/cli-plugins/docker-buildx
+
+
+五、最终使用方式统一使用：
+docker compose updocker compose downdocker compose ps
+
+不再使用：
+docker-compose  # deprecated
+
+
+六、环境验证1. Dockerdocker ps
+
+
+2. Composedocker compose version
+
+
+3. Socketecho $DOCKER_HOST
+
+应为空或由 context 管理（推荐）
+
+七、常见问题1. docker compose 不可用原因：
+
+plugin 未配置
+
+解决：
+ls ~/.docker/cli-plugins
+
+确认存在：
+docker-compose
+
+
+2. 连接错误Cannot connect to the Docker daemon
+
+排查：
+docker context ls
+
+
+3. 权限或路径问题which dockerwhich docker-compose
+
+确保均来自 Homebrew：
+/opt/homebrew/bin/
+
+
+八、最佳实践1. 固定 context在 shell 配置中加入：
+export DOCKER_CONTEXT=colima
+
+
+2. 避免 DOCKER_HOST 干扰不要手动设置：
+export DOCKER_HOST=...
+
+交由 context 管理
+
+3. 统一团队规范建议团队统一：
+
+使用 Colima
+使用 docker compose
+禁止 docker-compose
+
+
+九、优缺点分析优点
+轻量（相比 Docker Desktop）
+无商业授权限制
+启动速度快
+与 k8s &#x2F; containerd 更贴近
+
+
+缺点
+需要手动配置 Compose plugin
+初次上手成本略高
+部分 GUI 工具不可用
+
+
+十、总结该方案的核心是：
+
+用 Colima 替代 Docker Desktop，用 CLI + plugin 还原官方 Docker 体验
+
+最终效果：
+docker compose up
+
+与 Docker Desktop 环境保持一致，但更加轻量、可控。
+
+十一、参考命令速查# 启动环境colima start# 查看 contextdocker context ls# 切换 contextdocker context use colima# Composedocker compose updocker compose down# 查看 pluginls ~/.docker/cli-plugins
+
+
+十二、适用人群
+后端工程师（Node.js &#x2F; Go &#x2F; Java）
+前端工程化开发（需要容器化）
+使用 k8s &#x2F; 本地集群（k3s &#x2F; kind）
+追求轻量开发环境的工程师&#96;
+
+]]></content>
+      <categories>
+        <category>软件</category>
+      </categories>
+      <tags>
+        <tag>docker</tag>
+        <tag>colima</tag>
+        <tag>docker compose</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>在k3s中配置私有镜像仓库</title>
     <url>/2025/03/06/software/connect-to-private-docker-registry-in-k3s/</url>
     <content><![CDATA[前言本文的目的是实现在k3s中可以访问使用docker部署registry。
@@ -4969,161 +5124,6 @@ React + Vite + Build-time Prerender + Selective Hydration。
         <tag>react-dom</tag>
         <tag>vite</tag>
         <tag>prerender</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>无 Docker Desktop + Colima + Docker Compose v2 标准化方案</title>
-    <url>/2026/04/27/software/colima-docker-compose-setup/</url>
-    <content><![CDATA[无 Docker Desktop + 纯 CLI + Colima + Docker Compose v2 标准化方案一、背景在 macOS 环境中，Docker Desktop 虽然开箱即用，但存在以下问题：
-
-资源占用高（CPU &#x2F; 内存）
-启动慢
-商业使用存在许可限制
-与开发环境（如 k8s &#x2F; 自定义 runtime）耦合较重
-
-因此，采用以下组合替代：
-
-Colima + Docker CLI + Compose v2 Plugin
-
-目标是实现：
-
-轻量级 Docker 运行环境
-完整 CLI 操作体验
-原生支持 docker compose（v2）
-
-
-二、整体架构docker CLI   ↓docker context (colima)   ↓unix socket (~/.colima/default/docker.sock)   ↓Colima VM (container runtime)````---## 三、环境安装### 1. 安装基础工具```bashbrew install docker colima docker-compose
-
-说明：
-
-docker：CLI 工具
-colima：本地 container runtime（基于 Lima + containerd）
-docker-compose：Compose v2 实现（后续转换为 plugin）
-
-
-2. 启动 Colimacolima start
-
-可选配置：
-colima start --cpu 4 --memory 8
-
-
-3. 设置 Docker Contextdocker context use colima
-
-验证：
-docker context ls
-
-
-四、启用 Docker Compose v2（核心步骤）Homebrew 不直接提供 docker-compose-plugin，需要手动转换：
-1. 创建 plugin 目录mkdir -p ~/.docker/cli-plugins
-
-
-2. 软链接 composeln -s $(which docker-compose) ~/.docker/cli-plugins/docker-compose
-
-
-3. 验证docker compose version
-
-期望输出：
-Docker Compose version 5.x.x
-
-4. 补充Colima 默认只安装了底层的 Docker 守护进程，但在你的 Mac 宿主机上，缺少了 Docker 的 buildx 插件（也就是用来控制 BuildKit 的客户端组件）。
-# 1. 安装 buildx 插件brew install docker-buildx# 2. 创建 Docker 插件目录（如果不存在的话）mkdir -p ~/.docker/cli-plugins# 3. 将刚刚安装的 buildx 软链接到 Docker 插件目录下ln -sfn $(brew --prefix)/opt/docker-buildx/bin/docker-buildx ~/.docker/cli-plugins/docker-buildx
-
-
-五、最终使用方式统一使用：
-docker compose updocker compose downdocker compose ps
-
-不再使用：
-docker-compose  # deprecated
-
-
-六、环境验证1. Dockerdocker ps
-
-
-2. Composedocker compose version
-
-
-3. Socketecho $DOCKER_HOST
-
-应为空或由 context 管理（推荐）
-
-七、常见问题1. docker compose 不可用原因：
-
-plugin 未配置
-
-解决：
-ls ~/.docker/cli-plugins
-
-确认存在：
-docker-compose
-
-
-2. 连接错误Cannot connect to the Docker daemon
-
-排查：
-docker context ls
-
-
-3. 权限或路径问题which dockerwhich docker-compose
-
-确保均来自 Homebrew：
-/opt/homebrew/bin/
-
-
-八、最佳实践1. 固定 context在 shell 配置中加入：
-export DOCKER_CONTEXT=colima
-
-
-2. 避免 DOCKER_HOST 干扰不要手动设置：
-export DOCKER_HOST=...
-
-交由 context 管理
-
-3. 统一团队规范建议团队统一：
-
-使用 Colima
-使用 docker compose
-禁止 docker-compose
-
-
-九、优缺点分析优点
-轻量（相比 Docker Desktop）
-无商业授权限制
-启动速度快
-与 k8s &#x2F; containerd 更贴近
-
-
-缺点
-需要手动配置 Compose plugin
-初次上手成本略高
-部分 GUI 工具不可用
-
-
-十、总结该方案的核心是：
-
-用 Colima 替代 Docker Desktop，用 CLI + plugin 还原官方 Docker 体验
-
-最终效果：
-docker compose up
-
-与 Docker Desktop 环境保持一致，但更加轻量、可控。
-
-十一、参考命令速查# 启动环境colima start# 查看 contextdocker context ls# 切换 contextdocker context use colima# Composedocker compose updocker compose down# 查看 pluginls ~/.docker/cli-plugins
-
-
-十二、适用人群
-后端工程师（Node.js &#x2F; Go &#x2F; Java）
-前端工程化开发（需要容器化）
-使用 k8s &#x2F; 本地集群（k3s &#x2F; kind）
-追求轻量开发环境的工程师&#96;
-
-]]></content>
-      <categories>
-        <category>软件</category>
-      </categories>
-      <tags>
-        <tag>docker</tag>
-        <tag>colima</tag>
-        <tag>docker compose</tag>
       </tags>
   </entry>
   <entry>
@@ -5744,70 +5744,6 @@ Docker 默认也偏爱这个区间
       </tags>
   </entry>
   <entry>
-    <title>内网 GitOps 实践：FluxCD 与 Gitea (HTTP) 集成与 初始化 指南</title>
-    <url>/2026/07/21/software/fluxcd-gitea-http-bootstrap-solution/</url>
-    <content><![CDATA[FluxCD 在内网纯 HTTP 环境下与 Gitea 集成并完成初始化（Bootstrap）过程的技术总结
-
-1. 环境背景与技术痛点
-基础设施：部署于内网的 Gitea 实例（通过 HTTP 协议暴露服务，地址格式为 http://&lt;IP&gt;:&lt;PORT&gt;）。
-网络限制：内网环境未配置 TLS&#x2F;SSL 证书，不支持 HTTPS 通信。
-核心拦截点：
-
-
-协议强校验：新版 Flux CLI 的 flux bootstrap gitea 在调用 Gitea API 时默认强制使用 HTTPS，抛出 http: server gave HTTP response to HTTPS client 错误。
-Go-Git 明文传输保护：Flux 底层依赖的 Go-Git 库出于安全限制，禁止在未加密的明文 HTTP 链接中直接发送 Basic Auth 凭证（Token&#x2F;密码），抛出 basic auth cannot be sent over HTTP 错误。
-
-
-2. 核心解决方案（参考 Discussion #4972）根据 FluxCD 社区讨论 FluxCD Discussion #4972，最稳定且通用的解法是跳过特定 Git 供应商（Gitea）的 API 专有引导逻辑，改用通用 flux bootstrap git 命令，并显式透传 --allow-insecure-http=true 参数。
-关键机制说明：
-flux bootstrap git：避开了针对 Gitea API 的 HTTPS 强制探活逻辑（如 GetOrgByName 等组织&#x2F;个人账号鉴权 API）。
---allow-insecure-http=true：向底层 Go-Git 显式下发参数，解除对纯 HTTP 链接发送鉴权凭证的限制。
-
-
-3. 标准操作流程步骤一：预先准备 Gitea 仓库与 Token
-服务部署：Gitea 的容器化部署结构可参考 home-labs-docker&#x2F;gitea。
-凭证生成：在 Gitea 用户设置中生成个人访问令牌（PAT），需包含仓库读写权限（write:repository）。
-创建仓库：登录 Gitea 页面，手动创建一个空的私有 Git 仓库，例如 fleet-infra。
-
-步骤二：执行 Bootstrap 引导命令在终端中执行通用 Git 初始化命令（使用 PAT 作为 --password）：
-flux bootstrap git \  --url=&quot;http://&lt;Gitea-IP&gt;:&lt;Port&gt;/&lt;Username&gt;/fleet-infra.git&quot; \  --username=&quot;&lt;Username&gt;&quot; \  --password=&quot;&lt;Gitea_PAT_Token&gt;&quot; \  --allow-insecure-http=true \  --token-auth=true \  --path=&quot;./clusters/&lt;Cluster-Name-or-IP&gt;&quot;
-
-步骤三：验证安装结果命令执行完成后，检查系统与组件状态：
-
-检查控制器状态：
-
-flux check
-
-
-确认 source-controller、kustomize-controller、helm-controller 和 notification-controller 全部就绪。2. 检查 Git 源同步状态：
-flux get sources git
-
-
-确认 flux-system 源的 READY 状态为 True，且已存储最新的 Commit Hash。
-➜  ~ flux get sources gitNAME       	REVISION          	SUSPENDED	READY	MESSAGEflux-system	main@sha1:d1968847	False    	True 	stored artifact for revision &#x27;main@sha1:d1968847&#x27;
-
-
-4. GitOps 工作流闭环验证初始化完成后，无需直接在本地运行 kubectl apply：
-
-配置提交：将应用的 Kubernetes Manifests（如 pod.yaml）提交并 git push 至 Gitea 的 fleet-infra 仓库对应集群路径（./clusters/&lt;Cluster-Name-or-IP&gt;/）下。
-
-cat &lt;&lt;EOF &gt; ./clusters/192.168.31.215/pod.yamlapiVersion: v1kind: Podmetadata:  name: gitops-pod-test  namespace: defaultspec:  containers:  - name: nginx    image: nginx:alpine    ports:    - containerPort: 80EOF
-
-自动调和：集群内部的 Flux source-controller 与 kustomize-controller 会定期轮询 Gitea 仓库，自动检测版本差异并将其应用至集群，实现声明式部署与状态漂移修复。
-
-]]></content>
-      <categories>
-        <category>软件</category>
-      </categories>
-      <tags>
-        <tag>Kubernetes</tag>
-        <tag>GitOps</tag>
-        <tag>FluxCD</tag>
-        <tag>Gitea</tag>
-        <tag>DevOps</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>Oh My Zsh 更新失败：第三方插件安装目录冲突及解决方案</title>
     <url>/2026/09/30/software/fix-oh-my-zsh-plugin-update-conflict/</url>
     <content><![CDATA[Oh My Zsh 更新失败：第三方插件安装目录冲突及解决方案最近在更新 Oh My Zsh 时，遇到了一个 Git 文件冲突问题。排查后发现，我之前编写的 Zsh 自动安装脚本将第三方插件直接安装到了 Oh My Zsh 的内置插件目录。
@@ -5906,6 +5842,70 @@ zsh-syntax-highlighting
       <tags>
         <tag>zhs</tag>
         <tag>oh-my-zsh</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>内网 GitOps 实践：FluxCD 与 Gitea (HTTP) 集成与 初始化 指南</title>
+    <url>/2026/07/21/software/fluxcd-gitea-http-bootstrap-solution/</url>
+    <content><![CDATA[FluxCD 在内网纯 HTTP 环境下与 Gitea 集成并完成初始化（Bootstrap）过程的技术总结
+
+1. 环境背景与技术痛点
+基础设施：部署于内网的 Gitea 实例（通过 HTTP 协议暴露服务，地址格式为 http://&lt;IP&gt;:&lt;PORT&gt;）。
+网络限制：内网环境未配置 TLS&#x2F;SSL 证书，不支持 HTTPS 通信。
+核心拦截点：
+
+
+协议强校验：新版 Flux CLI 的 flux bootstrap gitea 在调用 Gitea API 时默认强制使用 HTTPS，抛出 http: server gave HTTP response to HTTPS client 错误。
+Go-Git 明文传输保护：Flux 底层依赖的 Go-Git 库出于安全限制，禁止在未加密的明文 HTTP 链接中直接发送 Basic Auth 凭证（Token&#x2F;密码），抛出 basic auth cannot be sent over HTTP 错误。
+
+
+2. 核心解决方案（参考 Discussion #4972）根据 FluxCD 社区讨论 FluxCD Discussion #4972，最稳定且通用的解法是跳过特定 Git 供应商（Gitea）的 API 专有引导逻辑，改用通用 flux bootstrap git 命令，并显式透传 --allow-insecure-http=true 参数。
+关键机制说明：
+flux bootstrap git：避开了针对 Gitea API 的 HTTPS 强制探活逻辑（如 GetOrgByName 等组织&#x2F;个人账号鉴权 API）。
+--allow-insecure-http=true：向底层 Go-Git 显式下发参数，解除对纯 HTTP 链接发送鉴权凭证的限制。
+
+
+3. 标准操作流程步骤一：预先准备 Gitea 仓库与 Token
+服务部署：Gitea 的容器化部署结构可参考 home-labs-docker&#x2F;gitea。
+凭证生成：在 Gitea 用户设置中生成个人访问令牌（PAT），需包含仓库读写权限（write:repository）。
+创建仓库：登录 Gitea 页面，手动创建一个空的私有 Git 仓库，例如 fleet-infra。
+
+步骤二：执行 Bootstrap 引导命令在终端中执行通用 Git 初始化命令（使用 PAT 作为 --password）：
+flux bootstrap git \  --url=&quot;http://&lt;Gitea-IP&gt;:&lt;Port&gt;/&lt;Username&gt;/fleet-infra.git&quot; \  --username=&quot;&lt;Username&gt;&quot; \  --password=&quot;&lt;Gitea_PAT_Token&gt;&quot; \  --allow-insecure-http=true \  --token-auth=true \  --path=&quot;./clusters/&lt;Cluster-Name-or-IP&gt;&quot;
+
+步骤三：验证安装结果命令执行完成后，检查系统与组件状态：
+
+检查控制器状态：
+
+flux check
+
+
+确认 source-controller、kustomize-controller、helm-controller 和 notification-controller 全部就绪。2. 检查 Git 源同步状态：
+flux get sources git
+
+
+确认 flux-system 源的 READY 状态为 True，且已存储最新的 Commit Hash。
+➜  ~ flux get sources gitNAME       	REVISION          	SUSPENDED	READY	MESSAGEflux-system	main@sha1:d1968847	False    	True 	stored artifact for revision &#x27;main@sha1:d1968847&#x27;
+
+
+4. GitOps 工作流闭环验证初始化完成后，无需直接在本地运行 kubectl apply：
+
+配置提交：将应用的 Kubernetes Manifests（如 pod.yaml）提交并 git push 至 Gitea 的 fleet-infra 仓库对应集群路径（./clusters/&lt;Cluster-Name-or-IP&gt;/）下。
+
+cat &lt;&lt;EOF &gt; ./clusters/192.168.31.215/pod.yamlapiVersion: v1kind: Podmetadata:  name: gitops-pod-test  namespace: defaultspec:  containers:  - name: nginx    image: nginx:alpine    ports:    - containerPort: 80EOF
+
+自动调和：集群内部的 Flux source-controller 与 kustomize-controller 会定期轮询 Gitea 仓库，自动检测版本差异并将其应用至集群，实现声明式部署与状态漂移修复。
+
+]]></content>
+      <categories>
+        <category>软件</category>
+      </categories>
+      <tags>
+        <tag>Kubernetes</tag>
+        <tag>GitOps</tag>
+        <tag>FluxCD</tag>
+        <tag>Gitea</tag>
+        <tag>DevOps</tag>
       </tags>
   </entry>
   <entry>
@@ -7271,6 +7271,78 @@ FluxCD：Kustomization
       </tags>
   </entry>
   <entry>
+    <title>使用K3s 从零部署 CloudNativePG：打造 Homelab 统一 PostgreSQL 平台</title>
+    <url>/2026/06/12/software/k3s-cloudnativepg-homelab-postgres/</url>
+    <content><![CDATA[K3s 从零部署 CloudNativePG：打造 Homelab 统一 PostgreSQL 平台前言在很多 CloudNativePG 教程中，通常只会介绍如何安装 Operator 并创建一个 PostgreSQL 集群。
+但在实际 Homelab 场景中，我们更希望：
+
+整个 K3s 集群共用一套 PostgreSQL 服务
+支持 Spring Boot 项目
+支持 Gitea
+支持 Immich
+支持未来新增应用
+能够通过固定 IP 从局域网访问数据库
+保留未来扩容多节点 K3s 的能力
+
+因此本文不只是介绍 CloudNativePG 的安装，而是介绍如何将其建设为 Homelab 的统一 PostgreSQL 平台。
+
+环境说明K3s 节点192.168.31.215
+
+路由器小米路由器
+DHCP 配置：
+192.168.31.5 - 192.168.31.229
+
+MetalLB 地址规划192.168.31.230 postgres192.168.31.231 ingress192.168.31.232 gitea192.168.31.233 argocd192.168.31.234 grafana
+
+本文中 PostgreSQL 固定使用：
+192.168.31.230
+
+
+最终架构                   家庭局域网┌──────────────┐│ MacBook      │├──────────────┤│ ThinkPad     │├──────────────┤│ DataGrip     │├──────────────┤│ Spring Boot  │└───────┬──────┘        │        ▼ postgres.home.lab        │        ▼  192.168.31.230        │     MetalLB        │        ▼  postgres-lb        │        ▼  postgres-rw        │        ▼CloudNativePG
+
+集群外通过 LoadBalancer 访问。
+集群内通过 Service DNS 访问。
+
+安装 MetalLB添加 Helm Repo：
+helm repo add metallb https://metallb.github.io/metallbhelm repo update
+
+安装：
+helm install metallb metallb/metallb \  -n metallb-system \  --create-namespace
+
+确认：
+kubectl get pods -n metallb-system
+
+NAME                                            READY   STATUS    RESTARTS   AGEmetallb-controller-55846b4849-t2dr7             1/1     Running   0          18hmetallb-frr-k8s-statuscleaner-8bf664555-52sgc   1/1     Running   0          18hmetallb-frr-k8s-w2n6j                           5/5     Running   0          18hmetallb-speaker-bd4fd                           1/1     Running   0          18h
+
+安装完成后创建地址池：
+apiVersion: metallb.io/v1beta1kind: IPAddressPoolmetadata:  name: homelab-pool  namespace: metallb-systemspec:  addresses:    - 192.168.31.230-192.168.31.239---apiVersion: metallb.io/v1beta1kind: L2Advertisementmetadata:  name: homelab  namespace: metallb-system
+
+
+安装 CloudNativePGCloudNativePG 提供了一个非常强大的 kubectl 插件，可以帮助你轻松查看数据库状态、进行主备切换、查看日志等。
+在你的控制端（或 K3s 节点上）运行以下命令安装：
+curl -sSfL https://github.com/cloudnative-pg/cloudnative-pg/raw/main/hack/install-cnpg-plugin.sh | sudo sh -s -- -b /usr/local/bin
+如果你是中国用户，你可以使用gh-proxy来加速
+curl -sSfL https://gh-proxy.com/https://github.com/cloudnative-pg/cloudnative-pg/raw/main/hack/install-cnpg-plugin.sh | sudo sh -s -- -b /usr/local/bin
+
+验证：
+kubectl cnpg versionBuild: &#123;Version:1.29.1 Commit:a4060c152 Date:2026-05-08&#125;
+
+使用helm来部署CNPG Operator：
+# 添加并更新仓库helm repo add cnpg https://cloudnative-pg.github.io/chartshelm repo update# 安装 1.29 对应的 Operatorhelm install cnpg-operator cnpg/cloudnative-pg \  --namespace cnpg-system \  --create-namespace
+
+
+创建 PostgreSQL 集群]]></content>
+      <categories>
+        <category>软件</category>
+      </categories>
+      <tags>
+        <tag>k3s</tag>
+        <tag>kubernetes</tag>
+        <tag>CloudnativePg</tag>
+        <tag>HomeLab</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>从零开始：在 K3s 中部署 CloudNativePG 并成功实现外部直连（全流程实战）</title>
     <url>/2026/06/10/software/k3s-cloudnativepg-from-scratch-practical-guide/</url>
     <content><![CDATA[前言本文是在我的Homelab 单节点 K3s（IP: 192.168.0.103）上部署 CloudNativePG (CNPG) 1.29 版本。
@@ -7353,78 +7425,6 @@ Public Image Mirror
         <tag>k3s</tag>
         <tag>kubernetes</tag>
         <tag>CloudnativePg</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>使用K3s 从零部署 CloudNativePG：打造 Homelab 统一 PostgreSQL 平台</title>
-    <url>/2026/06/12/software/k3s-cloudnativepg-homelab-postgres/</url>
-    <content><![CDATA[K3s 从零部署 CloudNativePG：打造 Homelab 统一 PostgreSQL 平台前言在很多 CloudNativePG 教程中，通常只会介绍如何安装 Operator 并创建一个 PostgreSQL 集群。
-但在实际 Homelab 场景中，我们更希望：
-
-整个 K3s 集群共用一套 PostgreSQL 服务
-支持 Spring Boot 项目
-支持 Gitea
-支持 Immich
-支持未来新增应用
-能够通过固定 IP 从局域网访问数据库
-保留未来扩容多节点 K3s 的能力
-
-因此本文不只是介绍 CloudNativePG 的安装，而是介绍如何将其建设为 Homelab 的统一 PostgreSQL 平台。
-
-环境说明K3s 节点192.168.31.215
-
-路由器小米路由器
-DHCP 配置：
-192.168.31.5 - 192.168.31.229
-
-MetalLB 地址规划192.168.31.230 postgres192.168.31.231 ingress192.168.31.232 gitea192.168.31.233 argocd192.168.31.234 grafana
-
-本文中 PostgreSQL 固定使用：
-192.168.31.230
-
-
-最终架构                   家庭局域网┌──────────────┐│ MacBook      │├──────────────┤│ ThinkPad     │├──────────────┤│ DataGrip     │├──────────────┤│ Spring Boot  │└───────┬──────┘        │        ▼ postgres.home.lab        │        ▼  192.168.31.230        │     MetalLB        │        ▼  postgres-lb        │        ▼  postgres-rw        │        ▼CloudNativePG
-
-集群外通过 LoadBalancer 访问。
-集群内通过 Service DNS 访问。
-
-安装 MetalLB添加 Helm Repo：
-helm repo add metallb https://metallb.github.io/metallbhelm repo update
-
-安装：
-helm install metallb metallb/metallb \  -n metallb-system \  --create-namespace
-
-确认：
-kubectl get pods -n metallb-system
-
-NAME                                            READY   STATUS    RESTARTS   AGEmetallb-controller-55846b4849-t2dr7             1/1     Running   0          18hmetallb-frr-k8s-statuscleaner-8bf664555-52sgc   1/1     Running   0          18hmetallb-frr-k8s-w2n6j                           5/5     Running   0          18hmetallb-speaker-bd4fd                           1/1     Running   0          18h
-
-安装完成后创建地址池：
-apiVersion: metallb.io/v1beta1kind: IPAddressPoolmetadata:  name: homelab-pool  namespace: metallb-systemspec:  addresses:    - 192.168.31.230-192.168.31.239---apiVersion: metallb.io/v1beta1kind: L2Advertisementmetadata:  name: homelab  namespace: metallb-system
-
-
-安装 CloudNativePGCloudNativePG 提供了一个非常强大的 kubectl 插件，可以帮助你轻松查看数据库状态、进行主备切换、查看日志等。
-在你的控制端（或 K3s 节点上）运行以下命令安装：
-curl -sSfL https://github.com/cloudnative-pg/cloudnative-pg/raw/main/hack/install-cnpg-plugin.sh | sudo sh -s -- -b /usr/local/bin
-如果你是中国用户，你可以使用gh-proxy来加速
-curl -sSfL https://gh-proxy.com/https://github.com/cloudnative-pg/cloudnative-pg/raw/main/hack/install-cnpg-plugin.sh | sudo sh -s -- -b /usr/local/bin
-
-验证：
-kubectl cnpg versionBuild: &#123;Version:1.29.1 Commit:a4060c152 Date:2026-05-08&#125;
-
-使用helm来部署CNPG Operator：
-# 添加并更新仓库helm repo add cnpg https://cloudnative-pg.github.io/chartshelm repo update# 安装 1.29 对应的 Operatorhelm install cnpg-operator cnpg/cloudnative-pg \  --namespace cnpg-system \  --create-namespace
-
-
-创建 PostgreSQL 集群]]></content>
-      <categories>
-        <category>软件</category>
-      </categories>
-      <tags>
-        <tag>k3s</tag>
-        <tag>kubernetes</tag>
-        <tag>CloudnativePg</tag>
-        <tag>HomeLab</tag>
       </tags>
   </entry>
   <entry>
@@ -7532,8 +7532,8 @@ docker logs -f zot-registry&#123;&quot;time&quot;:&quot;2026-02-21T14:52:57.5097
         <tag>docker-compose</tag>
         <tag>k3s</tag>
         <tag>podman</tag>
-        <tag>docker registry</tag>
         <tag>docker compose</tag>
+        <tag>docker registry</tag>
         <tag>zot</tag>
       </tags>
   </entry>
@@ -8354,27 +8354,6 @@ API 陷阱：旧版教程常用 traefik.containo.us&#x2F;v1alpha1，新版 K3s �
 ]]></content>
   </entry>
   <entry>
-    <title>记录一些测试币的水龙头</title>
-    <url>/2023/01/07/web3/some-token-faucet/</url>
-    <content><![CDATA[记录一些测试币的水龙头记录一些常用的区块链水龙头，以防忘记
-GoerliGoerli Testnet Faucet: 不太记得当初是怎么知道了，但是似乎永远失败…
-GOERLI FAUCET, 每天可以获取0.1 ETH(以前是可以每天领取0.25ETH), 需要使用Alchemy账号.
-Mining Faucet, 使用cpu的算力去挖矿，问题不大，可以使用。
-polygonpolygon faucet, 支持多个测试网络，但是Goerli的ETH没拿到
-参考资料
-免費取得Goerli測試幣
-
-]]></content>
-      <categories>
-        <category>web3</category>
-      </categories>
-      <tags>
-        <tag>web3</tag>
-        <tag>Goerli</tag>
-        <tag>polygon</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>2023年度总结</title>
     <url>/2024/01/06/summary/2023/</url>
     <content><![CDATA[2023年度总结2023年就这样子莫名其妙的过了，又是稀里糊涂的一年。这一年，和最爱的人去了一趟西藏，圆了她心心念念的梦想；这一年，坐了30多小时的火车，跨越千里去见证一段美好的爱情；这一年，参加了加入PWC以来第二次的线下年会，疫情总算是过去了。
@@ -8399,6 +8378,27 @@ PWC线下年会我是19年加入PWC的。PWC的年会其实是财年的意思，
 
 最后Time files over us, but leaves its shadow behind.
 ]]></content>
+  </entry>
+  <entry>
+    <title>记录一些测试币的水龙头</title>
+    <url>/2023/01/07/web3/some-token-faucet/</url>
+    <content><![CDATA[记录一些测试币的水龙头记录一些常用的区块链水龙头，以防忘记
+GoerliGoerli Testnet Faucet: 不太记得当初是怎么知道了，但是似乎永远失败…
+GOERLI FAUCET, 每天可以获取0.1 ETH(以前是可以每天领取0.25ETH), 需要使用Alchemy账号.
+Mining Faucet, 使用cpu的算力去挖矿，问题不大，可以使用。
+polygonpolygon faucet, 支持多个测试网络，但是Goerli的ETH没拿到
+参考资料
+免費取得Goerli測試幣
+
+]]></content>
+      <categories>
+        <category>web3</category>
+      </categories>
+      <tags>
+        <tag>web3</tag>
+        <tag>Goerli</tag>
+        <tag>polygon</tag>
+      </tags>
   </entry>
   <entry>
     <title>Mastra 入门：从零搭建旅行助手 Agent</title>
@@ -8504,26 +8504,6 @@ Mastra 中文教程：动手构建；教程源码与旅行助手示例
       </tags>
   </entry>
   <entry>
-    <title>Android Studio安装笔记</title>
-    <url>/2021/01/01/software/install/how-to-install-android-studio/</url>
-    <content><![CDATA[Android Studio安装笔记简单记录一下Android Studio安装
-下载从官网安装Android Studio,
-然后点击安装。
-Android SDK使用http://ping.chinaz.com获取dl.google.com的大陆响应时间最短的IP地址。
-以我为例：180.163.151.161
-将其写入hosts文件(C:\WINDOWS\System32\drivers\etc\hosts)
-180.163.151.161 dl.google.com
-
-参考资料在Android Studio中下载Android SDK的两种方式（Android Studio3.0、windows
-]]></content>
-      <categories>
-        <category>软件</category>
-      </categories>
-      <tags>
-        <tag>Android Studio</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>drone + gogs + docker实现持续自动化部署</title>
     <url>/2022/05/15/software/install/drone-gogs-docker-devops/</url>
     <content><![CDATA[准备我们使用docker-compose来安装gogs和drone。
@@ -8616,6 +8596,26 @@ Drone 教程
       </tags>
   </entry>
   <entry>
+    <title>Android Studio安装笔记</title>
+    <url>/2021/01/01/software/install/how-to-install-android-studio/</url>
+    <content><![CDATA[Android Studio安装笔记简单记录一下Android Studio安装
+下载从官网安装Android Studio,
+然后点击安装。
+Android SDK使用http://ping.chinaz.com获取dl.google.com的大陆响应时间最短的IP地址。
+以我为例：180.163.151.161
+将其写入hosts文件(C:\WINDOWS\System32\drivers\etc\hosts)
+180.163.151.161 dl.google.com
+
+参考资料在Android Studio中下载Android SDK的两种方式（Android Studio3.0、windows
+]]></content>
+      <categories>
+        <category>软件</category>
+      </categories>
+      <tags>
+        <tag>Android Studio</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>Homebrew安装笔记</title>
     <url>/2021/07/31/software/install/how-to-install-homebrew/</url>
     <content><![CDATA[Homebrew安装笔记简单记录一下Homebrew安装
@@ -8680,6 +8680,49 @@ NVIM v0.10.4Build type: RelWithDebInfoLuaJIT 2.1.1713484068Run &quot;nvim -V1 -v
       </tags>
   </entry>
   <entry>
+    <title>轻量化 K8s 管理方案：在 k3s 中部署 Skooner 可视化面板</title>
+    <url>/2026/01/08/software/k8s/deploy-skooner-on-k3s/</url>
+    <content><![CDATA[前言管理 Kubernetes 集群不应该以牺牲系统资源为代价。虽然官方 Dashboard 功能强大，但对于小型集群或单节点 k3s 环境来说，它往往显得过于臃肿。如果你正在寻找一个极致轻快、响应迅速的管理界面，Skooner 是一个完美的平衡点。
+Skooner（原名 K8dash）是一款开源、超轻量级的实时仪表盘，它在不增加集群负担的前提下，提供了核心的资源观测能力。
+为什么选择 Skooner？Skooner 的设计哲学与 k3s 的轻量化理念完美契合：
+
+极低的资源占用：它的内存占用通常不到 50MB，在你的系统监控中几乎可以忽略不计。
+实时状态感知：基于 WebSocket 技术，无需手动刷新页面即可实时查看 CPU、内存消耗以及 Pod 状态。
+移动端自适应：UI 采用响应式设计，即使在手机或平板浏览器上也能轻松排查集群问题。
+
+部署步骤在本指南中，我们将通过 NodePort (32007) 的方式部署并暴露 Skooner，以便你直接通过物理机 IP 访问。
+1. 部署核心组件首先，一键安装 Skooner 的命名空间、服务和部署资源：
+kubectl apply -f https://raw.githubusercontent.com/skooner-k8s/skooner/master/kubernetes-skooner.yaml
+
+2. 配置自定义端口 (32007)默认情况下，Kubernetes 会分配一个随机的 NodePort。我们通过以下命令将其固定为 32007：
+kubectl patch svc skooner -n kube-system --type=&#x27;json&#x27; -p=&#x27;[&#123;&quot;op&quot;: &quot;replace&quot;, &quot;path&quot;: &quot;/spec/type&quot;, &quot;value&quot;:&quot;NodePort&quot;&#125;, &#123;&quot;op&quot;: &quot;replace&quot;, &quot;path&quot;: &quot;/spec/ports/0/nodePort&quot;, &quot;value&quot;:32007&#125;]&#x27;
+
+3. 创建管理 TokenSkooner 使用 Kubernetes 原生的 RBAC 权限。为了获得完整的管理权限，我们需要创建一个 ServiceAccount 并生成登录 Token：
+# 创建 ServiceAccount 和 集群角色绑定cat &lt;&lt;EOF | kubectl apply -f -apiVersion: v1kind: ServiceAccountmetadata:  name: skooner-admin  namespace: kube-system---apiVersion: rbac.authorization.k8s.io/v1kind: ClusterRoleBindingmetadata:  name: skooner-admin-bindingroleRef:  apiGroup: rbac.authorization.k8s.io  kind: ClusterRole  name: cluster-adminsubjects:- kind: ServiceAccount  name: skooner-admin  namespace: kube-systemEOF# 生成登录 Token（有效期 24 小时）kubectl create token skooner-admin -n kube-system --duration=24h
+
+
+如何访问
+打开浏览器，访问：http://&lt;你的服务器IP&gt;:32007。
+在登录界面选择 “Token” 模式。
+粘贴上一步生成的长字符串即可进入面板。
+
+这是我本地的效果：
+
+结语Skooner 在保持 k3s 轻量化特性的同时，为你提供了一个直观、现代的操作界面。对于那些既想要可视化观测、又不想被复杂管理平台拖慢系统性能的开发者来说，Skooner 是一个“即插即用”的最佳方案。
+如需了解更多高级配置，可以参考官方文档：skooner.io。
+一键安装脚本# 1. Deploy Skooner resourceskubectl apply -f https://raw.githubusercontent.com/skooner-k8s/skooner/master/kubernetes-skooner.yaml# 2. Patch the Service to NodePort and set it specifically to 32007kubectl patch svc skooner -n kube-system --type=&#x27;json&#x27; -p=&#x27;[&#123;&quot;op&quot;: &quot;replace&quot;, &quot;path&quot;: &quot;/spec/type&quot;, &quot;value&quot;:&quot;NodePort&quot;&#125;, &#123;&quot;op&quot;: &quot;replace&quot;, &quot;path&quot;: &quot;/spec/ports/0/nodePort&quot;, &quot;value&quot;:32007&#125;]&#x27;# 3. Create a Cluster Admin ServiceAccount for login (if not already created)cat &lt;&lt;EOF | kubectl apply -f -apiVersion: v1kind: ServiceAccountmetadata:  name: skooner-admin  namespace: kube-system---apiVersion: rbac.authorization.k8s.io/v1kind: ClusterRoleBindingmetadata:  name: skooner-admin-bindingroleRef:  apiGroup: rbac.authorization.k8s.io  kind: ClusterRole  name: cluster-adminsubjects:- kind: ServiceAccount  name: skooner-admin  namespace: kube-systemEOF# 4. Generate Login Tokenecho &quot;-------------------------------------------------------&quot;echo &quot;Skooner is now accessible at port: 32007&quot;echo &quot;Access URL: http://$(hostname -I | awk &#x27;&#123;print $1&#125;&#x27;):32007&quot;echo &quot;&quot;echo &quot;Login Token:&quot;kubectl create token skooner-admin -n kube-system --duration=24hecho &quot;-------------------------------------------------------&quot;
+]]></content>
+      <categories>
+        <category>软件</category>
+      </categories>
+      <tags>
+        <tag>k8s</tag>
+        <tag>k3s</tag>
+        <tag>kubernetes</tag>
+        <tag>skooner</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>HorizontalPodAutoscaler入门实践</title>
     <url>/2023/09/27/software/k8s/horizontal-pod-autoscaler-getting-started/</url>
     <content><![CDATA[HorizontalPodAutoscaler在Kubernetes中，HorizontalPodAutoscaler 自动更新工作负载资源（例如Deployment或者StatefulSet），目的是自动扩缩工作负载以满足需求。水平扩缩意味着对增加的负载的响应是部署更多的 Pod。
@@ -8726,49 +8769,6 @@ feat: 使用k8s的HorizontalPodAutoscaler进行水平的资源缩放
       </tags>
   </entry>
   <entry>
-    <title>轻量化 K8s 管理方案：在 k3s 中部署 Skooner 可视化面板</title>
-    <url>/2026/01/08/software/k8s/deploy-skooner-on-k3s/</url>
-    <content><![CDATA[前言管理 Kubernetes 集群不应该以牺牲系统资源为代价。虽然官方 Dashboard 功能强大，但对于小型集群或单节点 k3s 环境来说，它往往显得过于臃肿。如果你正在寻找一个极致轻快、响应迅速的管理界面，Skooner 是一个完美的平衡点。
-Skooner（原名 K8dash）是一款开源、超轻量级的实时仪表盘，它在不增加集群负担的前提下，提供了核心的资源观测能力。
-为什么选择 Skooner？Skooner 的设计哲学与 k3s 的轻量化理念完美契合：
-
-极低的资源占用：它的内存占用通常不到 50MB，在你的系统监控中几乎可以忽略不计。
-实时状态感知：基于 WebSocket 技术，无需手动刷新页面即可实时查看 CPU、内存消耗以及 Pod 状态。
-移动端自适应：UI 采用响应式设计，即使在手机或平板浏览器上也能轻松排查集群问题。
-
-部署步骤在本指南中，我们将通过 NodePort (32007) 的方式部署并暴露 Skooner，以便你直接通过物理机 IP 访问。
-1. 部署核心组件首先，一键安装 Skooner 的命名空间、服务和部署资源：
-kubectl apply -f https://raw.githubusercontent.com/skooner-k8s/skooner/master/kubernetes-skooner.yaml
-
-2. 配置自定义端口 (32007)默认情况下，Kubernetes 会分配一个随机的 NodePort。我们通过以下命令将其固定为 32007：
-kubectl patch svc skooner -n kube-system --type=&#x27;json&#x27; -p=&#x27;[&#123;&quot;op&quot;: &quot;replace&quot;, &quot;path&quot;: &quot;/spec/type&quot;, &quot;value&quot;:&quot;NodePort&quot;&#125;, &#123;&quot;op&quot;: &quot;replace&quot;, &quot;path&quot;: &quot;/spec/ports/0/nodePort&quot;, &quot;value&quot;:32007&#125;]&#x27;
-
-3. 创建管理 TokenSkooner 使用 Kubernetes 原生的 RBAC 权限。为了获得完整的管理权限，我们需要创建一个 ServiceAccount 并生成登录 Token：
-# 创建 ServiceAccount 和 集群角色绑定cat &lt;&lt;EOF | kubectl apply -f -apiVersion: v1kind: ServiceAccountmetadata:  name: skooner-admin  namespace: kube-system---apiVersion: rbac.authorization.k8s.io/v1kind: ClusterRoleBindingmetadata:  name: skooner-admin-bindingroleRef:  apiGroup: rbac.authorization.k8s.io  kind: ClusterRole  name: cluster-adminsubjects:- kind: ServiceAccount  name: skooner-admin  namespace: kube-systemEOF# 生成登录 Token（有效期 24 小时）kubectl create token skooner-admin -n kube-system --duration=24h
-
-
-如何访问
-打开浏览器，访问：http://&lt;你的服务器IP&gt;:32007。
-在登录界面选择 “Token” 模式。
-粘贴上一步生成的长字符串即可进入面板。
-
-这是我本地的效果：
-
-结语Skooner 在保持 k3s 轻量化特性的同时，为你提供了一个直观、现代的操作界面。对于那些既想要可视化观测、又不想被复杂管理平台拖慢系统性能的开发者来说，Skooner 是一个“即插即用”的最佳方案。
-如需了解更多高级配置，可以参考官方文档：skooner.io。
-一键安装脚本# 1. Deploy Skooner resourceskubectl apply -f https://raw.githubusercontent.com/skooner-k8s/skooner/master/kubernetes-skooner.yaml# 2. Patch the Service to NodePort and set it specifically to 32007kubectl patch svc skooner -n kube-system --type=&#x27;json&#x27; -p=&#x27;[&#123;&quot;op&quot;: &quot;replace&quot;, &quot;path&quot;: &quot;/spec/type&quot;, &quot;value&quot;:&quot;NodePort&quot;&#125;, &#123;&quot;op&quot;: &quot;replace&quot;, &quot;path&quot;: &quot;/spec/ports/0/nodePort&quot;, &quot;value&quot;:32007&#125;]&#x27;# 3. Create a Cluster Admin ServiceAccount for login (if not already created)cat &lt;&lt;EOF | kubectl apply -f -apiVersion: v1kind: ServiceAccountmetadata:  name: skooner-admin  namespace: kube-system---apiVersion: rbac.authorization.k8s.io/v1kind: ClusterRoleBindingmetadata:  name: skooner-admin-bindingroleRef:  apiGroup: rbac.authorization.k8s.io  kind: ClusterRole  name: cluster-adminsubjects:- kind: ServiceAccount  name: skooner-admin  namespace: kube-systemEOF# 4. Generate Login Tokenecho &quot;-------------------------------------------------------&quot;echo &quot;Skooner is now accessible at port: 32007&quot;echo &quot;Access URL: http://$(hostname -I | awk &#x27;&#123;print $1&#125;&#x27;):32007&quot;echo &quot;&quot;echo &quot;Login Token:&quot;kubectl create token skooner-admin -n kube-system --duration=24hecho &quot;-------------------------------------------------------&quot;
-]]></content>
-      <categories>
-        <category>软件</category>
-      </categories>
-      <tags>
-        <tag>k8s</tag>
-        <tag>k3s</tag>
-        <tag>kubernetes</tag>
-        <tag>skooner</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>Docker Desktop自带k8s安装笔记</title>
     <url>/2021/01/14/software/k8s/how-to-install-docker-desktop-k8s/</url>
     <content><![CDATA[Docker Desktop自带k8s安装笔记安装一个k8s还是一个比较复杂的事情，但是Docker Desktop已经自带了一个简易版的k8s，可以基本满足正常的学习使用
@@ -8812,6 +8812,57 @@ Kubernetes Dashboard
         <tag>docker</tag>
         <tag>kubernetes</tag>
         <tag>Docker Desktop</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Mac版minikube安装笔记</title>
+    <url>/2022/01/17/software/k8s/how-to-install-minkube-on-mac/</url>
+    <content><![CDATA[Mac版minikube安装笔记minikube是一个专注于让Kubernetes更加容易学习和开发的本地Kubernetes。只需要Docker或者虚拟机环境，我们便可以通过minikube start就能快速启动Kubernetes。
+要求安装minikube需要以下要求：
+
+至少两个CPU
+至少2GB内容
+至少20GB的硬盘空间
+容器或者虚拟机， 比如Docker, Hyperkit, Hyper-V, KVM, Parallels, Podman, VirtualBox, or VMware Fusion&#x2F;Workstation
+
+安装针对macos的x86-64的平台的，可以使用homebrew进行安装：
+brew install minikube
+
+如果倾向于二进制文件安装，可以使用下面的命令：
+curl -LO https://storage.googleapis.com/minikube/releases/latest/minikube-darwin-amd64sudo install minikube-darwin-amd64 /usr/local/bin/minikube
+
+如果是其他平台的操作系统，请看minikube的官网教程
+启动简单来说，可以直接使用minikube start可以直接启动了，但是在国内用于特殊的网络限制，请使用如下命令：
+minikube start --registry-mirror=https://registry.docker-cn.com  --image-repository registry.cn-hangzhou.aliyuncs.com/google_containers
+
+驱动（Drivers）通过驱动，minikube可以支持不同的容器和虚拟机。
+针对macos来说，推荐使用docker和hyperkit，我们只需要在上面的命令的基础上添加--vm-driver=docker或者--vm-driver=hyperkit。
+其他平台可以访问Drivers。
+kubectlkubectl是Kubernetes的命令行工具，方便用户通过一些简单的命令去管理Kubernetes。
+如果事先安装了docker desktop, 那么kubectl已经安装好了，如果没有安装，那可以使用homebrew安装：
+brew install kubectl 
+
+其他平台可以访问kubectl
+验证新建终端，输入kubectl get po -A,显示以下类似命令就算启动成功了：
+NAMESPACE     NAME                               READY   STATUS    RESTARTS   AGEkube-system   coredns-7d89d9b6b8-d462h           0/1     Running   0          20skube-system   etcd-minikube                      1/1     Running   0          32skube-system   kube-apiserver-minikube            1/1     Running   0          35skube-system   kube-controller-manager-minikube   1/1     Running   0          32skube-system   kube-proxy-gcbpj                   1/1     Running   0          20skube-system   kube-scheduler-minikube            1/1     Running   0          31skube-system   storage-provisioner                1/1     Running   0          30s
+
+
+参考资料以下是本文撰写过程中的参考资料：
+
+minikube start
+kubectl
+Minkube安装笔记
+Minikube - Kubernetes本地实验环境
+
+]]></content>
+      <categories>
+        <category>软件</category>
+      </categories>
+      <tags>
+        <tag>k8s</tag>
+        <tag>minikube</tag>
+        <tag>kubernetes</tag>
+        <tag>Mac</tag>
       </tags>
   </entry>
   <entry>
@@ -8887,57 +8938,6 @@ curl -sfL https://rancher-mirror.rancher.cn/k3s/k3s-install.sh | INSTALL_K3S_MIR
         <tag>docker</tag>
         <tag>k3s</tag>
         <tag>kubernetes</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>Mac版minikube安装笔记</title>
-    <url>/2022/01/17/software/k8s/how-to-install-minkube-on-mac/</url>
-    <content><![CDATA[Mac版minikube安装笔记minikube是一个专注于让Kubernetes更加容易学习和开发的本地Kubernetes。只需要Docker或者虚拟机环境，我们便可以通过minikube start就能快速启动Kubernetes。
-要求安装minikube需要以下要求：
-
-至少两个CPU
-至少2GB内容
-至少20GB的硬盘空间
-容器或者虚拟机， 比如Docker, Hyperkit, Hyper-V, KVM, Parallels, Podman, VirtualBox, or VMware Fusion&#x2F;Workstation
-
-安装针对macos的x86-64的平台的，可以使用homebrew进行安装：
-brew install minikube
-
-如果倾向于二进制文件安装，可以使用下面的命令：
-curl -LO https://storage.googleapis.com/minikube/releases/latest/minikube-darwin-amd64sudo install minikube-darwin-amd64 /usr/local/bin/minikube
-
-如果是其他平台的操作系统，请看minikube的官网教程
-启动简单来说，可以直接使用minikube start可以直接启动了，但是在国内用于特殊的网络限制，请使用如下命令：
-minikube start --registry-mirror=https://registry.docker-cn.com  --image-repository registry.cn-hangzhou.aliyuncs.com/google_containers
-
-驱动（Drivers）通过驱动，minikube可以支持不同的容器和虚拟机。
-针对macos来说，推荐使用docker和hyperkit，我们只需要在上面的命令的基础上添加--vm-driver=docker或者--vm-driver=hyperkit。
-其他平台可以访问Drivers。
-kubectlkubectl是Kubernetes的命令行工具，方便用户通过一些简单的命令去管理Kubernetes。
-如果事先安装了docker desktop, 那么kubectl已经安装好了，如果没有安装，那可以使用homebrew安装：
-brew install kubectl 
-
-其他平台可以访问kubectl
-验证新建终端，输入kubectl get po -A,显示以下类似命令就算启动成功了：
-NAMESPACE     NAME                               READY   STATUS    RESTARTS   AGEkube-system   coredns-7d89d9b6b8-d462h           0/1     Running   0          20skube-system   etcd-minikube                      1/1     Running   0          32skube-system   kube-apiserver-minikube            1/1     Running   0          35skube-system   kube-controller-manager-minikube   1/1     Running   0          32skube-system   kube-proxy-gcbpj                   1/1     Running   0          20skube-system   kube-scheduler-minikube            1/1     Running   0          31skube-system   storage-provisioner                1/1     Running   0          30s
-
-
-参考资料以下是本文撰写过程中的参考资料：
-
-minikube start
-kubectl
-Minkube安装笔记
-Minikube - Kubernetes本地实验环境
-
-]]></content>
-      <categories>
-        <category>软件</category>
-      </categories>
-      <tags>
-        <tag>k8s</tag>
-        <tag>minikube</tag>
-        <tag>kubernetes</tag>
-        <tag>Mac</tag>
       </tags>
   </entry>
 </search>
