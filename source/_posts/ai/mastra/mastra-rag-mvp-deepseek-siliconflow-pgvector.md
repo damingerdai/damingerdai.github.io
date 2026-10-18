@@ -644,3 +644,7 @@ npm run chat -- "Health Master 为什么从 MD5 迁移到 Argon2id？"
 - [pgvector](https://github.com/pgvector/pgvector)
 - [Health Master PR #333](https://github.com/damingerdai/health-master/pull/333)
 - [从密码哈希迁移到 Argon2id：一次 Go 项目中的密码安全实践（Markdown 原文）](https://raw.githubusercontent.com/damingerdai/damingerdai.github.io/refs/heads/master/source/_posts/back-end/golang-argon2id-password-hashing.md)
+
+## 源代码
+
+[mastra-rag-app](https://github.com/damingerdai/mastra-rag-app)
