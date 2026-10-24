@@ -1,0 +1,841 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="dark"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1.0,viewport-fit=cover"><title>从零构建 Mastra 多 Agent 写作系统：Research、Analysis、Writer 与 Reviewer 协作实战 | Damingerdai's Blog</title><meta name="author" content="Arthur Ming"><meta name="copyright" content="Arthur Ming"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#0d0d0d"><meta name="description" content="基于 Mastra、TypeScript 和 Zod 构建多 Agent 技术文章生成工作流，记录四个 Agent 的协作机制，以及 DeepSeek 结构化输出、OpenAI JSON Schema、引用校验和自动审核循环的真实踩坑过程。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="从零构建 Mastra 多 Agent 写作系统：Research、Analysis、Writer 与 Reviewer 协作实战">
+<meta property="og:url" content="http://blog.damingerdai.com/2026/10/24/ai/mastra/mastra-multi-agent-writing-workflow/index.html">
+<meta property="og:site_name" content="Damingerdai&#39;s Blog">
+<meta property="og:description" content="基于 Mastra、TypeScript 和 Zod 构建多 Agent 技术文章生成工作流，记录四个 Agent 的协作机制，以及 DeepSeek 结构化输出、OpenAI JSON Schema、引用校验和自动审核循环的真实踩坑过程。">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg">
+<meta property="article:published_time" content="2026-10-24T09:11:00.000Z">
+<meta property="article:modified_time" content="2026-10-24T09:48:24.727Z">
+<meta property="article:author" content="Arthur Ming">
+<meta property="article:tag" content="Mastra">
+<meta property="article:tag" content="TypeScript">
+<meta property="article:tag" content="AI Agent">
+<meta property="article:tag" content="Zod">
+<meta property="article:tag" content="DeepSeek">
+<meta property="article:tag" content="OpenAI">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg"><script type="application/ld+json">{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "从零构建 Mastra 多 Agent 写作系统：Research、Analysis、Writer 与 Reviewer 协作实战",
+  "url": "http://blog.damingerdai.com/2026/10/24/ai/mastra/mastra-multi-agent-writing-workflow/",
+  "image": "https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg",
+  "datePublished": "2026-10-24T09:11:00.000Z",
+  "dateModified": "2026-10-24T09:48:24.727Z",
+  "author": [
+    {
+      "@type": "Person",
+      "name": "Arthur Ming",
+      "url": "http://blog.damingerdai.com"
+    }
+  ]
+}</script><link rel="shortcut icon" href="/img/avatar.png"><link rel="canonical" href="http://blog.damingerdai.com/2026/10/24/ai/mastra/mastra-multi-agent-writing-workflow/index.html"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><link rel="stylesheet" href="/css/index.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free/css/all.min.css"><script>
+    (() => {
+      
+    const saveToLocal = {
+      set: (key, value, ttl) => {
+        const data = { value }
+
+        if (ttl != null) {
+          data.expiry = Date.now() + ttl * 86400000
+        }
+
+        localStorage.setItem(key, JSON.stringify(data))
+      },
+      get: key => {
+        const itemStr = localStorage.getItem(key)
+        if (!itemStr) return
+
+        try {
+          const data = JSON.parse(itemStr)
+
+          if (data.expiry && Date.now() > data.expiry) {
+            localStorage.removeItem(key)
+            return
+          }
+
+          return data.value
+        } catch {
+          localStorage.removeItem(key)
+        }
+      }
+    }
+
+    const scriptCache = new Map()
+    const cssCache = new Map()
+    window.btf = {
+      saveToLocal,
+      getScript: (url, attr = {}) => {
+        if (scriptCache.has(url)) {
+          return scriptCache.get(url)
+        }
+
+        const promise = new Promise((resolve, reject) => {
+          const script = document.createElement('script')
+
+          script.src = url
+          script.async = true
+
+          for (const key in attr) {
+            script.setAttribute(key, attr[key])
+          }
+
+          script.onload = resolve
+          script.onerror = reject
+
+          document.head.appendChild(script)
+        })
+
+        scriptCache.set(url, promise)
+
+        return promise
+      },
+      getCSS: (url, id) => {
+        if (cssCache.has(url)) {
+          return cssCache.get(url)
+        }
+
+        const promise = new Promise((resolve, reject) => {
+          const link = document.createElement('link')
+
+          link.rel = 'stylesheet'
+          link.href = url
+
+          if (id) {
+            link.id = id
+          }
+
+          link.onload = resolve
+          link.onerror = reject
+
+          document.head.appendChild(link)
+        })
+
+        cssCache.set(url, promise)
+
+        return promise
+      },
+      addGlobalFn: (key, fn, name = false, parent = window) => {
+        if (!false && key.startsWith('pjax')) return
+        const globalFn = parent.globalFn || {}
+        globalFn[key] = globalFn[key] || {}
+        globalFn[key][name || Object.keys(globalFn[key]).length] = fn
+        parent.globalFn = globalFn
+      }
+    }
+  
+      
+      const metaThemeColor = document.querySelector('meta[name="theme-color"]')
+      const activateDarkMode = () => {
+        document.documentElement.dataset.theme = 'dark'
+        if (metaThemeColor !== null) {
+          metaThemeColor.setAttribute('content', '#0d0d0d')
+        }
+      }
+      const activateLightMode = () => {
+        document.documentElement.dataset.theme = 'light'
+        if (metaThemeColor !== null) {
+          metaThemeColor.setAttribute('content', '#ffffff')
+        }
+      }
+
+      btf.activateDarkMode = activateDarkMode
+      btf.activateLightMode = activateLightMode
+
+      const theme = saveToLocal.get('theme')
+    
+          const mediaQueryDark = window.matchMedia('(prefers-color-scheme: dark)')
+          const mediaQueryLight = window.matchMedia('(prefers-color-scheme: light)')
+
+          if (theme === undefined) {
+            if (mediaQueryLight.matches) activateLightMode()
+            else if (mediaQueryDark.matches) activateDarkMode()
+            else {
+              const hour = new Date().getHours()
+              const start = 6
+              const end = 18
+              const isNight =
+                start < end
+                    ? hour < start || hour >= end
+                    : hour >= start || hour < end
+              isNight ? activateDarkMode() : activateLightMode()
+            }
+            mediaQueryDark.addEventListener('change', e => {
+              if (saveToLocal.get('theme') === undefined) {
+                e.matches ? activateDarkMode() : activateLightMode()
+              }
+            })
+          } else {
+            theme === 'light' ? activateLightMode() : activateDarkMode()
+          }
+        
+      
+      const asideStatus = saveToLocal.get('aside-status')
+      if (asideStatus !== undefined) {
+        document.documentElement.classList.toggle('hide-aside', asideStatus === 'hide')
+      }
+    
+      
+    const detectApple = () => {
+      if (/iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent)) {
+        document.documentElement.classList.add('apple')
+      }
+    }
+    detectApple()
+  
+    })()
+  </script><script>const GLOBAL_CONFIG = {
+  root: '/',
+  algolia: undefined,
+  localSearch: undefined,
+  translate: undefined,
+  highlight: {"plugin":"highlight.js","highlightCopy":true,"highlightLang":true,"highlightHeightLimit":false,"highlightFullpage":false,"highlightMacStyle":false},
+  copy: {
+    success: '复制成功',
+    error: '复制失败',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '',
+  dateSuffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: undefined,
+  lightbox: 'null',
+  Snackbar: undefined,
+  infinitegrid: {
+    js: 'https://cdn.jsdelivr.net/npm/@egjs/infinitegrid/dist/infinitegrid.min.js',
+    buttonText: '加载更多'
+  },
+  isPhotoFigcaption: false,
+  islazyloadPlugin: false,
+  isAnchor: false,
+  percent: {
+    toc: true,
+    rightside: false,
+  },
+  autoDarkmode: true
+}</script><script id="config-diff">var GLOBAL_CONFIG_SITE = {
+  title: '从零构建 Mastra 多 Agent 写作系统：Research、Analysis、Writer 与 Reviewer 协作实战',
+  isHighlightShrink: false,
+  isToc: true,
+  pageType: 'post'
+}</script><link rel="stylesheet" href="/css/styles.css"><meta name="generator" content="Hexo 7.3.0"></head><body><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="avatar-img text-center"><img src="/img/avatar.png" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="site-data text-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">112</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">187</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">9</div></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归类</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><span class="site-page group"><i class="fa-fw fas fa-list"></i><span> 其他</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><li><a class="site-page child" href="/others/learning"><i class="fa-fw fas fa-graduation-cap"></i><span> 学习课程</span></a></li><li><a class="site-page child" href="/others/link/"><i class="fa-fw fas fa-link"></i><span> 链接</span></a></li><li><a class="site-page child" href="/others/interview/"><i class="fa-fw fas fa-glide"></i><span> 面试</span></a></li></ul></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于</span></a></div></div></div></div><div class="post" id="body-wrap"><header class="post-bg" id="page-header" style="background-image: url(https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg);"><nav id="nav"><span id="blog-info"><a class="nav-site-title" href="/"><span class="site-name">Damingerdai's Blog</span></a><a class="nav-page-title" href="/"><span class="site-name">从零构建 Mastra 多 Agent 写作系统：Research、Analysis、Writer 与 Reviewer 协作实战</span><span class="site-name"><i class="fa-solid fa-circle-arrow-left"></i><span>  返回首页</span></span></a></span><div id="menus"><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归类</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><span class="site-page group"><i class="fa-fw fas fa-list"></i><span> 其他</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><li><a class="site-page child" href="/others/learning"><i class="fa-fw fas fa-graduation-cap"></i><span> 学习课程</span></a></li><li><a class="site-page child" href="/others/link/"><i class="fa-fw fas fa-link"></i><span> 链接</span></a></li><li><a class="site-page child" href="/others/interview/"><i class="fa-fw fas fa-glide"></i><span> 面试</span></a></li></ul></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于</span></a></div></div><div id="toggle-menu"><span class="site-page"><i class="fas fa-bars fa-fw"></i></span></div></div></nav><div id="post-info"><h1 class="post-title">从零构建 Mastra 多 Agent 写作系统：Research、Analysis、Writer 与 Reviewer 协作实战</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2026-10-24T09:11:00.000Z" title="发表于 2026-10-24 17:11:00">2026-10-24</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2026-10-24T09:48:24.727Z" title="更新于 2026-10-24 17:48:24">2026-10-24</time></span><span class="post-meta-categories"><span class="post-meta-separator">|</span><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/AI/">AI</a><i class="fas fa-angle-right post-meta-separator"></i><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/AI/Mastra/">Mastra</a></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-pv-cv" id="" data-flag-title=""><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">浏览量:</span><span id="busuanzi_value_page_pv"><i class="fa-solid fa-spinner fa-spin"></i></span></span></div></div></div></header><main class="layout" id="content-inner"><div id="post"><article class="container post-content" id="article-container"><h1 id="从零构建-Mastra-多-Agent-写作系统：Research、Analysis、Writer-与-Reviewer-协作实战"><a href="#从零构建-Mastra-多-Agent-写作系统：Research、Analysis、Writer-与-Reviewer-协作实战" class="headerlink" title="从零构建 Mastra 多 Agent 写作系统：Research、Analysis、Writer 与 Reviewer 协作实战"></a>从零构建 Mastra 多 Agent 写作系统：Research、Analysis、Writer 与 Reviewer 协作实战</h1><p>在前两篇文章中，我分别使用 Mastra 实现了 RAG 知识库和 Agent Memory。</p>
+<ul>
+<li><a href="https://blog.damingerdai.com/2026/10/18/ai/mastra/mastra-rag-mvp-deepseek-siliconflow-pgvector/">从零构建 Mastra RAG MVP：DeepSeek、SiliconFlow 与 PostgreSQL&#x2F;pgvector 实战</a></li>
+<li><a href="https://blog.damingerdai.com/2026/10/19/ai/mastra/mastra-memory-postgresql-practice/">从 RAG 到有记忆的 Agent：Mastra Memory 与 PostgreSQL 实战</a></li>
+</ul>
+<p>RAG 解决的是 Agent 如何获取外部知识，Memory 解决的是 Agent 如何保存和使用上下文。</p>
+<p>那么接下来的问题是：<strong>如果一项任务需要研究、分析、执行和审核，能不能让多个 Agent 分工协作？</strong></p>
+<p>为了回答这个问题，我决定使用 Mastra 构建一个技术文章生成系统。</p>
+<p>输入一个主题，例如：</p>
+<blockquote>
+<p>Go 后端为什么应该从 MD5 迁移到 Argon2id？</p>
+</blockquote>
+<p>系统需要自动完成资料检索、技术分析、文章编写和质量审核。如果 Reviewer 认为文章存在问题，Writer 应该根据反馈修改文章，而不是简单地重新生成一遍。</p>
+<p>这次实验的目标不是构建一个完整的内容生产平台，而是理解 Mastra 多 Agent 协作的基本原理，以及实际开发中会遇到哪些工程问题。</p>
+<h2 id="一、系统架构"><a href="#一、系统架构" class="headerlink" title="一、系统架构"></a>一、系统架构</h2><p>我将文章生成过程拆分为四个业务 Agent。</p>
+<table>
+<thead>
+<tr>
+<th>Agent</th>
+<th>职责</th>
+<th>输出</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Research Agent</td>
+<td>检索知识库，收集资料</td>
+<td>ResearchResult</td>
+</tr>
+<tr>
+<td>Analysis Agent</td>
+<td>分析资料，设计文章结构</td>
+<td>AnalysisResult</td>
+</tr>
+<tr>
+<td>Writer Agent</td>
+<td>生成文章，处理修订意见</td>
+<td>DraftResult</td>
+</tr>
+<tr>
+<td>Reviewer Agent</td>
+<td>审核文章，决定下一步操作</td>
+<td>ReviewResult</td>
+</tr>
+</tbody></table>
+<p>整体执行过程如下：</p>
+<pre class="mermaid">flowchart TD
+    A["输入文章主题"] --> B["Research Agent"]
+    B --> C["Research Formatter"]
+    C --> D["Analysis Agent"]
+    D --> E["Writer Agent"]
+    E --> F["Reviewer Agent"]
+    F --> G{"审核决策"}
+    G -->|approve| H["完成文章"]
+    G -->|revise| I["Writer 修改文章"]
+    I --> F
+    G -->|research| J["Research 补充资料"]
+    J --> D</pre>
+
+<p>其中，Research Formatter 是一个辅助格式化环节：Research Agent 可以先使用工具生成研究报告，再由 Formatter 将报告转换为符合 Zod Schema 的 JSON。</p>
+<p>系统的关键不在于 Agent 数量，而在于 <strong>每个 Agent 的输入、输出和决策边界是否清晰</strong>。</p>
+<p>尤其是 Reviewer，它不应该只是返回一个评分，而应该决定下一步执行什么操作。</p>
+<h2 id="二、使用-Zod-定义-Agent-之间的数据契约"><a href="#二、使用-Zod-定义-Agent-之间的数据契约" class="headerlink" title="二、使用 Zod 定义 Agent 之间的数据契约"></a>二、使用 Zod 定义 Agent 之间的数据契约</h2><p>多 Agent 协作首先需要解决数据交换问题。</p>
+<p>如果 Research Agent 输出一大段自然语言，Analysis Agent 再自行理解，Writer Agent 又重新解释一次，那么信息就可能在不同 Agent 之间逐渐丢失或发生偏差。</p>
+<p>因此，我决定使用 Zod 为各个阶段定义明确的数据结构。</p>
+<h3 id="2-1-ResearchResult"><a href="#2-1-ResearchResult" class="headerlink" title="2.1 ResearchResult"></a>2.1 ResearchResult</h3><p>Research Agent 的任务不是写文章，而是提供事实、来源和证据缺口。</p>
+<figure class="highlight typescript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> &#123; z &#125; <span class="keyword">from</span> <span class="string">&quot;zod&quot;</span>;</span><br><span class="line"></span><br><span class="line"><span class="keyword">export</span> <span class="keyword">const</span> researchSchema = z.<span class="title function_">object</span>(&#123;</span><br><span class="line">  <span class="attr">topic</span>: z.<span class="title function_">string</span>(),</span><br><span class="line">  <span class="attr">findings</span>: z.<span class="title function_">array</span>(</span><br><span class="line">    z.<span class="title function_">object</span>(&#123;</span><br><span class="line">      <span class="attr">claim</span>: z.<span class="title function_">string</span>(),</span><br><span class="line">      <span class="attr">sourceId</span>: z.<span class="title function_">string</span>(),</span><br><span class="line">      <span class="attr">confidence</span>: z.<span class="title function_">enum</span>([<span class="string">&quot;high&quot;</span>, <span class="string">&quot;medium&quot;</span>, <span class="string">&quot;low&quot;</span>]),</span><br><span class="line">    &#125;),</span><br><span class="line">  ),</span><br><span class="line">  <span class="attr">sources</span>: z.<span class="title function_">array</span>(</span><br><span class="line">    z.<span class="title function_">object</span>(&#123;</span><br><span class="line">      <span class="attr">id</span>: z.<span class="title function_">string</span>(),</span><br><span class="line">      <span class="attr">title</span>: z.<span class="title function_">string</span>(),</span><br><span class="line">      <span class="attr">url</span>: z.<span class="title function_">string</span>().<span class="title function_">nullable</span>(),</span><br><span class="line">      <span class="attr">verified</span>: z.<span class="title function_">boolean</span>(),</span><br><span class="line">    &#125;),</span><br><span class="line">  ),</span><br><span class="line">  <span class="attr">gaps</span>: z.<span class="title function_">array</span>(z.<span class="title function_">string</span>()),</span><br><span class="line">  <span class="attr">summary</span>: z.<span class="title function_">string</span>(),</span><br><span class="line">&#125;);</span><br></pre></td></tr></table></figure>
+
+<p>这里有几个值得注意的字段。</p>
+<p><code>sourceId</code> 用于建立事实与资料来源之间的关系。<code>confidence</code> 表示研究结果的置信程度，但它并不等于事实已经得到独立验证。<code>verified</code> 用于记录来源是否已经实际检索和阅读。<code>gaps</code> 则记录当前资料中尚未解决的问题。</p>
+<p>我不希望 Agent 在证据不足时自行补充事实，因此将证据缺口作为 ResearchResult 的一部分。</p>
+<h3 id="2-2-AnalysisResult"><a href="#2-2-AnalysisResult" class="headerlink" title="2.2 AnalysisResult"></a>2.2 AnalysisResult</h3><p>Analysis Agent 接收 ResearchResult，并将研究结果组织成文章结构。</p>
+<figure class="highlight typescript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">export</span> <span class="keyword">const</span> analysisSchema = z.<span class="title function_">object</span>(&#123;</span><br><span class="line">  <span class="attr">topic</span>: z.<span class="title function_">string</span>(),</span><br><span class="line">  <span class="attr">keyPoints</span>: z.<span class="title function_">array</span>(</span><br><span class="line">    z.<span class="title function_">object</span>(&#123;</span><br><span class="line">      <span class="attr">point</span>: z.<span class="title function_">string</span>(),</span><br><span class="line">      <span class="attr">sourceIds</span>: z.<span class="title function_">array</span>(z.<span class="title function_">string</span>()),</span><br><span class="line">      <span class="attr">importance</span>: z.<span class="title function_">enum</span>([<span class="string">&quot;high&quot;</span>, <span class="string">&quot;medium&quot;</span>, <span class="string">&quot;low&quot;</span>]),</span><br><span class="line">    &#125;),</span><br><span class="line">  ),</span><br><span class="line">  <span class="attr">outline</span>: z.<span class="title function_">array</span>(</span><br><span class="line">    z.<span class="title function_">object</span>(&#123;</span><br><span class="line">      <span class="attr">heading</span>: z.<span class="title function_">string</span>(),</span><br><span class="line">      <span class="attr">description</span>: z.<span class="title function_">string</span>(),</span><br><span class="line">      <span class="attr">sourceIds</span>: z.<span class="title function_">array</span>(z.<span class="title function_">string</span>()),</span><br><span class="line">    &#125;),</span><br><span class="line">  ),</span><br><span class="line">  <span class="attr">risks</span>: z.<span class="title function_">array</span>(</span><br><span class="line">    z.<span class="title function_">object</span>(&#123;</span><br><span class="line">      <span class="attr">description</span>: z.<span class="title function_">string</span>(),</span><br><span class="line">      <span class="attr">sourceIds</span>: z.<span class="title function_">array</span>(z.<span class="title function_">string</span>()),</span><br><span class="line">    &#125;),</span><br><span class="line">  ),</span><br><span class="line">  <span class="attr">missingEvidence</span>: z.<span class="title function_">array</span>(z.<span class="title function_">string</span>()),</span><br><span class="line">  <span class="attr">needsMoreResearch</span>: z.<span class="title function_">boolean</span>(),</span><br><span class="line">  <span class="attr">summary</span>: z.<span class="title function_">string</span>(),</span><br><span class="line">&#125;);</span><br></pre></td></tr></table></figure>
+
+<p>与普通文章大纲不同，这里的每个关键论点和章节都可以关联来源 ID。这让 Writer 有机会判断某个结论是否具备研究依据，而不是仅根据模型已有知识生成内容。</p>
+<h3 id="2-3-DraftResult"><a href="#2-3-DraftResult" class="headerlink" title="2.3 DraftResult"></a>2.3 DraftResult</h3><p>Writer Agent 负责将研究结果和文章大纲转换为 Markdown。</p>
+<figure class="highlight typescript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">export</span> <span class="keyword">const</span> draftSchema = z.<span class="title function_">object</span>(&#123;</span><br><span class="line">  <span class="attr">title</span>: z.<span class="title function_">string</span>(),</span><br><span class="line">  <span class="attr">description</span>: z.<span class="title function_">string</span>(),</span><br><span class="line">  <span class="attr">tags</span>: z.<span class="title function_">array</span>(z.<span class="title function_">string</span>()),</span><br><span class="line">  <span class="attr">categories</span>: z.<span class="title function_">array</span>(z.<span class="title function_">string</span>()),</span><br><span class="line">  <span class="attr">content</span>: z.<span class="title function_">string</span>(),</span><br><span class="line">  <span class="attr">usedSourceIds</span>: z.<span class="title function_">array</span>(z.<span class="title function_">string</span>()),</span><br><span class="line">  <span class="attr">notes</span>: z.<span class="title function_">array</span>(z.<span class="title function_">string</span>()),</span><br><span class="line">&#125;);</span><br></pre></td></tr></table></figure>
+
+<p><code>content</code> 保存 Markdown 正文。<code>usedSourceIds</code> 保存文章实际引用的来源 ID。<code>notes</code> 用于记录需要 Reviewer 关注的编辑说明，例如证据限制、缺少性能数据等。</p>
+<p>这里有一个重要原则：<strong>Writer 可以组织和解释已有证据，但不应该为了让文章更完整而编造证据。</strong></p>
+<h3 id="2-4-ReviewResult"><a href="#2-4-ReviewResult" class="headerlink" title="2.4 ReviewResult"></a>2.4 ReviewResult</h3><p>Reviewer 的输出决定 Workflow 的下一步执行路径。</p>
+<figure class="highlight typescript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> &#123; z &#125; <span class="keyword">from</span> <span class="string">&quot;zod&quot;</span>;</span><br><span class="line"></span><br><span class="line"><span class="keyword">export</span> <span class="keyword">const</span> reviewIssueSchema = z.<span class="title function_">object</span>(&#123;</span><br><span class="line">  <span class="attr">severity</span>: z.<span class="title function_">enum</span>([<span class="string">&quot;high&quot;</span>, <span class="string">&quot;medium&quot;</span>, <span class="string">&quot;low&quot;</span>]),</span><br><span class="line">  <span class="attr">description</span>: z.<span class="title function_">string</span>(),</span><br><span class="line">  <span class="attr">suggestedFix</span>: z.<span class="title function_">string</span>(),</span><br><span class="line">&#125;);</span><br><span class="line"></span><br><span class="line"><span class="keyword">export</span> <span class="keyword">const</span> reviewSchema = z.<span class="title function_">object</span>(&#123;</span><br><span class="line">  <span class="attr">decision</span>: z.<span class="title function_">enum</span>([<span class="string">&quot;approve&quot;</span>, <span class="string">&quot;revise&quot;</span>, <span class="string">&quot;research&quot;</span>]),</span><br><span class="line">  <span class="attr">score</span>: z.<span class="title function_">number</span>().<span class="title function_">min</span>(<span class="number">0</span>).<span class="title function_">max</span>(<span class="number">100</span>).<span class="title function_">nullable</span>(),</span><br><span class="line">  <span class="attr">issues</span>: z.<span class="title function_">array</span>(reviewIssueSchema),</span><br><span class="line">  <span class="attr">feedback</span>: z.<span class="title function_">string</span>(),</span><br><span class="line">&#125;);</span><br></pre></td></tr></table></figure>
+
+<p>这里最重要的字段是 <code>decision</code>：<code>approve</code> 表示文章通过审核；<code>revise</code> 表示可以利用已有资料修改文章；<code>research</code> 表示缺少必要证据，需要补充研究。</p>
+<p>为了避免不合理的审核结果，我还使用 <code>superRefine()</code> 增加业务规则：</p>
+<figure class="highlight typescript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">export</span> <span class="keyword">const</span> validatedReviewSchema = reviewSchema.superRefine(</span><br><span class="line">  <span class="function">(<span class="params">review, ctx</span>) =&gt;</span> &#123;</span><br><span class="line">    <span class="keyword">if</span> (review.<span class="property">decision</span> !== <span class="string">&quot;approve&quot;</span> &amp;&amp; review.<span class="property">issues</span>.<span class="property">length</span> === <span class="number">0</span>) &#123;</span><br><span class="line">      ctx.<span class="title function_">addIssue</span>(&#123;</span><br><span class="line">        <span class="attr">code</span>: <span class="string">&quot;custom&quot;</span>,</span><br><span class="line">        <span class="attr">path</span>: [<span class="string">&quot;issues&quot;</span>],</span><br><span class="line">        <span class="attr">message</span>: <span class="string">&quot;revise/research decisions must include actionable issues&quot;</span>,</span><br><span class="line">      &#125;);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">if</span> (</span><br><span class="line">      review.<span class="property">decision</span> === <span class="string">&quot;approve&quot;</span> &amp;&amp;</span><br><span class="line">      review.<span class="property">issues</span>.<span class="title function_">some</span>(<span class="function">(<span class="params">issue</span>) =&gt;</span> issue.<span class="property">severity</span> === <span class="string">&quot;high&quot;</span>)</span><br><span class="line">    ) &#123;</span><br><span class="line">      ctx.<span class="title function_">addIssue</span>(&#123;</span><br><span class="line">        <span class="attr">code</span>: <span class="string">&quot;custom&quot;</span>,</span><br><span class="line">        <span class="attr">path</span>: [<span class="string">&quot;decision&quot;</span>],</span><br><span class="line">        <span class="attr">message</span>: <span class="string">&quot;Cannot approve a draft with high-severity issues&quot;</span>,</span><br><span class="line">      &#125;);</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;,</span><br><span class="line">);</span><br></pre></td></tr></table></figure>
+
+<p>需要注意的是，传给 LLM 的是基础 <code>reviewSchema</code>，而业务校验使用 <code>validatedReviewSchema</code>。这样可以把 JSON 结构约束与业务规则分开处理。</p>
+<h2 id="三、Research-Agent：让知识库成为研究资料来源"><a href="#三、Research-Agent：让知识库成为研究资料来源" class="headerlink" title="三、Research Agent：让知识库成为研究资料来源"></a>三、Research Agent：让知识库成为研究资料来源</h2><p>Research Agent 使用之前 RAG 项目中的知识检索工具。</p>
+<figure class="highlight typescript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> &#123; <span class="title class_">Agent</span> &#125; <span class="keyword">from</span> <span class="string">&quot;@mastra/core/agent&quot;</span>;</span><br><span class="line"><span class="keyword">import</span> &#123; knowledgeSearchTool &#125; <span class="keyword">from</span> <span class="string">&quot;../tools/knowledge-search.tool.js&quot;</span>;</span><br><span class="line"><span class="keyword">import</span> &#123; workflowModel &#125; <span class="keyword">from</span> <span class="string">&quot;../lib/openai.js&quot;</span>;</span><br><span class="line"></span><br><span class="line"><span class="keyword">export</span> <span class="keyword">const</span> researchAgent = <span class="keyword">new</span> <span class="title class_">Agent</span>(&#123;</span><br><span class="line">  <span class="attr">id</span>: <span class="string">&quot;research-agent&quot;</span>,</span><br><span class="line">  <span class="attr">name</span>: <span class="string">&quot;Research Agent&quot;</span>,</span><br><span class="line">  <span class="attr">model</span>: workflowModel,</span><br><span class="line">  <span class="attr">tools</span>: &#123; knowledgeSearchTool &#125;,</span><br><span class="line">  <span class="attr">instructions</span>: <span class="string">`</span></span><br><span class="line"><span class="string">You are a technical research specialist.</span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string">Responsibilities:</span></span><br><span class="line"><span class="string">1. Search the knowledge base for relevant information.</span></span><br><span class="line"><span class="string">2. Extract factual findings.</span></span><br><span class="line"><span class="string">3. Record source references.</span></span><br><span class="line"><span class="string">4. Identify missing evidence.</span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string">Rules:</span></span><br><span class="line"><span class="string">- Always search before answering.</span></span><br><span class="line"><span class="string">- Never invent sources.</span></span><br><span class="line"><span class="string">- Clearly distinguish facts and assumptions.</span></span><br><span class="line"><span class="string">- If evidence is insufficient, say so.</span></span><br><span class="line"><span class="string">- Do not write the final article.</span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string">Respond in Chinese.</span></span><br><span class="line"><span class="string">`</span>,</span><br><span class="line">&#125;);</span><br></pre></td></tr></table></figure>
+
+<p>检索工具调用之前实现的 <code>searchKnowledge()</code>：</p>
+<figure class="highlight typescript"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">const</span> results = <span class="keyword">await</span> <span class="title function_">searchKnowledge</span>(query, &#123; <span class="attr">topK</span>: <span class="number">5</span> &#125;);</span><br></pre></td></tr></table></figure>
+
+<p>其底层仍然是之前实现的 PostgreSQL&#x2F;pgvector 检索方案。</p>
+<p>这里我遇到的第一个设计问题是：Research Agent 不仅需要调用工具，还需要返回结构化数据。</p>
+<p>最初我尝试让它直接完成这两件事情，但在模型兼容性和输出稳定性方面遇到了问题。最后采用了一个更容易调试的方式：将研究与格式化分开。</p>
+<figure class="highlight typescript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">export</span> <span class="keyword">async</span> <span class="keyword">function</span> <span class="title function_">conductResearch</span>(<span class="params">prompt: <span class="built_in">string</span></span>) &#123;</span><br><span class="line">  <span class="keyword">const</span> report = <span class="keyword">await</span> researchAgent.<span class="title function_">generate</span>(prompt, &#123; <span class="attr">maxSteps</span>: <span class="number">8</span> &#125;);</span><br><span class="line"></span><br><span class="line">  <span class="keyword">if</span> (!report.<span class="property">text</span>.<span class="title function_">trim</span>()) &#123;</span><br><span class="line">    <span class="keyword">throw</span> <span class="keyword">new</span> <span class="title class_">Error</span>(<span class="string">&quot;Research returned an empty report&quot;</span>);</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="keyword">const</span> formatted = <span class="keyword">await</span> researchFormatterAgent.<span class="title function_">generate</span>(</span><br><span class="line">    <span class="string">`Convert the research report into JSON.\n\nResearch report:\n<span class="subst">$&#123;report.text&#125;</span>`</span>,</span><br><span class="line">    &#123; <span class="attr">structuredOutput</span>: &#123; <span class="attr">schema</span>: researchSchema &#125; &#125;,</span><br><span class="line">  );</span><br><span class="line"></span><br><span class="line">  <span class="keyword">return</span> researchSchema.<span class="title function_">parse</span>(formatted.<span class="property">object</span>);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>以上省略了实际项目中的完整格式要求和来源一致性校验。</p>
+<p>这样设计并不代表必须为每个格式化任务创建一个独立 Agent。它只是我在这个 POC 中选择的一种实现方式。如果以后需要降低成本，也可以考虑直接使用一次普通的结构化模型调用。</p>
+<h2 id="四、使用-Mastra-Workflow-编排多个-Agent"><a href="#四、使用-Mastra-Workflow-编排多个-Agent" class="headerlink" title="四、使用 Mastra Workflow 编排多个 Agent"></a>四、使用 Mastra Workflow 编排多个 Agent</h2><p>单独调用四个 Agent 并不复杂。真正复杂的是：<strong>如何让 Reviewer 的输出决定后续流程，并让 Writer 使用上一轮审核结果继续修改文章？</strong></p>
+<p>我使用 Mastra 的 <code>createWorkflow()</code> 和 <code>createStep()</code> 实现这个过程。</p>
+<h3 id="4-1-初始化阶段"><a href="#4-1-初始化阶段" class="headerlink" title="4.1 初始化阶段"></a>4.1 初始化阶段</h3><p>初始化阶段依次执行：</p>
+<figure class="highlight typescript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">const</span> initializeStep = <span class="title function_">createStep</span>(&#123;</span><br><span class="line">  <span class="attr">id</span>: <span class="string">&quot;initialize-article&quot;</span>,</span><br><span class="line">  inputSchema,</span><br><span class="line">  <span class="attr">outputSchema</span>: stateSchema,</span><br><span class="line">  <span class="attr">execute</span>: <span class="keyword">async</span> (&#123; inputData &#125;) =&gt; &#123;</span><br><span class="line">    <span class="keyword">const</span> &#123; topic &#125; = inputData;</span><br><span class="line"></span><br><span class="line">    <span class="variable language_">console</span>.<span class="title function_">log</span>(<span class="string">&quot;[Research] Starting...&quot;</span>);</span><br><span class="line">    <span class="keyword">const</span> research = <span class="keyword">await</span> <span class="title function_">conductResearch</span>(<span class="string">`Research this topic: <span class="subst">$&#123;topic&#125;</span>`</span>);</span><br><span class="line"></span><br><span class="line">    <span class="variable language_">console</span>.<span class="title function_">log</span>(<span class="string">&quot;[Analysis] Starting...&quot;</span>);</span><br><span class="line">    <span class="keyword">const</span> analysisResponse = <span class="keyword">await</span> analysisAgent.<span class="title function_">generate</span>(</span><br><span class="line">      <span class="string">`Analyze this research:\n<span class="subst">$&#123;<span class="built_in">JSON</span>.stringify(research)&#125;</span>`</span>,</span><br><span class="line">      &#123; <span class="attr">structuredOutput</span>: &#123; <span class="attr">schema</span>: analysisSchema &#125; &#125;,</span><br><span class="line">    );</span><br><span class="line">    <span class="keyword">const</span> analysis = analysisSchema.<span class="title function_">parse</span>(analysisResponse.<span class="property">object</span>);</span><br><span class="line"></span><br><span class="line">    <span class="variable language_">console</span>.<span class="title function_">log</span>(<span class="string">&quot;[Writer] Creating initial draft...&quot;</span>);</span><br><span class="line">    <span class="keyword">const</span> writerResponse = <span class="keyword">await</span> writerAgent.<span class="title function_">generate</span>(</span><br><span class="line">      <span class="string">`Write an article using:\n\nResearch:\n<span class="subst">$&#123;<span class="built_in">JSON</span>.stringify(research)&#125;</span>\n\nAnalysis:\n<span class="subst">$&#123;<span class="built_in">JSON</span>.stringify(analysis)&#125;</span>`</span>,</span><br><span class="line">      &#123; <span class="attr">structuredOutput</span>: &#123; <span class="attr">schema</span>: draftSchema &#125; &#125;,</span><br><span class="line">    );</span><br><span class="line">    <span class="keyword">const</span> draft = draftSchema.<span class="title function_">parse</span>(writerResponse.<span class="property">object</span>);</span><br><span class="line">    <span class="title function_">validateCitations</span>(research, draft);</span><br><span class="line"></span><br><span class="line">    <span class="keyword">return</span> &#123;</span><br><span class="line">      topic,</span><br><span class="line">      research,</span><br><span class="line">      analysis,</span><br><span class="line">      draft,</span><br><span class="line">      <span class="attr">reviewHistory</span>: [],</span><br><span class="line">      <span class="attr">reviewCount</span>: <span class="number">0</span>,</span><br><span class="line">      <span class="attr">researchRounds</span>: <span class="number">0</span>,</span><br><span class="line">      <span class="attr">maxReviews</span>: inputData.<span class="property">maxReviews</span>,</span><br><span class="line">      <span class="attr">maxResearchRounds</span>: inputData.<span class="property">maxResearchRounds</span>,</span><br><span class="line">      <span class="attr">status</span>: <span class="string">&quot;pending&quot;</span> <span class="keyword">as</span> <span class="keyword">const</span>,</span><br><span class="line">    &#125;;</span><br><span class="line">  &#125;,</span><br><span class="line">&#125;);</span><br></pre></td></tr></table></figure>
+
+<p>这段代码展示了核心结构，完整实现中还包含更严格的 Prompt 和错误处理。</p>
+<p>这里的 <code>stateSchema</code> 非常重要。它保存研究结果、分析结果、当前草稿、审核历史以及循环计数器。下一轮审核需要读取的是最新草稿，而不是第一次生成的文章。</p>
+<h3 id="4-2-Reviewer-决策"><a href="#4-2-Reviewer-决策" class="headerlink" title="4.2 Reviewer 决策"></a>4.2 Reviewer 决策</h3><p>审核阶段首先调用 Reviewer：</p>
+<figure class="highlight typescript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">const</span> response = <span class="keyword">await</span> reviewerAgent.<span class="title function_">generate</span>(prompt, &#123;</span><br><span class="line">  <span class="attr">structuredOutput</span>: &#123; <span class="attr">schema</span>: reviewSchema &#125;,</span><br><span class="line">&#125;);</span><br><span class="line"><span class="keyword">const</span> review = validatedReviewSchema.<span class="title function_">parse</span>(response.<span class="property">object</span>);</span><br></pre></td></tr></table></figure>
+
+<p>然后根据审核结果决定下一步操作。</p>
+<figure class="highlight typescript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">if</span> (review.<span class="property">decision</span> === <span class="string">&quot;approve&quot;</span>) &#123;</span><br><span class="line">  <span class="keyword">return</span> &#123; ...base, <span class="attr">status</span>: <span class="string">&quot;approved&quot;</span> <span class="keyword">as</span> <span class="keyword">const</span> &#125;;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">if</span> (nextCount &gt;= maxReviews) &#123;</span><br><span class="line">  <span class="keyword">return</span> &#123; ...base, <span class="attr">status</span>: <span class="string">&quot;max_reviews_reached&quot;</span> <span class="keyword">as</span> <span class="keyword">const</span> &#125;;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">if</span> (review.<span class="property">decision</span> === <span class="string">&quot;research&quot;</span>) &#123;</span><br><span class="line">  <span class="comment">// 补充研究，再次分析并重写文章</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// revise：使用现有证据修改文章</span></span><br></pre></td></tr></table></figure>
+
+<p><code>revise</code> 分支会将当前文章和 Reviewer 的反馈一起传给 Writer：</p>
+<figure class="highlight typescript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">const</span> writerResponse = <span class="keyword">await</span> writerAgent.<span class="title function_">generate</span>(</span><br><span class="line">  <span class="string">`Revise this Chinese engineering article.</span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string">Current DraftResult:</span></span><br><span class="line"><span class="string"><span class="subst">$&#123;<span class="built_in">JSON</span>.stringify(draft)&#125;</span></span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string">Reviewer:</span></span><br><span class="line"><span class="string"><span class="subst">$&#123;<span class="built_in">JSON</span>.stringify(review)&#125;</span></span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string">Address each issue using existing evidence.</span></span><br><span class="line"><span class="string">Do not invent new source IDs or facts.</span></span><br><span class="line"><span class="string">Return a complete DraftResult.`</span>,</span><br><span class="line">  &#123; <span class="attr">structuredOutput</span>: &#123; <span class="attr">schema</span>: draftSchema &#125; &#125;,</span><br><span class="line">);</span><br></pre></td></tr></table></figure>
+
+<p>这与简单的“重新生成文章”不同。Writer 能够读取上一轮文章和具体修改建议，围绕现有内容继续工作。</p>
+<h3 id="4-3-使用-dountil-实现审核循环"><a href="#4-3-使用-dountil-实现审核循环" class="headerlink" title="4.3 使用 dountil 实现审核循环"></a>4.3 使用 dountil 实现审核循环</h3><p>最后使用 <code>.dountil()</code> 将审核步骤连接起来：</p>
+<figure class="highlight typescript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">export</span> <span class="keyword">const</span> fullArticleWorkflow = <span class="title function_">createWorkflow</span>(&#123;</span><br><span class="line">  <span class="attr">id</span>: <span class="string">&quot;full-article-workflow&quot;</span>,</span><br><span class="line">  inputSchema,</span><br><span class="line">  <span class="attr">outputSchema</span>: stateSchema,</span><br><span class="line">&#125;)</span><br><span class="line">  .<span class="title function_">then</span>(initializeStep)</span><br><span class="line">  .<span class="title function_">dountil</span>(</span><br><span class="line">    reviewLoopStep,</span><br><span class="line">    <span class="keyword">async</span> (&#123; inputData &#125;) =&gt; inputData.<span class="property">status</span> !== <span class="string">&quot;pending&quot;</span>,</span><br><span class="line">  )</span><br><span class="line">  .<span class="title function_">then</span>(finalizeStep)</span><br><span class="line">  .<span class="title function_">commit</span>();</span><br></pre></td></tr></table></figure>
+
+<p>只要状态仍然是 <code>pending</code>，Workflow 就继续执行审核步骤。如果 Reviewer 返回 <code>approve</code>，或者达到最大审核次数，就退出循环。</p>
+<p>我还设置了 <code>maxResearchRounds</code>，避免系统无限补充资料。</p>
+<p>这里需要强调：<code>research</code> 分支虽然已经实现，但在本文展示的成功测试中没有被触发，因此不能仅凭这次运行就认为补充研究路径已经得到完整验证。</p>
+<h2 id="五、实际开发中遇到的问题"><a href="#五、实际开发中遇到的问题" class="headerlink" title="五、实际开发中遇到的问题"></a>五、实际开发中遇到的问题</h2><p>这一部分是整个项目最花时间的地方。</p>
+<p>一开始我认为最困难的是多 Agent 的工作流编排。实际开发后才发现，<strong>结构化输出的稳定性反而是更大的问题。</strong></p>
+<h3 id="5-1-DeepSeek-返回合法-JSON，但不符合-Schema"><a href="#5-1-DeepSeek-返回合法-JSON，但不符合-Schema" class="headerlink" title="5.1 DeepSeek 返回合法 JSON，但不符合 Schema"></a>5.1 DeepSeek 返回合法 JSON，但不符合 Schema</h3><p>最初使用的是 DeepSeek，通过 OpenAI Compatible API 接入 Mastra。</p>
+<figure class="highlight typescript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> &#123; createOpenAICompatible &#125; <span class="keyword">from</span> <span class="string">&quot;@ai-sdk/openai-compatible&quot;</span>;</span><br><span class="line"></span><br><span class="line"><span class="keyword">export</span> <span class="keyword">const</span> deepseek = <span class="title function_">createOpenAICompatible</span>(&#123;</span><br><span class="line">  <span class="attr">name</span>: <span class="string">&quot;deepseek&quot;</span>,</span><br><span class="line">  <span class="attr">baseURL</span>: <span class="string">&quot;https://api.deepseek.com/v1&quot;</span>,</span><br><span class="line">  <span class="attr">apiKey</span>: process.<span class="property">env</span>.<span class="property">DEEPSEEK_API_KEY</span>!,</span><br><span class="line">&#125;);</span><br></pre></td></tr></table></figure>
+
+<p>首先遇到的是 JSON 模式的请求限制：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">Prompt must contain the word &#x27;json&#x27; in some form</span><br><span class="line">to use &#x27;response_format&#x27; of type &#x27;json_object&#x27;.</span><br></pre></td></tr></table></figure>
+
+<p>这个问题相对容易解决，只需要在 Prompt 中明确要求返回 JSON。但之后出现的问题更加麻烦。</p>
+<p>例如 Analysis Agent 应该返回：</p>
+<figure class="highlight json"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="punctuation">&#123;</span></span><br><span class="line">  <span class="attr">&quot;keyPoints&quot;</span><span class="punctuation">:</span> <span class="punctuation">[</span></span><br><span class="line">    <span class="punctuation">&#123;</span></span><br><span class="line">      <span class="attr">&quot;point&quot;</span><span class="punctuation">:</span> <span class="string">&quot;MD5 不适合密码存储&quot;</span><span class="punctuation">,</span></span><br><span class="line">      <span class="attr">&quot;sourceIds&quot;</span><span class="punctuation">:</span> <span class="punctuation">[</span><span class="string">&quot;S1&quot;</span><span class="punctuation">]</span><span class="punctuation">,</span></span><br><span class="line">      <span class="attr">&quot;importance&quot;</span><span class="punctuation">:</span> <span class="string">&quot;high&quot;</span></span><br><span class="line">    <span class="punctuation">&#125;</span></span><br><span class="line">  <span class="punctuation">]</span></span><br><span class="line"><span class="punctuation">&#125;</span></span><br></pre></td></tr></table></figure>
+
+<p>实际却可能返回：</p>
+<figure class="highlight json"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="punctuation">&#123;</span></span><br><span class="line">  <span class="attr">&quot;keyPoints&quot;</span><span class="punctuation">:</span> <span class="punctuation">[</span><span class="string">&quot;MD5 不适合密码存储&quot;</span><span class="punctuation">]</span></span><br><span class="line"><span class="punctuation">&#125;</span></span><br></pre></td></tr></table></figure>
+
+<p>从 JSON 语法来看，两者都是合法的。但从 Zod Schema 来看，第二种显然不符合要求。</p>
+<p>此外，我还遇到过：</p>
+<ul>
+<li><code>risks</code> 返回字符串数组，而不是对象数组。</li>
+<li><code>missingEvidence</code> 被替换成 <code>evidenceGaps</code>。</li>
+<li>必填的 <code>summary</code> 字段缺失。</li>
+<li>字段类型和嵌套对象结构不一致。</li>
+</ul>
+<p>最终导致：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">STRUCTURED_OUTPUT_SCHEMA_VALIDATION_FAILED</span><br></pre></td></tr></table></figure>
+
+<p>这些问题在单个 Agent 中可能只是一次重试。但在多 Agent Workflow 中，某个阶段输出不符合 Schema，就会影响整个执行链。</p>
+<p>为了兼容这些输出，我一度使用了大量 <code>z.preprocess()</code>，尝试将模型返回的数据转换成预期结构。</p>
+<figure class="highlight typescript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">const</span> risksSchema = z.<span class="title function_">preprocess</span>(</span><br><span class="line">  <span class="function">(<span class="params">value</span>) =&gt;</span> &#123;</span><br><span class="line">    <span class="keyword">if</span> (!<span class="title class_">Array</span>.<span class="title function_">isArray</span>(value)) <span class="keyword">return</span> value;</span><br><span class="line">    <span class="keyword">return</span> value.<span class="title function_">map</span>(<span class="function">(<span class="params">item</span>) =&gt;</span> &#123;</span><br><span class="line">      <span class="keyword">if</span> (<span class="keyword">typeof</span> item === <span class="string">&quot;string&quot;</span>) &#123;</span><br><span class="line">        <span class="keyword">return</span> &#123; <span class="attr">description</span>: item, <span class="attr">sourceIds</span>: [] &#125;;</span><br><span class="line">      &#125;</span><br><span class="line">      <span class="keyword">return</span> item;</span><br><span class="line">    &#125;);</span><br><span class="line">  &#125;,</span><br><span class="line">  z.<span class="title function_">array</span>(riskSchema),</span><br><span class="line">);</span><br></pre></td></tr></table></figure>
+
+<p>这种方式可以处理部分格式差异，但也会带来额外复杂度。</p>
+<p>我逐渐意识到：如果需要编写大量代码来修正 LLM 的输出格式，那么模型与任务之间可能并不匹配。</p>
+<h3 id="5-2-切换-GPT-4-1-mini"><a href="#5-2-切换-GPT-4-1-mini" class="headerlink" title="5.2 切换 GPT-4.1 mini"></a>5.2 切换 GPT-4.1 mini</h3><p>为了提高结构化输出的稳定性，我最终将四个业务 Agent 切换到 GPT-4.1 mini。</p>
+<p>项目使用了自定义 OpenAI 兼容 API 地址：</p>
+<figure class="highlight typescript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> <span class="keyword">type</span> &#123; <span class="title class_">MastraModelConfig</span> &#125; <span class="keyword">from</span> <span class="string">&quot;@mastra/core/llm&quot;</span>;</span><br><span class="line"></span><br><span class="line"><span class="keyword">export</span> <span class="keyword">const</span> <span class="attr">workflowModel</span>: <span class="title class_">MastraModelConfig</span> = &#123;</span><br><span class="line">  <span class="attr">id</span>: <span class="string">&quot;bianxie/gpt-4.1-mini&quot;</span>,</span><br><span class="line">  <span class="attr">url</span>: <span class="string">&quot;https://api.bianxie.ai/v1&quot;</span>,</span><br><span class="line">  <span class="attr">apiKey</span>: process.<span class="property">env</span>.<span class="property">OPENAI_API_KEY</span>!,</span><br><span class="line">  <span class="attr">api</span>: <span class="string">&quot;chat&quot;</span>,</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+
+<p>这里使用的是第三方 OpenAI 兼容代理，而不是直接连接 OpenAI 官方 API。实际部署时需要自行评估代理服务的可靠性、隐私和兼容性。</p>
+<p>切换过程中还遇到了 AI SDK 与 Mastra 的类型兼容问题：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">Type &#x27;LanguageModelV4&#x27; is not assignable to</span><br><span class="line">type &#x27;MastraLanguageModelV4&#x27;.</span><br></pre></td></tr></table></figure>
+
+<p>原因是直接创建的 AI SDK 模型对象与当前 Mastra 所接受的模型接口存在类型差异。最终使用 Mastra 支持的模型配置对象，避免直接传入不兼容的模型实例。</p>
+<h3 id="5-3-OpenAI-Strict-JSON-Schema-不接受-optional-字段"><a href="#5-3-OpenAI-Strict-JSON-Schema-不接受-optional-字段" class="headerlink" title="5.3 OpenAI Strict JSON Schema 不接受 optional 字段"></a>5.3 OpenAI Strict JSON Schema 不接受 optional 字段</h3><p>切换模型后，前三个 Agent 已经可以正常执行。但 Reviewer 又遇到了一个新的问题：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">Invalid schema for response_format &#x27;response&#x27;:</span><br><span class="line">&#x27;required&#x27; is required to be supplied</span><br><span class="line">and to be an array including every key</span><br><span class="line">in properties. Missing &#x27;score&#x27;.</span><br></pre></td></tr></table></figure>
+
+<p>当时的 Schema 是：</p>
+<figure class="highlight typescript"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">score</span>: z.<span class="title function_">number</span>().<span class="title function_">min</span>(<span class="number">0</span>).<span class="title function_">max</span>(<span class="number">100</span>).<span class="title function_">optional</span>(),</span><br></pre></td></tr></table></figure>
+
+<p>普通 Zod 校验允许字段不存在。但 OpenAI Strict Structured Outputs 要求对象的所有属性都出现在 <code>required</code> 中。</p>
+<p>解决方法是将 <code>optional()</code> 改成 <code>nullable()</code>：</p>
+<figure class="highlight typescript"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">score</span>: z.<span class="title function_">number</span>().<span class="title function_">min</span>(<span class="number">0</span>).<span class="title function_">max</span>(<span class="number">100</span>).<span class="title function_">nullable</span>(),</span><br></pre></td></tr></table></figure>
+
+<p>这样 <code>score</code> 仍然必须返回，但允许其值为 <code>null</code>。</p>
+<p>这次问题让我更加明确：<strong>Zod Schema 能够通过 TypeScript 类型检查，并不代表它一定能够直接作为 LLM 的 Strict JSON Schema 使用。</strong></p>
+<p>因此，我将结构化输出 Schema 与业务规则校验分离，避免把所有约束都塞进模型输出阶段。</p>
+<h3 id="5-4-引用校验也会导致-Workflow-失败"><a href="#5-4-引用校验也会导致-Workflow-失败" class="headerlink" title="5.4 引用校验也会导致 Workflow 失败"></a>5.4 引用校验也会导致 Workflow 失败</h3><p>另一个问题出现在 Writer 生成文章之后。当时的错误是：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">Declared but unused source: S1</span><br></pre></td></tr></table></figure>
+
+<p>Writer 声明使用了 <code>S1</code>，但校验程序没有在正文中识别出对应引用。最初的实现只支持 <code>[S1]</code> 这种格式。然而，模型可能生成 <code>[S1, S2]</code>、<code>（S1）</code> 等不同形式。</p>
+<p>因此，我调整了引用提取逻辑：</p>
+<figure class="highlight typescript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">const</span> citationGroups = [</span><br><span class="line">  ...draft.<span class="property">content</span>.<span class="title function_">matchAll</span>(</span><br><span class="line">    <span class="regexp">/[\[（(]((?:S\d+)(?:\s*[,，、;；]\s*S\d+)*)[\]）)]/g</span>,</span><br><span class="line">  ),</span><br><span class="line">];</span><br><span class="line"></span><br><span class="line"><span class="keyword">const</span> cited = <span class="keyword">new</span> <span class="title class_">Set</span>(</span><br><span class="line">  citationGroups.<span class="title function_">flatMap</span>(<span class="function">(<span class="params">match</span>) =&gt;</span> match[<span class="number">1</span>].<span class="title function_">match</span>(<span class="regexp">/S\d+/g</span>) ?? []),</span><br><span class="line">);</span><br></pre></td></tr></table></figure>
+
+<p>随后检查：声明的来源是否存在于 ResearchResult；正文引用的来源是否存在；正文引用是否包含在 <code>usedSourceIds</code> 中。</p>
+<p>对于声明但未使用的来源，POC 阶段只输出警告，而不是直接终止 Workflow。</p>
+<p>需要注意，这种校验只能保证引用 ID 的基本一致性。它无法证明某个技术结论真的受到对应来源支持，更无法保证来源本身真实可靠。这仍然需要更深入的证据验证。</p>
+<h2 id="六、最终运行结果"><a href="#六、最终运行结果" class="headerlink" title="六、最终运行结果"></a>六、最终运行结果</h2><p>完成上述调整后，我再次运行完整 Workflow：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">npx tsx src/scripts/test-full-article-workflow.ts \</span><br><span class="line">  <span class="string">&quot;Go 后端为什么应该从 MD5 迁移到 Argon2id？&quot;</span></span><br></pre></td></tr></table></figure>
+
+<p>这次终于成功。</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line">[Research] Starting...</span><br><span class="line">[Analysis] Starting...</span><br><span class="line">[Writer] Creating initial draft...</span><br><span class="line"></span><br><span class="line">[Citation] Validation passed</span><br><span class="line">&#123; declared: [ &#x27;S1&#x27; ], cited: [ &#x27;S1&#x27; ] &#125;</span><br><span class="line"></span><br><span class="line">[Review 1/3] revise</span><br><span class="line">[Writer] Revising from feedback...</span><br><span class="line"></span><br><span class="line">[Citation] Validation passed</span><br><span class="line">&#123; declared: [ &#x27;S1&#x27; ], cited: [ &#x27;S1&#x27; ] &#125;</span><br><span class="line"></span><br><span class="line">[Review 2/3] revise</span><br><span class="line">[Writer] Revising from feedback...</span><br><span class="line"></span><br><span class="line">[Citation] Validation passed</span><br><span class="line">&#123; declared: [ &#x27;S1&#x27; ], cited: [ &#x27;S1&#x27; ] &#125;</span><br><span class="line"></span><br><span class="line">[Review 3/3] approve</span><br></pre></td></tr></table></figure>
+
+<p>最终结果：</p>
+<figure class="highlight json"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="punctuation">&#123;</span></span><br><span class="line">  <span class="attr">&quot;topic&quot;</span><span class="punctuation">:</span> <span class="string">&quot;Go 后端为什么应该从 MD5 迁移到 Argon2id？&quot;</span><span class="punctuation">,</span></span><br><span class="line">  <span class="attr">&quot;status&quot;</span><span class="punctuation">:</span> <span class="string">&quot;approved&quot;</span><span class="punctuation">,</span></span><br><span class="line">  <span class="attr">&quot;reviewCount&quot;</span><span class="punctuation">:</span> <span class="number">3</span><span class="punctuation">,</span></span><br><span class="line">  <span class="attr">&quot;researchRounds&quot;</span><span class="punctuation">:</span> <span class="number">0</span><span class="punctuation">,</span></span><br><span class="line">  <span class="attr">&quot;decisions&quot;</span><span class="punctuation">:</span> <span class="punctuation">[</span><span class="string">&quot;revise&quot;</span><span class="punctuation">,</span> <span class="string">&quot;revise&quot;</span><span class="punctuation">,</span> <span class="string">&quot;approve&quot;</span><span class="punctuation">]</span><span class="punctuation">,</span></span><br><span class="line">  <span class="attr">&quot;title&quot;</span><span class="punctuation">:</span> <span class="string">&quot;Go 后端为什么应该从 MD5 迁移到 Argon2id？&quot;</span></span><br><span class="line"><span class="punctuation">&#125;</span></span><br></pre></td></tr></table></figure>
+
+<p>整个过程经历了三次审核和两次自动修订。</p>
+<p>第一次审核认为文章缺少 OWASP、IETF 等权威标准的直接引用，也缺少性能对比和迁移边界情况说明。第二次审核认为文章已经有所改进，但仍然存在证据和实施细节方面的不足。第三次审核最终返回 <code>approve</code>。</p>
+<p>这说明 Writer 与 Reviewer 之间的自动修订机制已经能够正常运行。</p>
+<p>但这次结果也暴露了一个问题：Reviewer 连续要求补充权威文献，却始终返回 <code>revise</code>，而不是 <code>research</code>。最终文章仍然只有一个引用来源 <code>S1</code>。</p>
+<p>也就是说，系统虽然完成了自动审核闭环，但 Reviewer 的决策并不总是完全符合我们预先设计的职责边界。</p>
+<p>这也是多 Agent 系统与传统确定性程序之间的一个重要区别：<strong>Workflow 可以保证执行路径受到约束，但无法仅凭流程本身保证 LLM 的判断正确。</strong></p>
+<h2 id="七、关于多-Agent-系统的一些思考"><a href="#七、关于多-Agent-系统的一些思考" class="headerlink" title="七、关于多 Agent 系统的一些思考"></a>七、关于多 Agent 系统的一些思考</h2><p>完成这个 POC 后，我对多 Agent 有了更具体的认识。</p>
+<h3 id="7-1-多-Agent-不一定比单-Agent-更好"><a href="#7-1-多-Agent-不一定比单-Agent-更好" class="headerlink" title="7.1 多 Agent 不一定比单 Agent 更好"></a>7.1 多 Agent 不一定比单 Agent 更好</h3><p>拆分 Agent 的好处是职责明确。Research 负责检索，Analysis 负责分析，Writer 负责写作，Reviewer 负责审核。</p>
+<p>但拆分之后，也会引入额外成本：</p>
+<ul>
+<li>更多 LLM 调用。</li>
+<li>更多 Prompt 和 Schema。</li>
+<li>更多中间状态。</li>
+<li>更多错误处理。</li>
+<li>更复杂的调试过程。</li>
+<li>更高的 Token 消耗。</li>
+</ul>
+<p>一个 Agent 输出格式不正确，就可能让整个 Workflow 失败。而 Reviewer 的一次 <code>revise</code>，可能又会触发 Writer 和 Reviewer 的多次调用。</p>
+<p>因此，我认为是否需要多个 Agent，应该取决于任务是否真的存在独立的职责和决策边界，而不是 Agent 数量越多越好。</p>
+<h3 id="7-2-Workflow-比-Agent-数量更重要"><a href="#7-2-Workflow-比-Agent-数量更重要" class="headerlink" title="7.2 Workflow 比 Agent 数量更重要"></a>7.2 Workflow 比 Agent 数量更重要</h3><p>在这个项目中，最有价值的部分不是定义了四个 Agent。真正有价值的是：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">Reviewer → revise → Writer → Reviewer</span><br><span class="line">Reviewer → research → Research → Analysis → Writer</span><br></pre></td></tr></table></figure>
+
+<p>这些由审核结果驱动的执行路径。</p>
+<p>Agent 负责在给定上下文中完成任务，Workflow 负责管理状态、限制循环和决定执行顺序。</p>
+<p>我认为这种职责分离，比让一个 Agent 完全自主地决定所有执行步骤更容易理解和调试。</p>
+<h3 id="7-3-结构化输出应该作为工程约束"><a href="#7-3-结构化输出应该作为工程约束" class="headerlink" title="7.3 结构化输出应该作为工程约束"></a>7.3 结构化输出应该作为工程约束</h3><p>如果只是让 LLM 生成一篇 Markdown 文章，模型输出的格式偶尔发生变化，通常影响不大。但在多 Agent Workflow 中，输出会直接成为下一个程序步骤的输入。</p>
+<p>因此，结构化输出不能只是 Prompt 中的一句：</p>
+<blockquote>
+<p>Please return JSON.</p>
+</blockquote>
+<p>它应该包括明确的数据 Schema、模型对 Schema 的兼容能力、运行时数据校验、必要的业务规则校验，以及失败后的错误处理。</p>
+<p>这些都是普通后端工程中非常熟悉的概念，只不过现在数据生产者变成了 LLM。</p>
+<h3 id="7-4-不要把审核通过等同于事实正确"><a href="#7-4-不要把审核通过等同于事实正确" class="headerlink" title="7.4 不要把审核通过等同于事实正确"></a>7.4 不要把审核通过等同于事实正确</h3><p>本次实验最终返回了 <code>approved</code>。但 Reviewer 的判断仍然依赖于提供给它的研究资料和文章内容。</p>
+<p>如果 Research 阶段只有一个来源，Reviewer 即使反复审核，也无法凭空获得更多可靠证据。</p>
+<p>这说明多 Agent 的互相审核并不能自动消除幻觉。对于技术文章，尤其是涉及安全、性能和工程实践的内容，最终仍然需要开发者确认关键技术结论和引用来源。</p>
+<h2 id="八、总结：复杂结构化-Workflow-中，我暂时不推荐-DeepSeek"><a href="#八、总结：复杂结构化-Workflow-中，我暂时不推荐-DeepSeek" class="headerlink" title="八、总结：复杂结构化 Workflow 中，我暂时不推荐 DeepSeek"></a>八、总结：复杂结构化 Workflow 中，我暂时不推荐 DeepSeek</h2><p>这次实验让我对模型选择有了比较明确的看法。</p>
+<p>在之前的 RAG MVP 中，我使用 DeepSeek 完成知识问答，并没有遇到无法接受的问题。但在这次多 Agent Workflow 中，情况明显不同。</p>
+<p>Research、Analysis、Writer 和 Reviewer 需要交换严格定义的 JSON 数据。任何一个阶段的字段缺失、类型错误或者对象结构不匹配，都可能导致整个 Workflow 中断。</p>
+<p>我在 DeepSeek 上遇到的主要问题不是模型完全无法生成 JSON，而是：</p>
+<p><strong>它能够生成合法 JSON，却不能在这次测试中稳定遵循复杂的 Zod Schema。</strong></p>
+<p>为此，我花费了不少时间修改 Prompt、补充 Schema 描述，以及使用 <code>z.preprocess()</code> 兼容模型输出。这些工作并没有直接提升文章质量，而是在修复模型输出与程序接口之间的不一致。</p>
+<p>切换到 GPT-4.1 mini 后，虽然也遇到了 Strict JSON Schema 的配置问题，但在修复 Schema 后，最终成功运行了完整的三轮审核流程。</p>
+<p>所以，对于这次实验涉及的场景，我的建议是：</p>
+<p><strong>如果使用 Mastra 构建多 Agent Workflow，并且严重依赖复杂的 Structured Output，我暂时不推荐优先选择 DeepSeek。</strong></p>
+<p>这不是说 DeepSeek 不适合所有 Agent 应用。对于普通聊天、RAG 问答、内容生成，或者结构较简单的 JSON 输出，它仍然可能是一个具有成本优势的选择。</p>
+<p>但对于多个 Agent 之间需要严格交换结构化数据的系统，我会优先考虑经过实际测试、能够稳定遵循 Schema 的模型。</p>
+<p>因为模型调用成本不只有 API Token 费用，还包括重试、错误处理、调试和维护成本。一个 Token 单价更低的模型，如果经常导致工作流中断，最终未必更便宜。</p>
+<p>至于这个 POC，我决定到这里为止。不继续增加 Agent，也不准备把它扩展成一个复杂的自动化内容生产平台。</p>
+<p>通过这次实验，我已经验证了 Mastra 多 Agent 协作中最想理解的几个问题：结构化数据如何传递、Workflow 如何管理状态、Reviewer 如何驱动修订，以及模型不稳定时会给整个系统带来什么影响。</p>
+<p>对我来说，这些收获已经足够。</p>
+<p><strong>多 Agent 的目标不应该是让系统拥有更多 Agent，而应该是让复杂任务变得更可靠、更容易控制。</strong></p>
+</article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta"><i class="fas fa-circle-user fa-fw"></i>文章作者: </span><span class="post-copyright-info"><a href="http://blog.damingerdai.com">Arthur Ming</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta"><i class="fas fa-square-arrow-up-right fa-fw"></i>文章链接: </span><span class="post-copyright-info"><a href="http://blog.damingerdai.com/2026/10/24/ai/mastra/mastra-multi-agent-writing-workflow/">http://blog.damingerdai.com/2026/10/24/ai/mastra/mastra-multi-agent-writing-workflow/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta"><i class="fas fa-circle-exclamation fa-fw"></i>版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来源 <a href="http://blog.damingerdai.com" target="_blank">Damingerdai's Blog</a>！</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/Mastra/">Mastra</a><a class="post-meta__tags" href="/tags/TypeScript/">TypeScript</a><a class="post-meta__tags" href="/tags/AI-Agent/">AI Agent</a><a class="post-meta__tags" href="/tags/Zod/">Zod</a><a class="post-meta__tags" href="/tags/DeepSeek/">DeepSeek</a><a class="post-meta__tags" href="/tags/OpenAI/">OpenAI</a></div><div class="post-share"><div class="social-share" data-image="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" data-sites="facebook,x,wechat,weibo,qq"></div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/butterfly-extsrc/sharejs/dist/css/share.min.css" media="print" onload="this.media='all'"><script src="https://cdn.jsdelivr.net/npm/butterfly-extsrc/sharejs/dist/js/social-share.min.js" defer></script></div></div><nav class="pagination-post" id="pagination"><a class="pagination-related full-width" href="/2026/10/24/front-end/netlify-to-lighthouse-ci/" title="从 Netlify 部署失败到 Lighthouse CI：在 GitHub Actions 中建立前端质量门禁"><img class="cover" src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" onerror="onerror=null;src='/img/404.jpg'" alt="cover of next post"><div class="info text-right"><div class="info-1"><div class="info-item-1">下一篇</div><div class="info-item-2">从 Netlify 部署失败到 Lighthouse CI：在 GitHub Actions 中建立前端质量门禁</div></div><div class="info-2"><div class="info-item-1">前言：Netlify 部署失败，问题竟然出在 Lighthouse 插件最近一次 Netlify 部署失败，让我重新思考了前端项目的 CI&#x2F;CD 质量检查应该放在哪里。 当时的错误日志非常明确： 12345678910111213❯ Context  production❯ Installing plugins   - @netlify/plugin-lighthouse@4Configuration errorThe Node.js version is 22.23.3 but the plugin&quot;@netlify/plugin-lighthouse&quot; requires &gt;=14.15 &lt;20Failed during stage &#x27;building site&#x27;:Build script returned non-zero exit code: 2  Netlify 使用 Node.js 22.23.3，但 @netlify/plugin-lighthouse@4 声明的版本范围是 &gt;=14.15 &lt;2...</div></div></div></a></nav><div class="relatedPosts"><div class="headline"><i class="fas fa-thumbs-up fa-fw"></i><span>相关推荐</span></div><div class="relatedPosts-list"><a class="pagination-related" href="/2026/10/18/ai/mastra/mastra-rag-mvp-deepseek-siliconflow-pgvector/" title="从零构建 Mastra RAG MVP：DeepSeek、SiliconFlow 与 PostgreSQL&#x2F;pgvector 实战"><img class="cover" src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-10-18</div><div class="info-item-2">从零构建 Mastra RAG MVP：DeepSeek、SiliconFlow 与 PostgreSQL&#x2F;pgvector 实战</div></div><div class="info-2"><div class="info-item-1">最近我在尝试使用 Mastra 构建一个简单的 RAG（Retrieval-Augmented Generation，检索增强生成）应用。目标并不是一开始就做完整的知识库平台，而是先打通一条最小可用链路：把自己的 Markdown 技术文章导入向量数据库，然后用自然语言提问，让模型根据文章内容回答问题。 这次选用的技术组合是：  Mastra：组织 Agent 和 Tool。 DeepSeek：负责理解问题、决定调用检索工具并生成答案。 SiliconFlow：提供 BAAI/bge-m3 Embedding 模型，将文本转换为向量。 PostgreSQL + pgvector：保存并检索文档向量。 TypeScript：实现导入脚本、检索服务和命令行问答。  这篇文章记录 MVP 的实现思路、关键代码，以及真正遇到的几次错误。代码按这次项目的实现方式整理；Mastra 和 AI SDK 的具体类型、方法签名可能随版本调整，复制时应以项目安装版本为准。  一、先理解要实现的 RAG 链路普通 LLM 并不知道我最近在 GitHub 上修改了什么，也不一定知道 Health Mas...</div></div></div></a><a class="pagination-related" href="/2026/10/19/ai/mastra/mastra-memory-postgresql-practice/" title="从 RAG 到有记忆的 Agent：Mastra Memory 与 PostgreSQL 实战"><img class="cover" src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-10-19</div><div class="info-item-2">从 RAG 到有记忆的 Agent：Mastra Memory 与 PostgreSQL 实战</div></div><div class="info-2"><div class="info-item-1">上一篇文章《从零构建 Mastra RAG MVP：DeepSeek、SiliconFlow 与 PostgreSQL&#x2F;pgvector 实战》中，我把自己的 Markdown 技术文章切分、向量化并存入 PostgreSQL&#x2F;pgvector，再通过 Mastra Agent 和 DeepSeek 调用检索工具完成知识问答。 这解决了“Agent 如何知道我的知识库内容”，但没有解决另一个问题：Agent 如何记住之前的对话？ 如果用户刚刚问过 Health Master 为什么从 MD5 迁移到 Argon2id，下一句再问“它有什么优势”，Agent 应该能够理解上下文。更进一步，用户在一个对话中说自己喜欢 Rust，换一个对话后，Agent 能不能继续记住？ 这次在原有 mastra-rag-app 上增加 Mastra Memory，继续使用同一个 PostgreSQL 实例，并把实际测试和排错过程记录下来。以下代码以本次项目使用的 API 形态为例；Mastra 更新较快，复制时应核对安装版本的类型签名。 一、先区分 RAG、Conversatio...</div></div></div></a><a class="pagination-related" href="/2026/10/20/ai/mastra/mastra-rag-document-lifecycle-version-aware-retrieval/" title="Mastra RAG 进阶：使用 Drizzle ORM 和 pgvector 实现文档版本管理与 Version-aware Retrieval"><img class="cover" src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-10-20</div><div class="info-item-2">Mastra RAG 进阶：使用 Drizzle ORM 和 pgvector 实现文档版本管理与 Version-aware Retrieval</div></div><div class="info-2"><div class="info-item-1">Mastra RAG 进阶：使用 Drizzle ORM 和 pgvector 实现文档版本管理与 Version-aware Retrieval前言在上一篇文章《从零构建 Mastra RAG MVP：DeepSeek、SiliconFlow 与 PostgreSQL&#x2F;pgvector 实战》中，我使用 Mastra、DeepSeek、SiliconFlow BGE-M3 和 PostgreSQL&#x2F;pgvector 搭建了最小可运行的 RAG 知识库。 最初的链路是：Markdown → Chunking → Embedding → pgvector → Similarity Search → Agent。它能够完成基础检索，却没有解决文档更新后的版本问题。 当一篇文章从 v1 更新为 v2，旧版向量仍在 pgvector 中时，怎样保证 RAG 不会把旧内容当成最新知识？ 这次在原有 POC 上引入 Drizzle ORM，增加三张文档元数据表，实现内容去重、版本创建、发布指针和 Version-aware Retrieval。本文基于实际 TypeScr...</div></div></div></a><a class="pagination-related" href="/2026/09/28/ai/mastra/getting-started-travel-agent/" title="Mastra 入门：从零搭建旅行助手 Agent"><img class="cover" src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-09-28</div><div class="info-item-2">Mastra 入门：从零搭建旅行助手 Agent</div></div><div class="info-2"><div class="info-item-1">Mastra 入门：从零搭建旅行助手 Agent本文面向熟悉 TypeScript、刚接触 Mastra 的开发者。完成后，你会有一个能追问旅行需求、生成行程，并按需调用模拟天气工具的 Agent。示例使用 Bun 和 DeepSeek Flash；天气数值固定，仅用于学习工具调用。 1. 先理解三个概念   概念 在本例中的职责    Agent 配置模型、指令和可用工具，处理用户对话   Tool 接受经过 Schema 约束的输入，执行代码，返回结构化结果   Studio 本地可视化调试界面，试聊 Agent、查看工具调用与运行过程   Agent 可以决定是否请求调用工具；工具的 execute 才负责真正执行代码。当前示例没有持久化 Memory、实时天气、车票和酒店查询，也没有保证跨新会话记住偏好。更完整的 Workflow、Memory、RAG、MCP 可以以后逐步加入。 2. 初始化项目确认 Node.js 满足当前 Mastra 文档的最低要求（教程所列为 22.13.0），并检查 Bun： 12node -vbun -v  最可控的入门方式是手动安装。这样项...</div></div></div></a></div></div></div><div class="aside-content" id="aside-content"><div class="card-widget card-info text-center"><div class="avatar-img"><img src="/img/avatar.png" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="author-info-name">Arthur Ming</div><div class="author-info-description">大明二代的博客</div><div class="site-data"><a href="/archives/"><div class="headline">文章</div><div class="length-num">112</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">187</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">9</div></a></div><a id="card-info-btn" target="_blank" rel="noopener" href="https://github.com/damingerdai"><i class="fab fa-github"></i><span>Follow Me</span></a><div class="card-info-social-icons"><a class="social-icon" href="https://github.com/damingerdai" target="_blank" title="Github"><i class="fab fa-github" style="color: #24292e;"></i></a><a class="social-icon" href="mailto:mingguobin@live.com" target="_blank" title="Email"><i class="fas fa-envelope" style="color: #4a7dbe;"></i></a></div></div><div class="card-widget card-announcement"><div class="item-headline"><i class="fas fa-bullhorn fa-shake"></i><span>公告</span></div><div class="announcement_content">大家好，我是大明二代</div></div><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="item-headline"><i class="fas fa-stream"></i><span>目录</span><span class="toc-percentage"></span></div><div class="toc-content"><ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#%E4%BB%8E%E9%9B%B6%E6%9E%84%E5%BB%BA-Mastra-%E5%A4%9A-Agent-%E5%86%99%E4%BD%9C%E7%B3%BB%E7%BB%9F%EF%BC%9AResearch%E3%80%81Analysis%E3%80%81Writer-%E4%B8%8E-Reviewer-%E5%8D%8F%E4%BD%9C%E5%AE%9E%E6%88%98"><span class="toc-number">1.</span> <span class="toc-text">从零构建 Mastra 多 Agent 写作系统：Research、Analysis、Writer 与 Reviewer 协作实战</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%B8%80%E3%80%81%E7%B3%BB%E7%BB%9F%E6%9E%B6%E6%9E%84"><span class="toc-number">1.1.</span> <span class="toc-text">一、系统架构</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%BA%8C%E3%80%81%E4%BD%BF%E7%94%A8-Zod-%E5%AE%9A%E4%B9%89-Agent-%E4%B9%8B%E9%97%B4%E7%9A%84%E6%95%B0%E6%8D%AE%E5%A5%91%E7%BA%A6"><span class="toc-number">1.2.</span> <span class="toc-text">二、使用 Zod 定义 Agent 之间的数据契约</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#2-1-ResearchResult"><span class="toc-number">1.2.1.</span> <span class="toc-text">2.1 ResearchResult</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#2-2-AnalysisResult"><span class="toc-number">1.2.2.</span> <span class="toc-text">2.2 AnalysisResult</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#2-3-DraftResult"><span class="toc-number">1.2.3.</span> <span class="toc-text">2.3 DraftResult</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#2-4-ReviewResult"><span class="toc-number">1.2.4.</span> <span class="toc-text">2.4 ReviewResult</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%B8%89%E3%80%81Research-Agent%EF%BC%9A%E8%AE%A9%E7%9F%A5%E8%AF%86%E5%BA%93%E6%88%90%E4%B8%BA%E7%A0%94%E7%A9%B6%E8%B5%84%E6%96%99%E6%9D%A5%E6%BA%90"><span class="toc-number">1.3.</span> <span class="toc-text">三、Research Agent：让知识库成为研究资料来源</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%9B%9B%E3%80%81%E4%BD%BF%E7%94%A8-Mastra-Workflow-%E7%BC%96%E6%8E%92%E5%A4%9A%E4%B8%AA-Agent"><span class="toc-number">1.4.</span> <span class="toc-text">四、使用 Mastra Workflow 编排多个 Agent</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#4-1-%E5%88%9D%E5%A7%8B%E5%8C%96%E9%98%B6%E6%AE%B5"><span class="toc-number">1.4.1.</span> <span class="toc-text">4.1 初始化阶段</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#4-2-Reviewer-%E5%86%B3%E7%AD%96"><span class="toc-number">1.4.2.</span> <span class="toc-text">4.2 Reviewer 决策</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#4-3-%E4%BD%BF%E7%94%A8-dountil-%E5%AE%9E%E7%8E%B0%E5%AE%A1%E6%A0%B8%E5%BE%AA%E7%8E%AF"><span class="toc-number">1.4.3.</span> <span class="toc-text">4.3 使用 dountil 实现审核循环</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%BA%94%E3%80%81%E5%AE%9E%E9%99%85%E5%BC%80%E5%8F%91%E4%B8%AD%E9%81%87%E5%88%B0%E7%9A%84%E9%97%AE%E9%A2%98"><span class="toc-number">1.5.</span> <span class="toc-text">五、实际开发中遇到的问题</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#5-1-DeepSeek-%E8%BF%94%E5%9B%9E%E5%90%88%E6%B3%95-JSON%EF%BC%8C%E4%BD%86%E4%B8%8D%E7%AC%A6%E5%90%88-Schema"><span class="toc-number">1.5.1.</span> <span class="toc-text">5.1 DeepSeek 返回合法 JSON，但不符合 Schema</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#5-2-%E5%88%87%E6%8D%A2-GPT-4-1-mini"><span class="toc-number">1.5.2.</span> <span class="toc-text">5.2 切换 GPT-4.1 mini</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#5-3-OpenAI-Strict-JSON-Schema-%E4%B8%8D%E6%8E%A5%E5%8F%97-optional-%E5%AD%97%E6%AE%B5"><span class="toc-number">1.5.3.</span> <span class="toc-text">5.3 OpenAI Strict JSON Schema 不接受 optional 字段</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#5-4-%E5%BC%95%E7%94%A8%E6%A0%A1%E9%AA%8C%E4%B9%9F%E4%BC%9A%E5%AF%BC%E8%87%B4-Workflow-%E5%A4%B1%E8%B4%A5"><span class="toc-number">1.5.4.</span> <span class="toc-text">5.4 引用校验也会导致 Workflow 失败</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%85%AD%E3%80%81%E6%9C%80%E7%BB%88%E8%BF%90%E8%A1%8C%E7%BB%93%E6%9E%9C"><span class="toc-number">1.6.</span> <span class="toc-text">六、最终运行结果</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%B8%83%E3%80%81%E5%85%B3%E4%BA%8E%E5%A4%9A-Agent-%E7%B3%BB%E7%BB%9F%E7%9A%84%E4%B8%80%E4%BA%9B%E6%80%9D%E8%80%83"><span class="toc-number">1.7.</span> <span class="toc-text">七、关于多 Agent 系统的一些思考</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#7-1-%E5%A4%9A-Agent-%E4%B8%8D%E4%B8%80%E5%AE%9A%E6%AF%94%E5%8D%95-Agent-%E6%9B%B4%E5%A5%BD"><span class="toc-number">1.7.1.</span> <span class="toc-text">7.1 多 Agent 不一定比单 Agent 更好</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#7-2-Workflow-%E6%AF%94-Agent-%E6%95%B0%E9%87%8F%E6%9B%B4%E9%87%8D%E8%A6%81"><span class="toc-number">1.7.2.</span> <span class="toc-text">7.2 Workflow 比 Agent 数量更重要</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#7-3-%E7%BB%93%E6%9E%84%E5%8C%96%E8%BE%93%E5%87%BA%E5%BA%94%E8%AF%A5%E4%BD%9C%E4%B8%BA%E5%B7%A5%E7%A8%8B%E7%BA%A6%E6%9D%9F"><span class="toc-number">1.7.3.</span> <span class="toc-text">7.3 结构化输出应该作为工程约束</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#7-4-%E4%B8%8D%E8%A6%81%E6%8A%8A%E5%AE%A1%E6%A0%B8%E9%80%9A%E8%BF%87%E7%AD%89%E5%90%8C%E4%BA%8E%E4%BA%8B%E5%AE%9E%E6%AD%A3%E7%A1%AE"><span class="toc-number">1.7.4.</span> <span class="toc-text">7.4 不要把审核通过等同于事实正确</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%85%AB%E3%80%81%E6%80%BB%E7%BB%93%EF%BC%9A%E5%A4%8D%E6%9D%82%E7%BB%93%E6%9E%84%E5%8C%96-Workflow-%E4%B8%AD%EF%BC%8C%E6%88%91%E6%9A%82%E6%97%B6%E4%B8%8D%E6%8E%A8%E8%8D%90-DeepSeek"><span class="toc-number">1.8.</span> <span class="toc-text">八、总结：复杂结构化 Workflow 中，我暂时不推荐 DeepSeek</span></a></li></ol></li></ol></div></div><div class="card-widget card-recent-post"><div class="item-headline"><i class="fas fa-history"></i><span>最新文章</span></div><div class="aside-list"><div class="aside-list-item"><a class="thumbnail" href="/2026/10/24/ai/mastra/mastra-multi-agent-writing-workflow/" title="从零构建 Mastra 多 Agent 写作系统：Research、Analysis、Writer 与 Reviewer 协作实战"><img src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="从零构建 Mastra 多 Agent 写作系统：Research、Analysis、Writer 与 Reviewer 协作实战"/></a><div class="content"><a class="title" href="/2026/10/24/ai/mastra/mastra-multi-agent-writing-workflow/" title="从零构建 Mastra 多 Agent 写作系统：Research、Analysis、Writer 与 Reviewer 协作实战">从零构建 Mastra 多 Agent 写作系统：Research、Analysis、Writer 与 Reviewer 协作实战</a><time datetime="2026-10-24T09:11:00.000Z" title="发表于 2026-10-24 17:11:00">2026-10-24</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2026/10/24/front-end/netlify-to-lighthouse-ci/" title="从 Netlify 部署失败到 Lighthouse CI：在 GitHub Actions 中建立前端质量门禁"><img src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="从 Netlify 部署失败到 Lighthouse CI：在 GitHub Actions 中建立前端质量门禁"/></a><div class="content"><a class="title" href="/2026/10/24/front-end/netlify-to-lighthouse-ci/" title="从 Netlify 部署失败到 Lighthouse CI：在 GitHub Actions 中建立前端质量门禁">从 Netlify 部署失败到 Lighthouse CI：在 GitHub Actions 中建立前端质量门禁</a><time datetime="2026-10-24T07:30:00.000Z" title="发表于 2026-10-24 15:30:00">2026-10-24</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2026/10/20/ai/mastra/mastra-rag-document-lifecycle-version-aware-retrieval/" title="Mastra RAG 进阶：使用 Drizzle ORM 和 pgvector 实现文档版本管理与 Version-aware Retrieval"><img src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="Mastra RAG 进阶：使用 Drizzle ORM 和 pgvector 实现文档版本管理与 Version-aware Retrieval"/></a><div class="content"><a class="title" href="/2026/10/20/ai/mastra/mastra-rag-document-lifecycle-version-aware-retrieval/" title="Mastra RAG 进阶：使用 Drizzle ORM 和 pgvector 实现文档版本管理与 Version-aware Retrieval">Mastra RAG 进阶：使用 Drizzle ORM 和 pgvector 实现文档版本管理与 Version-aware Retrieval</a><time datetime="2026-10-20T08:30:00.000Z" title="发表于 2026-10-20 16:30:00">2026-10-20</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2026/10/19/ai/mastra/mastra-memory-postgresql-practice/" title="从 RAG 到有记忆的 Agent：Mastra Memory 与 PostgreSQL 实战"><img src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="从 RAG 到有记忆的 Agent：Mastra Memory 与 PostgreSQL 实战"/></a><div class="content"><a class="title" href="/2026/10/19/ai/mastra/mastra-memory-postgresql-practice/" title="从 RAG 到有记忆的 Agent：Mastra Memory 与 PostgreSQL 实战">从 RAG 到有记忆的 Agent：Mastra Memory 与 PostgreSQL 实战</a><time datetime="2026-10-19T10:30:00.000Z" title="发表于 2026-10-19 18:30:00">2026-10-19</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2026/10/18/ai/mastra/mastra-rag-mvp-deepseek-siliconflow-pgvector/" title="从零构建 Mastra RAG MVP：DeepSeek、SiliconFlow 与 PostgreSQL/pgvector 实战"><img src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="从零构建 Mastra RAG MVP：DeepSeek、SiliconFlow 与 PostgreSQL/pgvector 实战"/></a><div class="content"><a class="title" href="/2026/10/18/ai/mastra/mastra-rag-mvp-deepseek-siliconflow-pgvector/" title="从零构建 Mastra RAG MVP：DeepSeek、SiliconFlow 与 PostgreSQL/pgvector 实战">从零构建 Mastra RAG MVP：DeepSeek、SiliconFlow 与 PostgreSQL/pgvector 实战</a><time datetime="2026-10-18T02:30:00.000Z" title="发表于 2026-10-18 10:30:00">2026-10-18</time></div></div></div></div></div></div></main><footer id="footer"><div class="footer-other"><div class="footer-copyright"><span class="copyright">&copy;&nbsp;2020 - 2026 By Arthur Ming</span></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="日间和夜间模式切换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside-config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><button id="go-up" type="button" title="回到顶部"><span class="scroll-percent"></span><i class="fas fa-arrow-up"></i></button></div></div><div><script src="/js/utils.js"></script><script src="/js/main.js"></script><div class="js-pjax"><script>(() => {
+  const parseViewBox = viewBox => {
+    if (!viewBox) return null
+    const parts = viewBox.trim().split(/[\s,]+/).map(n => Number(n))
+    if (parts.length !== 4 || parts.some(n => Number.isNaN(n))) return null
+    return parts
+  }
+
+  const getSvgViewBox = svg => {
+    const attr = parseViewBox(svg.getAttribute('viewBox'))
+    if (attr) return attr
+
+    // Fallback: use bbox to build a viewBox
+    try {
+      const bbox = svg.getBBox()
+      if (bbox && bbox.width && bbox.height) return [bbox.x, bbox.y, bbox.width, bbox.height]
+    } catch (e) {
+      // getBBox may fail on some edge cases; ignore
+    }
+
+    const w = Number(svg.getAttribute('width')) || 0
+    const h = Number(svg.getAttribute('height')) || 0
+    if (w > 0 && h > 0) return [0, 0, w, h]
+    return [0, 0, 100, 100]
+  }
+
+  const setSvgViewBox = (svg, vb) => {
+    svg.setAttribute('viewBox', `${vb[0]} ${vb[1]} ${vb[2]} ${vb[3]}`)
+  }
+
+  const clamp = (v, min, max) => Math.max(min, Math.min(max, v))
+
+  const openSvgInNewTab = ({ source, initViewBox }) => {
+    const getClonedSvg = () => {
+      if (typeof source === 'string') {
+        const template = document.createElement('template')
+        template.innerHTML = source.trim()
+        const svg = template.content.querySelector('svg')
+        return svg ? svg.cloneNode(true) : null
+      }
+      if (source && typeof source.cloneNode === 'function') {
+        return source.cloneNode(true)
+      }
+      return null
+    }
+
+    const clone = getClonedSvg()
+    if (!clone) return
+    if (initViewBox && initViewBox.length === 4) {
+      clone.setAttribute('viewBox', initViewBox.join(' '))
+    }
+    if (!clone.getAttribute('xmlns')) clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg')
+    if (!clone.getAttribute('xmlns:xlink') && clone.innerHTML.includes('xlink:')) {
+      clone.setAttribute('xmlns:xlink', 'http://www.w3.org/1999/xlink')
+    }
+    // inject background to match current theme
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark'
+    const bg = getComputedStyle(document.body).backgroundColor || (isDark ? '#1e1e1e' : '#ffffff')
+    if (!clone.style.background) clone.style.background = bg
+
+    const serializer = new XMLSerializer()
+    const svgSource = serializer.serializeToString(clone)
+    const htmlSource = `<!doctype html><html><head><meta charset="utf-8" />
+      <style>
+        html, body { width: 100%; height: 100%; margin: 0; display: flex; align-items: center; justify-content: center; background: ${bg}; }
+        svg { max-width: 100%; max-height: 100%; height: auto; width: auto; }
+      </style>
+      </head><body>${svgSource}</body></html>`
+    const blob = new Blob([htmlSource], { type: 'text/html;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    window.open(url, '_blank', 'noopener')
+
+    setTimeout(() => URL.revokeObjectURL(url), 5000)
+  }
+
+  const attachMermaidViewerButton = wrap => {
+    let btn = wrap.querySelector('.mermaid-open-btn')
+    if (!btn) {
+      btn = document.createElement('button')
+      btn.type = 'button'
+      btn.className = 'mermaid-open-btn'
+      wrap.appendChild(btn)
+    }
+
+    btn.innerHTML = '<i class="fa fa-search fa-fw" aria-hidden="true"></i>'
+
+    if (!btn.__mermaidViewerBound) {
+      btn.addEventListener('click', e => {
+        e.preventDefault()
+        e.stopPropagation()
+        const svg = wrap.__mermaidOriginalSvg || wrap.querySelector('svg')
+        if (!svg) return
+        const initViewBox = wrap.__mermaidInitViewBox
+        openSvgInNewTab({ source: svg, initViewBox })
+      })
+      btn.__mermaidViewerBound = true
+    }
+  }
+
+  // Zoom around a point (px, py) in the SVG viewport (in viewBox coordinates)
+  const zoomAtPoint = (vb, factor, px, py) => {
+    const w = vb[2] * factor
+    const h = vb[3] * factor
+    const nx = px - (px - vb[0]) * factor
+    const ny = py - (py - vb[1]) * factor
+    return [nx, ny, w, h]
+  }
+
+  const initMermaidGestures = wrap => {
+    // Clean up previous event listeners and pending frames
+    if (wrap.__mermaidAbortController) {
+      wrap.__mermaidAbortController.abort()
+      if (wrap.__mermaidRafId) cancelAnimationFrame(wrap.__mermaidRafId)
+    }
+    const ac = new AbortController()
+    wrap.__mermaidAbortController = ac
+    const svg = wrap.querySelector('svg')
+    if (!svg) return
+
+    // Ensure viewBox exists so gestures always work
+    const initVb = getSvgViewBox(svg)
+    wrap.__mermaidInitViewBox = initVb
+    wrap.__mermaidCurViewBox = initVb.slice()
+    setSvgViewBox(svg, initVb)
+    // Disable default gestures to prevent scroll chaining and pinch-zoom penetration in Chrome
+    svg.style.touchAction = 'none'
+
+    // Cache BoundingClientRect, throttled on scroll to reduce reflow
+    let cachedRect = svg.getBoundingClientRect()
+    let rectDirty = false
+    const markRectDirty = () => { rectDirty = true }
+    window.addEventListener('resize', markRectDirty, { signal: ac.signal })
+    window.addEventListener('scroll', markRectDirty, { signal: ac.signal, capture: true })
+    const getRect = () => {
+      if (rectDirty) {
+        cachedRect = svg.getBoundingClientRect()
+        rectDirty = false
+      }
+      return cachedRect
+    }
+
+    // Precompute clamp bounds from initial viewBox
+    const minW = initVb[2] * 0.1
+    const maxW = initVb[2] * 10
+    const minH = initVb[3] * 0.1
+    const maxH = initVb[3] * 10
+    const clampVb = vb => {
+      const out = vb.slice()
+      out[2] = clamp(out[2], minW, maxW)
+      out[3] = clamp(out[3], minH, maxH)
+      return out
+    }
+
+    // Throttle DOM updates using requestAnimationFrame
+    let pendingVb = null
+    let rafId = null
+    const applyVb = () => {
+      if (pendingVb) {
+        wrap.__mermaidCurViewBox = pendingVb
+        setSvgViewBox(svg, pendingVb)
+        pendingVb = null
+      }
+      rafId = null
+      wrap.__mermaidRafId = null
+    }
+    const setCurVb = vb => {
+      pendingVb = clampVb(vb)
+      if (!rafId) {
+        rafId = requestAnimationFrame(applyVb)
+        wrap.__mermaidRafId = rafId
+      }
+    }
+
+    const state = {
+      pointers: new Map(),
+      startVb: null,
+      startDist: 0,
+      lastPointerX: 0,
+      lastPointerY: 0
+    }
+
+    const onPointerDown = e => {
+      if (e.pointerType === 'mouse' && e.button !== 0) return
+      svg.setPointerCapture(e.pointerId)
+      const curVb = wrap.__mermaidCurViewBox
+      state.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY })
+      if (state.pointers.size === 1) {
+        state.startVb = curVb.slice()
+        state.lastPointerX = e.clientX
+        state.lastPointerY = e.clientY
+      } else if (state.pointers.size === 2) {
+        const pts = [...state.pointers.values()]
+        const dx = pts[0].x - pts[1].x
+        const dy = pts[0].y - pts[1].y
+        state.startDist = Math.hypot(dx, dy)
+        state.startVb = curVb.slice()
+      }
+    }
+
+    const onPointerMove = e => {
+      if (!state.pointers.has(e.pointerId)) return
+      state.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY })
+      const curVb = wrap.__mermaidCurViewBox
+      const rect = getRect()
+      if (state.pointers.size === 1 && state.startVb) {
+        const p = state.pointers.values().next().value
+        const dxClient = p.x - state.lastPointerX
+        const dyClient = p.y - state.lastPointerY
+        state.lastPointerX = p.x
+        state.lastPointerY = p.y
+        const dx = dxClient * (curVb[2] / rect.width)
+        const dy = dyClient * (curVb[3] / rect.height)
+        setCurVb([curVb[0] - dx, curVb[1] - dy, curVb[2], curVb[3]])
+        return
+      }
+      if (state.pointers.size === 2 && state.startVb && state.startDist > 0) {
+        const pts = [...state.pointers.values()]
+        const dx = pts[0].x - pts[1].x
+        const dy = pts[0].y - pts[1].y
+        const dist = Math.hypot(dx, dy)
+        if (!dist) return
+        const factor = state.startDist / dist
+        const cx = (pts[0].x + pts[1].x) / 2
+        const cy = (pts[0].y + pts[1].y) / 2
+        const px = curVb[0] + (cx - rect.left) * (curVb[2] / rect.width)
+        const py = curVb[1] + (cy - rect.top) * (curVb[3] / rect.height)
+        setCurVb(zoomAtPoint(state.startVb, factor, px, py))
+      }
+    }
+
+    const onPointerUpOrCancel = e => {
+      // Release PointerCapture to avoid event capture anomalies
+      if (svg.hasPointerCapture && svg.hasPointerCapture(e.pointerId)) {
+        svg.releasePointerCapture(e.pointerId)
+      }
+      state.pointers.delete(e.pointerId)
+      if (state.pointers.size === 0) {
+        state.startVb = null
+        state.startDist = 0
+      } else if (state.pointers.size === 1) {
+        const p = state.pointers.values().next().value
+        state.lastPointerX = p.x
+        state.lastPointerY = p.y
+      }
+    }
+
+    const onWheel = e => {
+      // Prevent event bubbling from triggering external scroll
+      e.preventDefault()
+      e.stopPropagation()
+      // Normalize deltaY across deltaMode (Chrome uses pixels, Safari uses lines)
+      let delta = e.deltaY
+      if (e.deltaMode === 1) delta *= 16
+      else if (e.deltaMode === 2) delta *= 400
+
+      // Continuous zoom factor: smoother than fixed 1.1/0.9 steps
+      const zoomFactor = Math.pow(1.001, delta)
+
+      const curVb = wrap.__mermaidCurViewBox
+      const rect = getRect()
+      const px = curVb[0] + (e.clientX - rect.left) * (curVb[2] / rect.width)
+      const py = curVb[1] + (e.clientY - rect.top) * (curVb[3] / rect.height)
+      setCurVb(zoomAtPoint(curVb, zoomFactor, px, py))
+    }
+
+    const onDblClick = () => {
+      const init = wrap.__mermaidInitViewBox
+      if (init) setCurVb(init)
+    }
+
+    svg.addEventListener('pointerdown', onPointerDown, { signal: ac.signal })
+    svg.addEventListener('pointermove', onPointerMove, { signal: ac.signal })
+    svg.addEventListener('pointerup', onPointerUpOrCancel, { signal: ac.signal })
+    svg.addEventListener('pointercancel', onPointerUpOrCancel, { signal: ac.signal })
+    svg.addEventListener('wheel', onWheel, { passive: false, signal: ac.signal })
+    svg.addEventListener('dblclick', onDblClick, { signal: ac.signal })
+  }
+
+  const runMermaid = ele => {
+    window.loadMermaid = true
+    const theme = document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'default'
+    ele.forEach((item, index) => {
+      const mermaidSrc = item.firstElementChild
+      // Clean up event listeners before removing old SVG
+      if (item.__mermaidAbortController) {
+        item.__mermaidAbortController.abort()
+      }
+      const oldSvg = item.querySelector('svg')
+      if (oldSvg) oldSvg.remove()
+      let config = {}
+      try {
+        config = mermaidSrc.dataset.config ? JSON.parse(mermaidSrc.dataset.config) : {}
+      } catch (e) {
+        console.warn('[mermaid] failed to parse dataset.config:', e)
+      }
+      if (!config.theme) {
+        config.theme = theme
+      }
+      const mermaidThemeConfig = `%%{init: ${JSON.stringify(config)}}%%\n`
+      const mermaidID = `mermaid-${index}`
+      const mermaidDefinition = mermaidThemeConfig + mermaidSrc.textContent
+
+      const renderMermaid = svg => {
+        mermaidSrc.insertAdjacentHTML('afterend', svg)
+        if (true) initMermaidGestures(item)
+        item.__mermaidOriginalSvg = svg
+        if (true) attachMermaidViewerButton(item)
+      }
+
+      const handleError = err => {
+        console.error(`[mermaid] render failed for block #${index}:`, err)
+        const errorEl = document.createElement('div')
+        errorEl.className = 'mermaid-error'
+        errorEl.textContent = `Mermaid render error: ${err.message || err}`
+        mermaidSrc.insertAdjacentElement('afterend', errorEl)
+      }
+
+      try {
+        const renderFn = mermaid.render(mermaidID, mermaidDefinition)
+        // mermaid v9 and v10 compatibility
+        if (typeof renderFn === 'string') {
+          renderMermaid(renderFn)
+        } else {
+          renderFn.then(({ svg }) => renderMermaid(svg)).catch(handleError)
+        }
+      } catch (err) {
+        handleError(err)
+      }
+    })
+  }
+
+  const codeToMermaid = $article => {
+    const codeMermaidEle = $article.querySelectorAll('pre > code.mermaid')
+    if (codeMermaidEle.length === 0) return
+
+    codeMermaidEle.forEach(ele => {
+      const preEle = document.createElement('pre')
+      preEle.className = 'mermaid-src'
+      preEle.hidden = true
+      preEle.textContent = ele.textContent
+      const newEle = document.createElement('div')
+      newEle.className = 'mermaid-wrap'
+      newEle.appendChild(preEle)
+      ele.parentNode.replaceWith(newEle)
+    })
+  }
+
+  const loadMermaid = () => {
+    const $article = document.getElementById('article-container')
+    if (!$article) return
+
+    if (true) codeToMermaid($article)
+    const $mermaid = $article.querySelectorAll('.mermaid-wrap')
+    if ($mermaid.length === 0) return
+
+    const runMermaidFn = () => runMermaid($mermaid)
+    btf.addGlobalFn('themeChange', runMermaidFn, 'mermaid')
+    window.loadMermaid ? runMermaidFn() : btf.getScript('https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js').then(runMermaidFn)
+  }
+
+  btf.addGlobalFn('encrypt', loadMermaid, 'mermaid')
+  window.pjax ? loadMermaid() : document.addEventListener('DOMContentLoaded', loadMermaid)
+})()</script></div><script defer="defer" id="ribbon" src="https://cdn.jsdelivr.net/npm/butterfly-extsrc/dist/canvas-ribbon.min.js" size="150" alpha="0.6" zIndex="-1" mobile="false" data-click="true"></script><script async data-pjax src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script></div></body></html>
