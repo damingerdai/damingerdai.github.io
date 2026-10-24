@@ -15,7 +15,7 @@ categories: [软件]
 
 为了让整个系统足够轻量且好维护，我们采用了以下设计方案：
 
-```mermaid
+{% mermaid %}
 flowchart TB
     subgraph Client ["开发者环境 (Client)"]
         Browser["浏览器 (HTTPS)"]
@@ -58,7 +58,7 @@ flowchart TB
     Gitea ==> PGSVC
     PGSVC --> EPS
     EPS ==>|跨网络访问| PG
-```
+{% endmermaid %}
 
 * 核心服务：Gitea（采用官方轻量化 Rootless 镜像）。
 
