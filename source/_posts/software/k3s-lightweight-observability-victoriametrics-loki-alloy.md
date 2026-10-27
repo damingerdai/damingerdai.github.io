@@ -256,7 +256,7 @@ Grafana → Explore → VictoriaMetrics 数据源，执行：
 up
 ```
 
-![Grafana Explore 中 VictoriaMetrics 的 up 指标查询结果](images/k3s-observability/victoriametrics-up.png)
+![Grafana Explore 中 VictoriaMetrics 的 up 指标查询结果](k3s-lightweight-observability-victoriametrics-loki-alloy/images/victoriametrics-up.png)
 
 *图 1：VictoriaMetrics 数据源中 `up` 指标返回值为 1 的时间序列。*
 
@@ -270,7 +270,7 @@ Grafana → Explore → Loki 数据源，执行：
 {namespace="monitoring"}
 ```
 
-![Grafana Explore 中 Loki 查询 monitoring 命名空间日志及日志量](images/k3s-observability/loki-logs.png)
+![Grafana Explore 中 Loki 查询 monitoring 命名空间日志及日志量](k3s-lightweight-observability-victoriametrics-loki-alloy/images/loki-logs.png)
 
 *图 2：Loki 返回 monitoring 命名空间的日志，Grafana 同时显示日志量分布。*
 
