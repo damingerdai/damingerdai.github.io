@@ -1,0 +1,833 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="dark"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1.0,viewport-fit=cover"><title>4GB 内存跑 Kubernetes 可观测性：K3s + FluxCD + VictoriaMetrics + Loki + Grafana Alloy 实战 | Damingerdai's Blog</title><meta name="author" content="Arthur Ming"><meta name="copyright" content="Arthur Ming"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#0d0d0d"><meta name="description" content="4GB 内存跑 Kubernetes 可观测性：K3s + FluxCD + VictoriaMetrics + Loki + Grafana Alloy 实战前言最近整理自己的 K3s Homelab，希望给 Kubernetes 上的业务应用补齐 Metrics 和 Logs 两条可观测性链路。我的机器资源有限：单节点 K3s、约 4GB 内存、4 核 CPU，系统为 Debian，部署通过">
+<meta property="og:type" content="article">
+<meta property="og:title" content="4GB 内存跑 Kubernetes 可观测性：K3s + FluxCD + VictoriaMetrics + Loki + Grafana Alloy 实战">
+<meta property="og:url" content="http://blog.damingerdai.com/2026/10/25/software/k3s-observability/k3s-observability/index.html">
+<meta property="og:site_name" content="Damingerdai&#39;s Blog">
+<meta property="og:description" content="4GB 内存跑 Kubernetes 可观测性：K3s + FluxCD + VictoriaMetrics + Loki + Grafana Alloy 实战前言最近整理自己的 K3s Homelab，希望给 Kubernetes 上的业务应用补齐 Metrics 和 Logs 两条可观测性链路。我的机器资源有限：单节点 K3s、约 4GB 内存、4 核 CPU，系统为 Debian，部署通过">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg">
+<meta property="article:published_time" content="2026-10-25T16:00:00.000Z">
+<meta property="article:modified_time" content="2026-10-27T03:03:54.469Z">
+<meta property="article:author" content="Arthur Ming">
+<meta property="article:tag" content="GitOps">
+<meta property="article:tag" content="FluxCD">
+<meta property="article:tag" content="Grafana">
+<meta property="article:tag" content="K3s">
+<meta property="article:tag" content="VictoriaMetrics">
+<meta property="article:tag" content="Loki">
+<meta property="article:tag" content="Alloy">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg"><script type="application/ld+json">{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "4GB 内存跑 Kubernetes 可观测性：K3s + FluxCD + VictoriaMetrics + Loki + Grafana Alloy 实战",
+  "url": "http://blog.damingerdai.com/2026/10/25/software/k3s-observability/k3s-observability/",
+  "image": "https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg",
+  "datePublished": "2026-10-25T16:00:00.000Z",
+  "dateModified": "2026-10-27T03:03:54.469Z",
+  "author": [
+    {
+      "@type": "Person",
+      "name": "Arthur Ming",
+      "url": "http://blog.damingerdai.com"
+    }
+  ]
+}</script><link rel="shortcut icon" href="/img/avatar.png"><link rel="canonical" href="http://blog.damingerdai.com/2026/10/25/software/k3s-observability/k3s-observability/index.html"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><link rel="stylesheet" href="/css/index.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free/css/all.min.css"><script>
+    (() => {
+      
+    const saveToLocal = {
+      set: (key, value, ttl) => {
+        const data = { value }
+
+        if (ttl != null) {
+          data.expiry = Date.now() + ttl * 86400000
+        }
+
+        localStorage.setItem(key, JSON.stringify(data))
+      },
+      get: key => {
+        const itemStr = localStorage.getItem(key)
+        if (!itemStr) return
+
+        try {
+          const data = JSON.parse(itemStr)
+
+          if (data.expiry && Date.now() > data.expiry) {
+            localStorage.removeItem(key)
+            return
+          }
+
+          return data.value
+        } catch {
+          localStorage.removeItem(key)
+        }
+      }
+    }
+
+    const scriptCache = new Map()
+    const cssCache = new Map()
+    window.btf = {
+      saveToLocal,
+      getScript: (url, attr = {}) => {
+        if (scriptCache.has(url)) {
+          return scriptCache.get(url)
+        }
+
+        const promise = new Promise((resolve, reject) => {
+          const script = document.createElement('script')
+
+          script.src = url
+          script.async = true
+
+          for (const key in attr) {
+            script.setAttribute(key, attr[key])
+          }
+
+          script.onload = resolve
+          script.onerror = reject
+
+          document.head.appendChild(script)
+        })
+
+        scriptCache.set(url, promise)
+
+        return promise
+      },
+      getCSS: (url, id) => {
+        if (cssCache.has(url)) {
+          return cssCache.get(url)
+        }
+
+        const promise = new Promise((resolve, reject) => {
+          const link = document.createElement('link')
+
+          link.rel = 'stylesheet'
+          link.href = url
+
+          if (id) {
+            link.id = id
+          }
+
+          link.onload = resolve
+          link.onerror = reject
+
+          document.head.appendChild(link)
+        })
+
+        cssCache.set(url, promise)
+
+        return promise
+      },
+      addGlobalFn: (key, fn, name = false, parent = window) => {
+        if (!false && key.startsWith('pjax')) return
+        const globalFn = parent.globalFn || {}
+        globalFn[key] = globalFn[key] || {}
+        globalFn[key][name || Object.keys(globalFn[key]).length] = fn
+        parent.globalFn = globalFn
+      }
+    }
+  
+      
+      const metaThemeColor = document.querySelector('meta[name="theme-color"]')
+      const activateDarkMode = () => {
+        document.documentElement.dataset.theme = 'dark'
+        if (metaThemeColor !== null) {
+          metaThemeColor.setAttribute('content', '#0d0d0d')
+        }
+      }
+      const activateLightMode = () => {
+        document.documentElement.dataset.theme = 'light'
+        if (metaThemeColor !== null) {
+          metaThemeColor.setAttribute('content', '#ffffff')
+        }
+      }
+
+      btf.activateDarkMode = activateDarkMode
+      btf.activateLightMode = activateLightMode
+
+      const theme = saveToLocal.get('theme')
+    
+          const mediaQueryDark = window.matchMedia('(prefers-color-scheme: dark)')
+          const mediaQueryLight = window.matchMedia('(prefers-color-scheme: light)')
+
+          if (theme === undefined) {
+            if (mediaQueryLight.matches) activateLightMode()
+            else if (mediaQueryDark.matches) activateDarkMode()
+            else {
+              const hour = new Date().getHours()
+              const start = 6
+              const end = 18
+              const isNight =
+                start < end
+                    ? hour < start || hour >= end
+                    : hour >= start || hour < end
+              isNight ? activateDarkMode() : activateLightMode()
+            }
+            mediaQueryDark.addEventListener('change', e => {
+              if (saveToLocal.get('theme') === undefined) {
+                e.matches ? activateDarkMode() : activateLightMode()
+              }
+            })
+          } else {
+            theme === 'light' ? activateLightMode() : activateDarkMode()
+          }
+        
+      
+      const asideStatus = saveToLocal.get('aside-status')
+      if (asideStatus !== undefined) {
+        document.documentElement.classList.toggle('hide-aside', asideStatus === 'hide')
+      }
+    
+      
+    const detectApple = () => {
+      if (/iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent)) {
+        document.documentElement.classList.add('apple')
+      }
+    }
+    detectApple()
+  
+    })()
+  </script><script>const GLOBAL_CONFIG = {
+  root: '/',
+  algolia: undefined,
+  localSearch: undefined,
+  translate: undefined,
+  highlight: {"plugin":"highlight.js","highlightCopy":true,"highlightLang":true,"highlightHeightLimit":false,"highlightFullpage":false,"highlightMacStyle":false},
+  copy: {
+    success: '复制成功',
+    error: '复制失败',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '',
+  dateSuffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: undefined,
+  lightbox: 'null',
+  Snackbar: undefined,
+  infinitegrid: {
+    js: 'https://cdn.jsdelivr.net/npm/@egjs/infinitegrid/dist/infinitegrid.min.js',
+    buttonText: '加载更多'
+  },
+  isPhotoFigcaption: false,
+  islazyloadPlugin: false,
+  isAnchor: false,
+  percent: {
+    toc: true,
+    rightside: false,
+  },
+  autoDarkmode: true
+}</script><script id="config-diff">var GLOBAL_CONFIG_SITE = {
+  title: '4GB 内存跑 Kubernetes 可观测性：K3s + FluxCD + VictoriaMetrics + Loki + Grafana Alloy 实战',
+  isHighlightShrink: false,
+  isToc: true,
+  pageType: 'post'
+}</script><link rel="stylesheet" href="/css/styles.css"><meta name="generator" content="Hexo 7.3.0"></head><body><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="avatar-img text-center"><img src="/img/avatar.png" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="site-data text-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">113</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">190</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">11</div></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归类</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><span class="site-page group"><i class="fa-fw fas fa-list"></i><span> 其他</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><li><a class="site-page child" href="/others/learning"><i class="fa-fw fas fa-graduation-cap"></i><span> 学习课程</span></a></li><li><a class="site-page child" href="/others/link/"><i class="fa-fw fas fa-link"></i><span> 链接</span></a></li><li><a class="site-page child" href="/others/interview/"><i class="fa-fw fas fa-glide"></i><span> 面试</span></a></li></ul></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于</span></a></div></div></div></div><div class="post" id="body-wrap"><header class="post-bg" id="page-header" style="background-image: url(https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg);"><nav id="nav"><span id="blog-info"><a class="nav-site-title" href="/"><span class="site-name">Damingerdai's Blog</span></a><a class="nav-page-title" href="/"><span class="site-name">4GB 内存跑 Kubernetes 可观测性：K3s + FluxCD + VictoriaMetrics + Loki + Grafana Alloy 实战</span><span class="site-name"><i class="fa-solid fa-circle-arrow-left"></i><span>  返回首页</span></span></a></span><div id="menus"><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归类</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><span class="site-page group"><i class="fa-fw fas fa-list"></i><span> 其他</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><li><a class="site-page child" href="/others/learning"><i class="fa-fw fas fa-graduation-cap"></i><span> 学习课程</span></a></li><li><a class="site-page child" href="/others/link/"><i class="fa-fw fas fa-link"></i><span> 链接</span></a></li><li><a class="site-page child" href="/others/interview/"><i class="fa-fw fas fa-glide"></i><span> 面试</span></a></li></ul></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于</span></a></div></div><div id="toggle-menu"><span class="site-page"><i class="fas fa-bars fa-fw"></i></span></div></div></nav><div id="post-info"><h1 class="post-title">4GB 内存跑 Kubernetes 可观测性：K3s + FluxCD + VictoriaMetrics + Loki + Grafana Alloy 实战</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2026-10-25T16:00:00.000Z" title="发表于 2026-10-26 00:00:00">2026-10-26</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2026-10-27T03:03:54.469Z" title="更新于 2026-10-27 11:03:54">2026-10-27</time></span><span class="post-meta-categories"><span class="post-meta-separator">|</span><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/Kubernetes/">Kubernetes</a><i class="fas fa-angle-right post-meta-separator"></i><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/Kubernetes/%E8%BD%AF%E4%BB%B6/">软件</a></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-pv-cv" id="" data-flag-title=""><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">浏览量:</span><span id="busuanzi_value_page_pv"><i class="fa-solid fa-spinner fa-spin"></i></span></span></div></div></div></header><main class="layout" id="content-inner"><div id="post"><article class="container post-content" id="article-container"><h1 id="4GB-内存跑-Kubernetes-可观测性：K3s-FluxCD-VictoriaMetrics-Loki-Grafana-Alloy-实战"><a href="#4GB-内存跑-Kubernetes-可观测性：K3s-FluxCD-VictoriaMetrics-Loki-Grafana-Alloy-实战" class="headerlink" title="4GB 内存跑 Kubernetes 可观测性：K3s + FluxCD + VictoriaMetrics + Loki + Grafana Alloy 实战"></a>4GB 内存跑 Kubernetes 可观测性：K3s + FluxCD + VictoriaMetrics + Loki + Grafana Alloy 实战</h1><h2 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h2><p>最近整理自己的 K3s Homelab，希望给 Kubernetes 上的业务应用补齐 Metrics 和 Logs 两条可观测性链路。我的机器资源有限：单节点 K3s、约 4GB 内存、4 核 CPU，系统为 Debian，部署通过 FluxCD GitOps 管理。</p>
+<p>这次的边界很明确：<strong>监控 K3s&#x2F;Kubernetes 和其中的业务应用，不额外监控宿主机 Docker 容器或独立运行的 PostgreSQL</strong>。指标和日志都以保留 7 天为目标，优先考虑组件数量、内存占用和可维护性。</p>
+<p>最终采用：</p>
+<ul>
+<li><strong>VictoriaMetrics Single</strong>：存储与查询 Prometheus 兼容指标。</li>
+<li><strong>Grafana Loki（SingleBinary）</strong>：集中存储 Kubernetes Pod 日志。</li>
+<li><strong>Grafana Alloy（DaemonSet）</strong>：负责发现、采集并转发指标与日志。</li>
+<li><strong>Grafana</strong>：统一查询与可视化。</li>
+<li><strong>FluxCD</strong>：通过 HelmRelease 管理版本和配置。</li>
+</ul>
+<p>本文记录实际部署、遇到的故障、解决过程，以及 Grafana Explore 的验证截图。<strong>这是一套 Homelab 实践，不代表已经完成企业级高可用、告警和容量规划。</strong></p>
+<h2 id="一、部署环境与架构"><a href="#一、部署环境与架构" class="headerlink" title="一、部署环境与架构"></a>一、部署环境与架构</h2><table>
+<thead>
+<tr>
+<th>项目</th>
+<th>配置</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>系统</td>
+<td>Debian Linux</td>
+</tr>
+<tr>
+<td>Kubernetes</td>
+<td>单节点 K3s</td>
+</tr>
+<tr>
+<td>节点</td>
+<td><code>daming-thinkpad-e470</code></td>
+</tr>
+<tr>
+<td>节点地址</td>
+<td><code>192.168.31.222</code>（局域网示例）</td>
+</tr>
+<tr>
+<td>CPU &#x2F; 内存</td>
+<td>4 核 &#x2F; 约 4GB</td>
+</tr>
+<tr>
+<td>GitOps</td>
+<td>FluxCD</td>
+</tr>
+<tr>
+<td>持久化存储</td>
+<td>K3s <code>local-path</code> PVC</td>
+</tr>
+<tr>
+<td>指标与日志保留</td>
+<td>目标 7 天，需结合最终 Helm Values 验证</td>
+</tr>
+</tbody></table>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">Kubernetes Metrics ─┐</span><br><span class="line">                    ├─&gt; Grafana Alloy ──remote_write──&gt; VictoriaMetrics ─┐</span><br><span class="line">Kubernetes Pod Logs ┘                └──Loki push──────&gt; Loki ────────────┤</span><br><span class="line">                                                                          v</span><br><span class="line">                                                                        Grafana</span><br></pre></td></tr></table></figure>
+
+<p>核心原则是<strong>采集、存储和展示分离</strong>。Alloy 负责收集和转发，VictoriaMetrics&#x2F;Loki 分别存储指标与日志，Grafana 负责查询和展示。</p>
+<h2 id="二、为什么选这套组合"><a href="#二、为什么选这套组合" class="headerlink" title="二、为什么选这套组合"></a>二、为什么选这套组合</h2><p>对于单节点 4GB 内存的机器，我不希望部署过多重量级组件。VictoriaMetrics Single 提供 Prometheus 兼容的查询接口，也能接收 Remote Write；Loki SingleBinary 避免了分布式日志系统的额外组件；Alloy 同时承担指标与日志采集，便于统一管理。</p>
+<p>这不意味着 Prometheus 或 Elasticsearch 不能运行，而是当前机器和目标更适合这套组合。Grafana 仍然可以把 VictoriaMetrics 配置为 <strong>Prometheus 类型</strong>的数据源，Loki 则配置为 <strong>Loki 类型</strong>。</p>
+<h2 id="三、使用-FluxCD-管理部署"><a href="#三、使用-FluxCD-管理部署" class="headerlink" title="三、使用 FluxCD 管理部署"></a>三、使用 FluxCD 管理部署</h2><p>这次使用的 Helm Chart 版本：</p>
+<table>
+<thead>
+<tr>
+<th>组件</th>
+<th>Chart 版本</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Alloy</td>
+<td><code>1.14.3</code></td>
+</tr>
+<tr>
+<td>Grafana</td>
+<td><code>10.5.15</code></td>
+</tr>
+<tr>
+<td>Loki</td>
+<td><code>7.5.0</code></td>
+</tr>
+<tr>
+<td>VictoriaMetrics Single</td>
+<td><code>0.49.0</code></td>
+</tr>
+</tbody></table>
+<p>GitOps 目录按组件拆分：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">clusters/</span><br><span class="line">└── 192.168.31.222/</span><br><span class="line">    └── monitoring/</span><br><span class="line">        ├── alloy/</span><br><span class="line">        ├── grafana/</span><br><span class="line">        ├── loki/</span><br><span class="line">        └── victoria-metrics/</span><br></pre></td></tr></table></figure>
+
+<p>检查状态：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">flux get helmreleases -n monitoring</span><br><span class="line">kubectl get pods -n monitoring</span><br><span class="line">kubectl get pvc -n monitoring</span><br></pre></td></tr></table></figure>
+
+<p>所有资源的真实配置应以仓库中的 HelmRelease 为准。下文展示的是<strong>实际排障时使用过的关键配置片段</strong>，并非可以直接部署的完整 HelmRelease 清单。</p>
+<h2 id="四、踩坑一：VictoriaMetrics-参数单位"><a href="#四、踩坑一：VictoriaMetrics-参数单位" class="headerlink" title="四、踩坑一：VictoriaMetrics 参数单位"></a>四、踩坑一：VictoriaMetrics 参数单位</h2><p>最初设置了：</p>
+<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">memory.allowedBytes:</span> <span class="string">&quot;128Mi&quot;</span></span><br></pre></td></tr></table></figure>
+
+<p>启动失败。这里的参数需要字节数量，改成：</p>
+<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">memory.allowedBytes:</span> <span class="string">&quot;134217728&quot;</span></span><br></pre></td></tr></table></figure>
+
+<p>即 128 × 1024 × 1024 字节。<strong>不要假设 Helm Values 的每个参数都能使用 Kubernetes <code>Mi</code>、<code>Gi</code> 资源单位</strong>：最终要看参数由哪个程序解析。</p>
+<h2 id="五、踩坑二：Alloy-初始化耗时与-Readiness"><a href="#五、踩坑二：Alloy-初始化耗时与-Readiness" class="headerlink" title="五、踩坑二：Alloy 初始化耗时与 Readiness"></a>五、踩坑二：Alloy 初始化耗时与 Readiness</h2><p>最初给 Alloy 设置了比较紧的限制：CPU <code>200m</code>、内存 <code>128Mi</code>，Readiness 超时也较短。运行时 River Graph Evaluation 非常慢，Pod 长时间无法 Ready。</p>
+<p>后来将相关 Values 调整为：</p>
+<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">alloy:</span></span><br><span class="line">  <span class="attr">timeoutSeconds:</span> <span class="number">5</span></span><br><span class="line">  <span class="attr">resources:</span></span><br><span class="line">    <span class="attr">requests:</span></span><br><span class="line">      <span class="attr">cpu:</span> <span class="string">50m</span></span><br><span class="line">      <span class="attr">memory:</span> <span class="string">64Mi</span></span><br><span class="line">    <span class="attr">limits:</span></span><br><span class="line">      <span class="attr">cpu:</span> <span class="string">500m</span></span><br><span class="line">      <span class="attr">memory:</span> <span class="string">256Mi</span></span><br></pre></td></tr></table></figure>
+
+<p>调整后 Alloy 的配置图评估时间显著下降，Readiness Endpoint 返回 HTTP 200，Pod 进入 <code>2/2 Running</code>。</p>
+<p>注意不要把几种现象混为一谈：<strong>CPU throttling</strong>、Kubernetes API 的 <strong>client-side throttling</strong>、River Graph Evaluation 耗时、Readiness Probe 超时是不同概念。此次资源调整改善了实际表现，但并不等于单凭这些现象就能证明全部根因。</p>
+<h2 id="六、踩坑三：Grafana-init-chown-data-权限错误"><a href="#六、踩坑三：Grafana-init-chown-data-权限错误" class="headerlink" title="六、踩坑三：Grafana init-chown-data 权限错误"></a>六、踩坑三：Grafana <code>init-chown-data</code> 权限错误</h2><p>Grafana 使用 <code>local-path</code> PVC 保存数据。更新过程中，初始化容器报错：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">chown: /var/lib/grafana/csv: Permission denied</span><br><span class="line">chown: /var/lib/grafana/png: Permission denied</span><br><span class="line">chown: /var/lib/grafana/pdf: Permission denied</span><br></pre></td></tr></table></figure>
+
+<p>Pod 因而进入 <code>Init:Error</code>。排查时需要同时检查 PVC 宿主机路径、目录所有权、运行用户、Pod SecurityContext 和初始化容器权限。</p>
+<p>Grafana 通常以 UID 472 运行。可以考虑在确认目录可写后关闭初始化 chown：</p>
+<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">initChownData:</span></span><br><span class="line">  <span class="attr">enabled:</span> <span class="literal">false</span></span><br></pre></td></tr></table></figure>
+
+<p>但这<strong>不是通用权限修复</strong>：如果 Grafana 主进程本身无权写入 PVC，跳过初始化容器只会把错误推迟到应用启动时。对于没有重要数据的新环境，重新创建 Grafana PVC 也是可选方案，但会丢失其中数据。不要为了修复 Grafana 而删除 Loki 或 VictoriaMetrics 的 PVC。</p>
+<h2 id="七、踩坑四：RollingUpdate-切换-Recreate-的字段冲突"><a href="#七、踩坑四：RollingUpdate-切换-Recreate-的字段冲突" class="headerlink" title="七、踩坑四：RollingUpdate 切换 Recreate 的字段冲突"></a>七、踩坑四：RollingUpdate 切换 Recreate 的字段冲突</h2><p>单副本 Grafana 使用 PVC 和本地 SQLite 数据库时，我希望避免滚动更新期间新旧 Pod 同时访问同一目录，因此将 Deployment 策略改为：</p>
+<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">deploymentStrategy:</span></span><br><span class="line">  <span class="attr">type:</span> <span class="string">Recreate</span></span><br></pre></td></tr></table></figure>
+
+<p>FluxCD 随后报错：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">Deployment.apps &quot;grafana&quot; is invalid:</span><br><span class="line">spec.strategy.rollingUpdate: Forbidden:</span><br><span class="line">may not be specified when strategy `type` is &#x27;Recreate&#x27;</span><br></pre></td></tr></table></figure>
+
+<p>原因是已有 Deployment 保留了 <code>rollingUpdate</code> 字段。Kubernetes 不允许 <code>Recreate</code> 与 <code>rollingUpdate</code> 配置同时存在。</p>
+<p>这次通过一次性 JSON Patch 清除旧字段并修改策略：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">kubectl patch deployment grafana \</span><br><span class="line">  -n monitoring \</span><br><span class="line">  --<span class="built_in">type</span>=json \</span><br><span class="line">  -p=<span class="string">&#x27;[</span></span><br><span class="line"><span class="string">    &#123;&quot;op&quot;:&quot;remove&quot;,&quot;path&quot;:&quot;/spec/strategy/rollingUpdate&quot;&#125;,</span></span><br><span class="line"><span class="string">    &#123;&quot;op&quot;:&quot;replace&quot;,&quot;path&quot;:&quot;/spec/strategy/type&quot;,&quot;value&quot;:&quot;Recreate&quot;&#125;</span></span><br><span class="line"><span class="string">  ]&#x27;</span></span><br></pre></td></tr></table></figure>
+
+<p>然后恢复 FluxCD 协调：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">flux reconcile helmrelease grafana -n monitoring --reset</span><br></pre></td></tr></table></figure>
+
+<p>注意：<code>kubectl patch</code> 是一次性的故障修复，<strong>长期期望状态仍应保存在 GitOps HelmRelease 中</strong>。同时，<code>Recreate</code> 只是避免重叠运行的更新策略，不是 PVC 权限问题的直接修复。</p>
+<h2 id="八、最终运行状态与资源开销"><a href="#八、最终运行状态与资源开销" class="headerlink" title="八、最终运行状态与资源开销"></a>八、最终运行状态与资源开销</h2><p>恢复后：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">alloy-26ll2                                         2/2 Running</span><br><span class="line"> grafana-769c4cc54c-cv8tj                           1/1 Running</span><br><span class="line"> loki-0                                              2/2 Running</span><br><span class="line"> victoria-metrics-victoria-metrics-single-server-0   1/1 Running</span><br></pre></td></tr></table></figure>
+
+<blockquote>
+<p>上面是一次运行状态快照；Grafana 当时有一次历史重启。Pod Ready 不代表 FluxCD 的所有 HelmRelease 一定都是 Ready，仍需单独检查。</p>
+</blockquote>
+<p>执行：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">kubectl top pods -n monitoring --sort-by=cpu</span><br><span class="line">kubectl top node</span><br></pre></td></tr></table></figure>
+
+<p>当时的结果：</p>
+<table>
+<thead>
+<tr>
+<th>组件</th>
+<th align="right">CPU</th>
+<th align="right">内存</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Grafana</td>
+<td align="right">77m</td>
+<td align="right">92Mi</td>
+</tr>
+<tr>
+<td>Loki</td>
+<td align="right">21m</td>
+<td align="right">164Mi</td>
+</tr>
+<tr>
+<td>Alloy</td>
+<td align="right">10m</td>
+<td align="right">152Mi</td>
+</tr>
+<tr>
+<td>VictoriaMetrics</td>
+<td align="right">5m</td>
+<td align="right">41Mi</td>
+</tr>
+<tr>
+<td><strong>四组件合计</strong></td>
+<td align="right"><strong>113m</strong></td>
+<td align="right"><strong>449Mi</strong></td>
+</tr>
+</tbody></table>
+<p>节点整体：CPU <code>883m</code>（22%），内存 <code>2121Mi</code>（55%）。这只是<strong>一个时间点的实际使用量</strong>，不是 requests&#x2F;limits，也不是长期峰值。节点整体开销还包含 K3s、其他工作负载和系统进程。</p>
+<h2 id="九、验证-Grafana-API-与数据源"><a href="#九、验证-Grafana-API-与数据源" class="headerlink" title="九、验证 Grafana API 与数据源"></a>九、验证 Grafana API 与数据源</h2><p>先通过 Port Forward 访问 Grafana：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">kubectl port-forward -n monitoring svc/grafana 3000:80</span><br></pre></td></tr></table></figure>
+
+<p>另一个终端检查：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">curl -i --max-time 10 http://localhost:3000/api/health</span><br></pre></td></tr></table></figure>
+
+<p>返回 HTTP <code>200 OK</code>，正文包括：</p>
+<figure class="highlight json"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="punctuation">&#123;</span></span><br><span class="line">  <span class="attr">&quot;database&quot;</span><span class="punctuation">:</span> <span class="string">&quot;ok&quot;</span><span class="punctuation">,</span></span><br><span class="line">  <span class="attr">&quot;version&quot;</span><span class="punctuation">:</span> <span class="string">&quot;12.3.1&quot;</span><span class="punctuation">,</span></span><br><span class="line">  <span class="attr">&quot;commit&quot;</span><span class="punctuation">:</span> <span class="string">&quot;3a1c80ca7ce612f309fdc99338dd3c5e486339be&quot;</span></span><br><span class="line"><span class="punctuation">&#125;</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="9-1-VictoriaMetrics：PromQL-up"><a href="#9-1-VictoriaMetrics：PromQL-up" class="headerlink" title="9.1 VictoriaMetrics：PromQL up"></a>9.1 VictoriaMetrics：PromQL <code>up</code></h3><p>Grafana → Explore → VictoriaMetrics 数据源，执行：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">up</span><br></pre></td></tr></table></figure>
+
+<p><img src="/images/k3s-observability/victoriametrics-up.png" alt="Grafana Explore 中 VictoriaMetrics 的 up 指标查询结果"></p>
+<p><em>图 1：VictoriaMetrics 数据源中 <code>up</code> 指标返回值为 1 的时间序列。</em></p>
+<p>这证明至少有一个采集目标成功被抓取，并且查询链路工作正常。<strong>仅凭 <code>up=1</code> 不能说明所有 Kubernetes 节点、Pod 或业务应用指标都已覆盖</strong>；还应查看具体的 <code>job</code>、<code>instance</code> 标签及业务指标。</p>
+<h3 id="9-2-Loki：查询-Kubernetes-日志"><a href="#9-2-Loki：查询-Kubernetes-日志" class="headerlink" title="9.2 Loki：查询 Kubernetes 日志"></a>9.2 Loki：查询 Kubernetes 日志</h3><p>Grafana → Explore → Loki 数据源，执行：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">&#123;namespace=&quot;monitoring&quot;&#125;</span><br></pre></td></tr></table></figure>
+
+<p><img src="/images/k3s-observability/loki-logs.png" alt="Grafana Explore 中 Loki 查询 monitoring 命名空间日志及日志量"></p>
+<p><em>图 2：Loki 返回 monitoring 命名空间的日志，Grafana 同时显示日志量分布。</em></p>
+<p>可以看到最近一小时的日志量图和具体日志行。继续排查时可尝试：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">&#123;namespace=&quot;monitoring&quot;&#125; |= &quot;error&quot;</span><br></pre></td></tr></table></figure>
+
+<p>这是字符串包含过滤；是否能准确匹配应用错误等级，取决于日志格式。更精细的过滤应使用实际存在的标签或解析后的字段。</p>
+<h3 id="9-3-两条链路的验证边界"><a href="#9-3-两条链路的验证边界" class="headerlink" title="9.3 两条链路的验证边界"></a>9.3 两条链路的验证边界</h3><table>
+<thead>
+<tr>
+<th>项目</th>
+<th>结果</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Grafana API</td>
+<td>HTTP 200</td>
+<td>服务可访问</td>
+</tr>
+<tr>
+<td>Grafana 数据库</td>
+<td><code>ok</code></td>
+<td>数据库健康检查通过</td>
+</tr>
+<tr>
+<td>VictoriaMetrics</td>
+<td><code>up=1</code></td>
+<td>至少一个抓取目标成功</td>
+</tr>
+<tr>
+<td>Loki</td>
+<td>返回 Pod 日志</td>
+<td>日志查询链路可用</td>
+</tr>
+<tr>
+<td>Namespace 标签</td>
+<td><code>monitoring</code> 可筛选</td>
+<td>Kubernetes 元数据已用于日志查询</td>
+</tr>
+</tbody></table>
+<p>这些结果说明基本的 Metrics 和 Logs 查询链路已经打通；后续仍需验证应用指标覆盖率、7 天保留策略和高负载稳定性。</p>
+<h2 id="十、后续计划"><a href="#十、后续计划" class="headerlink" title="十、后续计划"></a>十、后续计划</h2><ol>
+<li>增加 Kubernetes Dashboard：Node、Pod、Namespace 的 CPU、内存、重启和运行状态。</li>
+<li>为 Go、Spring Boot 等业务应用暴露 HTTP 请求、错误率和延迟指标，并验证 Alloy 采集。</li>
+<li>优化 Loki 日志标签与结构化日志格式，避免高基数标签。</li>
+<li>观察 24 小时及更长时间的资源峰值，再调整 requests&#x2F;limits。</li>
+<li>核对 VictoriaMetrics 与 Loki 的最终 Helm Values，验证指标和日志的 7 天保留确实生效。</li>
+<li>持续检查 FluxCD HelmRelease 状态，避免出现 Pod Running 但 GitOps 升级失败的情况。</li>
+</ol>
+<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>这次最大的收获不是安装了 Grafana，而是把 <strong>Kubernetes 日志与指标的采集、存储和查询</strong>串成了一条可验证的链路，并在单节点、约 4GB 内存的约束下跑通。</p>
+<p>过程中遇到的 VictoriaMetrics 参数单位、Alloy 启动与 Readiness、Grafana PVC 权限、Deployment 更新策略冲突，都提醒我：<strong>可观测性平台本身也需要可观测、可排障、可恢复。</strong></p>
+<p>对于 Homelab，先把基础 Metrics 和 Logs 跑通，再逐步增加 Dashboard、应用指标和告警，比一开始堆齐全部组件更实用。</p>
+</article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta"><i class="fas fa-circle-user fa-fw"></i>文章作者: </span><span class="post-copyright-info"><a href="http://blog.damingerdai.com">Arthur Ming</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta"><i class="fas fa-square-arrow-up-right fa-fw"></i>文章链接: </span><span class="post-copyright-info"><a href="http://blog.damingerdai.com/2026/10/25/software/k3s-observability/k3s-observability/">http://blog.damingerdai.com/2026/10/25/software/k3s-observability/k3s-observability/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta"><i class="fas fa-circle-exclamation fa-fw"></i>版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来源 <a href="http://blog.damingerdai.com" target="_blank">Damingerdai's Blog</a>！</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/GitOps/">GitOps</a><a class="post-meta__tags" href="/tags/FluxCD/">FluxCD</a><a class="post-meta__tags" href="/tags/Grafana/">Grafana</a><a class="post-meta__tags" href="/tags/K3s/">K3s</a><a class="post-meta__tags" href="/tags/VictoriaMetrics/">VictoriaMetrics</a><a class="post-meta__tags" href="/tags/Loki/">Loki</a><a class="post-meta__tags" href="/tags/Alloy/">Alloy</a></div><div class="post-share"><div class="social-share" data-image="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" data-sites="facebook,x,wechat,weibo,qq"></div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/butterfly-extsrc/sharejs/dist/css/share.min.css" media="print" onload="this.media='all'"><script src="https://cdn.jsdelivr.net/npm/butterfly-extsrc/sharejs/dist/js/social-share.min.js" defer></script></div></div><nav class="pagination-post" id="pagination"><a class="pagination-related full-width" href="/2026/10/24/ai/mastra/mastra-multi-agent-writing-workflow/" title="从零构建 Mastra 多 Agent 写作系统：Research、Analysis、Writer 与 Reviewer 协作实战"><img class="cover" src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" onerror="onerror=null;src='/img/404.jpg'" alt="cover of next post"><div class="info text-right"><div class="info-1"><div class="info-item-1">下一篇</div><div class="info-item-2">从零构建 Mastra 多 Agent 写作系统：Research、Analysis、Writer 与 Reviewer 协作实战</div></div><div class="info-2"><div class="info-item-1">从零构建 Mastra 多 Agent 写作系统：Research、Analysis、Writer 与 Reviewer 协作实战在前两篇文章中，我分别使用 Mastra 实现了 RAG 知识库和 Agent Memory。  从零构建 Mastra RAG MVP：DeepSeek、SiliconFlow 与 PostgreSQL&#x2F;pgvector 实战 从 RAG 到有记忆的 Agent：Mastra Memory 与 PostgreSQL 实战  RAG 解决的是 Agent 如何获取外部知识，Memory 解决的是 Agent 如何保存和使用上下文。 那么接下来的问题是：如果一项任务需要研究、分析、执行和审核，能不能让多个 Agent 分工协作？ 为了回答这个问题，我决定使用 Mastra 构建一个技术文章生成系统。 输入一个主题，例如：  Go 后端为什么应该从 MD5 迁移到 Argon2id？  系统需要自动完成资料检索、技术分析、文章编写和质量审核。如果 Reviewer 认为文章存在问题，Writer 应该根据反馈修改文章，而不是简单地重新生成一遍。 ...</div></div></div></a></nav><div class="relatedPosts"><div class="headline"><i class="fas fa-thumbs-up fa-fw"></i><span>相关推荐</span></div><div class="relatedPosts-list"><a class="pagination-related" href="/2026/07/21/software/fluxcd-gitea-http-bootstrap-solution/" title="内网 GitOps 实践：FluxCD 与 Gitea (HTTP) 集成与 初始化 指南"><img class="cover" src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-21</div><div class="info-item-2">内网 GitOps 实践：FluxCD 与 Gitea (HTTP) 集成与 初始化 指南</div></div><div class="info-2"><div class="info-item-1">FluxCD 在内网纯 HTTP 环境下与 Gitea 集成并完成初始化（Bootstrap）过程的技术总结  1. 环境背景与技术痛点 基础设施：部署于内网的 Gitea 实例（通过 HTTP 协议暴露服务，地址格式为 http://&lt;IP&gt;:&lt;PORT&gt;）。 网络限制：内网环境未配置 TLS&#x2F;SSL 证书，不支持 HTTPS 通信。 核心拦截点：   协议强校验：新版 Flux CLI 的 flux bootstrap gitea 在调用 Gitea API 时默认强制使用 HTTPS，抛出 http: server gave HTTP response to HTTPS client 错误。 Go-Git 明文传输保护：Flux 底层依赖的 Go-Git 库出于安全限制，禁止在未加密的明文 HTTP 链接中直接发送 Basic Auth 凭证（Token&#x2F;密码），抛出 basic auth cannot be sent over HTTP 错误。   2. 核心解决方案（参考 Discussion #4972）根据 FluxCD ...</div></div></div></a><a class="pagination-related" href="/2026/08/28/software/internal-kubernetes-https-with-cert-manager-dns01/" title="使用 Traefik、cert-manager 和 DNS-01 为内网 Kubernetes 服务配置 HTTPS"><img class="cover" src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-08-28</div><div class="info-item-2">使用 Traefik、cert-manager 和 DNS-01 为内网 Kubernetes 服务配置 HTTPS</div></div><div class="info-2"><div class="info-item-1">使用 Traefik、cert-manager 和 DNS-01 为内网 Kubernetes 服务配置 HTTPS最近我给部署在内网 K3s 集群中的 Web 应用配置了一个浏览器可信的 HTTPS 入口。最终采用的方案是：  自有域名的内部子域名 + 本地 DNS 解析 + Traefik Ingress + cert-manager + Let’s Encrypt DNS-01  这套方案最大的优点是，服务本身不需要暴露到公网。Let’s Encrypt 只通过公网 DNS 的 TXT 记录验证域名所有权，签发完成后，用户仍然通过局域网 IP 访问服务。 本文记录完整的配置过程，并使用以下示例信息： 123456公网域名：example.com内部域名：health-master-dev.internal.example.comK3s 节点：192.168.31.215应用命名空间：health-master-dev-namespaceIngress Controller：TraefikDNS 服务商：Cloudflare  一、整体原理访问服务和签发证书走的是两条不同的链...</div></div></div></a><a class="pagination-related" href="/2026/08/20/software/fluxcd-homelab-hoteler-gitops/" title="使用 FluxCD 构建 Homelab GitOps：从私有 Git 仓库到 Hoteler 自动部署"><img class="cover" src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-08-20</div><div class="info-item-2">使用 FluxCD 构建 Homelab GitOps：从私有 Git 仓库到 Hoteler 自动部署</div></div><div class="info-2"><div class="info-item-1">使用 FluxCD 构建 Homelab GitOps：从私有 Git 仓库到 Hoteler 自动部署最近我重新整理了自己的 Homelab 部署方式。 过去 Kubernetes 应用虽然已经使用 Kustomize管理，但本质上仍然需要人为执行部署操作。既然集群已经运行FluxCD，更合理的方式应该是：  Git 描述期望状态，FluxCD 负责让 Kubernetes 的实际状态持续向 Git中的状态收敛。  这次以 Hoteler 为例，将现有 Kustomize 部署配置接入FluxCD，并将应用源码、应用部署配置和集群配置拆分。 1. 仓库职责划分整个 GitOps 体系拆成三个部分： Application Repositoryhoteler 是应用源码仓库，负责： 12345Source CodeDockerfileTestsCIContainer Image  CI 最终产生类似： 1ghcr.io/damingerdai/hoteler:v0.0.5  这样的应用镜像。 应用仓库本身不直接操作 Kubernetes。 Application GitOps R...</div></div></div></a><a class="pagination-related" href="/2026/08/23/software/fluxcd-github-sops-age-gitops/" title="使用 FluxCD + GitHub + SOPS + age 构建完整 GitOps 部署流程"><img class="cover" src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-08-23</div><div class="info-item-2">使用 FluxCD + GitHub + SOPS + age 构建完整 GitOps 部署流程</div></div><div class="info-2"><div class="info-item-1">使用 FluxCD + GitHub + SOPS + age 构建完整 GitOps 部署流程最近我将自己的 Kubernetes 部署方式从手工 Helm 部署逐步迁移到了 FluxCD 管理的 GitOps 模式。 最终希望实现的目标是： 12345678910111213GitHub  │  ├── fleet-infra  │      └── 管理集群以及 FluxCD 配置  │  └── hoteler-deployment         └── 管理 Hoteler 的 Kubernetes manifests                  │                  ▼               FluxCD                  │                  ▼                 K3s  其中两个 GitHub Repository 都是 Private Repository。 同时，由于 FluxCD 访问 hoteler-deployment 需要 SSH Deploy Key，因此又引出了一个新的问...</div></div></div></a><a class="pagination-related" href="/2026/02/22/software/how-to-deploy-grafana-on-k3s-with-ingress/" title="Grafana UI 部署与技术复盘报告"><img class="cover" src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-02-22</div><div class="info-item-2">Grafana UI 部署与技术复盘报告</div></div><div class="info-2"><div class="info-item-1">Grafana UI 部署与技术复盘报告1. 基础环境 集群环境: K3s (192.168.0.113) 监控套件: kube-prometheus-stack (Helm 部署) 目标: 通过正式域名 grafana.damingerdaint.com 暴露 Grafana UI 页面。   2. 成功方案：Ingress 部署实践由于 K3s 内置的 Traefik 默认已占用 80 端口，采用 Ingress 方案避开了端口冲突，实现了快速上线。 配置实现 (v1 标准写法)123456789101112131415161718192021apiVersion: networking.k8s.io/v1kind: Ingressmetadata:  name: grafana-ui-ingress  namespace: monitoring  annotations:    traefik.ingress.kubernetes.io/router.entrypoints: webspec:  ingressClassName: traefik  # 修复 Depreca...</div></div></div></a></div></div></div><div class="aside-content" id="aside-content"><div class="card-widget card-info text-center"><div class="avatar-img"><img src="/img/avatar.png" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="author-info-name">Arthur Ming</div><div class="author-info-description">大明二代的博客</div><div class="site-data"><a href="/archives/"><div class="headline">文章</div><div class="length-num">113</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">190</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">11</div></a></div><a id="card-info-btn" target="_blank" rel="noopener" href="https://github.com/damingerdai"><i class="fab fa-github"></i><span>Follow Me</span></a><div class="card-info-social-icons"><a class="social-icon" href="https://github.com/damingerdai" target="_blank" title="Github"><i class="fab fa-github" style="color: #24292e;"></i></a><a class="social-icon" href="mailto:mingguobin@live.com" target="_blank" title="Email"><i class="fas fa-envelope" style="color: #4a7dbe;"></i></a></div></div><div class="card-widget card-announcement"><div class="item-headline"><i class="fas fa-bullhorn fa-shake"></i><span>公告</span></div><div class="announcement_content">大家好，我是大明二代</div></div><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="item-headline"><i class="fas fa-stream"></i><span>目录</span><span class="toc-percentage"></span></div><div class="toc-content"><ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#4GB-%E5%86%85%E5%AD%98%E8%B7%91-Kubernetes-%E5%8F%AF%E8%A7%82%E6%B5%8B%E6%80%A7%EF%BC%9AK3s-FluxCD-VictoriaMetrics-Loki-Grafana-Alloy-%E5%AE%9E%E6%88%98"><span class="toc-number">1.</span> <span class="toc-text">4GB 内存跑 Kubernetes 可观测性：K3s + FluxCD + VictoriaMetrics + Loki + Grafana Alloy 实战</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%89%8D%E8%A8%80"><span class="toc-number">1.1.</span> <span class="toc-text">前言</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%B8%80%E3%80%81%E9%83%A8%E7%BD%B2%E7%8E%AF%E5%A2%83%E4%B8%8E%E6%9E%B6%E6%9E%84"><span class="toc-number">1.2.</span> <span class="toc-text">一、部署环境与架构</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%BA%8C%E3%80%81%E4%B8%BA%E4%BB%80%E4%B9%88%E9%80%89%E8%BF%99%E5%A5%97%E7%BB%84%E5%90%88"><span class="toc-number">1.3.</span> <span class="toc-text">二、为什么选这套组合</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%B8%89%E3%80%81%E4%BD%BF%E7%94%A8-FluxCD-%E7%AE%A1%E7%90%86%E9%83%A8%E7%BD%B2"><span class="toc-number">1.4.</span> <span class="toc-text">三、使用 FluxCD 管理部署</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%9B%9B%E3%80%81%E8%B8%A9%E5%9D%91%E4%B8%80%EF%BC%9AVictoriaMetrics-%E5%8F%82%E6%95%B0%E5%8D%95%E4%BD%8D"><span class="toc-number">1.5.</span> <span class="toc-text">四、踩坑一：VictoriaMetrics 参数单位</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%BA%94%E3%80%81%E8%B8%A9%E5%9D%91%E4%BA%8C%EF%BC%9AAlloy-%E5%88%9D%E5%A7%8B%E5%8C%96%E8%80%97%E6%97%B6%E4%B8%8E-Readiness"><span class="toc-number">1.6.</span> <span class="toc-text">五、踩坑二：Alloy 初始化耗时与 Readiness</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%85%AD%E3%80%81%E8%B8%A9%E5%9D%91%E4%B8%89%EF%BC%9AGrafana-init-chown-data-%E6%9D%83%E9%99%90%E9%94%99%E8%AF%AF"><span class="toc-number">1.7.</span> <span class="toc-text">六、踩坑三：Grafana init-chown-data 权限错误</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%B8%83%E3%80%81%E8%B8%A9%E5%9D%91%E5%9B%9B%EF%BC%9ARollingUpdate-%E5%88%87%E6%8D%A2-Recreate-%E7%9A%84%E5%AD%97%E6%AE%B5%E5%86%B2%E7%AA%81"><span class="toc-number">1.8.</span> <span class="toc-text">七、踩坑四：RollingUpdate 切换 Recreate 的字段冲突</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%85%AB%E3%80%81%E6%9C%80%E7%BB%88%E8%BF%90%E8%A1%8C%E7%8A%B6%E6%80%81%E4%B8%8E%E8%B5%84%E6%BA%90%E5%BC%80%E9%94%80"><span class="toc-number">1.9.</span> <span class="toc-text">八、最终运行状态与资源开销</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%B9%9D%E3%80%81%E9%AA%8C%E8%AF%81-Grafana-API-%E4%B8%8E%E6%95%B0%E6%8D%AE%E6%BA%90"><span class="toc-number">1.10.</span> <span class="toc-text">九、验证 Grafana API 与数据源</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#9-1-VictoriaMetrics%EF%BC%9APromQL-up"><span class="toc-number">1.10.1.</span> <span class="toc-text">9.1 VictoriaMetrics：PromQL up</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#9-2-Loki%EF%BC%9A%E6%9F%A5%E8%AF%A2-Kubernetes-%E6%97%A5%E5%BF%97"><span class="toc-number">1.10.2.</span> <span class="toc-text">9.2 Loki：查询 Kubernetes 日志</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#9-3-%E4%B8%A4%E6%9D%A1%E9%93%BE%E8%B7%AF%E7%9A%84%E9%AA%8C%E8%AF%81%E8%BE%B9%E7%95%8C"><span class="toc-number">1.10.3.</span> <span class="toc-text">9.3 两条链路的验证边界</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%8D%81%E3%80%81%E5%90%8E%E7%BB%AD%E8%AE%A1%E5%88%92"><span class="toc-number">1.11.</span> <span class="toc-text">十、后续计划</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E6%80%BB%E7%BB%93"><span class="toc-number">1.12.</span> <span class="toc-text">总结</span></a></li></ol></li></ol></div></div><div class="card-widget card-recent-post"><div class="item-headline"><i class="fas fa-history"></i><span>最新文章</span></div><div class="aside-list"><div class="aside-list-item"><a class="thumbnail" href="/2026/10/25/software/k3s-observability/k3s-observability/" title="4GB 内存跑 Kubernetes 可观测性：K3s + FluxCD + VictoriaMetrics + Loki + Grafana Alloy 实战"><img src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="4GB 内存跑 Kubernetes 可观测性：K3s + FluxCD + VictoriaMetrics + Loki + Grafana Alloy 实战"/></a><div class="content"><a class="title" href="/2026/10/25/software/k3s-observability/k3s-observability/" title="4GB 内存跑 Kubernetes 可观测性：K3s + FluxCD + VictoriaMetrics + Loki + Grafana Alloy 实战">4GB 内存跑 Kubernetes 可观测性：K3s + FluxCD + VictoriaMetrics + Loki + Grafana Alloy 实战</a><time datetime="2026-10-25T16:00:00.000Z" title="发表于 2026-10-26 00:00:00">2026-10-26</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2026/10/24/ai/mastra/mastra-multi-agent-writing-workflow/" title="从零构建 Mastra 多 Agent 写作系统：Research、Analysis、Writer 与 Reviewer 协作实战"><img src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="从零构建 Mastra 多 Agent 写作系统：Research、Analysis、Writer 与 Reviewer 协作实战"/></a><div class="content"><a class="title" href="/2026/10/24/ai/mastra/mastra-multi-agent-writing-workflow/" title="从零构建 Mastra 多 Agent 写作系统：Research、Analysis、Writer 与 Reviewer 协作实战">从零构建 Mastra 多 Agent 写作系统：Research、Analysis、Writer 与 Reviewer 协作实战</a><time datetime="2026-10-24T09:11:00.000Z" title="发表于 2026-10-24 17:11:00">2026-10-24</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2026/10/24/front-end/netlify-to-lighthouse-ci/" title="从 Netlify 部署失败到 Lighthouse CI：在 GitHub Actions 中建立前端质量门禁"><img src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="从 Netlify 部署失败到 Lighthouse CI：在 GitHub Actions 中建立前端质量门禁"/></a><div class="content"><a class="title" href="/2026/10/24/front-end/netlify-to-lighthouse-ci/" title="从 Netlify 部署失败到 Lighthouse CI：在 GitHub Actions 中建立前端质量门禁">从 Netlify 部署失败到 Lighthouse CI：在 GitHub Actions 中建立前端质量门禁</a><time datetime="2026-10-24T07:30:00.000Z" title="发表于 2026-10-24 15:30:00">2026-10-24</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2026/10/20/ai/mastra/mastra-rag-document-lifecycle-version-aware-retrieval/" title="Mastra RAG 进阶：使用 Drizzle ORM 和 pgvector 实现文档版本管理与 Version-aware Retrieval"><img src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="Mastra RAG 进阶：使用 Drizzle ORM 和 pgvector 实现文档版本管理与 Version-aware Retrieval"/></a><div class="content"><a class="title" href="/2026/10/20/ai/mastra/mastra-rag-document-lifecycle-version-aware-retrieval/" title="Mastra RAG 进阶：使用 Drizzle ORM 和 pgvector 实现文档版本管理与 Version-aware Retrieval">Mastra RAG 进阶：使用 Drizzle ORM 和 pgvector 实现文档版本管理与 Version-aware Retrieval</a><time datetime="2026-10-20T08:30:00.000Z" title="发表于 2026-10-20 16:30:00">2026-10-20</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2026/10/19/ai/mastra/mastra-memory-postgresql-practice/" title="从 RAG 到有记忆的 Agent：Mastra Memory 与 PostgreSQL 实战"><img src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="从 RAG 到有记忆的 Agent：Mastra Memory 与 PostgreSQL 实战"/></a><div class="content"><a class="title" href="/2026/10/19/ai/mastra/mastra-memory-postgresql-practice/" title="从 RAG 到有记忆的 Agent：Mastra Memory 与 PostgreSQL 实战">从 RAG 到有记忆的 Agent：Mastra Memory 与 PostgreSQL 实战</a><time datetime="2026-10-19T10:30:00.000Z" title="发表于 2026-10-19 18:30:00">2026-10-19</time></div></div></div></div></div></div></main><footer id="footer"><div class="footer-other"><div class="footer-copyright"><span class="copyright">&copy;&nbsp;2020 - 2026 By Arthur Ming</span></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="日间和夜间模式切换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside-config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><button id="go-up" type="button" title="回到顶部"><span class="scroll-percent"></span><i class="fas fa-arrow-up"></i></button></div></div><div><script src="/js/utils.js"></script><script src="/js/main.js"></script><div class="js-pjax"><script>(() => {
+  const parseViewBox = viewBox => {
+    if (!viewBox) return null
+    const parts = viewBox.trim().split(/[\s,]+/).map(n => Number(n))
+    if (parts.length !== 4 || parts.some(n => Number.isNaN(n))) return null
+    return parts
+  }
+
+  const getSvgViewBox = svg => {
+    const attr = parseViewBox(svg.getAttribute('viewBox'))
+    if (attr) return attr
+
+    // Fallback: use bbox to build a viewBox
+    try {
+      const bbox = svg.getBBox()
+      if (bbox && bbox.width && bbox.height) return [bbox.x, bbox.y, bbox.width, bbox.height]
+    } catch (e) {
+      // getBBox may fail on some edge cases; ignore
+    }
+
+    const w = Number(svg.getAttribute('width')) || 0
+    const h = Number(svg.getAttribute('height')) || 0
+    if (w > 0 && h > 0) return [0, 0, w, h]
+    return [0, 0, 100, 100]
+  }
+
+  const setSvgViewBox = (svg, vb) => {
+    svg.setAttribute('viewBox', `${vb[0]} ${vb[1]} ${vb[2]} ${vb[3]}`)
+  }
+
+  const clamp = (v, min, max) => Math.max(min, Math.min(max, v))
+
+  const openSvgInNewTab = ({ source, initViewBox }) => {
+    const getClonedSvg = () => {
+      if (typeof source === 'string') {
+        const template = document.createElement('template')
+        template.innerHTML = source.trim()
+        const svg = template.content.querySelector('svg')
+        return svg ? svg.cloneNode(true) : null
+      }
+      if (source && typeof source.cloneNode === 'function') {
+        return source.cloneNode(true)
+      }
+      return null
+    }
+
+    const clone = getClonedSvg()
+    if (!clone) return
+    if (initViewBox && initViewBox.length === 4) {
+      clone.setAttribute('viewBox', initViewBox.join(' '))
+    }
+    if (!clone.getAttribute('xmlns')) clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg')
+    if (!clone.getAttribute('xmlns:xlink') && clone.innerHTML.includes('xlink:')) {
+      clone.setAttribute('xmlns:xlink', 'http://www.w3.org/1999/xlink')
+    }
+    // inject background to match current theme
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark'
+    const bg = getComputedStyle(document.body).backgroundColor || (isDark ? '#1e1e1e' : '#ffffff')
+    if (!clone.style.background) clone.style.background = bg
+
+    const serializer = new XMLSerializer()
+    const svgSource = serializer.serializeToString(clone)
+    const htmlSource = `<!doctype html><html><head><meta charset="utf-8" />
+      <style>
+        html, body { width: 100%; height: 100%; margin: 0; display: flex; align-items: center; justify-content: center; background: ${bg}; }
+        svg { max-width: 100%; max-height: 100%; height: auto; width: auto; }
+      </style>
+      </head><body>${svgSource}</body></html>`
+    const blob = new Blob([htmlSource], { type: 'text/html;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    window.open(url, '_blank', 'noopener')
+
+    setTimeout(() => URL.revokeObjectURL(url), 5000)
+  }
+
+  const attachMermaidViewerButton = wrap => {
+    let btn = wrap.querySelector('.mermaid-open-btn')
+    if (!btn) {
+      btn = document.createElement('button')
+      btn.type = 'button'
+      btn.className = 'mermaid-open-btn'
+      wrap.appendChild(btn)
+    }
+
+    btn.innerHTML = '<i class="fa fa-search fa-fw" aria-hidden="true"></i>'
+
+    if (!btn.__mermaidViewerBound) {
+      btn.addEventListener('click', e => {
+        e.preventDefault()
+        e.stopPropagation()
+        const svg = wrap.__mermaidOriginalSvg || wrap.querySelector('svg')
+        if (!svg) return
+        const initViewBox = wrap.__mermaidInitViewBox
+        openSvgInNewTab({ source: svg, initViewBox })
+      })
+      btn.__mermaidViewerBound = true
+    }
+  }
+
+  // Zoom around a point (px, py) in the SVG viewport (in viewBox coordinates)
+  const zoomAtPoint = (vb, factor, px, py) => {
+    const w = vb[2] * factor
+    const h = vb[3] * factor
+    const nx = px - (px - vb[0]) * factor
+    const ny = py - (py - vb[1]) * factor
+    return [nx, ny, w, h]
+  }
+
+  const initMermaidGestures = wrap => {
+    // Clean up previous event listeners and pending frames
+    if (wrap.__mermaidAbortController) {
+      wrap.__mermaidAbortController.abort()
+      if (wrap.__mermaidRafId) cancelAnimationFrame(wrap.__mermaidRafId)
+    }
+    const ac = new AbortController()
+    wrap.__mermaidAbortController = ac
+    const svg = wrap.querySelector('svg')
+    if (!svg) return
+
+    // Ensure viewBox exists so gestures always work
+    const initVb = getSvgViewBox(svg)
+    wrap.__mermaidInitViewBox = initVb
+    wrap.__mermaidCurViewBox = initVb.slice()
+    setSvgViewBox(svg, initVb)
+    // Disable default gestures to prevent scroll chaining and pinch-zoom penetration in Chrome
+    svg.style.touchAction = 'none'
+
+    // Cache BoundingClientRect, throttled on scroll to reduce reflow
+    let cachedRect = svg.getBoundingClientRect()
+    let rectDirty = false
+    const markRectDirty = () => { rectDirty = true }
+    window.addEventListener('resize', markRectDirty, { signal: ac.signal })
+    window.addEventListener('scroll', markRectDirty, { signal: ac.signal, capture: true })
+    const getRect = () => {
+      if (rectDirty) {
+        cachedRect = svg.getBoundingClientRect()
+        rectDirty = false
+      }
+      return cachedRect
+    }
+
+    // Precompute clamp bounds from initial viewBox
+    const minW = initVb[2] * 0.1
+    const maxW = initVb[2] * 10
+    const minH = initVb[3] * 0.1
+    const maxH = initVb[3] * 10
+    const clampVb = vb => {
+      const out = vb.slice()
+      out[2] = clamp(out[2], minW, maxW)
+      out[3] = clamp(out[3], minH, maxH)
+      return out
+    }
+
+    // Throttle DOM updates using requestAnimationFrame
+    let pendingVb = null
+    let rafId = null
+    const applyVb = () => {
+      if (pendingVb) {
+        wrap.__mermaidCurViewBox = pendingVb
+        setSvgViewBox(svg, pendingVb)
+        pendingVb = null
+      }
+      rafId = null
+      wrap.__mermaidRafId = null
+    }
+    const setCurVb = vb => {
+      pendingVb = clampVb(vb)
+      if (!rafId) {
+        rafId = requestAnimationFrame(applyVb)
+        wrap.__mermaidRafId = rafId
+      }
+    }
+
+    const state = {
+      pointers: new Map(),
+      startVb: null,
+      startDist: 0,
+      lastPointerX: 0,
+      lastPointerY: 0
+    }
+
+    const onPointerDown = e => {
+      if (e.pointerType === 'mouse' && e.button !== 0) return
+      svg.setPointerCapture(e.pointerId)
+      const curVb = wrap.__mermaidCurViewBox
+      state.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY })
+      if (state.pointers.size === 1) {
+        state.startVb = curVb.slice()
+        state.lastPointerX = e.clientX
+        state.lastPointerY = e.clientY
+      } else if (state.pointers.size === 2) {
+        const pts = [...state.pointers.values()]
+        const dx = pts[0].x - pts[1].x
+        const dy = pts[0].y - pts[1].y
+        state.startDist = Math.hypot(dx, dy)
+        state.startVb = curVb.slice()
+      }
+    }
+
+    const onPointerMove = e => {
+      if (!state.pointers.has(e.pointerId)) return
+      state.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY })
+      const curVb = wrap.__mermaidCurViewBox
+      const rect = getRect()
+      if (state.pointers.size === 1 && state.startVb) {
+        const p = state.pointers.values().next().value
+        const dxClient = p.x - state.lastPointerX
+        const dyClient = p.y - state.lastPointerY
+        state.lastPointerX = p.x
+        state.lastPointerY = p.y
+        const dx = dxClient * (curVb[2] / rect.width)
+        const dy = dyClient * (curVb[3] / rect.height)
+        setCurVb([curVb[0] - dx, curVb[1] - dy, curVb[2], curVb[3]])
+        return
+      }
+      if (state.pointers.size === 2 && state.startVb && state.startDist > 0) {
+        const pts = [...state.pointers.values()]
+        const dx = pts[0].x - pts[1].x
+        const dy = pts[0].y - pts[1].y
+        const dist = Math.hypot(dx, dy)
+        if (!dist) return
+        const factor = state.startDist / dist
+        const cx = (pts[0].x + pts[1].x) / 2
+        const cy = (pts[0].y + pts[1].y) / 2
+        const px = curVb[0] + (cx - rect.left) * (curVb[2] / rect.width)
+        const py = curVb[1] + (cy - rect.top) * (curVb[3] / rect.height)
+        setCurVb(zoomAtPoint(state.startVb, factor, px, py))
+      }
+    }
+
+    const onPointerUpOrCancel = e => {
+      // Release PointerCapture to avoid event capture anomalies
+      if (svg.hasPointerCapture && svg.hasPointerCapture(e.pointerId)) {
+        svg.releasePointerCapture(e.pointerId)
+      }
+      state.pointers.delete(e.pointerId)
+      if (state.pointers.size === 0) {
+        state.startVb = null
+        state.startDist = 0
+      } else if (state.pointers.size === 1) {
+        const p = state.pointers.values().next().value
+        state.lastPointerX = p.x
+        state.lastPointerY = p.y
+      }
+    }
+
+    const onWheel = e => {
+      // Prevent event bubbling from triggering external scroll
+      e.preventDefault()
+      e.stopPropagation()
+      // Normalize deltaY across deltaMode (Chrome uses pixels, Safari uses lines)
+      let delta = e.deltaY
+      if (e.deltaMode === 1) delta *= 16
+      else if (e.deltaMode === 2) delta *= 400
+
+      // Continuous zoom factor: smoother than fixed 1.1/0.9 steps
+      const zoomFactor = Math.pow(1.001, delta)
+
+      const curVb = wrap.__mermaidCurViewBox
+      const rect = getRect()
+      const px = curVb[0] + (e.clientX - rect.left) * (curVb[2] / rect.width)
+      const py = curVb[1] + (e.clientY - rect.top) * (curVb[3] / rect.height)
+      setCurVb(zoomAtPoint(curVb, zoomFactor, px, py))
+    }
+
+    const onDblClick = () => {
+      const init = wrap.__mermaidInitViewBox
+      if (init) setCurVb(init)
+    }
+
+    svg.addEventListener('pointerdown', onPointerDown, { signal: ac.signal })
+    svg.addEventListener('pointermove', onPointerMove, { signal: ac.signal })
+    svg.addEventListener('pointerup', onPointerUpOrCancel, { signal: ac.signal })
+    svg.addEventListener('pointercancel', onPointerUpOrCancel, { signal: ac.signal })
+    svg.addEventListener('wheel', onWheel, { passive: false, signal: ac.signal })
+    svg.addEventListener('dblclick', onDblClick, { signal: ac.signal })
+  }
+
+  const runMermaid = ele => {
+    window.loadMermaid = true
+    const theme = document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'default'
+    ele.forEach((item, index) => {
+      const mermaidSrc = item.firstElementChild
+      // Clean up event listeners before removing old SVG
+      if (item.__mermaidAbortController) {
+        item.__mermaidAbortController.abort()
+      }
+      const oldSvg = item.querySelector('svg')
+      if (oldSvg) oldSvg.remove()
+      let config = {}
+      try {
+        config = mermaidSrc.dataset.config ? JSON.parse(mermaidSrc.dataset.config) : {}
+      } catch (e) {
+        console.warn('[mermaid] failed to parse dataset.config:', e)
+      }
+      if (!config.theme) {
+        config.theme = theme
+      }
+      const mermaidThemeConfig = `%%{init: ${JSON.stringify(config)}}%%\n`
+      const mermaidID = `mermaid-${index}`
+      const mermaidDefinition = mermaidThemeConfig + mermaidSrc.textContent
+
+      const renderMermaid = svg => {
+        mermaidSrc.insertAdjacentHTML('afterend', svg)
+        if (true) initMermaidGestures(item)
+        item.__mermaidOriginalSvg = svg
+        if (true) attachMermaidViewerButton(item)
+      }
+
+      const handleError = err => {
+        console.error(`[mermaid] render failed for block #${index}:`, err)
+        const errorEl = document.createElement('div')
+        errorEl.className = 'mermaid-error'
+        errorEl.textContent = `Mermaid render error: ${err.message || err}`
+        mermaidSrc.insertAdjacentElement('afterend', errorEl)
+      }
+
+      try {
+        const renderFn = mermaid.render(mermaidID, mermaidDefinition)
+        // mermaid v9 and v10 compatibility
+        if (typeof renderFn === 'string') {
+          renderMermaid(renderFn)
+        } else {
+          renderFn.then(({ svg }) => renderMermaid(svg)).catch(handleError)
+        }
+      } catch (err) {
+        handleError(err)
+      }
+    })
+  }
+
+  const codeToMermaid = $article => {
+    const codeMermaidEle = $article.querySelectorAll('pre > code.mermaid')
+    if (codeMermaidEle.length === 0) return
+
+    codeMermaidEle.forEach(ele => {
+      const preEle = document.createElement('pre')
+      preEle.className = 'mermaid-src'
+      preEle.hidden = true
+      preEle.textContent = ele.textContent
+      const newEle = document.createElement('div')
+      newEle.className = 'mermaid-wrap'
+      newEle.appendChild(preEle)
+      ele.parentNode.replaceWith(newEle)
+    })
+  }
+
+  const loadMermaid = () => {
+    const $article = document.getElementById('article-container')
+    if (!$article) return
+
+    if (true) codeToMermaid($article)
+    const $mermaid = $article.querySelectorAll('.mermaid-wrap')
+    if ($mermaid.length === 0) return
+
+    const runMermaidFn = () => runMermaid($mermaid)
+    btf.addGlobalFn('themeChange', runMermaidFn, 'mermaid')
+    window.loadMermaid ? runMermaidFn() : btf.getScript('https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js').then(runMermaidFn)
+  }
+
+  btf.addGlobalFn('encrypt', loadMermaid, 'mermaid')
+  window.pjax ? loadMermaid() : document.addEventListener('DOMContentLoaded', loadMermaid)
+})()</script></div><script defer="defer" id="ribbon" src="https://cdn.jsdelivr.net/npm/butterfly-extsrc/dist/canvas-ribbon.min.js" size="150" alpha="0.6" zIndex="-1" mobile="false" data-click="true"></script><script async data-pjax src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script></div></body></html>
