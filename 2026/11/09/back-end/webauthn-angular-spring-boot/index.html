@@ -1,0 +1,772 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="dark"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1.0,viewport-fit=cover"><title>WebAuthn 入门：从无密码认证原理到 Angular + Spring Boot 实战 | Damingerdai's Blog</title><meta name="author" content="Arthur Ming"><meta name="copyright" content="Arthur Ming"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#0d0d0d"><meta name="description" content="从 WebAuthn 公钥密码学、Challenge、RP ID 和 Origin 入手，使用 Angular、SimpleWebAuthn、Spring Boot 与 WebAuthn4J 实现 Passkey 注册和登录。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="WebAuthn 入门：从无密码认证原理到 Angular + Spring Boot 实战">
+<meta property="og:url" content="http://blog.damingerdai.com/2026/11/09/back-end/webauthn-angular-spring-boot/index.html">
+<meta property="og:site_name" content="Damingerdai&#39;s Blog">
+<meta property="og:description" content="从 WebAuthn 公钥密码学、Challenge、RP ID 和 Origin 入手，使用 Angular、SimpleWebAuthn、Spring Boot 与 WebAuthn4J 实现 Passkey 注册和登录。">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg">
+<meta property="article:published_time" content="2026-11-09T15:25:00.000Z">
+<meta property="article:modified_time" content="2026-11-09T15:57:03.292Z">
+<meta property="article:author" content="Arthur Ming">
+<meta property="article:tag" content="WebAuthn">
+<meta property="article:tag" content="Passkey">
+<meta property="article:tag" content="Angular">
+<meta property="article:tag" content="Spring Boot">
+<meta property="article:tag" content="Java">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg"><script type="application/ld+json">{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "WebAuthn 入门：从无密码认证原理到 Angular + Spring Boot 实战",
+  "url": "http://blog.damingerdai.com/2026/11/09/back-end/webauthn-angular-spring-boot/",
+  "image": "https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg",
+  "datePublished": "2026-11-09T15:25:00.000Z",
+  "dateModified": "2026-11-09T15:57:03.292Z",
+  "author": [
+    {
+      "@type": "Person",
+      "name": "Arthur Ming",
+      "url": "http://blog.damingerdai.com"
+    }
+  ]
+}</script><link rel="shortcut icon" href="/img/avatar.png"><link rel="canonical" href="http://blog.damingerdai.com/2026/11/09/back-end/webauthn-angular-spring-boot/index.html"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><link rel="stylesheet" href="/css/index.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free/css/all.min.css"><script>
+    (() => {
+      
+    const saveToLocal = {
+      set: (key, value, ttl) => {
+        const data = { value }
+
+        if (ttl != null) {
+          data.expiry = Date.now() + ttl * 86400000
+        }
+
+        localStorage.setItem(key, JSON.stringify(data))
+      },
+      get: key => {
+        const itemStr = localStorage.getItem(key)
+        if (!itemStr) return
+
+        try {
+          const data = JSON.parse(itemStr)
+
+          if (data.expiry && Date.now() > data.expiry) {
+            localStorage.removeItem(key)
+            return
+          }
+
+          return data.value
+        } catch {
+          localStorage.removeItem(key)
+        }
+      }
+    }
+
+    const scriptCache = new Map()
+    const cssCache = new Map()
+    window.btf = {
+      saveToLocal,
+      getScript: (url, attr = {}) => {
+        if (scriptCache.has(url)) {
+          return scriptCache.get(url)
+        }
+
+        const promise = new Promise((resolve, reject) => {
+          const script = document.createElement('script')
+
+          script.src = url
+          script.async = true
+
+          for (const key in attr) {
+            script.setAttribute(key, attr[key])
+          }
+
+          script.onload = resolve
+          script.onerror = reject
+
+          document.head.appendChild(script)
+        })
+
+        scriptCache.set(url, promise)
+
+        return promise
+      },
+      getCSS: (url, id) => {
+        if (cssCache.has(url)) {
+          return cssCache.get(url)
+        }
+
+        const promise = new Promise((resolve, reject) => {
+          const link = document.createElement('link')
+
+          link.rel = 'stylesheet'
+          link.href = url
+
+          if (id) {
+            link.id = id
+          }
+
+          link.onload = resolve
+          link.onerror = reject
+
+          document.head.appendChild(link)
+        })
+
+        cssCache.set(url, promise)
+
+        return promise
+      },
+      addGlobalFn: (key, fn, name = false, parent = window) => {
+        if (!false && key.startsWith('pjax')) return
+        const globalFn = parent.globalFn || {}
+        globalFn[key] = globalFn[key] || {}
+        globalFn[key][name || Object.keys(globalFn[key]).length] = fn
+        parent.globalFn = globalFn
+      }
+    }
+  
+      
+      const metaThemeColor = document.querySelector('meta[name="theme-color"]')
+      const activateDarkMode = () => {
+        document.documentElement.dataset.theme = 'dark'
+        if (metaThemeColor !== null) {
+          metaThemeColor.setAttribute('content', '#0d0d0d')
+        }
+      }
+      const activateLightMode = () => {
+        document.documentElement.dataset.theme = 'light'
+        if (metaThemeColor !== null) {
+          metaThemeColor.setAttribute('content', '#ffffff')
+        }
+      }
+
+      btf.activateDarkMode = activateDarkMode
+      btf.activateLightMode = activateLightMode
+
+      const theme = saveToLocal.get('theme')
+    
+          const mediaQueryDark = window.matchMedia('(prefers-color-scheme: dark)')
+          const mediaQueryLight = window.matchMedia('(prefers-color-scheme: light)')
+
+          if (theme === undefined) {
+            if (mediaQueryLight.matches) activateLightMode()
+            else if (mediaQueryDark.matches) activateDarkMode()
+            else {
+              const hour = new Date().getHours()
+              const start = 6
+              const end = 18
+              const isNight =
+                start < end
+                    ? hour < start || hour >= end
+                    : hour >= start || hour < end
+              isNight ? activateDarkMode() : activateLightMode()
+            }
+            mediaQueryDark.addEventListener('change', e => {
+              if (saveToLocal.get('theme') === undefined) {
+                e.matches ? activateDarkMode() : activateLightMode()
+              }
+            })
+          } else {
+            theme === 'light' ? activateLightMode() : activateDarkMode()
+          }
+        
+      
+      const asideStatus = saveToLocal.get('aside-status')
+      if (asideStatus !== undefined) {
+        document.documentElement.classList.toggle('hide-aside', asideStatus === 'hide')
+      }
+    
+      
+    const detectApple = () => {
+      if (/iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent)) {
+        document.documentElement.classList.add('apple')
+      }
+    }
+    detectApple()
+  
+    })()
+  </script><script>const GLOBAL_CONFIG = {
+  root: '/',
+  algolia: undefined,
+  localSearch: undefined,
+  translate: undefined,
+  highlight: {"plugin":"highlight.js","highlightCopy":true,"highlightLang":true,"highlightHeightLimit":false,"highlightFullpage":false,"highlightMacStyle":false},
+  copy: {
+    success: '复制成功',
+    error: '复制失败',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '',
+  dateSuffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: undefined,
+  lightbox: 'null',
+  Snackbar: undefined,
+  infinitegrid: {
+    js: 'https://cdn.jsdelivr.net/npm/@egjs/infinitegrid/dist/infinitegrid.min.js',
+    buttonText: '加载更多'
+  },
+  isPhotoFigcaption: false,
+  islazyloadPlugin: false,
+  isAnchor: false,
+  percent: {
+    toc: true,
+    rightside: false,
+  },
+  autoDarkmode: true
+}</script><script id="config-diff">var GLOBAL_CONFIG_SITE = {
+  title: 'WebAuthn 入门：从无密码认证原理到 Angular + Spring Boot 实战',
+  isHighlightShrink: false,
+  isToc: true,
+  pageType: 'post'
+}</script><link rel="stylesheet" href="/css/styles.css"><meta name="generator" content="Hexo 7.3.0"></head><body><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="avatar-img text-center"><img src="/img/avatar.png" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="site-data text-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">114</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">195</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">12</div></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归类</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><span class="site-page group"><i class="fa-fw fas fa-list"></i><span> 其他</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><li><a class="site-page child" href="/others/learning"><i class="fa-fw fas fa-graduation-cap"></i><span> 学习课程</span></a></li><li><a class="site-page child" href="/others/link/"><i class="fa-fw fas fa-link"></i><span> 链接</span></a></li><li><a class="site-page child" href="/others/interview/"><i class="fa-fw fas fa-glide"></i><span> 面试</span></a></li></ul></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于</span></a></div></div></div></div><div class="post" id="body-wrap"><header class="post-bg" id="page-header" style="background-image: url(https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg);"><nav id="nav"><span id="blog-info"><a class="nav-site-title" href="/"><span class="site-name">Damingerdai's Blog</span></a><a class="nav-page-title" href="/"><span class="site-name">WebAuthn 入门：从无密码认证原理到 Angular + Spring Boot 实战</span><span class="site-name"><i class="fa-solid fa-circle-arrow-left"></i><span>  返回首页</span></span></a></span><div id="menus"><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归类</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><span class="site-page group"><i class="fa-fw fas fa-list"></i><span> 其他</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><li><a class="site-page child" href="/others/learning"><i class="fa-fw fas fa-graduation-cap"></i><span> 学习课程</span></a></li><li><a class="site-page child" href="/others/link/"><i class="fa-fw fas fa-link"></i><span> 链接</span></a></li><li><a class="site-page child" href="/others/interview/"><i class="fa-fw fas fa-glide"></i><span> 面试</span></a></li></ul></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于</span></a></div></div><div id="toggle-menu"><span class="site-page"><i class="fas fa-bars fa-fw"></i></span></div></div></nav><div id="post-info"><h1 class="post-title">WebAuthn 入门：从无密码认证原理到 Angular + Spring Boot 实战</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2026-11-09T15:25:00.000Z" title="发表于 2026-11-09 23:25:00">2026-11-09</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2026-11-09T15:57:03.292Z" title="更新于 2026-11-09 23:57:03">2026-11-09</time></span><span class="post-meta-categories"><span class="post-meta-separator">|</span><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/%E6%8A%80%E6%9C%AF%E5%AE%9E%E8%B7%B5/">技术实践</a></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-pv-cv" id="" data-flag-title=""><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">浏览量:</span><span id="busuanzi_value_page_pv"><i class="fa-solid fa-spinner fa-spin"></i></span></span></div></div></div></header><main class="layout" id="content-inner"><div id="post"><article class="container post-content" id="article-container"><p>传统密码登录存在密码复用、凭证泄露和钓鱼攻击等问题。Passkey 则让我们通过指纹、面容识别或设备 PIN 完成登录，而不需要向服务器提交密码。</p>
+<p>这篇文章分成两部分：先理解 <strong>WebAuthn 是什么、为什么安全</strong>，再结合我在 Batcher 项目中的实现，介绍 <strong>Angular + Spring Boot 如何完成 Passkey 注册和登录</strong>。</p>
+<h1 id="第一部分：WebAuthn-理论"><a href="#第一部分：WebAuthn-理论" class="headerlink" title="第一部分：WebAuthn 理论"></a>第一部分：WebAuthn 理论</h1><h2 id="1-WebAuthn-是什么？"><a href="#1-WebAuthn-是什么？" class="headerlink" title="1. WebAuthn 是什么？"></a>1. WebAuthn 是什么？</h2><p>WebAuthn（Web Authentication）是 W3C 制定的 Web 身份认证标准，也是 FIDO2 体系的一部分。它允许网站通过浏览器调用认证器（Authenticator），使用<strong>公钥密码学</strong>注册和验证身份。</p>
+<p>认证器可以是 Mac 的 Touch ID、iPhone 的 Face ID、Windows Hello、硬件安全密钥，或支持 Passkey 的密码管理器。</p>
+<p>传统密码认证依赖服务器验证用户提交的秘密；WebAuthn 则依赖认证器使用私钥签名，服务器使用此前登记的公钥验证签名。</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">传统密码：用户输入密码 → 服务器验证密码</span><br><span class="line">WebAuthn：服务器发送挑战 → 认证器用私钥签名 → 服务器用公钥验证</span><br></pre></td></tr></table></figure>
+
+<h2 id="2-WebAuthn-与-Passkey-的关系"><a href="#2-WebAuthn-与-Passkey-的关系" class="headerlink" title="2. WebAuthn 与 Passkey 的关系"></a>2. WebAuthn 与 Passkey 的关系</h2><ul>
+<li><strong>WebAuthn</strong>：浏览器与服务端进行公钥注册和认证的标准&#x2F;API。</li>
+<li><strong>FIDO2</strong>：包含 WebAuthn 与 CTAP 等协议的技术体系。</li>
+<li><strong>Authenticator</strong>：负责创建或使用凭证密钥的认证器。</li>
+<li><strong>Passkey</strong>：面向用户的 FIDO 无密码登录凭证及体验，可以是设备绑定的，也可以通过支持的密码管理器同步。</li>
+<li><strong>Relying Party（RP）</strong>：使用 WebAuthn 进行身份认证的网站。</li>
+</ul>
+<p>注册时，浏览器可能让用户选择 Apple Passwords、Microsoft Password Manager、手机或安全密钥等位置。选择不同的凭证提供者，并不改变服务器验证签名的基本机制。</p>
+<h2 id="3-公钥和私钥如何工作？"><a href="#3-公钥和私钥如何工作？" class="headerlink" title="3. 公钥和私钥如何工作？"></a>3. 公钥和私钥如何工作？</h2><p>注册时，认证器创建一组密钥：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">认证器创建密钥对</span><br><span class="line">├── 私钥：由认证器或凭证提供者保护，不交给网站服务器</span><br><span class="line">└── 公钥：注册成功后由服务器保存</span><br></pre></td></tr></table></figure>
+
+<p>登录时，服务器发送随机 Challenge，认证器使用私钥签名，服务器用公钥验证。</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">signature = Sign(privateKey, message)</span><br><span class="line">valid = Verify(publicKey, message, signature)</span><br></pre></td></tr></table></figure>
+
+<p>这只是概念表达。WebAuthn 实际签名的数据是：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">authenticatorData || SHA256(clientDataJSON)</span><br></pre></td></tr></table></figure>
+
+<p><code>clientDataJSON</code> 包含 Challenge、Origin、操作类型等信息；<code>authenticatorData</code> 包含 RP ID Hash、用户验证标志、签名计数器等数据。</p>
+<p><strong>为什么攻击者不能只拿公钥登录？</strong> 因为公钥可以验证签名，但不能直接产生与对应私钥等效的有效签名。服务器即使泄露公钥，也不等于泄露了用户的私钥。</p>
+<h2 id="4-Challenge-为什么必不可少？"><a href="#4-Challenge-为什么必不可少？" class="headerlink" title="4. Challenge 为什么必不可少？"></a>4. Challenge 为什么必不可少？</h2><p>如果每次登录都对固定内容签名，攻击者可能重放此前截获的有效认证响应。Challenge 是服务器为本次操作生成的一次性随机值，使每次认证需要签名的数据不同。</p>
+<p>在 Demo 中使用 Java <code>SecureRandom</code> 生成 32 字节随机数：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">byte</span>[] challenge = <span class="keyword">new</span> <span class="title class_">byte</span>[<span class="number">32</span>];</span><br><span class="line">secureRandom.nextBytes(challenge);</span><br></pre></td></tr></table></figure>
+
+<p>服务器还会保存操作类型、用户名、过期时间，并在验证时<strong>一次性消费</strong> Challenge。当前实现设置 5 分钟有效期。</p>
+<h2 id="5-RP-ID-与-Origin"><a href="#5-RP-ID-与-Origin" class="headerlink" title="5. RP ID 与 Origin"></a>5. RP ID 与 Origin</h2><p>WebAuthn 的防钓鱼能力不仅来自签名，还来自浏览器和服务端对网站身份的校验。</p>
+<ul>
+<li><strong>RP ID</strong> 通常是域名，Demo 中为 <code>localhost</code>。</li>
+<li><strong>Origin</strong> 包括协议、主机和端口，Demo 中为 <code>http://localhost:4200</code>。</li>
+</ul>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">final</span> <span class="type">String</span> <span class="variable">RP_ID</span> <span class="operator">=</span> <span class="string">&quot;localhost&quot;</span>;</span><br><span class="line"><span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">final</span> <span class="type">String</span> <span class="variable">ORIGIN</span> <span class="operator">=</span> <span class="string">&quot;http://localhost:4200&quot;</span>;</span><br></pre></td></tr></table></figure>
+
+<p>Angular 页面运行在 <code>http://localhost:4200</code>，Spring Boot API 运行在 <code>http://localhost:8080</code>。尽管请求发送到后端，WebAuthn 客户端操作的 Origin 仍是 Angular 页面的来源。</p>
+<p><strong>CORS 与 WebAuthn Origin 验证不同</strong>：前者控制跨源 HTTP 访问，后者参与身份认证安全校验。正式部署通常需要 HTTPS；<code>localhost</code> 是允许本地开发的特殊情况。</p>
+<h2 id="6-指纹和-Face-ID-会发送给服务器吗？"><a href="#6-指纹和-Face-ID-会发送给服务器吗？" class="headerlink" title="6. 指纹和 Face ID 会发送给服务器吗？"></a>6. 指纹和 Face ID 会发送给服务器吗？</h2><p>不会。指纹、面容识别或 PIN 通常用于在本地授权认证器使用私钥。服务器收到的是公钥凭证注册数据或数字签名认证结果，而不是生物识别原始数据。</p>
+<h2 id="7-注册与登录的完整流程"><a href="#7-注册与登录的完整流程" class="headerlink" title="7. 注册与登录的完整流程"></a>7. 注册与登录的完整流程</h2><p><strong>注册（Registration）</strong>：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">Angular                 Spring Boot                 Authenticator</span><br><span class="line">   |  请求注册 Challenge     |                           |</span><br><span class="line">   |-----------------------&gt;|                           |</span><br><span class="line">   |  返回 CreationOptions   |                           |</span><br><span class="line">   |&lt;-----------------------|                           |</span><br><span class="line">   |  startRegistration()                               |</span><br><span class="line">   |---------------------------------------------------&gt;|</span><br><span class="line">   |                           创建密钥对、用户授权       |</span><br><span class="line">   |&lt;---------------------------------------------------|</span><br><span class="line">   |  提交 Credential       |                           |</span><br><span class="line">   |-----------------------&gt;|                           |</span><br><span class="line">   |                   验证并保存公钥凭证                 |</span><br><span class="line">   |&lt;-----------------------|                           |</span><br></pre></td></tr></table></figure>
+
+<p><strong>登录（Authentication）</strong>：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">Angular                 Spring Boot                 Authenticator</span><br><span class="line">   |  请求登录 Challenge     |                           |</span><br><span class="line">   |-----------------------&gt;|                           |</span><br><span class="line">   |  返回 RequestOptions    |                           |</span><br><span class="line">   |&lt;-----------------------|                           |</span><br><span class="line">   |  startAuthentication()                             |</span><br><span class="line">   |---------------------------------------------------&gt;|</span><br><span class="line">   |                           用户授权、私钥签名         |</span><br><span class="line">   |&lt;---------------------------------------------------|</span><br><span class="line">   |  提交 Assertion        |                           |</span><br><span class="line">   |-----------------------&gt;|                           |</span><br><span class="line">   |                   使用公钥验证签名                   |</span><br><span class="line">   |&lt;-----------------------|                           |</span><br></pre></td></tr></table></figure>
+
+<h1 id="第二部分：Angular-Spring-Boot-实践"><a href="#第二部分：Angular-Spring-Boot-实践" class="headerlink" title="第二部分：Angular + Spring Boot 实践"></a>第二部分：Angular + Spring Boot 实践</h1><h2 id="8-技术栈和项目结构"><a href="#8-技术栈和项目结构" class="headerlink" title="8. 技术栈和项目结构"></a>8. 技术栈和项目结构</h2><p>本次实现使用：Angular 22、Angular Material、<code>@simplewebauthn/browser</code> 14、Spring Boot、WebAuthn4J <code>0.32.0.RELEASE</code>，并暂时使用内存 DAO 保存 Challenge 和 Credential。</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line">com.github.damingerdai.batcher</span><br><span class="line">├── api/WebAuthnController.java</span><br><span class="line">├── config/WebAuthnConfig.java</span><br><span class="line">├── dao/IWebAuthnDao.java</span><br><span class="line">├── dao/impl/InMemoryWebAuthnDao.java</span><br><span class="line">├── pojo/ChallengePurpose.java</span><br><span class="line">├── pojo/PendingChallenge.java</span><br><span class="line">├── pojo/StoredCredential.java</span><br><span class="line">├── service/IWebAuthnService.java</span><br><span class="line">└── service/impl/WebAuthnServiceImpl.java</span><br><span class="line"></span><br><span class="line">ui/src/app</span><br><span class="line">├── core/services/webauthn.service.ts</span><br><span class="line">└── routes/passkey/</span><br><span class="line">    ├── passkey.component.ts</span><br><span class="line">    ├── passkey.component.html</span><br><span class="line">    ├── passkey.component.scss</span><br><span class="line">    └── passkey.routes.ts</span><br></pre></td></tr></table></figure>
+
+<p>Controller 负责 HTTP 请求；Service 负责注册、登录及协议验证；DAO 负责数据存储。这样的分层也方便以后接入 PostgreSQL 和 Redis。</p>
+<h2 id="9-Spring-Boot-配置-WebAuthn4J"><a href="#9-Spring-Boot-配置-WebAuthn4J" class="headerlink" title="9. Spring Boot 配置 WebAuthn4J"></a>9. Spring Boot 配置 WebAuthn4J</h2><p>在 <code>build.gradle</code> 中引入：</p>
+<figure class="highlight gradle"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">implementation <span class="string">&#x27;com.webauthn4j:webauthn4j-core:0.32.0.RELEASE&#x27;</span></span><br></pre></td></tr></table></figure>
+
+<p>配置 <code>WebAuthnManager</code>：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Configuration</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">WebAuthnConfig</span> &#123;</span><br><span class="line">    <span class="meta">@Bean</span></span><br><span class="line">    <span class="keyword">public</span> WebAuthnManager <span class="title function_">webAuthnManager</span><span class="params">()</span> &#123;</span><br><span class="line">        <span class="keyword">return</span> WebAuthnManager.createNonStrictWebAuthnManager();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>这里的 <code>NonStrict</code> <strong>不等于不验证签名</strong>。它主要涉及注册时对认证器 Attestation 信任链的验证策略；普通 Passkey 应用通常不强制要求设备厂商证明。</p>
+<h2 id="10-Challenge-和-Credential-模型"><a href="#10-Challenge-和-Credential-模型" class="headerlink" title="10. Challenge 和 Credential 模型"></a>10. Challenge 和 Credential 模型</h2><p><code>PendingChallenge</code> 保存用户、用途、随机挑战值和过期时间：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">record</span> <span class="title class_">PendingChallenge</span><span class="params">(</span></span><br><span class="line"><span class="params">        String username,</span></span><br><span class="line"><span class="params">        ChallengePurpose purpose,</span></span><br><span class="line"><span class="params">        <span class="type">byte</span>[] challenge,</span></span><br><span class="line"><span class="params">        Instant expiresAt</span></span><br><span class="line"><span class="params">)</span> &#123;</span><br><span class="line">    <span class="keyword">public</span> PendingChallenge &#123;</span><br><span class="line">        challenge = challenge.clone();</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="keyword">public</span> <span class="type">byte</span>[] challenge() &#123;</span><br><span class="line">        <span class="keyword">return</span> challenge.clone();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><code>ChallengePurpose</code> 区分 <code>REGISTER</code> 和 <code>LOGIN</code>，避免混用挑战值。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">enum</span> <span class="title class_">ChallengePurpose</span> &#123;</span><br><span class="line">    REGISTER,</span><br><span class="line">    LOGIN</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><code>StoredCredential</code> 保存用户、Credential ID 和 WebAuthn4J 的凭证记录：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">record</span> <span class="title class_">StoredCredential</span><span class="params">(</span></span><br><span class="line"><span class="params">        String username,</span></span><br><span class="line"><span class="params">        <span class="type">byte</span>[] credentialId,</span></span><br><span class="line"><span class="params">        CredentialRecord credentialRecord</span></span><br><span class="line"><span class="params">)</span> &#123;</span><br><span class="line">    <span class="keyword">public</span> StoredCredential &#123;</span><br><span class="line">        credentialId = credentialId.clone();</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="keyword">public</span> <span class="type">byte</span>[] credentialId() &#123;</span><br><span class="line">        <span class="keyword">return</span> credentialId.clone();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>在 <code>InMemoryWebAuthnDao</code> 中，使用 <code>ConcurrentHashMap</code> 保存数据：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">private</span> <span class="keyword">final</span> Map&lt;String, PendingChallenge&gt; challenges =</span><br><span class="line">        <span class="keyword">new</span> <span class="title class_">ConcurrentHashMap</span>&lt;&gt;();</span><br><span class="line"></span><br><span class="line"><span class="keyword">private</span> <span class="keyword">final</span> Map&lt;String, StoredCredential&gt; credentials =</span><br><span class="line">        <span class="keyword">new</span> <span class="title class_">ConcurrentHashMap</span>&lt;&gt;();</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> Optional&lt;PendingChallenge&gt; <span class="title function_">consumeChallenge</span><span class="params">(String requestId)</span> &#123;</span><br><span class="line">    <span class="keyword">return</span> Optional.ofNullable(challenges.remove(requestId));</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><code>remove()</code> 能原子地消费 Challenge；<code>putIfAbsent()</code> 可以防止同一个 Credential ID 被重复注册。应用重启后内存数据会丢失，因此这只适合 Demo。</p>
+<h2 id="11-服务端生成注册选项"><a href="#11-服务端生成注册选项" class="headerlink" title="11. 服务端生成注册选项"></a>11. 服务端生成注册选项</h2><p><code>WebAuthnServiceImpl</code> 先生成 Challenge：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">private</span> String <span class="title function_">createChallenge</span><span class="params">(String username, ChallengePurpose purpose)</span> &#123;</span><br><span class="line">    <span class="type">byte</span>[] challenge = <span class="keyword">new</span> <span class="title class_">byte</span>[<span class="number">32</span>];</span><br><span class="line">    secureRandom.nextBytes(challenge);</span><br><span class="line"></span><br><span class="line">    <span class="type">String</span> <span class="variable">requestId</span> <span class="operator">=</span> UUID.randomUUID().toString();</span><br><span class="line">    webAuthnDao.saveChallenge(</span><br><span class="line">            requestId,</span><br><span class="line">            <span class="keyword">new</span> <span class="title class_">PendingChallenge</span>(</span><br><span class="line">                    username,</span><br><span class="line">                    purpose,</span><br><span class="line">                    challenge,</span><br><span class="line">                    Instant.now().plusSeconds(<span class="number">300</span>)</span><br><span class="line">            )</span><br><span class="line">    );</span><br><span class="line">    <span class="keyword">return</span> requestId;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>然后返回注册选项，结构如下（省略了外层 Java <code>Map.of</code> 代码）：</p>
+<figure class="highlight json"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line"><span class="punctuation">&#123;</span></span><br><span class="line">  <span class="attr">&quot;requestId&quot;</span><span class="punctuation">:</span> <span class="string">&quot;generated-request-id&quot;</span><span class="punctuation">,</span></span><br><span class="line">  <span class="attr">&quot;publicKey&quot;</span><span class="punctuation">:</span> <span class="punctuation">&#123;</span></span><br><span class="line">    <span class="attr">&quot;challenge&quot;</span><span class="punctuation">:</span> <span class="string">&quot;base64url-challenge&quot;</span><span class="punctuation">,</span></span><br><span class="line">    <span class="attr">&quot;rp&quot;</span><span class="punctuation">:</span> <span class="punctuation">&#123;</span> <span class="attr">&quot;id&quot;</span><span class="punctuation">:</span> <span class="string">&quot;localhost&quot;</span><span class="punctuation">,</span> <span class="attr">&quot;name&quot;</span><span class="punctuation">:</span> <span class="string">&quot;Passkey Demo&quot;</span> <span class="punctuation">&#125;</span><span class="punctuation">,</span></span><br><span class="line">    <span class="attr">&quot;user&quot;</span><span class="punctuation">:</span> <span class="punctuation">&#123;</span></span><br><span class="line">      <span class="attr">&quot;id&quot;</span><span class="punctuation">:</span> <span class="string">&quot;base64url-user-id&quot;</span><span class="punctuation">,</span></span><br><span class="line">      <span class="attr">&quot;name&quot;</span><span class="punctuation">:</span> <span class="string">&quot;arthur&quot;</span><span class="punctuation">,</span></span><br><span class="line">      <span class="attr">&quot;displayName&quot;</span><span class="punctuation">:</span> <span class="string">&quot;arthur&quot;</span></span><br><span class="line">    <span class="punctuation">&#125;</span><span class="punctuation">,</span></span><br><span class="line">    <span class="attr">&quot;pubKeyCredParams&quot;</span><span class="punctuation">:</span> <span class="punctuation">[</span></span><br><span class="line">      <span class="punctuation">&#123;</span> <span class="attr">&quot;type&quot;</span><span class="punctuation">:</span> <span class="string">&quot;public-key&quot;</span><span class="punctuation">,</span> <span class="attr">&quot;alg&quot;</span><span class="punctuation">:</span> <span class="number">-7</span> <span class="punctuation">&#125;</span><span class="punctuation">,</span></span><br><span class="line">      <span class="punctuation">&#123;</span> <span class="attr">&quot;type&quot;</span><span class="punctuation">:</span> <span class="string">&quot;public-key&quot;</span><span class="punctuation">,</span> <span class="attr">&quot;alg&quot;</span><span class="punctuation">:</span> <span class="number">-257</span> <span class="punctuation">&#125;</span></span><br><span class="line">    <span class="punctuation">]</span><span class="punctuation">,</span></span><br><span class="line">    <span class="attr">&quot;authenticatorSelection&quot;</span><span class="punctuation">:</span> <span class="punctuation">&#123;</span></span><br><span class="line">      <span class="attr">&quot;userVerification&quot;</span><span class="punctuation">:</span> <span class="string">&quot;required&quot;</span><span class="punctuation">,</span></span><br><span class="line">      <span class="attr">&quot;residentKey&quot;</span><span class="punctuation">:</span> <span class="string">&quot;preferred&quot;</span></span><br><span class="line">    <span class="punctuation">&#125;</span><span class="punctuation">,</span></span><br><span class="line">    <span class="attr">&quot;attestation&quot;</span><span class="punctuation">:</span> <span class="string">&quot;none&quot;</span><span class="punctuation">,</span></span><br><span class="line">    <span class="attr">&quot;timeout&quot;</span><span class="punctuation">:</span> <span class="number">60000</span></span><br><span class="line">  <span class="punctuation">&#125;</span></span><br><span class="line"><span class="punctuation">&#125;</span></span><br></pre></td></tr></table></figure>
+
+<p><code>-7</code> 是 ES256，<code>-257</code> 是 RS256；<code>userVerification: required</code> 要求认证器进行用户验证；<code>residentKey: preferred</code> 表示优先支持可发现凭证。</p>
+<p><strong>生产环境注意</strong>：示例中将用户名的 UTF-8 字节编码为 WebAuthn User ID，只是为了简化演示。正式应用应使用稳定、唯一且不暴露个人信息的内部用户标识。</p>
+<h2 id="12-后端验证注册响应"><a href="#12-后端验证注册响应" class="headerlink" title="12. 后端验证注册响应"></a>12. 后端验证注册响应</h2><p>浏览器返回注册 Credential 后，服务端先消费 Challenge，然后交给 WebAuthn4J 解析和验证：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">PendingChallenge</span> <span class="variable">pending</span> <span class="operator">=</span> consumeChallenge(</span><br><span class="line">        requestId, username, ChallengePurpose.REGISTER</span><br><span class="line">);</span><br><span class="line"></span><br><span class="line"><span class="type">RegistrationData</span> <span class="variable">registrationData</span> <span class="operator">=</span></span><br><span class="line">        webAuthnManager.parseRegistrationResponseJSON(credentialJson);</span><br><span class="line"></span><br><span class="line"><span class="type">RegistrationParameters</span> <span class="variable">parameters</span> <span class="operator">=</span> <span class="keyword">new</span> <span class="title class_">RegistrationParameters</span>(</span><br><span class="line">        serverProperty(pending.challenge()),</span><br><span class="line">        <span class="literal">null</span>,</span><br><span class="line">        <span class="literal">true</span>,</span><br><span class="line">        <span class="literal">true</span></span><br><span class="line">);</span><br><span class="line"></span><br><span class="line">webAuthnManager.verify(registrationData, parameters);</span><br></pre></td></tr></table></figure>
+
+<p>服务端安全上下文由 <code>ServerProperty</code> 提供：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">private</span> ServerProperty <span class="title function_">serverProperty</span><span class="params">(<span class="type">byte</span>[] challenge)</span> &#123;</span><br><span class="line">    <span class="keyword">return</span> ServerProperty.builder()</span><br><span class="line">            .origin(<span class="keyword">new</span> <span class="title class_">Origin</span>(<span class="string">&quot;http://localhost:4200&quot;</span>))</span><br><span class="line">            .rpId(<span class="string">&quot;localhost&quot;</span>)</span><br><span class="line">            .challenge(<span class="keyword">new</span> <span class="title class_">DefaultChallenge</span>(challenge))</span><br><span class="line">            .build();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>验证成功后，从 <code>registrationData</code> 提取 Credential ID，创建 <code>CredentialRecordImpl</code>，再通过 DAO 保存公钥凭证记录。</p>
+<h2 id="13-后端生成并验证登录请求"><a href="#13-后端生成并验证登录请求" class="headerlink" title="13. 后端生成并验证登录请求"></a>13. 后端生成并验证登录请求</h2><p>登录前先查询该用户的凭证，构造 <code>allowCredentials</code>，返回新的 Challenge：</p>
+<figure class="highlight json"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="punctuation">&#123;</span></span><br><span class="line">  <span class="attr">&quot;requestId&quot;</span><span class="punctuation">:</span> <span class="string">&quot;generated-request-id&quot;</span><span class="punctuation">,</span></span><br><span class="line">  <span class="attr">&quot;publicKey&quot;</span><span class="punctuation">:</span> <span class="punctuation">&#123;</span></span><br><span class="line">    <span class="attr">&quot;challenge&quot;</span><span class="punctuation">:</span> <span class="string">&quot;base64url-challenge&quot;</span><span class="punctuation">,</span></span><br><span class="line">    <span class="attr">&quot;rpId&quot;</span><span class="punctuation">:</span> <span class="string">&quot;localhost&quot;</span><span class="punctuation">,</span></span><br><span class="line">    <span class="attr">&quot;allowCredentials&quot;</span><span class="punctuation">:</span> <span class="punctuation">[</span></span><br><span class="line">      <span class="punctuation">&#123;</span> <span class="attr">&quot;type&quot;</span><span class="punctuation">:</span> <span class="string">&quot;public-key&quot;</span><span class="punctuation">,</span> <span class="attr">&quot;id&quot;</span><span class="punctuation">:</span> <span class="string">&quot;base64url-credential-id&quot;</span> <span class="punctuation">&#125;</span></span><br><span class="line">    <span class="punctuation">]</span><span class="punctuation">,</span></span><br><span class="line">    <span class="attr">&quot;userVerification&quot;</span><span class="punctuation">:</span> <span class="string">&quot;required&quot;</span><span class="punctuation">,</span></span><br><span class="line">    <span class="attr">&quot;timeout&quot;</span><span class="punctuation">:</span> <span class="number">60000</span></span><br><span class="line">  <span class="punctuation">&#125;</span></span><br><span class="line"><span class="punctuation">&#125;</span></span><br></pre></td></tr></table></figure>
+
+<p>浏览器返回 Authentication Response 后，后端根据 Credential ID 查询已保存的凭证，并确认它属于当前用户：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">AuthenticationData</span> <span class="variable">authenticationData</span> <span class="operator">=</span></span><br><span class="line">        webAuthnManager.parseAuthenticationResponseJSON(credentialJson);</span><br><span class="line"></span><br><span class="line"><span class="type">StoredCredential</span> <span class="variable">storedCredential</span> <span class="operator">=</span> webAuthnDao</span><br><span class="line">        .findCredential(authenticationData.getCredentialId())</span><br><span class="line">        .orElseThrow(() -&gt; <span class="keyword">new</span> <span class="title class_">IllegalArgumentException</span>(<span class="string">&quot;Credential not found&quot;</span>));</span><br><span class="line"></span><br><span class="line"><span class="keyword">if</span> (!storedCredential.username().equals(username)) &#123;</span><br><span class="line">    <span class="keyword">throw</span> <span class="keyword">new</span> <span class="title class_">IllegalArgumentException</span>(<span class="string">&quot;Credential does not belong to user&quot;</span>);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="type">AuthenticationParameters</span> <span class="variable">parameters</span> <span class="operator">=</span> <span class="keyword">new</span> <span class="title class_">AuthenticationParameters</span>(</span><br><span class="line">        serverProperty(pending.challenge()),</span><br><span class="line">        storedCredential.credentialRecord(),</span><br><span class="line">        List.of(storedCredential.credentialId()),</span><br><span class="line">        <span class="literal">true</span>,</span><br><span class="line">        <span class="literal">true</span></span><br><span class="line">);</span><br><span class="line"></span><br><span class="line">webAuthnManager.verify(authenticationData, parameters);</span><br></pre></td></tr></table></figure>
+
+<p>这一步验证成功，代表 WebAuthn 认证响应通过了服务端检查，<strong>但还不代表应用已经建立 Session</strong>。</p>
+<h2 id="14-REST-API-设计"><a href="#14-REST-API-设计" class="headerlink" title="14. REST API 设计"></a>14. REST API 设计</h2><p>Controller 提供四个端点，统一前缀为 <code>/api/auth/webauthn</code>：</p>
+<table>
+<thead>
+<tr>
+<th>方法</th>
+<th>路径</th>
+<th>作用</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>POST</td>
+<td><code>/register/challenge</code></td>
+<td>获取注册选项</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/register/verify</code></td>
+<td>验证注册结果</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/login/challenge</code></td>
+<td>获取登录选项</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/login/verify</code></td>
+<td>验证登录结果</td>
+</tr>
+</tbody></table>
+<p>请求 DTO：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">record</span> <span class="title class_">BeginRequest</span><span class="params">(String username)</span> &#123;&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">record</span> <span class="title class_">VerifyRequest</span><span class="params">(</span></span><br><span class="line"><span class="params">        String username,</span></span><br><span class="line"><span class="params">        String requestId,</span></span><br><span class="line"><span class="params">        JsonNode credential</span></span><br><span class="line"><span class="params">)</span> &#123;&#125;</span><br></pre></td></tr></table></figure>
+
+<p>本项目使用 Jackson 3 的 <code>tools.jackson.databind.JsonNode</code> 和 <code>ObjectMapper</code>。Controller 将 Credential JSON 序列化为字符串后传给 WebAuthn4J。不要混用 Jackson 2 的 <code>com.fasterxml.jackson.databind.ObjectMapper</code> 类型。</p>
+<h2 id="15-Angular-集成-SimpleWebAuthn"><a href="#15-Angular-集成-SimpleWebAuthn" class="headerlink" title="15. Angular 集成 SimpleWebAuthn"></a>15. Angular 集成 SimpleWebAuthn</h2><p>在 <code>ui</code> 目录安装：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">npm install @simplewebauthn/browser</span><br></pre></td></tr></table></figure>
+
+<p>使用 <code>@Injectable()</code> 定义 Angular Service，并显式导入 SimpleWebAuthn 的 JSON 类型，避免与 DOM 内置同名类型冲突：</p>
+<figure class="highlight typescript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> &#123; <span class="title class_">HttpClient</span> &#125; <span class="keyword">from</span> <span class="string">&#x27;@angular/common/http&#x27;</span>;</span><br><span class="line"><span class="keyword">import</span> &#123; inject, <span class="title class_">Injectable</span> &#125; <span class="keyword">from</span> <span class="string">&#x27;@angular/core&#x27;</span>;</span><br><span class="line"><span class="keyword">import</span> &#123; firstValueFrom &#125; <span class="keyword">from</span> <span class="string">&#x27;rxjs&#x27;</span>;</span><br><span class="line"><span class="keyword">import</span> &#123;</span><br><span class="line">  startRegistration,</span><br><span class="line">  startAuthentication,</span><br><span class="line">  browserSupportsWebAuthn,</span><br><span class="line">&#125; <span class="keyword">from</span> <span class="string">&#x27;@simplewebauthn/browser&#x27;</span>;</span><br><span class="line"><span class="keyword">import</span> <span class="keyword">type</span> &#123;</span><br><span class="line">  <span class="title class_">PublicKeyCredentialCreationOptionsJSON</span> <span class="keyword">as</span> <span class="title class_">RegistrationOptions</span>,</span><br><span class="line">  <span class="title class_">PublicKeyCredentialRequestOptionsJSON</span> <span class="keyword">as</span> <span class="title class_">AuthenticationOptions</span>,</span><br><span class="line">&#125; <span class="keyword">from</span> <span class="string">&#x27;@simplewebauthn/browser&#x27;</span>;</span><br><span class="line"></span><br><span class="line"><span class="keyword">interface</span> <span class="title class_">ChallengeResponse</span>&lt;T&gt; &#123;</span><br><span class="line">  <span class="attr">requestId</span>: <span class="built_in">string</span>;</span><br><span class="line">  <span class="attr">publicKey</span>: T;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">interface</span> <span class="title class_">WebAuthnResult</span> &#123;</span><br><span class="line">  <span class="attr">status</span>: <span class="built_in">string</span>;</span><br><span class="line">  <span class="attr">message</span>: <span class="built_in">string</span>;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="meta">@Injectable</span>(&#123; <span class="attr">providedIn</span>: <span class="string">&#x27;root&#x27;</span> &#125;)</span><br><span class="line"><span class="keyword">export</span> <span class="keyword">class</span> <span class="title class_">WebauthnService</span> &#123;</span><br><span class="line">  <span class="keyword">private</span> <span class="keyword">readonly</span> http = <span class="title function_">inject</span>(<span class="title class_">HttpClient</span>);</span><br><span class="line">  <span class="keyword">private</span> <span class="keyword">readonly</span> baseUrl = <span class="string">&#x27;http://localhost:8080/api/auth/webauthn&#x27;</span>;</span><br><span class="line"></span><br><span class="line">  <span class="title function_">isSupported</span>(): <span class="built_in">boolean</span> &#123;</span><br><span class="line">    <span class="keyword">return</span> <span class="title function_">browserSupportsWebAuthn</span>();</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="keyword">async</span> <span class="title function_">register</span>(<span class="attr">username</span>: <span class="built_in">string</span>): <span class="title class_">Promise</span>&lt;<span class="title class_">WebAuthnResult</span>&gt; &#123;</span><br><span class="line">    <span class="keyword">const</span> &#123; requestId, publicKey &#125; = <span class="keyword">await</span> <span class="title function_">firstValueFrom</span>(</span><br><span class="line">      <span class="variable language_">this</span>.<span class="property">http</span>.<span class="property">post</span>&lt;<span class="title class_">ChallengeResponse</span>&lt;<span class="title class_">RegistrationOptions</span>&gt;&gt;(</span><br><span class="line">        <span class="string">`<span class="subst">$&#123;<span class="variable language_">this</span>.baseUrl&#125;</span>/register/challenge`</span>, &#123; username &#125;</span><br><span class="line">      )</span><br><span class="line">    );</span><br><span class="line"></span><br><span class="line">    <span class="keyword">const</span> credential = <span class="keyword">await</span> <span class="title function_">startRegistration</span>(&#123; <span class="attr">optionsJSON</span>: publicKey &#125;);</span><br><span class="line"></span><br><span class="line">    <span class="keyword">return</span> <span class="title function_">firstValueFrom</span>(<span class="variable language_">this</span>.<span class="property">http</span>.<span class="property">post</span>&lt;<span class="title class_">WebAuthnResult</span>&gt;(</span><br><span class="line">      <span class="string">`<span class="subst">$&#123;<span class="variable language_">this</span>.baseUrl&#125;</span>/register/verify`</span>,</span><br><span class="line">      &#123; username, requestId, credential &#125;</span><br><span class="line">    ));</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="keyword">async</span> <span class="title function_">login</span>(<span class="attr">username</span>: <span class="built_in">string</span>): <span class="title class_">Promise</span>&lt;<span class="title class_">WebAuthnResult</span>&gt; &#123;</span><br><span class="line">    <span class="keyword">const</span> &#123; requestId, publicKey &#125; = <span class="keyword">await</span> <span class="title function_">firstValueFrom</span>(</span><br><span class="line">      <span class="variable language_">this</span>.<span class="property">http</span>.<span class="property">post</span>&lt;<span class="title class_">ChallengeResponse</span>&lt;<span class="title class_">AuthenticationOptions</span>&gt;&gt;(</span><br><span class="line">        <span class="string">`<span class="subst">$&#123;<span class="variable language_">this</span>.baseUrl&#125;</span>/login/challenge`</span>, &#123; username &#125;</span><br><span class="line">      )</span><br><span class="line">    );</span><br><span class="line"></span><br><span class="line">    <span class="keyword">const</span> credential = <span class="keyword">await</span> <span class="title function_">startAuthentication</span>(&#123; <span class="attr">optionsJSON</span>: publicKey &#125;);</span><br><span class="line"></span><br><span class="line">    <span class="keyword">return</span> <span class="title function_">firstValueFrom</span>(<span class="variable language_">this</span>.<span class="property">http</span>.<span class="property">post</span>&lt;<span class="title class_">WebAuthnResult</span>&gt;(</span><br><span class="line">      <span class="string">`<span class="subst">$&#123;<span class="variable language_">this</span>.baseUrl&#125;</span>/login/verify`</span>,</span><br><span class="line">      &#123; username, requestId, credential &#125;</span><br><span class="line">    ));</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><code>startRegistration()</code> 和 <code>startAuthentication()</code> 是整个 Angular 实现的核心。它们封装了原生 <code>navigator.credentials.create()</code> &#x2F; <code>get()</code> 及 ArrayBuffer、Base64URL、JSON 之间的转换。</p>
+<p><strong>SSR 提醒</strong>：Angular SSR 环境没有 <code>window</code>、<code>document</code> 等浏览器全局对象。实际项目中应通过 <code>isPlatformBrowser()</code> 或 <code>afterNextRender()</code> 在客户端检测 WebAuthn 支持情况，而不是在服务端渲染阶段直接执行浏览器 API。</p>
+<h2 id="16-Angular-Material-页面"><a href="#16-Angular-Material-页面" class="headerlink" title="16. Angular Material 页面"></a>16. Angular Material 页面</h2><p>页面只需要一个用户名输入框、两个按钮，以及加载、成功、失败状态。使用 Reactive Forms 和 Signals：</p>
+<figure class="highlight typescript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">readonly</span> username = <span class="keyword">new</span> <span class="title class_">FormControl</span>(<span class="string">&#x27;&#x27;</span>, &#123;</span><br><span class="line">  <span class="attr">nonNullable</span>: <span class="literal">true</span>,</span><br><span class="line">  <span class="attr">validators</span>: [<span class="title class_">Validators</span>.<span class="property">required</span>],</span><br><span class="line">&#125;);</span><br><span class="line"><span class="keyword">readonly</span> loading = <span class="title function_">signal</span>(<span class="literal">false</span>);</span><br><span class="line"><span class="keyword">readonly</span> error = <span class="title function_">signal</span>(<span class="string">&#x27;&#x27;</span>);</span><br><span class="line"><span class="keyword">readonly</span> success = <span class="title function_">signal</span>(<span class="string">&#x27;&#x27;</span>);</span><br><span class="line"></span><br><span class="line"><span class="keyword">async</span> <span class="title function_">register</span>(): <span class="title class_">Promise</span>&lt;<span class="built_in">void</span>&gt; &#123;</span><br><span class="line">  <span class="keyword">await</span> <span class="variable language_">this</span>.<span class="title function_">execute</span>(<span class="function">() =&gt;</span></span><br><span class="line">    <span class="variable language_">this</span>.<span class="property">webauthnService</span>.<span class="title function_">register</span>(<span class="variable language_">this</span>.<span class="property">username</span>.<span class="property">value</span>.<span class="title function_">trim</span>())</span><br><span class="line">  );</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">async</span> <span class="title function_">login</span>(): <span class="title class_">Promise</span>&lt;<span class="built_in">void</span>&gt; &#123;</span><br><span class="line">  <span class="keyword">await</span> <span class="variable language_">this</span>.<span class="title function_">execute</span>(<span class="function">() =&gt;</span></span><br><span class="line">    <span class="variable language_">this</span>.<span class="property">webauthnService</span>.<span class="title function_">login</span>(<span class="variable language_">this</span>.<span class="property">username</span>.<span class="property">value</span>.<span class="title function_">trim</span>())</span><br><span class="line">  );</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>模板示意：</p>
+<figure class="highlight html"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">mat-card</span> <span class="attr">appearance</span>=<span class="string">&quot;outlined&quot;</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;<span class="name">mat-card-header</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">mat-card-title</span>&gt;</span>Passkey Authentication<span class="tag">&lt;/<span class="name">mat-card-title</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;/<span class="name">mat-card-header</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;<span class="name">mat-card-content</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">mat-form-field</span> <span class="attr">appearance</span>=<span class="string">&quot;outline&quot;</span>&gt;</span></span><br><span class="line">      <span class="tag">&lt;<span class="name">mat-label</span>&gt;</span>Username<span class="tag">&lt;/<span class="name">mat-label</span>&gt;</span></span><br><span class="line">      <span class="tag">&lt;<span class="name">input</span> <span class="attr">matInput</span> [<span class="attr">formControl</span>]=<span class="string">&quot;username&quot;</span> <span class="attr">autocomplete</span>=<span class="string">&quot;username&quot;</span> /&gt;</span></span><br><span class="line">    <span class="tag">&lt;/<span class="name">mat-form-field</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">button</span> <span class="attr">mat-flat-button</span> (<span class="attr">click</span>)=<span class="string">&quot;register()&quot;</span>&gt;</span></span><br><span class="line">      <span class="tag">&lt;<span class="name">mat-icon</span>&gt;</span>fingerprint<span class="tag">&lt;/<span class="name">mat-icon</span>&gt;</span></span><br><span class="line">      Register Passkey</span><br><span class="line">    <span class="tag">&lt;/<span class="name">button</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">button</span> <span class="attr">mat-stroked-button</span> (<span class="attr">click</span>)=<span class="string">&quot;login()&quot;</span>&gt;</span></span><br><span class="line">      <span class="tag">&lt;<span class="name">mat-icon</span>&gt;</span>login<span class="tag">&lt;/<span class="name">mat-icon</span>&gt;</span></span><br><span class="line">      Login with Passkey</span><br><span class="line">    <span class="tag">&lt;/<span class="name">button</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;/<span class="name">mat-card-content</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">mat-card</span>&gt;</span></span><br></pre></td></tr></table></figure>
+
+<p>实际页面应禁用重复提交，并通过 <code>loading()</code>、<code>error()</code>、<code>success()</code> 显示对应状态。注意不要在认证失败后仍然执行页面跳转；应只在服务端确认认证成功后继续后续流程。</p>
+<h2 id="17-本地测试"><a href="#17-本地测试" class="headerlink" title="17. 本地测试"></a>17. 本地测试</h2><figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">Angular:      http://localhost:4200</span><br><span class="line">Spring Boot:  http://localhost:8080</span><br><span class="line">RP ID:        localhost</span><br><span class="line">Origin:       http://localhost:4200</span><br></pre></td></tr></table></figure>
+
+<ol>
+<li>输入用户名 <code>arthur</code>，点击 <strong>Register Passkey</strong>。</li>
+<li>在浏览器弹出的界面中选择 Apple Passwords、Microsoft Password Manager 或其他认证器，完成注册。</li>
+<li>再次输入相同用户名，点击 <strong>Login with Passkey</strong>。</li>
+<li>认证器完成私钥签名，Spring Boot 使用保存的公钥凭证验证响应。</li>
+</ol>
+<p>成功时，后端返回类似：</p>
+<figure class="highlight json"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="punctuation">&#123;</span></span><br><span class="line">  <span class="attr">&quot;status&quot;</span><span class="punctuation">:</span> <span class="string">&quot;success&quot;</span><span class="punctuation">,</span></span><br><span class="line">  <span class="attr">&quot;message&quot;</span><span class="punctuation">:</span> <span class="string">&quot;Passkey authentication successful&quot;</span></span><br><span class="line"><span class="punctuation">&#125;</span></span><br></pre></td></tr></table></figure>
+
+<p>这里返回的是<strong>WebAuthn 验证结果</strong>，不是 JWT 或已建立的登录 Session。</p>
+<h2 id="18-从-Demo-到生产环境还差什么？"><a href="#18-从-Demo-到生产环境还差什么？" class="headerlink" title="18. 从 Demo 到生产环境还差什么？"></a>18. 从 Demo 到生产环境还差什么？</h2><p>当前实现主要用于学习，正式使用前至少需要完善以下方面：</p>
+<ol>
+<li><strong>持久化</strong>：用 PostgreSQL 保存 Credential，用具备 TTL 和原子消费能力的存储管理 Challenge；内存 DAO 重启即丢失数据。</li>
+<li><strong>可信用户绑定</strong>：不能允许任何人仅凭用户名为现有账号注册 Passkey。必须先完成账号所有权验证，并从可信上下文获取用户 ID。</li>
+<li><strong>会话管理</strong>：WebAuthn 验证成功后，需要与 Spring Security、Session 或 Token 机制集成。</li>
+<li><strong>凭证状态更新</strong>：维护签名计数器和备份状态；可同步 Passkey 的计数器不一定严格递增。</li>
+<li><strong>凭证管理</strong>：支持查看、添加、撤销多个 Passkey，并设计安全的账号恢复机制。</li>
+<li><strong>异常与安全策略</strong>：限制滥用、处理重复注册和过期 Challenge、保护认证接口并增加测试。</li>
+</ol>
+<p>另外，删除 Apple Passwords 中的 <code>localhost</code> Passkey 不会自动删除服务器保存的 Credential；删除服务端 Credential 也不会自动删除设备中的凭证。</p>
+<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>WebAuthn 的核心<strong>不是指纹识别，而是公钥密码学与浏览器对网站身份的绑定</strong>。指纹、Face ID 和 PIN 通常只是本地授权使用私钥的方式。</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">注册：认证器生成密钥对 → 服务器验证并保存公钥凭证</span><br><span class="line">登录：服务器生成 Challenge → 认证器私钥签名 → 服务器公钥验证</span><br></pre></td></tr></table></figure>
+
+<p>Angular 负责获取 Challenge、调用认证器并提交结果；Spring Boot 负责生成 Challenge、验证响应及管理 Credential；SimpleWebAuthn 和 WebAuthn4J 则封装了底层协议细节。</p>
+<p>通过这个 Demo，我们完成了最基本的 Passkey 注册和认证闭环。下一步可以继续接入 Spring Security、数据库持久化和正式的账号体系。</p>
+<h2 id="参考资料"><a href="#参考资料" class="headerlink" title="参考资料"></a>参考资料</h2><ul>
+<li><a target="_blank" rel="noopener" href="https://www.w3.org/TR/webauthn-3/">W3C Web Authentication</a></li>
+<li><a target="_blank" rel="noopener" href="https://developer.mozilla.org/en-US/docs/Web/API/Web_Authentication_API">MDN Web Authentication API</a></li>
+<li><a target="_blank" rel="noopener" href="https://simplewebauthn.dev/docs/">SimpleWebAuthn Documentation</a></li>
+<li><a target="_blank" rel="noopener" href="https://webauthn4j.github.io/webauthn4j/en/">WebAuthn4J Documentation</a></li>
+<li><a target="_blank" rel="noopener" href="https://fidoalliance.org/passkeys/">FIDO Alliance — Passkeys</a></li>
+</ul>
+<blockquote>
+<p>本文示例基于 Batcher 项目的 WebAuthn 实验代码，用于原理学习与技术演示，不应直接视为生产级认证方案。</p>
+</blockquote>
+</article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta"><i class="fas fa-circle-user fa-fw"></i>文章作者: </span><span class="post-copyright-info"><a href="http://blog.damingerdai.com">Arthur Ming</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta"><i class="fas fa-square-arrow-up-right fa-fw"></i>文章链接: </span><span class="post-copyright-info"><a href="http://blog.damingerdai.com/2026/11/09/back-end/webauthn-angular-spring-boot/">http://blog.damingerdai.com/2026/11/09/back-end/webauthn-angular-spring-boot/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta"><i class="fas fa-circle-exclamation fa-fw"></i>版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来源 <a href="http://blog.damingerdai.com" target="_blank">Damingerdai's Blog</a>！</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/WebAuthn/">WebAuthn</a><a class="post-meta__tags" href="/tags/Passkey/">Passkey</a><a class="post-meta__tags" href="/tags/Angular/">Angular</a><a class="post-meta__tags" href="/tags/Spring-Boot/">Spring Boot</a><a class="post-meta__tags" href="/tags/Java/">Java</a></div><div class="post-share"><div class="social-share" data-image="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" data-sites="facebook,x,wechat,weibo,qq"></div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/butterfly-extsrc/sharejs/dist/css/share.min.css" media="print" onload="this.media='all'"><script src="https://cdn.jsdelivr.net/npm/butterfly-extsrc/sharejs/dist/js/social-share.min.js" defer></script></div></div><nav class="pagination-post" id="pagination"><a class="pagination-related full-width" href="/2026/10/25/software/k3s-lightweight-observability-victoriametrics-loki-alloy/" title="4GB 内存跑 Kubernetes 可观测性：K3s + FluxCD + VictoriaMetrics + Loki + Grafana Alloy 实战"><img class="cover" src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" onerror="onerror=null;src='/img/404.jpg'" alt="cover of next post"><div class="info text-right"><div class="info-1"><div class="info-item-1">下一篇</div><div class="info-item-2">4GB 内存跑 Kubernetes 可观测性：K3s + FluxCD + VictoriaMetrics + Loki + Grafana Alloy 实战</div></div><div class="info-2"><div class="info-item-1">4GB 内存跑 Kubernetes 可观测性：K3s + FluxCD + VictoriaMetrics + Loki + Grafana Alloy 实战前言最近整理自己的 K3s Homelab，希望给 Kubernetes 上的业务应用补齐 Metrics 和 Logs 两条可观测性链路。我的机器资源有限：单节点 K3s、约 4GB 内存、4 核 CPU，系统为 Debian，部署通过 FluxCD GitOps 管理。 这次的边界很明确：监控 K3s&#x2F;Kubernetes 和其中的业务应用，不额外监控宿主机 Docker 容器或独立运行的 PostgreSQL。指标和日志都以保留 7 天为目标，优先考虑组件数量、内存占用和可维护性。 最终采用：  VictoriaMetrics Single：存储与查询 Prometheus 兼容指标。 Grafana Loki（SingleBinary）：集中存储 Kubernetes Pod 日志。 Grafana Alloy（DaemonSet）：负责发现、采集并转发指标与日志。 Grafana：统一查询与可视化。 F...</div></div></div></a></nav></div><div class="aside-content" id="aside-content"><div class="card-widget card-info text-center"><div class="avatar-img"><img src="/img/avatar.png" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="author-info-name">Arthur Ming</div><div class="author-info-description">大明二代的博客</div><div class="site-data"><a href="/archives/"><div class="headline">文章</div><div class="length-num">114</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">195</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">12</div></a></div><a id="card-info-btn" target="_blank" rel="noopener" href="https://github.com/damingerdai"><i class="fab fa-github"></i><span>Follow Me</span></a><div class="card-info-social-icons"><a class="social-icon" href="https://github.com/damingerdai" target="_blank" title="Github"><i class="fab fa-github" style="color: #24292e;"></i></a><a class="social-icon" href="mailto:mingguobin@live.com" target="_blank" title="Email"><i class="fas fa-envelope" style="color: #4a7dbe;"></i></a></div></div><div class="card-widget card-announcement"><div class="item-headline"><i class="fas fa-bullhorn fa-shake"></i><span>公告</span></div><div class="announcement_content">大家好，我是大明二代</div></div><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="item-headline"><i class="fas fa-stream"></i><span>目录</span><span class="toc-percentage"></span></div><div class="toc-content"><ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#%E7%AC%AC%E4%B8%80%E9%83%A8%E5%88%86%EF%BC%9AWebAuthn-%E7%90%86%E8%AE%BA"><span class="toc-number">1.</span> <span class="toc-text">第一部分：WebAuthn 理论</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#1-WebAuthn-%E6%98%AF%E4%BB%80%E4%B9%88%EF%BC%9F"><span class="toc-number">1.1.</span> <span class="toc-text">1. WebAuthn 是什么？</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#2-WebAuthn-%E4%B8%8E-Passkey-%E7%9A%84%E5%85%B3%E7%B3%BB"><span class="toc-number">1.2.</span> <span class="toc-text">2. WebAuthn 与 Passkey 的关系</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#3-%E5%85%AC%E9%92%A5%E5%92%8C%E7%A7%81%E9%92%A5%E5%A6%82%E4%BD%95%E5%B7%A5%E4%BD%9C%EF%BC%9F"><span class="toc-number">1.3.</span> <span class="toc-text">3. 公钥和私钥如何工作？</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#4-Challenge-%E4%B8%BA%E4%BB%80%E4%B9%88%E5%BF%85%E4%B8%8D%E5%8F%AF%E5%B0%91%EF%BC%9F"><span class="toc-number">1.4.</span> <span class="toc-text">4. Challenge 为什么必不可少？</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#5-RP-ID-%E4%B8%8E-Origin"><span class="toc-number">1.5.</span> <span class="toc-text">5. RP ID 与 Origin</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#6-%E6%8C%87%E7%BA%B9%E5%92%8C-Face-ID-%E4%BC%9A%E5%8F%91%E9%80%81%E7%BB%99%E6%9C%8D%E5%8A%A1%E5%99%A8%E5%90%97%EF%BC%9F"><span class="toc-number">1.6.</span> <span class="toc-text">6. 指纹和 Face ID 会发送给服务器吗？</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#7-%E6%B3%A8%E5%86%8C%E4%B8%8E%E7%99%BB%E5%BD%95%E7%9A%84%E5%AE%8C%E6%95%B4%E6%B5%81%E7%A8%8B"><span class="toc-number">1.7.</span> <span class="toc-text">7. 注册与登录的完整流程</span></a></li></ol></li><li class="toc-item toc-level-1"><a class="toc-link" href="#%E7%AC%AC%E4%BA%8C%E9%83%A8%E5%88%86%EF%BC%9AAngular-Spring-Boot-%E5%AE%9E%E8%B7%B5"><span class="toc-number">2.</span> <span class="toc-text">第二部分：Angular + Spring Boot 实践</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#8-%E6%8A%80%E6%9C%AF%E6%A0%88%E5%92%8C%E9%A1%B9%E7%9B%AE%E7%BB%93%E6%9E%84"><span class="toc-number">2.1.</span> <span class="toc-text">8. 技术栈和项目结构</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#9-Spring-Boot-%E9%85%8D%E7%BD%AE-WebAuthn4J"><span class="toc-number">2.2.</span> <span class="toc-text">9. Spring Boot 配置 WebAuthn4J</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#10-Challenge-%E5%92%8C-Credential-%E6%A8%A1%E5%9E%8B"><span class="toc-number">2.3.</span> <span class="toc-text">10. Challenge 和 Credential 模型</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#11-%E6%9C%8D%E5%8A%A1%E7%AB%AF%E7%94%9F%E6%88%90%E6%B3%A8%E5%86%8C%E9%80%89%E9%A1%B9"><span class="toc-number">2.4.</span> <span class="toc-text">11. 服务端生成注册选项</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#12-%E5%90%8E%E7%AB%AF%E9%AA%8C%E8%AF%81%E6%B3%A8%E5%86%8C%E5%93%8D%E5%BA%94"><span class="toc-number">2.5.</span> <span class="toc-text">12. 后端验证注册响应</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#13-%E5%90%8E%E7%AB%AF%E7%94%9F%E6%88%90%E5%B9%B6%E9%AA%8C%E8%AF%81%E7%99%BB%E5%BD%95%E8%AF%B7%E6%B1%82"><span class="toc-number">2.6.</span> <span class="toc-text">13. 后端生成并验证登录请求</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#14-REST-API-%E8%AE%BE%E8%AE%A1"><span class="toc-number">2.7.</span> <span class="toc-text">14. REST API 设计</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#15-Angular-%E9%9B%86%E6%88%90-SimpleWebAuthn"><span class="toc-number">2.8.</span> <span class="toc-text">15. Angular 集成 SimpleWebAuthn</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#16-Angular-Material-%E9%A1%B5%E9%9D%A2"><span class="toc-number">2.9.</span> <span class="toc-text">16. Angular Material 页面</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#17-%E6%9C%AC%E5%9C%B0%E6%B5%8B%E8%AF%95"><span class="toc-number">2.10.</span> <span class="toc-text">17. 本地测试</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#18-%E4%BB%8E-Demo-%E5%88%B0%E7%94%9F%E4%BA%A7%E7%8E%AF%E5%A2%83%E8%BF%98%E5%B7%AE%E4%BB%80%E4%B9%88%EF%BC%9F"><span class="toc-number">2.11.</span> <span class="toc-text">18. 从 Demo 到生产环境还差什么？</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E6%80%BB%E7%BB%93"><span class="toc-number">2.12.</span> <span class="toc-text">总结</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%8F%82%E8%80%83%E8%B5%84%E6%96%99"><span class="toc-number">2.13.</span> <span class="toc-text">参考资料</span></a></li></ol></li></ol></div></div><div class="card-widget card-recent-post"><div class="item-headline"><i class="fas fa-history"></i><span>最新文章</span></div><div class="aside-list"><div class="aside-list-item"><a class="thumbnail" href="/2026/11/09/back-end/webauthn-angular-spring-boot/" title="WebAuthn 入门：从无密码认证原理到 Angular + Spring Boot 实战"><img src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="WebAuthn 入门：从无密码认证原理到 Angular + Spring Boot 实战"/></a><div class="content"><a class="title" href="/2026/11/09/back-end/webauthn-angular-spring-boot/" title="WebAuthn 入门：从无密码认证原理到 Angular + Spring Boot 实战">WebAuthn 入门：从无密码认证原理到 Angular + Spring Boot 实战</a><time datetime="2026-11-09T15:25:00.000Z" title="发表于 2026-11-09 23:25:00">2026-11-09</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2026/10/25/software/k3s-lightweight-observability-victoriametrics-loki-alloy/" title="4GB 内存跑 Kubernetes 可观测性：K3s + FluxCD + VictoriaMetrics + Loki + Grafana Alloy 实战"><img src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="4GB 内存跑 Kubernetes 可观测性：K3s + FluxCD + VictoriaMetrics + Loki + Grafana Alloy 实战"/></a><div class="content"><a class="title" href="/2026/10/25/software/k3s-lightweight-observability-victoriametrics-loki-alloy/" title="4GB 内存跑 Kubernetes 可观测性：K3s + FluxCD + VictoriaMetrics + Loki + Grafana Alloy 实战">4GB 内存跑 Kubernetes 可观测性：K3s + FluxCD + VictoriaMetrics + Loki + Grafana Alloy 实战</a><time datetime="2026-10-25T16:00:00.000Z" title="发表于 2026-10-26 00:00:00">2026-10-26</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2026/10/24/ai/mastra/mastra-multi-agent-writing-workflow/" title="从零构建 Mastra 多 Agent 写作系统：Research、Analysis、Writer 与 Reviewer 协作实战"><img src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="从零构建 Mastra 多 Agent 写作系统：Research、Analysis、Writer 与 Reviewer 协作实战"/></a><div class="content"><a class="title" href="/2026/10/24/ai/mastra/mastra-multi-agent-writing-workflow/" title="从零构建 Mastra 多 Agent 写作系统：Research、Analysis、Writer 与 Reviewer 协作实战">从零构建 Mastra 多 Agent 写作系统：Research、Analysis、Writer 与 Reviewer 协作实战</a><time datetime="2026-10-24T09:11:00.000Z" title="发表于 2026-10-24 17:11:00">2026-10-24</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2026/10/24/front-end/netlify-to-lighthouse-ci/" title="从 Netlify 部署失败到 Lighthouse CI：在 GitHub Actions 中建立前端质量门禁"><img src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="从 Netlify 部署失败到 Lighthouse CI：在 GitHub Actions 中建立前端质量门禁"/></a><div class="content"><a class="title" href="/2026/10/24/front-end/netlify-to-lighthouse-ci/" title="从 Netlify 部署失败到 Lighthouse CI：在 GitHub Actions 中建立前端质量门禁">从 Netlify 部署失败到 Lighthouse CI：在 GitHub Actions 中建立前端质量门禁</a><time datetime="2026-10-24T07:30:00.000Z" title="发表于 2026-10-24 15:30:00">2026-10-24</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2026/10/20/ai/mastra/mastra-rag-document-lifecycle-version-aware-retrieval/" title="Mastra RAG 进阶：使用 Drizzle ORM 和 pgvector 实现文档版本管理与 Version-aware Retrieval"><img src="https://i.loli.net/2020/05/01/gkihqEjXxJ5UZ1C.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="Mastra RAG 进阶：使用 Drizzle ORM 和 pgvector 实现文档版本管理与 Version-aware Retrieval"/></a><div class="content"><a class="title" href="/2026/10/20/ai/mastra/mastra-rag-document-lifecycle-version-aware-retrieval/" title="Mastra RAG 进阶：使用 Drizzle ORM 和 pgvector 实现文档版本管理与 Version-aware Retrieval">Mastra RAG 进阶：使用 Drizzle ORM 和 pgvector 实现文档版本管理与 Version-aware Retrieval</a><time datetime="2026-10-20T08:30:00.000Z" title="发表于 2026-10-20 16:30:00">2026-10-20</time></div></div></div></div></div></div></main><footer id="footer"><div class="footer-other"><div class="footer-copyright"><span class="copyright">&copy;&nbsp;2020 - 2026 By Arthur Ming</span></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="日间和夜间模式切换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside-config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><button id="go-up" type="button" title="回到顶部"><span class="scroll-percent"></span><i class="fas fa-arrow-up"></i></button></div></div><div><script src="/js/utils.js"></script><script src="/js/main.js"></script><div class="js-pjax"><script>(() => {
+  const parseViewBox = viewBox => {
+    if (!viewBox) return null
+    const parts = viewBox.trim().split(/[\s,]+/).map(n => Number(n))
+    if (parts.length !== 4 || parts.some(n => Number.isNaN(n))) return null
+    return parts
+  }
+
+  const getSvgViewBox = svg => {
+    const attr = parseViewBox(svg.getAttribute('viewBox'))
+    if (attr) return attr
+
+    // Fallback: use bbox to build a viewBox
+    try {
+      const bbox = svg.getBBox()
+      if (bbox && bbox.width && bbox.height) return [bbox.x, bbox.y, bbox.width, bbox.height]
+    } catch (e) {
+      // getBBox may fail on some edge cases; ignore
+    }
+
+    const w = Number(svg.getAttribute('width')) || 0
+    const h = Number(svg.getAttribute('height')) || 0
+    if (w > 0 && h > 0) return [0, 0, w, h]
+    return [0, 0, 100, 100]
+  }
+
+  const setSvgViewBox = (svg, vb) => {
+    svg.setAttribute('viewBox', `${vb[0]} ${vb[1]} ${vb[2]} ${vb[3]}`)
+  }
+
+  const clamp = (v, min, max) => Math.max(min, Math.min(max, v))
+
+  const openSvgInNewTab = ({ source, initViewBox }) => {
+    const getClonedSvg = () => {
+      if (typeof source === 'string') {
+        const template = document.createElement('template')
+        template.innerHTML = source.trim()
+        const svg = template.content.querySelector('svg')
+        return svg ? svg.cloneNode(true) : null
+      }
+      if (source && typeof source.cloneNode === 'function') {
+        return source.cloneNode(true)
+      }
+      return null
+    }
+
+    const clone = getClonedSvg()
+    if (!clone) return
+    if (initViewBox && initViewBox.length === 4) {
+      clone.setAttribute('viewBox', initViewBox.join(' '))
+    }
+    if (!clone.getAttribute('xmlns')) clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg')
+    if (!clone.getAttribute('xmlns:xlink') && clone.innerHTML.includes('xlink:')) {
+      clone.setAttribute('xmlns:xlink', 'http://www.w3.org/1999/xlink')
+    }
+    // inject background to match current theme
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark'
+    const bg = getComputedStyle(document.body).backgroundColor || (isDark ? '#1e1e1e' : '#ffffff')
+    if (!clone.style.background) clone.style.background = bg
+
+    const serializer = new XMLSerializer()
+    const svgSource = serializer.serializeToString(clone)
+    const htmlSource = `<!doctype html><html><head><meta charset="utf-8" />
+      <style>
+        html, body { width: 100%; height: 100%; margin: 0; display: flex; align-items: center; justify-content: center; background: ${bg}; }
+        svg { max-width: 100%; max-height: 100%; height: auto; width: auto; }
+      </style>
+      </head><body>${svgSource}</body></html>`
+    const blob = new Blob([htmlSource], { type: 'text/html;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    window.open(url, '_blank', 'noopener')
+
+    setTimeout(() => URL.revokeObjectURL(url), 5000)
+  }
+
+  const attachMermaidViewerButton = wrap => {
+    let btn = wrap.querySelector('.mermaid-open-btn')
+    if (!btn) {
+      btn = document.createElement('button')
+      btn.type = 'button'
+      btn.className = 'mermaid-open-btn'
+      wrap.appendChild(btn)
+    }
+
+    btn.innerHTML = '<i class="fa fa-search fa-fw" aria-hidden="true"></i>'
+
+    if (!btn.__mermaidViewerBound) {
+      btn.addEventListener('click', e => {
+        e.preventDefault()
+        e.stopPropagation()
+        const svg = wrap.__mermaidOriginalSvg || wrap.querySelector('svg')
+        if (!svg) return
+        const initViewBox = wrap.__mermaidInitViewBox
+        openSvgInNewTab({ source: svg, initViewBox })
+      })
+      btn.__mermaidViewerBound = true
+    }
+  }
+
+  // Zoom around a point (px, py) in the SVG viewport (in viewBox coordinates)
+  const zoomAtPoint = (vb, factor, px, py) => {
+    const w = vb[2] * factor
+    const h = vb[3] * factor
+    const nx = px - (px - vb[0]) * factor
+    const ny = py - (py - vb[1]) * factor
+    return [nx, ny, w, h]
+  }
+
+  const initMermaidGestures = wrap => {
+    // Clean up previous event listeners and pending frames
+    if (wrap.__mermaidAbortController) {
+      wrap.__mermaidAbortController.abort()
+      if (wrap.__mermaidRafId) cancelAnimationFrame(wrap.__mermaidRafId)
+    }
+    const ac = new AbortController()
+    wrap.__mermaidAbortController = ac
+    const svg = wrap.querySelector('svg')
+    if (!svg) return
+
+    // Ensure viewBox exists so gestures always work
+    const initVb = getSvgViewBox(svg)
+    wrap.__mermaidInitViewBox = initVb
+    wrap.__mermaidCurViewBox = initVb.slice()
+    setSvgViewBox(svg, initVb)
+    // Disable default gestures to prevent scroll chaining and pinch-zoom penetration in Chrome
+    svg.style.touchAction = 'none'
+
+    // Cache BoundingClientRect, throttled on scroll to reduce reflow
+    let cachedRect = svg.getBoundingClientRect()
+    let rectDirty = false
+    const markRectDirty = () => { rectDirty = true }
+    window.addEventListener('resize', markRectDirty, { signal: ac.signal })
+    window.addEventListener('scroll', markRectDirty, { signal: ac.signal, capture: true })
+    const getRect = () => {
+      if (rectDirty) {
+        cachedRect = svg.getBoundingClientRect()
+        rectDirty = false
+      }
+      return cachedRect
+    }
+
+    // Precompute clamp bounds from initial viewBox
+    const minW = initVb[2] * 0.1
+    const maxW = initVb[2] * 10
+    const minH = initVb[3] * 0.1
+    const maxH = initVb[3] * 10
+    const clampVb = vb => {
+      const out = vb.slice()
+      out[2] = clamp(out[2], minW, maxW)
+      out[3] = clamp(out[3], minH, maxH)
+      return out
+    }
+
+    // Throttle DOM updates using requestAnimationFrame
+    let pendingVb = null
+    let rafId = null
+    const applyVb = () => {
+      if (pendingVb) {
+        wrap.__mermaidCurViewBox = pendingVb
+        setSvgViewBox(svg, pendingVb)
+        pendingVb = null
+      }
+      rafId = null
+      wrap.__mermaidRafId = null
+    }
+    const setCurVb = vb => {
+      pendingVb = clampVb(vb)
+      if (!rafId) {
+        rafId = requestAnimationFrame(applyVb)
+        wrap.__mermaidRafId = rafId
+      }
+    }
+
+    const state = {
+      pointers: new Map(),
+      startVb: null,
+      startDist: 0,
+      lastPointerX: 0,
+      lastPointerY: 0
+    }
+
+    const onPointerDown = e => {
+      if (e.pointerType === 'mouse' && e.button !== 0) return
+      svg.setPointerCapture(e.pointerId)
+      const curVb = wrap.__mermaidCurViewBox
+      state.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY })
+      if (state.pointers.size === 1) {
+        state.startVb = curVb.slice()
+        state.lastPointerX = e.clientX
+        state.lastPointerY = e.clientY
+      } else if (state.pointers.size === 2) {
+        const pts = [...state.pointers.values()]
+        const dx = pts[0].x - pts[1].x
+        const dy = pts[0].y - pts[1].y
+        state.startDist = Math.hypot(dx, dy)
+        state.startVb = curVb.slice()
+      }
+    }
+
+    const onPointerMove = e => {
+      if (!state.pointers.has(e.pointerId)) return
+      state.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY })
+      const curVb = wrap.__mermaidCurViewBox
+      const rect = getRect()
+      if (state.pointers.size === 1 && state.startVb) {
+        const p = state.pointers.values().next().value
+        const dxClient = p.x - state.lastPointerX
+        const dyClient = p.y - state.lastPointerY
+        state.lastPointerX = p.x
+        state.lastPointerY = p.y
+        const dx = dxClient * (curVb[2] / rect.width)
+        const dy = dyClient * (curVb[3] / rect.height)
+        setCurVb([curVb[0] - dx, curVb[1] - dy, curVb[2], curVb[3]])
+        return
+      }
+      if (state.pointers.size === 2 && state.startVb && state.startDist > 0) {
+        const pts = [...state.pointers.values()]
+        const dx = pts[0].x - pts[1].x
+        const dy = pts[0].y - pts[1].y
+        const dist = Math.hypot(dx, dy)
+        if (!dist) return
+        const factor = state.startDist / dist
+        const cx = (pts[0].x + pts[1].x) / 2
+        const cy = (pts[0].y + pts[1].y) / 2
+        const px = curVb[0] + (cx - rect.left) * (curVb[2] / rect.width)
+        const py = curVb[1] + (cy - rect.top) * (curVb[3] / rect.height)
+        setCurVb(zoomAtPoint(state.startVb, factor, px, py))
+      }
+    }
+
+    const onPointerUpOrCancel = e => {
+      // Release PointerCapture to avoid event capture anomalies
+      if (svg.hasPointerCapture && svg.hasPointerCapture(e.pointerId)) {
+        svg.releasePointerCapture(e.pointerId)
+      }
+      state.pointers.delete(e.pointerId)
+      if (state.pointers.size === 0) {
+        state.startVb = null
+        state.startDist = 0
+      } else if (state.pointers.size === 1) {
+        const p = state.pointers.values().next().value
+        state.lastPointerX = p.x
+        state.lastPointerY = p.y
+      }
+    }
+
+    const onWheel = e => {
+      // Prevent event bubbling from triggering external scroll
+      e.preventDefault()
+      e.stopPropagation()
+      // Normalize deltaY across deltaMode (Chrome uses pixels, Safari uses lines)
+      let delta = e.deltaY
+      if (e.deltaMode === 1) delta *= 16
+      else if (e.deltaMode === 2) delta *= 400
+
+      // Continuous zoom factor: smoother than fixed 1.1/0.9 steps
+      const zoomFactor = Math.pow(1.001, delta)
+
+      const curVb = wrap.__mermaidCurViewBox
+      const rect = getRect()
+      const px = curVb[0] + (e.clientX - rect.left) * (curVb[2] / rect.width)
+      const py = curVb[1] + (e.clientY - rect.top) * (curVb[3] / rect.height)
+      setCurVb(zoomAtPoint(curVb, zoomFactor, px, py))
+    }
+
+    const onDblClick = () => {
+      const init = wrap.__mermaidInitViewBox
+      if (init) setCurVb(init)
+    }
+
+    svg.addEventListener('pointerdown', onPointerDown, { signal: ac.signal })
+    svg.addEventListener('pointermove', onPointerMove, { signal: ac.signal })
+    svg.addEventListener('pointerup', onPointerUpOrCancel, { signal: ac.signal })
+    svg.addEventListener('pointercancel', onPointerUpOrCancel, { signal: ac.signal })
+    svg.addEventListener('wheel', onWheel, { passive: false, signal: ac.signal })
+    svg.addEventListener('dblclick', onDblClick, { signal: ac.signal })
+  }
+
+  const runMermaid = ele => {
+    window.loadMermaid = true
+    const theme = document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'default'
+    ele.forEach((item, index) => {
+      const mermaidSrc = item.firstElementChild
+      // Clean up event listeners before removing old SVG
+      if (item.__mermaidAbortController) {
+        item.__mermaidAbortController.abort()
+      }
+      const oldSvg = item.querySelector('svg')
+      if (oldSvg) oldSvg.remove()
+      let config = {}
+      try {
+        config = mermaidSrc.dataset.config ? JSON.parse(mermaidSrc.dataset.config) : {}
+      } catch (e) {
+        console.warn('[mermaid] failed to parse dataset.config:', e)
+      }
+      if (!config.theme) {
+        config.theme = theme
+      }
+      const mermaidThemeConfig = `%%{init: ${JSON.stringify(config)}}%%\n`
+      const mermaidID = `mermaid-${index}`
+      const mermaidDefinition = mermaidThemeConfig + mermaidSrc.textContent
+
+      const renderMermaid = svg => {
+        mermaidSrc.insertAdjacentHTML('afterend', svg)
+        if (true) initMermaidGestures(item)
+        item.__mermaidOriginalSvg = svg
+        if (true) attachMermaidViewerButton(item)
+      }
+
+      const handleError = err => {
+        console.error(`[mermaid] render failed for block #${index}:`, err)
+        const errorEl = document.createElement('div')
+        errorEl.className = 'mermaid-error'
+        errorEl.textContent = `Mermaid render error: ${err.message || err}`
+        mermaidSrc.insertAdjacentElement('afterend', errorEl)
+      }
+
+      try {
+        const renderFn = mermaid.render(mermaidID, mermaidDefinition)
+        // mermaid v9 and v10 compatibility
+        if (typeof renderFn === 'string') {
+          renderMermaid(renderFn)
+        } else {
+          renderFn.then(({ svg }) => renderMermaid(svg)).catch(handleError)
+        }
+      } catch (err) {
+        handleError(err)
+      }
+    })
+  }
+
+  const codeToMermaid = $article => {
+    const codeMermaidEle = $article.querySelectorAll('pre > code.mermaid')
+    if (codeMermaidEle.length === 0) return
+
+    codeMermaidEle.forEach(ele => {
+      const preEle = document.createElement('pre')
+      preEle.className = 'mermaid-src'
+      preEle.hidden = true
+      preEle.textContent = ele.textContent
+      const newEle = document.createElement('div')
+      newEle.className = 'mermaid-wrap'
+      newEle.appendChild(preEle)
+      ele.parentNode.replaceWith(newEle)
+    })
+  }
+
+  const loadMermaid = () => {
+    const $article = document.getElementById('article-container')
+    if (!$article) return
+
+    if (true) codeToMermaid($article)
+    const $mermaid = $article.querySelectorAll('.mermaid-wrap')
+    if ($mermaid.length === 0) return
+
+    const runMermaidFn = () => runMermaid($mermaid)
+    btf.addGlobalFn('themeChange', runMermaidFn, 'mermaid')
+    window.loadMermaid ? runMermaidFn() : btf.getScript('https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js').then(runMermaidFn)
+  }
+
+  btf.addGlobalFn('encrypt', loadMermaid, 'mermaid')
+  window.pjax ? loadMermaid() : document.addEventListener('DOMContentLoaded', loadMermaid)
+})()</script></div><script defer="defer" id="ribbon" src="https://cdn.jsdelivr.net/npm/butterfly-extsrc/dist/canvas-ribbon.min.js" size="150" alpha="0.6" zIndex="-1" mobile="false" data-click="true"></script><script async data-pjax src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script></div></body></html>
